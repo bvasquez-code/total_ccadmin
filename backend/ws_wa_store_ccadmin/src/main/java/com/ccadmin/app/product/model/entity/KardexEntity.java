@@ -5,6 +5,9 @@ import com.ccadmin.app.pucharse.model.entity.PucharseDetDeliveryEntity;
 import com.ccadmin.app.sale.model.entity.CreditNoteDetWarehouseEntity;
 import com.ccadmin.app.sale.model.entity.SaleDetWarehouseEntity;
 import com.ccadmin.app.shared.model.entity.AuditTableEntity;
+import com.ccadmin.app.transfer.model.constants.TransferConstants;
+import com.ccadmin.app.transfer.model.entity.TransferDetEntity;
+import com.ccadmin.app.transfer.model.entity.TransferRequestDetEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 
@@ -88,6 +91,58 @@ public class KardexEntity extends AuditTableEntity implements Serializable {
         this.LotNumber = creditNoteDetWarehouse.LotNumber;
         this.ExpirationDate = creditNoteDetWarehouse.ExpirationDate;
         this.TypeOperationCod = 4;
+    }
+
+    public KardexEntity(KardexEntity kardexLast, TransferDetEntity transferDet, String storeCod, String warehouseCod, String typeOperation) {
+        int stockBefore = (kardexLast == null) ? 0 : kardexLast.NumStockAfter;
+        int stockMoved = TransferConstants.KARDEX_TYPE_OUT.equals(typeOperation) ? transferDet.NumUnitDispatch : transferDet.NumUnitReception;
+
+        this.OperationCod = transferDet.TransferCod;
+        this.ItemNumber = transferDet.ItemNumber;
+        this.SourceTable = TransferConstants.KARDEX_SOURCE_TABLE;
+        this.TypeOperation = typeOperation;
+        this.ProductCod = transferDet.ProductCod;
+        this.Variant = transferDet.Variant;
+        this.StoreCod = storeCod;
+        this.WarehouseCod = warehouseCod;
+        this.NumStockBefore = stockBefore;
+        this.NumStockMoved = stockMoved;
+        this.NumStockAfter = TransferConstants.KARDEX_TYPE_OUT.equals(typeOperation)
+                ? stockBefore - stockMoved
+                : stockBefore + stockMoved;
+        this.LotNumber = transferDet.LotNumber;
+        this.ExpirationDate = transferDet.ExpirationDate;
+        this.TypeOperationCod = TransferConstants.KARDEX_TYPE_OUT.equals(typeOperation) ? 5 : 6;
+
+        if (TransferConstants.KARDEX_TYPE_OUT.equals(typeOperation)) {
+            validateNonNegativeStock();
+        }
+    }
+
+    public KardexEntity(KardexEntity kardexLast, TransferRequestDetEntity transferRequestDet, String storeCod, String warehouseCod, String typeOperation) {
+        int stockBefore = (kardexLast == null) ? 0 : kardexLast.NumStockAfter;
+        int stockMoved = TransferConstants.KARDEX_TYPE_OUT.equals(typeOperation) ? transferRequestDet.NumUnit : transferRequestDet.NumUnitReception;
+
+        this.OperationCod = transferRequestDet.TransferReqCod;
+        this.ItemNumber = transferRequestDet.ItemNumber;
+        this.SourceTable = TransferConstants.KARDEX_SOURCE_TABLE;
+        this.TypeOperation = typeOperation;
+        this.ProductCod = transferRequestDet.ProductCod;
+        this.Variant = transferRequestDet.Variant;
+        this.StoreCod = storeCod;
+        this.WarehouseCod = warehouseCod;
+        this.NumStockBefore = stockBefore;
+        this.NumStockMoved = stockMoved;
+        this.NumStockAfter = TransferConstants.KARDEX_TYPE_OUT.equals(typeOperation)
+                ? stockBefore - stockMoved
+                : stockBefore + stockMoved;
+        this.LotNumber = transferRequestDet.LotNumber;
+        this.ExpirationDate = transferRequestDet.ExpirationDate;
+        this.TypeOperationCod = TransferConstants.KARDEX_TYPE_OUT.equals(typeOperation) ? 5 : 6;
+
+        if (TransferConstants.KARDEX_TYPE_OUT.equals(typeOperation)) {
+            validateNonNegativeStock();
+        }
     }
 
     @Override

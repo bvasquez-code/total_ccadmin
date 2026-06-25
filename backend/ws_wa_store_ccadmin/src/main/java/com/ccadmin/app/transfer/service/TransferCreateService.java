@@ -260,22 +260,8 @@ public class TransferCreateService extends SessionService {
                 throw new TransferException("Stock insuficiente para el producto "+det.ProductCod);
             }
 
-            KardexEntity kardex = new KardexEntity();
-            kardex.OperationCod = head.TransferCod;
-            kardex.ItemNumber = det.ItemNumber;
-            kardex.SourceTable = TransferConstants.KARDEX_SOURCE_TABLE;
-            kardex.TypeOperation = TransferConstants.KARDEX_TYPE_OUT;
-            kardex.ProductCod = det.ProductCod;
-            kardex.Variant = det.Variant;
-            kardex.StoreCod = head.StoreCodOrigin;
-            kardex.WarehouseCod = warehouseCodOrigin;
-            kardex.NumStockBefore = stockBefore;
-            kardex.NumStockMoved = det.NumUnitDispatch;
-            kardex.NumStockAfter = stockBefore - det.NumUnitDispatch;
-            kardex.LotNumber = det.LotNumber;
-            kardex.ExpirationDate = det.ExpirationDate;
-            kardex.TypeOperationCod = 5;
-            kardex.session(getUserSession(request.user));
+            KardexEntity kardex = new KardexEntity(kardexLast, det, head.StoreCodOrigin, warehouseCodOrigin, TransferConstants.KARDEX_TYPE_OUT)
+                    .session(getUserSession(request.user));
             kardexList.add(kardex);
             lastMovementByStock.put(stockKey, kardex);
         }
@@ -397,24 +383,8 @@ public class TransferCreateService extends SessionService {
                     ignored -> this.kardexShared.findLastMovement(det.ProductCod, det.Variant, warehouseCodDest, head.StoreCodDest)
             );
 
-            int stockBefore = (kardexLast == null) ? 0 : kardexLast.NumStockAfter;
-
-            KardexEntity kardex = new KardexEntity();
-            kardex.OperationCod = head.TransferCod;
-            kardex.ItemNumber = det.ItemNumber;
-            kardex.SourceTable = TransferConstants.KARDEX_SOURCE_TABLE;
-            kardex.TypeOperation = TransferConstants.KARDEX_TYPE_IN;
-            kardex.ProductCod = det.ProductCod;
-            kardex.Variant = det.Variant;
-            kardex.StoreCod = head.StoreCodDest;
-            kardex.WarehouseCod = warehouseCodDest;
-            kardex.NumStockBefore = stockBefore;
-            kardex.NumStockMoved = det.NumUnitReception;
-            kardex.NumStockAfter = stockBefore + det.NumUnitReception;
-            kardex.LotNumber = det.LotNumber;
-            kardex.ExpirationDate = det.ExpirationDate;
-            kardex.TypeOperationCod = 6;
-            kardex.session(getUserSession(request.user));
+            KardexEntity kardex = new KardexEntity(kardexLast, det, head.StoreCodDest, warehouseCodDest, TransferConstants.KARDEX_TYPE_IN)
+                    .session(getUserSession(request.user));
             kardexList.add(kardex);
             lastMovementByStock.put(stockKey, kardex);
         }
