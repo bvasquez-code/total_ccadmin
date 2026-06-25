@@ -998,7 +998,7 @@
             <a href="#"
               [ngClass]="menu.flg_menu_activo === true ? 'nav-link dropdown-toggle' : 'nav-link dropdown-toggle collapsed'"
               *ngIf="( menu.list_sub_menu.length > 0)">
-              <i class="nav-icon fa fa-cube"></i>
+              <i class="{{ menu.icono }}"></i>
               <span class="nav-text fadeable">
                 <span>{{ menu.des_menu }}</span>
               </span>

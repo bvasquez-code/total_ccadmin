@@ -1,137 +1,127 @@
-import { AfterViewInit, Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { ToastrService } from 'ngx-toastr';
+import { ActionModalConfirmService } from 'src/app/enterprise/shared/interface/ActionModalConfirmService';
+import { ActionTableService } from 'src/app/enterprise/shared/interface/ActionTableService';
 import { DataTablaGeneticDto } from 'src/app/enterprise/shared/model/dto/DataTablaGeneticDto';
 import { ResponsePageSearch } from 'src/app/enterprise/shared/model/dto/ResponsePageSearch';
 import { ResponseWsDto } from 'src/app/enterprise/shared/model/dto/ResponseWsDto';
 import { SearchDto } from 'src/app/enterprise/shared/model/dto/SearchDto';
-import { AppMenuService } from '../../service/appmenu.service';
-import { ActionTableService } from 'src/app/enterprise/shared/interface/ActionTableService';
 import { AppMenuEntity } from '../../model/entity/AppMenuEntity';
-import { ActionModalConfirmService } from 'src/app/enterprise/shared/interface/ActionModalConfirmService';
-import { ModalService } from 'src/app/enterprise/shared/service/ModalService';
+import { AppMenuService } from '../../service/appmenu.service';
 
 @Component({
   selector: 'app-listmenu',
   templateUrl: './listmenu.component.html'
 })
-export class ListmenuComponent implements OnInit,ActionTableService<AppMenuEntity>,ActionModalConfirmService {
+export class ListmenuComponent implements OnInit, ActionTableService<AppMenuEntity>, ActionModalConfirmService {
 
   @ViewChild('txtSearch') txtSearch!: ElementRef<HTMLInputElement>;
-  
-  responsePageSearch : ResponsePageSearch<AppMenuEntity> = new ResponsePageSearch();
 
-  dataTablaGenetic : DataTablaGeneticDto<AppMenuEntity> = new DataTablaGeneticDto();
+  responsePageSearch: ResponsePageSearch<AppMenuEntity> = new ResponsePageSearch();
+  dataTablaGenetic: DataTablaGeneticDto<AppMenuEntity> = new DataTablaGeneticDto();
+  AppMenuSelectionClick: AppMenuEntity = new AppMenuEntity();
 
-  AppMenuSelectionClick : AppMenuEntity = new AppMenuEntity();
-  
   constructor(
-    private appMenuService : AppMenuService
-  )
-  {
+    private appMenuService: AppMenuService,
+    private toastrService: ToastrService
+  ) {
   }
 
-  ngOnInit(): void 
-  {
-    this.findAll(1,"");
+  ngOnInit(): void {
+    this.findAll(1, "");
   }
 
-  getDataRow(item: AppMenuEntity) 
-  {
+  getDataRow(item: AppMenuEntity): void {
     this.AppMenuSelectionClick = item;
-    console.log(this.AppMenuSelectionClick);
   }
 
-  filter(Page : number)
-  {
+  filter(Page: number): void {
     const Query = (this.txtSearch?.nativeElement?.value) ? this.txtSearch.nativeElement.value : "";
-    this.findAll(Page,Query);
+    this.findAll(Page, Query);
   }
 
-  loadingTable(responsePageSearch : ResponsePageSearch<AppMenuEntity>)
-  {
-      const data : DataTablaGeneticDto<AppMenuEntity> = new DataTablaGeneticDto();
-      data.init(
-        [
-          { Name :  "Codigo" , key : "MenuCod" } ,
-          { Name :  "Descripción" , key : "Name"} ,
-          { Name :  "Modificación", key : "ModifyDate" , IsDate : true },
-          { Name :  "Estado" , 
-            key : "Status" , 
-            IsStatus : true,
-            Html : {
-              Activo : 'badge badge-sm bgc-info-d1 text-white pb-1 px-25',
-              Inactivo : 'badge badge-sm bgc-red-d1 text-white pb-1 px-25'
-            }
-          },
-          { Name :  "Opciones" , 
-            ColumnAction : true , 
-            Id : ["MenuCod"] , 
-            Options : [
-              { Type : "Url" , Name : "fa fa-pencil-alt" , Url : "/enterprise/menu/pages/createmenu?MenuCod={MenuCod}" },
-              { Type : "Url" , Name : "fa fa-trash-alt" , Url : "#" },
-              { Type : "Url" , Name : "fa fa-check" , Url : "#" }
-            ] 
-          }
-        ],
+  loadingTable(responsePageSearch: ResponsePageSearch<AppMenuEntity>): void {
+    const data: DataTablaGeneticDto<AppMenuEntity> = new DataTablaGeneticDto();
+    const showEnable = (item: AppMenuEntity) => item.Status !== "A";
+    const showDisable = (item: AppMenuEntity) => item.Status === "A";
+
+    data.init(
+      [
+        { Name: "Codigo", key: "MenuCod" },
+        { Name: "Descripcion", key: "Name" },
+        { Name: "Modificacion", key: "ModifyDate", IsDate: true },
         {
-          data : responsePageSearch
-        },
-        "Lista de menus del sistema"
-      );
-
-      this.dataTablaGenetic = data;
-  }
-
-  async findAll(Page : number,Query : string): Promise<void>
-  {
-      let search : SearchDto = new SearchDto();
-      search.Page = Page;
-      search.Query = Query;
-
-      const rpt : ResponseWsDto = await this.appMenuService.findAll(search);
-
-      if( !rpt.ErrorStatus )
-      {
-          this.responsePageSearch = rpt.Data;  
-
-          if(  this.responsePageSearch.resultSearch != null && this.responsePageSearch.resultSearch.length > 0 )
-          {
-              const resultSearch : AppMenuEntity[] = this.responsePageSearch.resultSearch;
-
-              for(let element of resultSearch)
-              {
-                element.Status = (element.Status === "A") ? "Activo" : "Inactivo";
-              }
+          Name: "Estado",
+          key: "Status",
+          IsStatus: true,
+          Html: {
+            A: 'badge badge-sm bgc-info-d1 text-white pb-1 px-25',
+            I: 'badge badge-sm bgc-red-d1 text-white pb-1 px-25'
+          },
+          Mask: {
+            A: "Activo",
+            I: "Inactivo"
           }
-  
-          this.loadingTable(this.responsePageSearch);
-      }
+        },
+        {
+          Name: "Opciones",
+          ColumnAction: true,
+          Id: ["MenuCod"],
+          Options: [
+            { Type: "Url", Name: "fa fa-pencil-alt", Url: "/enterprise/menu/pages/createmenu?MenuCod={MenuCod}" },
+            { Type: "Modal", Name: "fa fa-check", Url: "#", ID: "modal_enable_menu", Function: showEnable },
+            { Type: "Modal", Name: "fa fa-ban", Url: "#", ID: "modal_disable_menu", Function: showDisable }
+          ]
+        }
+      ],
+      { data: responsePageSearch },
+      "Lista de menus del sistema"
+    );
+
+    this.dataTablaGenetic = data;
   }
 
-  actionModal(ModalId : string): void 
-  {
-    if(ModalId == "Eliminar") this.deactivateById();
-    if(ModalId == "Activar") this.activateById();
-  }
+  async findAll(Page: number, Query: string): Promise<void> {
+    const search: SearchDto = new SearchDto();
+    search.Page = Page;
+    search.Query = Query;
 
-  async deactivateById()
-  {
-    this.AppMenuSelectionClick.Status = "I";
-    const rpt : ResponseWsDto = await this.appMenuService.updateStatus(this.AppMenuSelectionClick);
+    const rpt: ResponseWsDto = await this.appMenuService.findAll(search);
 
-    if( !rpt.ErrorStatus )
-    {
-      this.findAll(1,"");
+    if (!rpt.ErrorStatus) {
+      this.responsePageSearch = rpt.Data;
+      this.loadingTable(this.responsePageSearch);
+    } else {
+      this.toastrService.error(rpt.Message);
     }
   }
 
-  async activateById()
-  {
-    this.AppMenuSelectionClick.Status = "A";
-    const rpt : ResponseWsDto = await this.appMenuService.updateStatus(this.AppMenuSelectionClick);
+  actionModal(ModalId: string): void {
+    if (ModalId === "modal_disable_menu") this.deactivateById();
+    if (ModalId === "modal_enable_menu") this.activateById();
+  }
 
-    if( !rpt.ErrorStatus )
-    {
-      this.findAll(1,"");
+  async deactivateById(): Promise<void> {
+    this.AppMenuSelectionClick.Status = "I";
+    const rpt: ResponseWsDto = await this.appMenuService.updateStatus(this.AppMenuSelectionClick);
+
+    if (!rpt.ErrorStatus) {
+      this.toastrService.success("Menu deshabilitado");
+      this.filter(1);
+    } else {
+      this.toastrService.error(rpt.Message);
+    }
+  }
+
+  async activateById(): Promise<void> {
+    this.AppMenuSelectionClick.Status = "A";
+    const rpt: ResponseWsDto = await this.appMenuService.updateStatus(this.AppMenuSelectionClick);
+
+    if (!rpt.ErrorStatus) {
+      this.toastrService.success("Menu habilitado");
+      this.filter(1);
+    } else {
+      this.toastrService.error(rpt.Message);
     }
   }
 

@@ -49,13 +49,17 @@
 </div>
 
 <app-modalconfirm 
-  [id]="'Eliminar'"
+  [id]="'modal_disable_menu'"
+  [title]="'Deshabilitar menu'"
+  [message]="'Esta seguro que desea deshabilitar este menu?'"
   [action]="this"
 >
 </app-modalconfirm>
 
 <app-modalconfirm 
-  [id]="'Activar'"
+  [id]="'modal_enable_menu'"
+  [title]="'Habilitar menu'"
+  [message]="'Esta seguro que desea habilitar este menu?'"
   [action]="this"
 >
 </app-modalconfirm>
