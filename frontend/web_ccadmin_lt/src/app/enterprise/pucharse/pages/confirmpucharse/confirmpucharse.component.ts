@@ -249,10 +249,6 @@ export class ConfirmpucharseComponent implements IRegisterForm<PucharseRegisterD
         throw new Error("El lote no puede superar 32 caracteres");
       }
 
-      if (!expirationDate) {
-        throw new Error("Ingrese la fecha de vencimiento");
-      }
-
       if ((this.getLotReceptionTotal() + numUnit) > this.pucharseDetSelect.NumUnit) {
         throw new Error("La cantidad recepcionada no puede superar la cantidad solicitada");
       }

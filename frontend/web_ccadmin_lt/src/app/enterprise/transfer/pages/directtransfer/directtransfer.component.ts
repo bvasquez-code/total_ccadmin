@@ -21,6 +21,9 @@ import { TransferRequestDetEntity } from '../../model/entity/TransferRequestDetE
 import { TransferConstants } from '../../model/constants/TransferConstants';
 import { TransferDispatchDto } from '../../model/dto/TransferDispatchDto';
 import { TransferReceiveDto } from '../../model/dto/TransferReceiveDto';
+import { CarrierService } from '../../service/CarrierService';
+import { CarrierEntity } from '../../model/entity/CarrierEntity';
+import { TransferLotDispatchDto } from '../../model/dto/TransferLotDispatchDto';
 
 @Component({
   selector: 'app-directtransfer',
@@ -35,12 +38,16 @@ export class DirecttransferComponent implements OnInit {
   @ViewChild('cboTransportMode') cboTransportMode!: ElementRef<HTMLSelectElement>;
   @ViewChild('cboReason') cboReason!: ElementRef<HTMLSelectElement>;
   @ViewChild('txtVehiclePlate') txtVehiclePlate!: ElementRef<HTMLInputElement>;
-  @ViewChild('txtDriverDocType') txtDriverDocType!: ElementRef<HTMLInputElement>;
+  @ViewChild('cboDriverDocType') cboDriverDocType!: ElementRef<HTMLSelectElement>;
   @ViewChild('txtDriverDocNumber') txtDriverDocNumber!: ElementRef<HTMLInputElement>;
   @ViewChild('txtDriverLicenseNumber') txtDriverLicenseNumber!: ElementRef<HTMLInputElement>;
   @ViewChild('txtCarrierRuc') txtCarrierRuc!: ElementRef<HTMLInputElement>;
   @ViewChild('txtCarrierName') txtCarrierName!: ElementRef<HTMLInputElement>;
   @ViewChild('btnCloseModal') btnCloseModal!: ElementRef<HTMLButtonElement>;
+  @ViewChild('txtLotNumUnit') txtLotNumUnit!: ElementRef<HTMLInputElement>;
+  @ViewChild('txtLotNumber') txtLotNumber!: ElementRef<HTMLInputElement>;
+  @ViewChild('txtExpirationDate') txtExpirationDate!: ElementRef<HTMLInputElement>;
+  @ViewChild('btnCloseLotDispatchModal') btnCloseLotDispatchModal!: ElementRef<HTMLButtonElement>;
 
   Page: number = 1;
   transferRegister: TransferRegisterBundleDto = new TransferRegisterBundleDto();
@@ -49,6 +56,10 @@ export class DirecttransferComponent implements OnInit {
   productSelect: ProductSearchEntity = new ProductSearchEntity();
   productSearch: ProductSearchDto = new ProductSearchDto();
   storeList: StoreEntity[] = [];
+  selectedDetail: TransferDetEntity = new TransferDetEntity();
+  isTransferWithLots: boolean = false;
+  lotDispatchList: TransferLotDispatchDto[] = [];
+  private readonly maxLotNumberLength: number = 32;
 
   transportModeList = [
     { Code: '01', Name: 'Transporte público' },
@@ -69,7 +80,8 @@ export class DirecttransferComponent implements OnInit {
     private productSearchService: ProductSearchService,
     private session: DataSesionService,
     private router: Router,
-    private toastrService: ToastrService
+    private toastrService: ToastrService,
+    private carrierService: CarrierService
   ) { }
 
   ngOnInit(): void {
@@ -137,7 +149,7 @@ export class DirecttransferComponent implements OnInit {
     this.txtNumUnit.nativeElement.value = '';
     this.productSelect = product;
 
-    const existing = this.transferRegister.transferDetList.find(e => e.ProductCod === product.ProductCod);
+    const existing = this.transferRegister.transferDetList.find(e => e.ProductCod === product.ProductCod && !e.LotNumber);
     if (existing) {
       this.txtNumUnit.nativeElement.value = String(existing.NumUnit);
     }
@@ -157,7 +169,7 @@ export class DirecttransferComponent implements OnInit {
     }
 
     let transferDet: TransferDetEntity = new TransferDetEntity();
-    let transferDetExist: TransferDetEntity | undefined = this.transferRegister.transferDetList.find(e => e.ProductCod === product.ProductCod);
+    let transferDetExist: TransferDetEntity | undefined = this.transferRegister.transferDetList.find(e => e.ProductCod === product.ProductCod && !e.LotNumber);
 
     if (transferDetExist) {
       transferDet = transferDetExist;
@@ -179,6 +191,13 @@ export class DirecttransferComponent implements OnInit {
 
     this.txtNumUnit.nativeElement.value = '';
     this.closeModal();
+
+    if (this.isTransferWithLots) {
+      this.openLotDispatchModal(transferDet);
+      setTimeout(() => {
+        (window as any).$('#modalLotDispatch').modal('show');
+      }, 300);
+    }
   }
 
   closeModal() {
@@ -199,6 +218,143 @@ export class DirecttransferComponent implements OnInit {
     this.transferRegister.transferDetList = this.transferRegister.transferDetList.filter(e => !this.sameDetailLine(e, product));
   }
 
+  openLotDispatchModal(det: TransferDetEntity) {
+    this.selectedDetail = det;
+    this.lotDispatchList = [];
+    this.clearLotDispatchForm();
+  }
+
+  addLotDispatchLine(): void {
+    try {
+      const numUnit = Number(this.txtLotNumUnit.nativeElement.value);
+      const lotNumber = this.txtLotNumber.nativeElement.value.trim();
+      const expirationDate = this.txtExpirationDate.nativeElement.value;
+
+      if (!numUnit || numUnit <= 0) {
+        throw new Error('Ingrese una cantidad valida');
+      }
+
+      if (!lotNumber) {
+        throw new Error('Ingrese el lote');
+      }
+
+      if (lotNumber.length > this.maxLotNumberLength) {
+        throw new Error('El lote no puede superar 32 caracteres');
+      }
+
+      if ((this.getLotDispatchTotal() + numUnit) > this.selectedDetail.NumUnit) {
+        throw new Error('La cantidad no puede superar la cantidad solicitada');
+      }
+
+      const existingLot = this.lotDispatchList.find(e => e.LotNumber === lotNumber && e.ExpirationDate === expirationDate);
+
+      if (existingLot) {
+        existingLot.NumUnit += numUnit;
+      } else {
+        this.lotDispatchList.push(new TransferLotDispatchDto({
+          NumUnit: numUnit,
+          LotNumber: lotNumber,
+          ExpirationDate: expirationDate
+        }));
+      }
+
+      this.clearLotDispatchForm();
+    } catch (e: any) {
+      this.toastrService.error(e.message);
+    }
+  }
+
+  removeLotDispatchLine(index: number): void {
+    this.lotDispatchList.splice(index, 1);
+  }
+
+  getLotDispatchTotal(): number {
+    return this.lotDispatchList.reduce((total, item) => total + Number(item.NumUnit || 0), 0);
+  }
+
+  getLotDispatchPending(): number {
+    return Number(this.selectedDetail.NumUnit || 0) - this.getLotDispatchTotal();
+  }
+
+  confirmLotDispatch(): void {
+    try {
+      if (this.lotDispatchList.length === 0) {
+        throw new Error('Debe agregar al menos un lote');
+      }
+
+      if (this.getLotDispatchTotal() < this.selectedDetail.NumUnit) {
+        this.toastrService.warning('La cantidad despachada es menor a la cantidad solicitada');
+      }
+
+      this.replaceTransferLine(this.selectedDetail, this.lotDispatchList.map((item, index) => this.createLotDetail(item, index)));
+      this.lotDispatchList = [];
+      this.btnCloseLotDispatchModal.nativeElement.click();
+    } catch (e: any) {
+      this.toastrService.error(e.message);
+    }
+  }
+
+  private createLotDetail(item: TransferLotDispatchDto, index: number): TransferDetEntity {
+    const detail = new TransferDetEntity();
+    detail.TransferCod = this.selectedDetail.TransferCod;
+    detail.TypeOperation = this.selectedDetail.TypeOperation;
+    detail.ProductCod = this.selectedDetail.ProductCod;
+    detail.Variant = this.selectedDetail.Variant;
+    detail.ItemNumber = index === 0 ? this.selectedDetail.ItemNumber : 0;
+    detail.WarehouseCodOrigin = this.selectedDetail.WarehouseCodOrigin;
+    detail.WarehouseCodDest = this.selectedDetail.WarehouseCodDest;
+    detail.NumUnit = item.NumUnit;
+    detail.NumUnitDispatch = item.NumUnit;
+    detail.NumUnitReception = 0;
+    detail.FlgRequested = this.selectedDetail.FlgRequested;
+    detail.LotNumber = item.LotNumber;
+    detail.ExpirationDate = item.ExpirationDate;
+    detail.Product = this.selectedDetail.Product;
+
+    return detail;
+  }
+
+  private replaceTransferLine(origin: TransferDetEntity, detailList: TransferDetEntity[]): void {
+    const index = this.transferRegister.transferDetList.indexOf(origin);
+    if (index >= 0) {
+      this.transferRegister.transferDetList.splice(index, 1, ...detailList);
+    }
+  }
+
+  private clearLotDispatchForm(): void {
+    setTimeout(() => {
+      if (this.txtLotNumUnit) this.txtLotNumUnit.nativeElement.value = '';
+      if (this.txtLotNumber) this.txtLotNumber.nativeElement.value = '';
+      if (this.txtExpirationDate) this.txtExpirationDate.nativeElement.value = '';
+    });
+  }
+
+  async searchCarrier() {
+    if (!this.txtDriverDocNumber) return;
+
+    const carrierCod = this.txtDriverDocNumber.nativeElement.value.trim();
+    if (!carrierCod) {
+      this.toastrService.warning('Ingrese el N° doc. conductor');
+      return;
+    }
+
+    const rpt: ResponseWsDto = await this.carrierService.findById(carrierCod);
+    if (rpt.ErrorStatus || !rpt.Data) {
+      this.toastrService.warning(rpt.Message || 'Transportista no encontrado');
+      return;
+    }
+
+    const carrier: CarrierEntity = rpt.Data;
+    this.cboDriverDocType.nativeElement.value = carrier.DriverDocType || '';
+    this.txtDriverDocNumber.nativeElement.value = carrier.DriverDocNumber || carrier.CarrierCod || carrierCod;
+    this.txtDriverLicenseNumber.nativeElement.value = carrier.DriverLicenseNumber || '';
+    this.txtVehiclePlate.nativeElement.value = carrier.VehiclePlate || '';
+    this.txtCarrierRuc.nativeElement.value = carrier.CarrierRuc || '';
+    this.txtCarrierName.nativeElement.value = carrier.CarrierName || '';
+
+    this.toastrService.success('Datos del transportista cargados');
+  }
+
   async Save() {
     try {
       const destStore = this.cboStoreDest.nativeElement.value;
@@ -209,6 +365,10 @@ export class DirecttransferComponent implements OnInit {
 
       if (this.transferRegister.transferDetList.length === 0) {
         throw new Error('Debe agregar al menos un producto');
+      }
+
+      if (this.isTransferWithLots && this.transferRegister.transferDetList.some(e => !e.LotNumber)) {
+        throw new Error('Debe indicar lote para todos los productos');
       }
 
       const originStore = this.getCurrentStoreCod();
@@ -229,7 +389,7 @@ export class DirecttransferComponent implements OnInit {
       this.transferRegister.transferDocument.TransportModeCod = this.cboTransportMode?.nativeElement.value ?? '';
       this.transferRegister.transferDocument.ReasonTransferCod = this.cboReason?.nativeElement.value ?? '';
       this.transferRegister.transferDocument.VehiclePlate = this.txtVehiclePlate?.nativeElement.value ?? '';
-      this.transferRegister.transferDocument.DriverDocType = this.txtDriverDocType?.nativeElement.value ?? '';
+      this.transferRegister.transferDocument.DriverDocType = this.cboDriverDocType?.nativeElement.value ?? '';
       this.transferRegister.transferDocument.DriverDocNumber = this.txtDriverDocNumber?.nativeElement.value ?? '';
       this.transferRegister.transferDocument.DriverLicenseNumber = this.txtDriverLicenseNumber?.nativeElement.value ?? '';
       this.transferRegister.transferDocument.CarrierRuc = this.txtCarrierRuc?.nativeElement.value ?? '';

@@ -254,10 +254,6 @@ export class DispatchtransferComponent implements OnInit, ActionModalConfirmServ
         throw new Error('El lote no puede superar 32 caracteres');
       }
 
-      if (!expirationDate) {
-        throw new Error('Ingrese la fecha de vencimiento');
-      }
-
       if ((this.getLotDispatchTotal() + numUnit) > this.selectedDetail.NumUnit) {
         throw new Error('La cantidad despachada no puede superar la cantidad solicitada');
       }
