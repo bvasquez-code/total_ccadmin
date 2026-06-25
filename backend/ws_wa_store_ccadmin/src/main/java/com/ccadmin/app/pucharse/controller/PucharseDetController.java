@@ -1,6 +1,7 @@
 package com.ccadmin.app.pucharse.controller;
 
 import com.ccadmin.app.pucharse.model.dto.PucharseDetConfirmDto;
+import com.ccadmin.app.pucharse.model.dto.PucharseDetLotConfirmDto;
 import com.ccadmin.app.pucharse.service.PucharseDetService;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import org.apache.logging.log4j.LogManager;
@@ -25,6 +26,22 @@ public class PucharseDetController {
         try{
             return new ResponseEntity<ResponseWsDto>(
                     new ResponseWsDto(this.pucharseDetService.confirm(pucharseDetConfirm))
+                    , HttpStatus.OK
+            );
+        }
+        catch (Exception ex)
+        {
+            log.error("Error :"+ex.getMessage(), ex);
+            return new ResponseEntity<ResponseWsDto>(new ResponseWsDto(ex),HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("confirmWithLots")
+    public ResponseEntity<ResponseWsDto> confirmWithLots(@RequestBody PucharseDetLotConfirmDto pucharseDetLotConfirm)
+    {
+        try{
+            return new ResponseEntity<ResponseWsDto>(
+                    new ResponseWsDto(this.pucharseDetService.confirmWithLots(pucharseDetLotConfirm))
                     , HttpStatus.OK
             );
         }

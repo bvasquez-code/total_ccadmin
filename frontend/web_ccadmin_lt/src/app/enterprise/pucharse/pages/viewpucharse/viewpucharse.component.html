@@ -16,6 +16,10 @@
             </h1>
             <div class="page-tools">
               <div class="action-buttons">
+                <a class="btn bg-white btn-light mx-1px text-95 shadow-sm" (click)="print()" style="cursor:pointer;">
+                  <i class="mr-1 fa fa-print text-primary text-120 w-2"></i>
+                  Imprimir
+                </a>
                 <a class="btn bg-white btn-light mx-1px text-95 shadow-sm" (click)="goBack()" style="cursor:pointer;">
                   <i class="mr-1 fa fa-arrow-left text-primary text-120 w-2"></i>
                   Volver
@@ -103,9 +107,11 @@
               <div class="mt-4">
 
                 <div class="row text-600 text-95 text-secondary-d3 brc-green-l1 py-25 border-y-2">
-                  <div class="d-none d-sm-block col-sm-2">Código</div>
-                  <div class="d-none d-sm-block col-sm-4">Producto</div>
+                  <div class="d-none d-sm-block col-sm-1">Código</div>
+                  <div class="d-none d-sm-block col-sm-3">Producto</div>
                   <div class="d-none d-sm-block col-sm-1 text-center">Cant.</div>
+                  <div class="d-none d-sm-block col-sm-1">Lote</div>
+                  <div class="d-none d-sm-block col-sm-1">Venc.</div>
                   <div class="d-none d-sm-block col-sm-2 text-right">P. Unitario</div>
                   <div class="d-none d-sm-block col-sm-2 text-right">Total</div>
                   <div class="d-none d-sm-block col-sm-1 text-center">Recepción</div>
@@ -114,16 +120,24 @@
                 <div class="text-95 text-dark-m3">
                   <div class="row mb-2 mb-sm-0 py-25" [ngClass]="(i + 1) % 2 === 0 ? 'bgc-green-l4' : ''"
                     *ngFor="let item of PucharseDetails.DetailList; let i = index">
-                    <div class="col-7 col-sm-2 text-secondary-d3 text-600">
+                    <div class="col-7 col-sm-1 text-secondary-d3 text-600">
                       {{ item.ProductCod }}
                     </div>
 
-                    <div class="col-7 col-sm-4">
+                    <div class="col-7 col-sm-3">
                       {{ item.Product.ProductName || '—' }}
                     </div>
 
                     <div class="d-none d-sm-block col-1 text-center">
                       {{ item.NumUnit }}
+                    </div>
+
+                    <div class="d-none d-sm-block col-1">
+                      {{ getLotNumber(item.LotNumber) }}
+                    </div>
+
+                    <div class="d-none d-sm-block col-1">
+                      {{ item.ExpirationDate ? (item.ExpirationDate | date: 'dd/MM/yyyy') : '' }}
                     </div>
 
                     <div class="d-none d-sm-block col-2 text-right">

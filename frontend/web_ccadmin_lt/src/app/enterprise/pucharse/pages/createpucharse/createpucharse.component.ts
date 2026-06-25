@@ -15,6 +15,7 @@ import { PucharseRequestDetailsDto } from '../../model/dto/PucharseRequestDetail
 import { ProductRegisterDto } from 'src/app/enterprise/product/model/dto/ProductRegisterDto';
 import { SupplierService } from 'src/app/enterprise/supplier/service/supplier.service';
 import { SupplierEntity } from 'src/app/enterprise/supplier/model/entity/SupplierEntity';
+import { PucharsePrintService } from '../../service/PucharsePrintService';
 
 @Component({
   selector: 'app-createpucharse',
@@ -51,7 +52,8 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
     private toastrService: ToastrService,
     private productService: ProductService,
     private supplierService: SupplierService,
-    private session: DataSesionService
+    private session: DataSesionService,
+    private pucharsePrintService: PucharsePrintService
   ) {
     this.GetParamUrl(this.router);
   }
@@ -112,10 +114,24 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
 
     if (!rpt.ErrorStatus) {
       this.toastrService.success("Operación realizada con exito");
+      this.pucharsePrintService.printPucharseRequest(rpt.Data || this.pucharseRequestRegister);
       setTimeout(() => {
         this.router.navigate(['/enterprise/pucharse/pages/listpucharse']);
       }, 1000);
     }
+  }
+
+  print(): void {
+    this.pucharseRequestRegister.Headboard.DealerCod = this.txtDealerCod.nativeElement.value;
+    this.pucharseRequestRegister.Headboard.ExternalCod = this.txtExternalCod.nativeElement.value;
+    this.pucharseRequestRegister.Headboard.Commenter = this.txtCommenter.nativeElement.value;
+
+    if (this.pucharseRequestRegister.DetailList.length === 0) {
+      this.toastrService.error('Agregue al menos un producto para imprimir');
+      return;
+    }
+
+    this.pucharsePrintService.printPucharseRequest(this.pucharseRequestRegister);
   }
 
   async FindSupplierByRuc(): Promise<void> {

@@ -6,6 +6,7 @@ import { SearchDto } from '../../shared/model/dto/SearchDto';
 import { ICrudService } from "../../shared/interface/ICrudService";
 import { PucharseDetEntity } from "../model/entity/PucharseDetEntity";
 import { PucharseDetConfirmDto } from "../model/dto/PucharseDetConfirmDto";
+import { PucharseDetLotConfirmDto } from "../model/dto/PucharseDetLotConfirmDto";
 
 @Injectable({
     providedIn: 'root'
@@ -37,6 +38,17 @@ export class PucharseDetService implements ICrudService<PucharseDetEntity,Puchar
         let RespuestaWS : ResponseWsDto;
 
         RespuestaWS = await this.apiService.ExecutePostService(url,pucharseDetConfirm);
+
+        return RespuestaWS;
+
+    }
+
+    async ConfirmWithLots(pucharseDetLotConfirm: PucharseDetLotConfirmDto): Promise<ResponseWsDto> {
+        
+        let url: string = `${AppSetting.API}/api/v1/PucharseDet/confirmWithLots`;
+        let RespuestaWS : ResponseWsDto;
+
+        RespuestaWS = await this.apiService.ExecutePostService(url,pucharseDetLotConfirm);
 
         return RespuestaWS;
 

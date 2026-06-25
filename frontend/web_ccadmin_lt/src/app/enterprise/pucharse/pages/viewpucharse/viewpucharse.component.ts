@@ -4,6 +4,7 @@ import { PucharseService } from '../../service/PucharseService';
 import { PucharseDetailsDto } from '../../model/dto/PucharseDetailsDto';
 import { StoreEntity } from 'src/app/enterprise/shared/model/entity/StoreEntity';
 import { WarehouseEntity } from 'src/app/enterprise/shared/model/entity/WarehouseEntity';
+import { PucharsePrintService } from '../../service/PucharsePrintService';
 
 @Component({
   selector: 'app-viewpucharse',
@@ -18,7 +19,8 @@ export class ViewpucharseComponent {
 
   constructor(
     private pucharseService: PucharseService,
-    private router: Router
+    private router: Router,
+    private pucharsePrintService: PucharsePrintService
   ) {
     let urlTree: any = this.router.parseUrl(this.router.url);
     this.PucharseCod = urlTree.queryParams['PucharseCod'] ?? '';
@@ -61,8 +63,16 @@ export class ViewpucharseComponent {
       : 'badge badge-sm bgc-orange-d1 text-white pb-1 px-25';
   }
 
+  getLotNumber(value: string): string {
+    return value && value.trim() ? value : 'SN';
+  }
+
   get NumTotalPrice(): number {
     return this.PucharseDetails?.Headboard?.NumTotalPrice ?? 0;
+  }
+
+  print(): void {
+    this.pucharsePrintService.printReception(this.PucharseDetails, this.PucharseDetails.DetailList || [], this.Store, this.WarehouseList);
   }
 
   goBack(): void {

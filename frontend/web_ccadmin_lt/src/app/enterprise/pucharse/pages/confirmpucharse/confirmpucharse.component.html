@@ -78,6 +78,20 @@
                 <div class="card-body px-1 px-md-3">
 
                   <form autocomplete="off">
+                    <div class="d-flex justify-content-end mb-3 px-2 px-sm-0">
+                      <div class="custom-control custom-switch">
+                        <input
+                          type="checkbox"
+                          class="custom-control-input"
+                          id="switchReceptionWithLots"
+                          name="switchReceptionWithLots"
+                          [(ngModel)]="IsReceptionWithLots">
+                        <label class="custom-control-label" for="switchReceptionWithLots">
+                          Confirmar con lotes y fecha de vencimiento
+                        </label>
+                      </div>
+                    </div>
+
                     <div class="d-flex justify-content-between flex-column flex-sm-row mb-3 px-2 px-sm-0">
                       <div class="pos-rel ml-sm-auto mr-sm-2 order-last order-sm-0">
                         <i class="fa fa-search position-lc ml-25 text-primary-m1"></i>
@@ -109,6 +123,12 @@
                           <th>
                             Cantidad Contada
                           </th>
+                          <th *ngIf="IsReceptionWithLots">
+                            Lote
+                          </th>
+                          <th *ngIf="IsReceptionWithLots">
+                            Vencimiento
+                          </th>
                           <th></th>
                         </tr>
                       </thead>
@@ -124,22 +144,35 @@
                           <td class="text-600">
                             {{ item.NumUnitDelivered }}
                           </td>
+                          <td *ngIf="IsReceptionWithLots">
+                            {{ item.LotNumber || '-' }}
+                          </td>
+                          <td *ngIf="IsReceptionWithLots">
+                            {{ item.ExpirationDate | date:'yyyy-MM-dd' }}
+                          </td>
                           <td>
                             <div>
                               <div class="d-none d-lg-flex">
-                                <a *ngIf="(item.IsKardexAffected !== 'S')" 
+                                <a *ngIf="(item.IsKardexAffected !== 'S' && !IsReceptionWithLots)" 
                                     href="#" data-toggle="modal"
                                     (click)="selectRowTable(item)"
                                     class="mx-2px btn radius-1 border-2 btn-xs btn-brc-tp btn-light-secondary btn-h-lighter-success btn-a-lighter-success"
                                     data-target="#modal_update_quantity">
                                     <i class="fa fa-pencil-alt" class="fa fa-pencil-alt"></i>
                                 </a>
-                                <a *ngIf="(item.IsKardexAffected !== 'S')"
+                                <a *ngIf="(item.IsKardexAffected !== 'S' && !IsReceptionWithLots)"
                                     href="#" data-toggle="modal"
                                     (click)="selectRowTable(item)"
                                     class="mx-2px btn radius-1 border-2 btn-xs btn-brc-tp btn-light-secondary btn-h-lighter-success btn-a-lighter-success"
                                     data-target="#modal_confirm">
                                     <i class="fa fa-check" class="fa fa-check"></i>
+                                </a>
+                                <a *ngIf="(item.IsKardexAffected !== 'S' && IsReceptionWithLots)"
+                                    href="#" data-toggle="modal"
+                                    (click)="selectRowTableLots(item)"
+                                    class="mx-2px btn radius-1 border-2 btn-xs btn-brc-tp btn-light-secondary btn-h-lighter-success btn-a-lighter-success"
+                                    data-target="#modal_lot_reception">
+                                    <i class="fa fa-boxes"></i>
                                 </a>
                               </div>
                             </div>
@@ -167,6 +200,15 @@
                     <i class="fa fa-check mr-1"></i>
                     Finalizar recepción
                 </a>
+
+                <button
+                    class="btn btn-info btn-bold ml-2 px-4"
+                    type="button"
+                    (click)="print()"
+                >
+                    <i class="fa fa-print mr-1"></i>
+                    Imprimir
+                </button>
 
                 <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4" 
                     type="reset"
@@ -213,6 +255,97 @@
         </button>
         <button type="button" class="btn btn-primary" data-dismiss="modal" (click)="updateQuantity()">
           Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modal_lot_reception" tabindex="-1" role="dialog" aria-labelledby="modal_lot_reception"
+  aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 780px;">
+    <div class="modal-content" style="width: 100%;">
+      <div class="modal-header">
+        <h5 class="modal-title text-primary-d3" id="modal_lot_reception">
+          Recepcionar por lotes
+        </h5>
+
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close" #btnCloseLotReceptionModal>
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+      <div class="modal-body py-3">
+        <div class="mb-2">
+          <div class="text-600">{{ pucharseDetSelect.Product.ProductName }}</div>
+          <div class="text-muted text-90">
+            Solicitado: {{ pucharseDetSelect.NumUnit }} |
+            Recepcionado: {{ getLotReceptionTotal() }} |
+            Pendiente: {{ getLotReceptionPending() }}
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-3">
+            <label class="mb-1">Cantidad</label>
+            <input type="number" min="1" class="form-control" #txtLotNumUnit>
+          </div>
+          <div class="col-md-4">
+            <label class="mb-1">Lote</label>
+            <input type="text" class="form-control" #txtLotNumber>
+          </div>
+          <div class="col-md-3">
+            <label class="mb-1">Vencimiento</label>
+            <input type="date" class="form-control" #txtExpirationDate>
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <button type="button" class="btn btn-blue btn-bold w-100" (click)="addLotReceptionLine()">
+              Agregar
+            </button>
+          </div>
+        </div>
+
+        <div class="alert alert-warning py-2 mt-2 mb-0" *ngIf="LotReceptionList.length > 0 && getLotReceptionTotal() < pucharseDetSelect.NumUnit">
+          La cantidad recepcionada es menor a la cantidad solicitada.
+        </div>
+
+        <div class="table-responsive mt-2" style="max-height: 220px; overflow-y: auto;">
+          <table class="table table-bordered table-hover mb-0">
+            <thead class="bgc-grey-l4 text-90">
+              <tr>
+                <th>Cantidad</th>
+                <th>Lote</th>
+                <th>Vencimiento</th>
+                <th style="width: 70px;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of LotReceptionList; let i = index">
+                <td>{{ item.NumUnit }}</td>
+                <td>{{ item.LotNumber }}</td>
+                <td>{{ item.ExpirationDate | date:'yyyy-MM-dd' }}</td>
+                <td class="text-center">
+                  <button type="button" class="btn btn-xs btn-danger" (click)="removeLotReceptionLine(i)">
+                    <i class="fa fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="LotReceptionList.length === 0">
+                <td colspan="4" class="text-center text-muted">
+                  Sin lotes agregados
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-secondary px-4" data-dismiss="modal">
+          Cerrar
+        </button>
+        <button type="button" class="btn btn-primary" (click)="ConfirmLotReception()">
+          Confirmar recepcion
         </button>
       </div>
     </div>

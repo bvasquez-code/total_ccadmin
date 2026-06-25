@@ -14,6 +14,9 @@ import { PucharseDetConfirmDto } from '../../model/dto/PucharseDetConfirmDto';
 import { StoreEntity } from 'src/app/enterprise/shared/model/entity/StoreEntity';
 import { WarehouseEntity } from 'src/app/enterprise/shared/model/entity/WarehouseEntity';
 import { ActionModalConfirmService } from 'src/app/enterprise/shared/interface/ActionModalConfirmService';
+import { PucharseLotReceptionDto } from '../../model/dto/PucharseLotReceptionDto';
+import { PucharseDetLotConfirmDto } from '../../model/dto/PucharseDetLotConfirmDto';
+import { PucharsePrintService } from '../../service/PucharsePrintService';
 
 @Component({
   selector: 'app-confirmpucharse',
@@ -23,6 +26,10 @@ export class ConfirmpucharseComponent implements IRegisterForm<PucharseRegisterD
 
   @ViewChild('txtProductCod') txtProductCod!: ElementRef<HTMLInputElement>;
   @ViewChild('txtNumUnit') txtNumUnit!: ElementRef<HTMLInputElement>;
+  @ViewChild('txtLotNumUnit') txtLotNumUnit!: ElementRef<HTMLInputElement>;
+  @ViewChild('txtLotNumber') txtLotNumber!: ElementRef<HTMLInputElement>;
+  @ViewChild('txtExpirationDate') txtExpirationDate!: ElementRef<HTMLInputElement>;
+  @ViewChild('btnCloseLotReceptionModal') btnCloseLotReceptionModal!: ElementRef<HTMLButtonElement>;
   
   
   PucharseReqCod : string = "";
@@ -32,6 +39,8 @@ export class ConfirmpucharseComponent implements IRegisterForm<PucharseRegisterD
   Store : StoreEntity = new StoreEntity();
   WarehouseList : WarehouseEntity[] = [];
   pucharseDetSelect : PucharseDetEntity = new PucharseDetEntity();
+  IsReceptionWithLots: boolean = false;
+  LotReceptionList: PucharseLotReceptionDto[] = [];
 
   constructor(
     private pucharseService : PucharseService,
@@ -39,7 +48,8 @@ export class ConfirmpucharseComponent implements IRegisterForm<PucharseRegisterD
     private pucharseDetService : PucharseDetService,
     private dataSesionService : DataSesionService,
     private router: Router,
-    private toastrService : ToastrService
+    private toastrService : ToastrService,
+    private pucharsePrintService: PucharsePrintService
   )
   {
     this.GetParamUrl(this.router);
@@ -173,6 +183,10 @@ export class ConfirmpucharseComponent implements IRegisterForm<PucharseRegisterD
   }
 
   async Confirm(pucharseDet : PucharseDetEntity){
+    await this.confirmDetail(pucharseDet);
+  }
+
+  private async confirmDetail(pucharseDet : PucharseDetEntity): Promise<boolean>{
     const pucharseDetConfirmDto : PucharseDetConfirmDto = new PucharseDetConfirmDto();
 
     pucharseDetConfirmDto.pucharseDet = pucharseDet;
@@ -195,7 +209,10 @@ export class ConfirmpucharseComponent implements IRegisterForm<PucharseRegisterD
         pucharseDet.IsKardexAffected = "S";
       }
 
+      return true;
     }
+
+    return false;
     
   }
 
@@ -205,12 +222,163 @@ export class ConfirmpucharseComponent implements IRegisterForm<PucharseRegisterD
     this.txtNumUnit.nativeElement.value = String(pucharseDet.NumUnit);
   }
 
+  selectRowTableLots(pucharseDet : PucharseDetEntity)
+  {
+    this.pucharseDetSelect = pucharseDet;
+    this.LotReceptionList = [];
+    this.clearLotReceptionForm();
+  }
+
+  addLotReceptionLine(): void
+  {
+    try {
+      const numUnit = Number(this.txtLotNumUnit.nativeElement.value);
+      const lotNumber = this.txtLotNumber.nativeElement.value.trim();
+      const expirationDate = this.txtExpirationDate.nativeElement.value;
+
+      if (!numUnit || numUnit <= 0) {
+        throw new Error("Ingrese una cantidad valida");
+      }
+
+      if (!lotNumber) {
+        throw new Error("Ingrese el lote");
+      }
+
+      if (!expirationDate) {
+        throw new Error("Ingrese la fecha de vencimiento");
+      }
+
+      if ((this.getLotReceptionTotal() + numUnit) > this.pucharseDetSelect.NumUnit) {
+        throw new Error("La cantidad recepcionada no puede superar la cantidad solicitada");
+      }
+
+      const existingLot = this.LotReceptionList.find(e => e.LotNumber === lotNumber && e.ExpirationDate === expirationDate);
+
+      if (existingLot) {
+        existingLot.NumUnit += numUnit;
+      } else {
+        this.LotReceptionList.push(new PucharseLotReceptionDto({
+          NumUnit: numUnit,
+          LotNumber: lotNumber,
+          ExpirationDate: expirationDate
+        }));
+      }
+
+      this.clearLotReceptionForm();
+    } catch (e: any) {
+      this.toastrService.error(e.message);
+    }
+  }
+
+  removeLotReceptionLine(index: number): void
+  {
+    this.LotReceptionList.splice(index, 1);
+  }
+
+  getLotReceptionTotal(): number
+  {
+    return this.LotReceptionList.reduce((total, item) => total + Number(item.NumUnit || 0), 0);
+  }
+
+  getLotReceptionPending(): number
+  {
+    return Number(this.pucharseDetSelect.NumUnit || 0) - this.getLotReceptionTotal();
+  }
+
+  async ConfirmLotReception(): Promise<void>
+  {
+    try {
+      if (this.LotReceptionList.length === 0) {
+        throw new Error("Debe agregar al menos un lote");
+      }
+
+      if (this.getLotReceptionTotal() < this.pucharseDetSelect.NumUnit) {
+        this.toastrService.warning("La cantidad recepcionada es menor a la cantidad solicitada");
+      }
+
+      const pucharseDetLotConfirmDto = new PucharseDetLotConfirmDto();
+      pucharseDetLotConfirmDto.pucharseDet = this.pucharseDetSelect;
+      pucharseDetLotConfirmDto.WarehouseCod = this.WarehouseList[0].WarehouseCod;
+      pucharseDetLotConfirmDto.lotDetailList = this.LotReceptionList.map(item => this.createLotDetail(item));
+
+      const rpt = await this.pucharseDetService.ConfirmWithLots(pucharseDetLotConfirmDto);
+
+      if (!rpt.ErrorStatus) {
+        const confirmedDetailList: PucharseDetEntity[] = rpt.Data.lotDetailList || pucharseDetLotConfirmDto.lotDetailList;
+        this.replaceReceptionLine(this.pucharseDetSelect, confirmedDetailList);
+        this.LotReceptionList = [];
+        this.btnCloseLotReceptionModal.nativeElement.click();
+      } else {
+        this.toastrService.error("Ocurrio un error");
+      }
+    } catch (e: any) {
+      this.toastrService.error(e.message);
+    }
+  }
+
+  private createLotDetail(item: PucharseLotReceptionDto): PucharseDetEntity
+  {
+    const detail = new PucharseDetEntity();
+    detail.PucharseCod = this.pucharseDetSelect.PucharseCod;
+    detail.ItemNumber = this.pucharseDetSelect.ItemNumber;
+    detail.ProductCod = this.pucharseDetSelect.ProductCod;
+    detail.Variant = this.pucharseDetSelect.Variant;
+    detail.NumUnit = item.NumUnit;
+    detail.NumUnitDelivered = item.NumUnit;
+    detail.NumUnitPrice = this.pucharseDetSelect.NumUnitPrice;
+    detail.NumTotalPrice = Number(this.pucharseDetSelect.NumUnitPrice || 0) * item.NumUnit;
+    detail.IsKardexAffected = "S";
+    detail.LotNumber = item.LotNumber;
+    detail.ExpirationDate = item.ExpirationDate;
+    detail.Product = this.pucharseDetSelect.Product;
+
+    return detail;
+  }
+
+  private replaceReceptionLine(origin: PucharseDetEntity, confirmedDetailList: PucharseDetEntity[]): void
+  {
+    const index = this.PucharseRegister.DetailList.findIndex(item => this.sameDetailLine(item, origin));
+    const detailList = confirmedDetailList.map(item => {
+      item.Product = origin.Product;
+      item.NumUnitDelivered = item.NumUnitDelivered || item.NumUnit;
+      item.IsKardexAffected = "S";
+      return item;
+    });
+
+    if (index >= 0) {
+      this.PucharseRegister.DetailList.splice(index, 1, ...detailList);
+    }
+  }
+
+  private clearLotReceptionForm(): void
+  {
+    setTimeout(() => {
+      if (this.txtLotNumUnit) this.txtLotNumUnit.nativeElement.value = "";
+      if (this.txtLotNumber) this.txtLotNumber.nativeElement.value = "";
+      if (this.txtExpirationDate) this.txtExpirationDate.nativeElement.value = "";
+    });
+  }
+
+  print(): void
+  {
+    const receivedRows = this.PucharseRegister.DetailList.filter(item => item.IsKardexAffected === "S");
+
+    if (receivedRows.length === 0) {
+      this.toastrService.error("No hay productos recibidos para imprimir");
+      return;
+    }
+
+    this.pucharsePrintService.printReception(this.PucharseDetails, receivedRows, this.Store, this.WarehouseList);
+  }
+
   async EndReception()
   {
     const rpt = await this.pucharseService.EndReception(this.PucharseDetails.Headboard);
 
     if(!rpt.ErrorStatus){
       this.toastrService.success("Operación realizada con exito");
+      const receivedRows = this.PucharseRegister.DetailList.filter(item => item.IsKardexAffected === "S");
+      this.pucharsePrintService.printReception(this.PucharseDetails, receivedRows, this.Store, this.WarehouseList);
       setTimeout(() => {
         this.router.navigate(['/enterprise/pucharse/pages/listreception']);
       }, 1000);

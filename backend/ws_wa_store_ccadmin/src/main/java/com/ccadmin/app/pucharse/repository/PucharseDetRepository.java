@@ -14,4 +14,9 @@ public interface PucharseDetRepository extends JpaRepository<PucharseDetEntity, 
             select * from pucharse_det where PucharseCod = :PucharseCod and Status = 'A'
             """,nativeQuery = true)
     public List<PucharseDetEntity> findAllActive(@Param("PucharseCod") String PucharseCod);
+
+    @Query( value = """
+            select coalesce(max(ItemNumber),0) from pucharse_det where PucharseCod = :PucharseCod
+            """,nativeQuery = true)
+    public int findMaxItemNumber(@Param("PucharseCod") String PucharseCod);
 }
