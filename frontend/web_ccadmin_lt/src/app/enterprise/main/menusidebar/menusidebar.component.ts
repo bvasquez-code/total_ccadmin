@@ -1,25 +1,10 @@
 import { DOCUMENT } from '@angular/common';
 import { Component, Inject, OnInit } from '@angular/core';
+import { SidebarMenuConfigDto } from 'src/app/enterprise/menu/model/dto/SidebarMenuConfigDto';
+import { SidebarSubMenuConfigDto } from 'src/app/enterprise/menu/model/dto/SidebarSubMenuConfigDto';
 import { MenuPagina } from 'src/app/enterprise/menu/model/entity/MenuPagina';
 import { SubMenuPagina } from 'src/app/enterprise/menu/model/entity/SubMenuPagina';
 import { DataSesionService } from '../../compartido/service/datasesion.service';
-
-interface SidebarSubMenuConfig {
-  permission: string;
-  label: string;
-  url: string;
-  urlPosition?: string;
-  urlShade?: string;
-  icon?: string;
-  isVisible?: boolean;
-}
-
-interface SidebarMenuConfig {
-  permission: string;
-  label: string;
-  icon: string;
-  children: SidebarSubMenuConfig[];
-}
 
 @Component({
   selector: 'app-menusidebar',
@@ -32,8 +17,8 @@ export class MenusidebarComponent implements OnInit {
   public isOpenMenu: boolean = false;
 
   private readonly defaultIcon = "nav-icon fa fa-cube";
-  private readonly menuConfig: SidebarMenuConfig[] = [
-    {
+  private readonly menuConfig: SidebarMenuConfigDto[] = [
+    new SidebarMenuConfigDto({
       permission: "AT000000",
       label: "Administrar tienda",
       icon: "nav-icon fa fa-store",
@@ -43,8 +28,8 @@ export class MenusidebarComponent implements OnInit {
         { permission: "AT000003", label: "Bandeja de Proveedores", url: "enterprise/supplier/pages/listsupplier" },
         { permission: "AT000004", label: "Creacion de proveedores", url: "enterprise/supplier/pages/createsupplier", urlShade: "enterprise/supplier/pages/listsupplier", isVisible: false }
       ]
-    },
-    {
+    }),
+    new SidebarMenuConfigDto({
       permission: "CJ000000",
       label: "Modulo Caja",
       icon: "nav-icon fa fa-cash-register",
@@ -57,8 +42,8 @@ export class MenusidebarComponent implements OnInit {
         { permission: "CJ000004", label: "Talonarios", url: "enterprise/cash/pages/listcounterfoil" },
         { permission: "CJ000005", label: "Crear/Editar Talonario", url: "enterprise/cash/pages/createcounterfoil", urlShade: "enterprise/cash/pages/listcounterfoil", isVisible: false }
       ]
-    },
-    {
+    }),
+    new SidebarMenuConfigDto({
       permission: "CO000000",
       label: "compras",
       icon: "nav-icon fa fa-shopping-cart",
@@ -68,8 +53,8 @@ export class MenusidebarComponent implements OnInit {
         { permission: "CO000003", label: "Creacion de compras", url: "enterprise/pucharse/pages/createpucharse", urlShade: "enterprise/pucharse/pages/listpucharse", isVisible: false },
         { permission: "CO000004", label: "Proceso de recepcion de compras", url: "enterprise/pucharse/pages/confirmpucharse", urlShade: "enterprise/pucharse/pages/listpucharse", isVisible: false }
       ]
-    },
-    {
+    }),
+    new SidebarMenuConfigDto({
       permission: "PR000000",
       label: "productos",
       icon: "nav-icon fa fa-boxes",
@@ -84,8 +69,8 @@ export class MenusidebarComponent implements OnInit {
         { permission: "PR000010", label: "Creacion masiva de Marcas", url: "enterprise/product/pages/createbrandmassive", urlShade: "enterprise/product/pages/listBrand", isVisible: false },
         { permission: "PR000011", label: "Creacion masiva de categorias", url: "enterprise/product/pages/createcategorymassive", urlShade: "enterprise/product/pages/listCategory", isVisible: false }
       ]
-    },
-    {
+    }),
+    new SidebarMenuConfigDto({
       permission: "SE000000",
       label: "Seguimiento",
       icon: "nav-icon fa fa-chart-line",
@@ -95,8 +80,8 @@ export class MenusidebarComponent implements OnInit {
         { permission: "SE000001", label: "Pagos", url: "enterprise/trxpayment/pages/listtrxpayment" },
         { permission: "SE000001", label: "Ver pago", url: "enterprise/trxpayment/pages/viewtrxpayment", urlShade: "enterprise/trxpayment/pages/listtrxpayment", isVisible: false }
       ]
-    },
-    {
+    }),
+    new SidebarMenuConfigDto({
       permission: "SI000000",
       label: "sistema",
       icon: "nav-icon fa fa-cogs",
@@ -113,8 +98,8 @@ export class MenusidebarComponent implements OnInit {
         { permission: "SI000010", label: "Crear grupo de configuracion", url: "enterprise/businessconfiggroup/pages/createbusinessconfiggroup", urlShade: "enterprise/businessconfiggroup/pages/listbusinessconfiggroup", isVisible: false },
         { permission: "SI000011", label: "Administrar valores de configuracion", url: "enterprise/businessconfiggroup/pages/createbusinessconfig", urlShade: "enterprise/businessconfiggroup/pages/listbusinessconfiggroup", isVisible: false }
       ]
-    },
-    {
+    }),
+    new SidebarMenuConfigDto({
       permission: "TR000000",
       label: "Transferencias",
       icon: "nav-icon fa fa-truck",
@@ -126,8 +111,8 @@ export class MenusidebarComponent implements OnInit {
         { permission: "TR000005", label: "Despachar transferencia", url: "enterprise/transfer/pages/dispatchtransfer", urlShade: "enterprise/transfer/pages/listtransferdispatch", isVisible: false },
         { permission: "TR000006", label: "Recepcionar transferencia", url: "enterprise/transfer/pages/receivetransfer", urlShade: "enterprise/transfer/pages/listtransferdispatch", isVisible: false }
       ]
-    },
-    {
+    }),
+    new SidebarMenuConfigDto({
       permission: "US000000",
       label: "usuarios",
       icon: "nav-icon fa fa-users",
@@ -137,8 +122,8 @@ export class MenusidebarComponent implements OnInit {
         { permission: "US000003", label: "Creacion de usuarios", url: "enterprise/user/pages/createuser", urlShade: "enterprise/user/pages/listuser", isVisible: false },
         { permission: "US000004", label: "Creacion de perfiles", url: "enterprise/user/pages/createprofile", urlShade: "enterprise/user/pages/listprofile", isVisible: false }
       ]
-    },
-    {
+    }),
+    new SidebarMenuConfigDto({
       permission: "VT000000",
       label: "ventas",
       icon: "nav-icon fa fa-shopping-bag",
@@ -153,7 +138,7 @@ export class MenusidebarComponent implements OnInit {
         { permission: "VT000008", label: "Devolver stock de nota de credito", url: "enterprise/sale/pages/returnstockcreditnote", urlShade: "enterprise/sale/pages/listcreditnote", isVisible: false },
         { permission: "VT000009", label: "Ver nota de credito", url: "enterprise/sale/pages/viewcreditnote", urlShade: "enterprise/sale/pages/listcreditnote", isVisible: false }
       ]
-    }
+    })
   ];
 
   constructor(
@@ -173,7 +158,7 @@ export class MenusidebarComponent implements OnInit {
     this.markActiveMenu();
   }
 
-  private addMenuIfAllowed(config: SidebarMenuConfig): void {
+  private addMenuIfAllowed(config: SidebarMenuConfigDto): void {
     if (!this.permissionExists(config.permission)) {
       return;
     }
@@ -207,7 +192,7 @@ export class MenusidebarComponent implements OnInit {
     return mainMenu;
   }
 
-  private createSubMenu(config: SidebarSubMenuConfig): SubMenuPagina {
+  private createSubMenu(config: SidebarSubMenuConfigDto): SubMenuPagina {
     const subMenu: SubMenuPagina = new SubMenuPagina();
     subMenu.url = config.url;
     subMenu.url_position = config.urlPosition || config.url;
