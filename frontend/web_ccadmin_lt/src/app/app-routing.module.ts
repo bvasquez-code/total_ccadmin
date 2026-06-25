@@ -64,8 +64,14 @@ import { CreatestoreComponent } from './enterprise/store/pages/createstore/creat
 import { ListbusinessconfiggroupComponent } from './enterprise/businessconfiggroup/pages/listbusinessconfiggroup/listbusinessconfiggroup.component';
 import { CreatebusinessconfiggroupComponent } from './enterprise/businessconfiggroup/pages/createbusinessconfiggroup/createbusinessconfiggroup.component';
 import { CreatebusinessconfigComponent } from './enterprise/businessconfiggroup/pages/createbusinessconfig/createbusinessconfig.component';
+import { MenuAccessGuard } from './enterprise/menu/service/menu-access.guard';
+import { PermissiondeniedComponent } from './enterprise/shared/component/permissiondenied/permissiondenied.component';
 
 const routes: Routes = [
+  {
+    path: 'pages/permissiondenied',
+    component: PermissiondeniedComponent
+  },
   {
     path: '',
     component: MainComponent
@@ -86,6 +92,7 @@ const routes: Routes = [
   },
   {
     path: '',
+    canActivateChild: [MenuAccessGuard],
     children: [
       {
         path: 'enterprise/sale/pages/createpresale',
@@ -123,6 +130,7 @@ const routes: Routes = [
   },
   {
     path: '',
+    canActivateChild: [MenuAccessGuard],
     children: [
       {
         path: 'enterprise/menu/pages/listmenu',
@@ -156,6 +164,7 @@ const routes: Routes = [
   },
   {
     path: '',
+    canActivateChild: [MenuAccessGuard],
     children: [
       {
         path: 'enterprise/user/pages/listuser',
@@ -177,6 +186,7 @@ const routes: Routes = [
   },
   {
     path: '',
+    canActivateChild: [MenuAccessGuard],
     children: [
       {
         path: 'enterprise/client/pages/listclient',
@@ -190,6 +200,7 @@ const routes: Routes = [
   },
   {
     path: '',
+    canActivateChild: [MenuAccessGuard],
     children: [
       {
         path: 'enterprise/supplier/pages/listsupplier',
@@ -203,6 +214,7 @@ const routes: Routes = [
   },
   {
     path: '',
+    canActivateChild: [MenuAccessGuard],
     children: [
       {
         path: 'enterprise/product/pages/listProduct',
@@ -248,6 +260,7 @@ const routes: Routes = [
   },
   {
     path: '',
+    canActivateChild: [MenuAccessGuard],
     children: [
       {
         path: 'enterprise/pucharse/pages/listpucharse',
@@ -274,6 +287,7 @@ const routes: Routes = [
   },
   {
     path: '',
+    canActivateChild: [MenuAccessGuard],
     children: [
       { path: 'enterprise/cash/pages/listcashregister', component: ListcashregisterComponent },
       { path: 'enterprise/cash/pages/createcashregister', component: CreatecashregisterComponent },
@@ -290,6 +304,7 @@ const routes: Routes = [
 
   {
     path: '',
+    canActivateChild: [MenuAccessGuard],
     children: [
       {
         path: 'enterprise/trxpayment/pages/listtrxpayment',
@@ -307,6 +322,7 @@ const routes: Routes = [
   },
   {
     path: '',
+    canActivateChild: [MenuAccessGuard],
     children: [
       {
         path: 'enterprise/system/pages/appfile',
@@ -332,6 +348,7 @@ const routes: Routes = [
   },
   {
     path: '',
+    canActivateChild: [MenuAccessGuard],
     children: [
       { path: 'enterprise/transfer/pages/listtransferrequest', component: ListtransferrequestComponent },
       { path: 'enterprise/transfer/pages/createtransferrequest', component: CreatetransferrequestComponent },

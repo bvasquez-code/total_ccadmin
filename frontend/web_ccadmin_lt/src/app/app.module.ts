@@ -90,6 +90,7 @@ import { CreatestoreComponent } from './enterprise/store/pages/createstore/creat
 import { ListbusinessconfiggroupComponent } from './enterprise/businessconfiggroup/pages/listbusinessconfiggroup/listbusinessconfiggroup.component';
 import { CreatebusinessconfiggroupComponent } from './enterprise/businessconfiggroup/pages/createbusinessconfiggroup/createbusinessconfiggroup.component';
 import { CreatebusinessconfigComponent } from './enterprise/businessconfiggroup/pages/createbusinessconfig/createbusinessconfig.component';
+import { PermissiondeniedComponent } from './enterprise/shared/component/permissiondenied/permissiondenied.component';
 
 @NgModule({
   declarations: [
@@ -172,7 +173,8 @@ import { CreatebusinessconfigComponent } from './enterprise/businessconfiggroup/
     CreatestoreComponent,
     ListbusinessconfiggroupComponent,
     CreatebusinessconfiggroupComponent,
-    CreatebusinessconfigComponent
+    CreatebusinessconfigComponent,
+    PermissiondeniedComponent
   ],
   imports: [
     BrowserModule,

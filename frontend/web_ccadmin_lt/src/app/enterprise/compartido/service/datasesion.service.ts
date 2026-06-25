@@ -27,7 +27,7 @@ export class DataSesionService {
         this.sessionStorageDto.SessionID = Number(this.ObtenerKeySesion( sessionStorage.getItem('SessionID') ));
         this.sessionStorageDto.StoreCod = this.ObtenerKeySesion( sessionStorage.getItem('StoreCod') );
         this.sessionStorageDto.Names = this.ObtenerKeySesion( sessionStorage.getItem('Names') );
-        this.sessionStorageDto.AppMenuPermissions = JSON.parse(this.ObtenerKeySesion( sessionStorage.getItem('AppMenuPermissions') ));
+        this.sessionStorageDto.AppMenuPermissions = this.obtenerPermisosMenuSesion();
     }
 
     private ObtenerKeySesion( valor : any ) : string
@@ -47,11 +47,27 @@ export class DataSesionService {
 
     PermissionExists(MenuCod : string):boolean
     {
-        let AppMenuPermissions : AppMenuEntity[] = this.getSessionStorageDto().AppMenuPermissions;
+        let AppMenuPermissions : AppMenuEntity[] = this.getSessionStorageDto().AppMenuPermissions || [];
         if(AppMenuPermissions.find( e => e.MenuCod === MenuCod )){
             return true;
         }else{
             return false;
+        }
+    }
+
+    private obtenerPermisosMenuSesion(): AppMenuEntity[]
+    {
+        const appMenuPermissions = this.ObtenerKeySesion(sessionStorage.getItem('AppMenuPermissions'));
+
+        if (!appMenuPermissions) {
+            return [];
+        }
+
+        try {
+            const permisos = JSON.parse(appMenuPermissions);
+            return Array.isArray(permisos) ? permisos : [];
+        } catch (error) {
+            return [];
         }
     }
 
