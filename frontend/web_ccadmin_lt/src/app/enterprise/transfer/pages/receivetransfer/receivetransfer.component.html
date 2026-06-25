@@ -1,0 +1,169 @@
+<div role="main" class="main-content">
+  <div class="page-content container container-plus">
+    <div class="card-header">
+      <h3 class="card-title text-125 text-primary-d2">
+        <i class="fa fa-truck text-dark-l3 mr-1"></i>
+        Recepcionar transferencia {{ TransferReqCod }}
+      </h3>
+    </div>
+
+    <div class="card dcard">
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <h5 class="text-primary">Datos de la solicitud</h5>
+            <p><strong>Origen:</strong> {{ transferDetail.transferHead.StoreCodOrigin }}</p>
+            <p><strong>Destino:</strong> {{ transferDetail.transferHead.StoreCodDest }}</p>
+            <p><strong>Estado:</strong> {{ transferDetail.transferHead.TransferStatus }}</p>
+          </div>
+          <div class="col-md-6 mb-3">
+
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h5 class="text-primary mb-0">Detalle de productos</h5>
+              <button class="btn btn-sm btn-outline-success" (click)="confirmAll()">
+                <i class="fa fa-check-double mr-1"></i> Confirmar Todos
+              </button>
+            </div>
+
+            <div class="form-group mb-3">
+              <label>Escaneo o Ingreso Manual</label>
+              <div class="input-group">
+                <input type="text" class="form-control" placeholder="Escanee o ingrese código..." #txtSearchBarcode
+                  (keyup.enter)="searchBarcode()">
+                <div class="input-group-append">
+                  <button class="btn btn-primary" type="button" (click)="searchBarcode()">
+                    <i class="fa fa-search"></i> Buscar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-bordered">
+                <thead>
+                  <tr>
+                    <th class="text-center" style="width: 50px;">
+                      <i class="fa fa-check"></i>
+                    </th>
+                    <th>Producto</th>
+                    <th class="text-center">Cant. Env.</th>
+                    <th class="text-center">Cant. Rec.</th>
+                    <th class="text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let det of detailList" [class.bg-light-success]="det.NumUnitReception > 0">
+                    <td class="text-center align-middle">
+                      <input type="checkbox" [checked]="det.NumUnitReception > 0"
+                        (change)="toggleProductCheck(det, $event)" style="transform: scale(1.5);">
+                    </td>
+                    <td class="align-middle">{{ det.ProductCod +' - '+ det.Product.ProductName || det.ProductCod }}</td>
+                    <td class="text-center align-middle">{{ det.NumUnit }}</td>
+                    <td class="text-center align-middle">{{ det.NumUnitReception }}</td>
+                    <td class="text-center align-middle">
+                      <button class="btn btn-sm btn-info" (click)="openEditModal(det)" data-toggle="modal"
+                        data-target="#modalEditQty">
+                        <i class="fa fa-edit"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="detailList.length === 0">
+                    <td colspan="5" class="text-center text-muted">Sin productos</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-12 mb-3">
+            <label>Observación</label>
+            <textarea class="form-control" rows="2" #txtObservation></textarea>
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <button class="btn btn-success" (click)="preReceive()">
+            Recepcionar mercadería
+          </button>
+          <a class="btn btn-secondary ml-2" href="enterprise/transfer/pages/listtransferrequest">Volver</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<app-modalconfirm [id]="'modal_receive'" [title]="'Confirmar recepción'"
+  [message]="'¿Desea confirmar la recepción de la transferencia?'" [action]="this">
+</app-modalconfirm>
+
+<!-- Modal Edit Quantity -->
+<div class="modal fade" id="modalEditQty" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-primary-d3">
+          Editar Cantidad
+        </h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close" #btnCloseModalEdit>
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Producto:</label>
+          <input type="text" class="form-control" [value]="selectedDetail?.Product?.ProductName" disabled>
+        </div>
+        <div class="form-group">
+          <label>Cantidad Recibida:</label>
+          <input type="number" class="form-control" #txtEditQty (keyup.enter)="saveQuantity()">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="saveQuantity()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Scan Barcode -->
+<div class="modal fade" id="modalScanBarcode" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static"
+  data-keyboard="false">
+  <div class="modal-dialog modal-sm" role="document">
+    <div class="modal-content">
+      <div class="modal-header bg-primary">
+        <h5 class="modal-title text-white">
+          Validación Física
+        </h5>
+        <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" #btnCloseScanModal>
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Escanear código:</label>
+          <input type="text" class="form-control border-primary" placeholder="Siga escaneando..." #txtSearchBarcodeModal
+            (keyup.enter)="searchBarcodeInModal()">
+        </div>
+        <div class="alert alert-info py-2 px-3">
+          <small class="d-block mb-1"><strong>Producto actual:</strong></small>
+          <span class="d-block text-110">{{ scannedProduct?.ProductName || scannedProduct?.ProductCod }}</span>
+        </div>
+        <div class="form-group text-center mt-4">
+          <label class="text-muted">Cantidad leída</label>
+          <div class="display-4 font-weight-bold text-success">{{ scanCounter }}</div>
+        </div>
+      </div>
+
+      <div class="modal-footer justify-content-between">
+        <button type="button" class="btn btn-outline-secondary" data-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-success" (click)="saveScanQuantity()">Guardar Conteo</button>
+      </div>
+    </div>
+  </div>
+</div>

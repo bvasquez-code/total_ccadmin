@@ -1,0 +1,235 @@
+<div role="main" class="main-content">
+  <div class="page-content container container-plus">
+    <div class="card-header">
+      <h3 class="card-title text-125 text-primary-d2">
+        <i class="far fa-edit text-dark-l3 mr-1"></i>
+        Registrar Compra
+      </h3>
+    </div>
+
+    <div class="row">
+      <div class="col-12">
+        <div class="card dcard">
+          <div class="card-body px-1 px-md-3">
+            <!-- Header Fields -->
+            <div class="row">
+              <div class="col-md-4 mb-3">
+                <label>RUC Distribuidor</label>
+                <div class="input-group">
+                  <input type="text" class="form-control" #txtDealerCod maxlength="11" (input)="supplierInfo=''; supplierNotFound=false">
+                  <div class="input-group-append">
+                    <button class="btn btn-primary" type="button" (click)="FindSupplierByRuc()">
+                      <i class="fa fa-search"></i>
+                    </button>
+                  </div>
+                </div>
+                <div class="text-success mt-1" *ngIf="supplierInfo">
+                  Proveedor: {{ supplierInfo }}
+                </div>
+                <div class="text-danger mt-1" *ngIf="supplierNotFound">
+                  Proveedor no registrado.
+                  <a href="javascript:void(0)" data-toggle="modal" data-target="#modalCreateSupplier" (click)="openCreateSupplierModal()">
+                    Registrar proveedor
+                  </a>
+                </div>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label>Operación Referencia</label>
+                <input type="text" class="form-control" #txtExternalCod>
+              </div>
+              <div class="col-md-4 mb-3">
+                <label>Monto Total</label>
+                <input type="number" class="form-control" [value]="pucharseRequestRegister.Headboard.NumTotalPrice"
+                  readonly>
+              </div>
+              <div class="col-md-12 mb-3">
+                <label>Comentario</label>
+                <textarea class="form-control" rows="2" #txtCommenter></textarea>
+              </div>
+            </div>
+
+            <hr />
+
+            <div class="row">
+              <!-- Left Column: Search & Product List -->
+              <div class="col-md-6">
+                <h5 class="text-primary">Productos</h5>
+                <div class="d-flex align-items-center mb-2">
+                  <input type="text" class="form-control mr-2" placeholder="Buscar producto" #txtSearch
+                    (keyup.enter)="FindAllProduct(1)" />
+                  <button class="btn btn-primary" (click)="FindAllProduct(1)">Buscar</button>
+                  <button class="btn btn-success ml-2" data-toggle="modal" data-target="#modalCreateProduct"
+                    style="white-space: nowrap;" (click)="openCreateProductModal()">
+                    <i class="fa fa-plus"></i> Crear Producto
+                  </button>
+                </div>
+
+                <div class="table-responsive">
+                  <table class="table table-bordered">
+                    <thead>
+                      <tr>
+                        <th>Código</th>
+                        <th>Producto</th>
+                        <th class="text-center">Seleccionar</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let product of productList">
+                        <td>{{ product.ProductCod }}</td>
+                        <td>
+                          {{ product.ProductName }}
+                          <i class="fa fa-check text-success ml-2" *ngIf="isProductSelected(product)"></i>
+                        </td>
+                        <td class="text-center">
+                          <a class="btn btn-sm btn-outline-primary" (click)="selectProduct(product)" data-toggle="modal"
+                            data-target="#modalProduct">
+                            Elegir
+                          </a>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <!-- Pagination (Simple Logic based on previous implementation) -->
+                  <div class="d-flex justify-content-end mt-2">
+                    <a type="button" class="btn btn-sm btn-secondary mr-1" (click)="FindAllProductNext(-1)">Prev</a>
+                    <a type="button" class="btn btn-sm btn-secondary" (click)="FindAllProductNext(1)">Next</a>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Column: Detail List -->
+              <div class="col-md-6">
+                <h5 class="text-primary">Detalle de solicitud</h5>
+                <div class="table-responsive">
+                  <table class="table table-bordered">
+                    <thead>
+                      <tr>
+                        <th>Producto</th>
+                        <th class="text-center">Cant.</th>
+                        <th class="text-center">Precio</th>
+                        <th class="text-center">Total</th>
+                        <th class="text-center">Opciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let detail of pucharseRequestRegister.DetailList">
+                        <td>{{ detail.Product.ProductName }}</td>
+                        <td class="text-center">{{ detail.NumUnit }}</td>
+                        <td class="text-right">{{ detail.NumUnitPrice | FormatoMonedaPeruana : false }}</td>
+                        <td class="text-right">{{ detail.NumTotalPrice | FormatoMonedaPeruana : false }}</td>
+                        <td class="text-center">
+                          <button class="btn btn-sm btn-info mr-1" (click)="editDetail(detail)" data-toggle="modal"
+                            data-target="#modalProduct">
+                            <i class="fa fa-edit"></i>
+                          </button>
+                          <button class="btn btn-sm btn-danger" (click)="removeProduct(detail)">
+                            <i class="fa fa-trash"></i>
+                          </button>
+                        </td>
+                      </tr>
+                      <tr *ngIf="pucharseRequestRegister.DetailList.length === 0">
+                        <td colspan="5" class="text-center text-muted">Sin productos seleccionados</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-3">
+              <button class="btn btn-primary" (click)="Save()">Guardar Compra</button>
+              <a class="btn btn-secondary ml-2" href="enterprise/pucharse/pages/listpucharse">Cancelar</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Create Supplier -->
+<div class="modal fade" id="modalCreateSupplier" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
+    <div class="modal-content mx-auto" style="width: 60%;">
+      <div class="modal-header">
+        <h5 class="modal-title text-primary-d3">
+          Crear Nuevo Proveedor
+        </h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close" #btnCloseModalCreateSupplier>
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+      <div class="modal-body p-0">
+        <app-createsupplier
+          *ngIf="showCreateSupplier"
+          [InvokeType]="'modal'"
+          [InputDocumentType]="'06'"
+          [InputDocumentNum]="txtDealerCod.value"
+          (ResultForm)="handleSupplierCreated($event)">
+        </app-createsupplier>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Product -->
+<div class="modal fade" id="modalProduct" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-primary-d3">
+          Agregar / Editar Producto
+        </h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close" #btnCloseModal>
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Producto:</label>
+          <input type="text" class="form-control" [value]="productSelect.ProductName" disabled>
+        </div>
+        <div class="form-group row">
+          <div class="col-sm-6">
+            <label>Cantidad:</label>
+            <input type="number" class="form-control" #txtNumUnit (keyup.enter)="AddProduct()">
+          </div>
+          <div class="col-sm-6">
+            <label>Precio Unitario:</label>
+            <input type="number" class="form-control" #txtNumUnitPrice (keyup.enter)="AddProduct()">
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="AddProduct()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Create Product -->
+<div class="modal fade" id="modalCreateProduct" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-xl" role="document">
+    <div class="modal-content mx-auto" style="width: 60%;">
+      <div class="modal-header">
+        <h5 class="modal-title text-primary-d3">
+          Crear Nuevo Producto
+        </h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close" #btnCloseModalCreateProduct>
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+      <div class="modal-body p-0">
+        <app-createproduct *ngIf="showCreateProduct" [isModal]="true" (ProductCreated)="handleProductCreated($event)"
+          (CancelModal)="handleCancelCreateProduct()">
+        </app-createproduct>
+      </div>
+    </div>
+  </div>
+</div>

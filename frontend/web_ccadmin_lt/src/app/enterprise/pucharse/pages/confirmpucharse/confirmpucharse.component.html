@@ -1,0 +1,238 @@
+<div role="main" class="main-content">
+
+  <div class="page-content container container-plus">
+    <div class="card acard mt-2 mt-lg-3">
+      <div class="card-header">
+        <h3 class="card-title text-125 text-primary-d2">
+          <i class="far fa-edit text-dark-l3 mr-1"></i>
+          Recepción de productos
+        </h3>
+      </div>
+
+      <div class="card-body px-3 pb-1">
+        <form class="mt-lg-3" autocomplete="off">
+
+          <div class="form-group row">
+            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+              <label for="id-form-field-1" class="mb-0">
+                CODIGO DE COMPRA
+              </label>
+            </div>
+
+            <div class="col-sm-9">
+              <input type="text" class="form-control col-sm-8 col-md-6" value="{{this.PucharseDetails.Headboard.PucharseCod}}" disabled>
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+              <label for="id-form-field-1" class="mb-0">
+                CODIGO DE SOLICITUD
+              </label>
+            </div>
+
+            <div class="col-sm-9">
+              <input type="text" class="form-control col-sm-8 col-md-6" value="{{this.PucharseDetails.Headboard.PucharseReqCod}}" disabled>
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+              <label for="id-form-field-1" class="mb-0">
+                RUC DISTRIBUIDOR
+              </label>
+            </div>
+
+            <div class="col-sm-9">
+              <input type="text" class="form-control col-sm-8 col-md-6" value="{{this.PucharseDetails.Headboard.DealerCod}}" disabled>
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+              <label for="id-form-field-1" class="mb-0">
+                OPERCIÓN REFERENCIA
+              </label>
+            </div>
+
+            <div class="col-sm-9">
+              <input type="text" class="form-control col-sm-8 col-md-6" value="{{this.PucharseDetails.Headboard.ExternalCod}}" disabled>
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+              <label for="id-form-field-1" class="mb-0">
+                COMENTATARIO
+              </label>
+            </div>
+
+            <div class="col-sm-9">
+              <input type="text" class="form-control col-sm-8 col-md-6" value="{{this.PucharseDetails.Headboard.Commenter}}" disabled>
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <div class="col-sm-12">
+              <div class="card dcard">
+                <div class="card-body px-1 px-md-3">
+
+                  <form autocomplete="off">
+                    <div class="d-flex justify-content-between flex-column flex-sm-row mb-3 px-2 px-sm-0">
+                      <div class="pos-rel ml-sm-auto mr-sm-2 order-last order-sm-0">
+                        <i class="fa fa-search position-lc ml-25 text-primary-m1"></i>
+                        <input type="text" class="form-control w-100 pl-45 radius-1 brc-primary-m4"
+                          placeholder="Search ..." #txtProductCod>
+                      </div>
+
+                      <div class="mb-2 mb-sm-0">
+                        <button type="button"
+                          class="btn btn-blue px-3 d-block w-100 text-95 radius-round border-2 brc-black-tp10"
+                          (click)="SearchProd()">
+                          <i class="fa fa-plus mr-1"></i>
+                          Buscar
+                        </button>
+                      </div>
+                    </div>
+
+                    <table id="simple-table"
+                      class="mb-0 table table-borderless table-bordered-x brc-secondary-l3 text-dark-m2 radius-1 overflow-hidden">
+                      <thead class="text-dark-tp3 bgc-grey-l4 text-90 border-b-1 brc-transparent">
+                        <tr>
+                          <th>
+                            Codigo
+                          </th>
+
+                          <th>
+                            Descripción
+                          </th>
+                          <th>
+                            Cantidad Contada
+                          </th>
+                          <th></th>
+                        </tr>
+                      </thead>
+
+                      <tbody class="mt-1">
+                        <tr class="bgc-h-yellow-l4 d-style" *ngFor="let item of PucharseRegister.DetailList">
+                          <td class="text-600">
+                            {{ item.ProductCod }}
+                          </td>
+                          <td>
+                            {{ item.Product.ProductName }}
+                          </td>
+                          <td class="text-600">
+                            {{ item.NumUnitDelivered }}
+                          </td>
+                          <td>
+                            <div>
+                              <div class="d-none d-lg-flex">
+                                <a *ngIf="(item.IsKardexAffected !== 'S')" 
+                                    href="#" data-toggle="modal"
+                                    (click)="selectRowTable(item)"
+                                    class="mx-2px btn radius-1 border-2 btn-xs btn-brc-tp btn-light-secondary btn-h-lighter-success btn-a-lighter-success"
+                                    data-target="#modal_update_quantity">
+                                    <i class="fa fa-pencil-alt" class="fa fa-pencil-alt"></i>
+                                </a>
+                                <a *ngIf="(item.IsKardexAffected !== 'S')"
+                                    href="#" data-toggle="modal"
+                                    (click)="selectRowTable(item)"
+                                    class="mx-2px btn radius-1 border-2 btn-xs btn-brc-tp btn-light-secondary btn-h-lighter-success btn-a-lighter-success"
+                                    data-target="#modal_confirm">
+                                    <i class="fa fa-check" class="fa fa-check"></i>
+                                </a>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+
+                    <!-- table footer -->
+                  </form>
+
+                </div><!-- /.card-body -->
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
+            <div class="offset-md-3 col-md-9 text-nowrap">
+                <a 
+                    class="btn btn-info btn-bold px-4" 
+                    type="button"
+                    href="#" data-toggle="modal"
+                    data-target="#modal_end_reception"
+                >
+                    <i class="fa fa-check mr-1"></i>
+                    Finalizar recepción
+                </a>
+
+                <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4" 
+                    type="reset"
+                    href="/enterprise/pucharse/pages/listreception"
+                >
+                    <i class="fa fa-undo mr-1"></i>
+                    Volver
+                </a>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+
+  <div class="modal fade" id="modal_update_quantity" tabindex="-1" role="dialog" aria-labelledby="modal_update_quantity"
+  aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content" style="width: 100%;">
+      <div class="modal-header">
+        <h5 class="modal-title text-primary-d3" id="modal_update_quantity">
+          Modificar cantidad
+        </h5>
+
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="mb-3 row">
+          <label for="inputPassword" class="col-sm-4 col-form-label">Ingrese cantidad</label>
+          <div class="col-sm-8">
+            <input type="text" class="form-control" #txtNumUnit>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-dismiss="modal">
+          Cerrar
+        </button>
+        <button type="button" class="btn btn-primary" data-dismiss="modal" (click)="updateQuantity()">
+          Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<app-modalconfirm 
+  [id]="'modal_end_reception'"
+  [action]="this"
+  [message]="'¿Desea finalizar la recepción de productos, no habra manera de revertir esta operación?'"
+>
+</app-modalconfirm>
+
+<app-modalconfirm 
+  [id]="'modal_confirm'"
+  [action]="this"
+  [message]="'¿Confirma la recepción de todos los productos de este tipo?'"
+>
+</app-modalconfirm>
+
+

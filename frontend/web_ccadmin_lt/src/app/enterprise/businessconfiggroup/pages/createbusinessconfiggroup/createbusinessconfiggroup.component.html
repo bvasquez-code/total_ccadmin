@@ -1,0 +1,81 @@
+<div role="main" class="main-content">
+
+    <div class="page-content container container-plus">
+        <div class="card acard mt-2 mt-lg-3">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h3 class="card-title text-125 text-primary-d2 mb-0">
+                        <i class="far fa-edit text-dark-l3 mr-1"></i>
+                        {{ GroupCod !== '' ? 'Editar grupo de configuracion' : 'Registrar grupo de configuracion' }}
+                    </h3>
+                    <a class="btn btn-light-secondary btn-sm" (click)="toggleHeaderForm()" style="cursor:pointer;">
+                        <i [ngClass]="isHeaderCollapsed ? 'fa fa-chevron-down' : 'fa fa-chevron-up'"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div class="card-body px-3 pb-1" *ngIf="!isHeaderCollapsed">
+                <form class="mt-lg-3" autocomplete="off">
+
+                    <div *ngFor="let section of visibleSections" class="mb-4">
+                        <h5 class="text-dark-m3 text-110 mb-3 border-b-1 brc-secondary-l3 pb-2">
+                            {{ section.title }}
+                        </h5>
+
+                        <div class="row">
+                            <div class="col-sm-6" *ngFor="let field of section.fields">
+                                <div class="form-group row">
+                                    <div class="col-sm-4 col-form-label text-sm-right pr-0">
+                                        <label class="mb-0">
+                                            {{ field.label }}
+                                        </label>
+                                    </div>
+
+                                    <div class="col-sm-8">
+                                        <textarea
+                                            *ngIf="field.type === 'textarea'"
+                                            class="form-control"
+                                            rows="3"
+                                            [maxLength]="field.maxLength || 500"
+                                            [readonly]="isReadonly(field)"
+                                            [(ngModel)]="businessConfigGroup[field.key]"
+                                            name="{{ field.key }}"></textarea>
+
+                                        <input
+                                            *ngIf="field.type !== 'textarea'"
+                                            [type]="inputType(field)"
+                                            class="form-control"
+                                            [maxLength]="field.maxLength || null"
+                                            [readonly]="isReadonly(field)"
+                                            [(ngModel)]="businessConfigGroup[field.key]"
+                                            name="{{ field.key }}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
+                        <div class="offset-md-3 col-md-9 text-nowrap">
+                            <a
+                                class="btn btn-info btn-bold px-4"
+                                type="button"
+                                (click)="Save()">
+                                <i class="fa fa-check mr-1"></i>
+                                Guardar
+                            </a>
+
+                            <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4"
+                                type="reset"
+                                href="/enterprise/businessconfiggroup/pages/listbusinessconfiggroup">
+                                <i class="fa fa-undo mr-1"></i>
+                                Volver
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>

@@ -1,0 +1,158 @@
+<div role="main" class="main-content">
+
+  <div class="page-content container container-plus">
+    <div class="container px-0">
+
+      <div class="row mt-4">
+        <div class="col-12">
+
+          <div class="page-header border-0 mb-0">
+            <h1 class="page-title text-dark-l3 text-115">
+              Pagos
+              <i class="fa fa-angle-right text-80 ml-1"></i>
+              <small class="page-info text-dark-m3">
+                Detalle de pago - {{ TrxPayment.TrxPaymentId }}
+              </small>
+            </h1>
+            <div class="page-tools">
+              <div class="action-buttons">
+                <a class="btn bg-white btn-light mx-1px text-95 shadow-sm" (click)="goBack()" style="cursor:pointer;">
+                  <i class="mr-1 fa fa-arrow-left text-primary text-120 w-2"></i>
+                  Volver
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="card dcard mb-4">
+            <div class="card-body px-4 px-lg-5">
+
+              <div class="row mt-4">
+
+                <div class="col-sm-6">
+                  <div class="text-100 text-grey-m1 align-middle mb-1">Transaccion</div>
+                  <div class="text-600 text-110 text-primary mt-1 mb-2">
+                    {{ TrxPayment.TransactionId || '-' }}
+                  </div>
+
+                  <div class="text-dark-l1">
+                    <div class="my-1">
+                      <i class="fa fa-credit-card text-purple mr-1"></i>
+                      <b class="text-600">Metodo:</b>
+                      {{ getPaymentMethodName(TrxPayment.PaymentMethodCod) }}
+                    </div>
+                    <div class="my-1">
+                      <i class="fa fa-desktop text-info mr-1"></i>
+                      <b class="text-600">Plataforma:</b>
+                      {{ TrxPayment.PaymentPlatform || '-' }}
+                    </div>
+                    <div class="my-1">
+                      <i class="fa fa-exchange-alt text-orange mr-1"></i>
+                      <b class="text-600">Movimiento:</b>
+                      <span [class]="getMovementClass(TrxPayment.TypeMovement)">
+                        {{ getMovementLabel(TrxPayment.TypeMovement) }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-sm-6 align-self-start d-sm-flex justify-content-end text-95">
+                  <hr class="d-sm-none">
+                  <div class="text-dark-l1">
+                    <div class="mt-1 mb-2 text-secondary-d1 text-600 text-125">Datos de pago</div>
+
+                    <div class="my-2">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                      <span class="text-600 text-90">ID:</span>
+                      {{ TrxPayment.TrxPaymentId }}
+                    </div>
+
+                    <div class="my-2">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                      <span class="text-600 text-90">Estado:</span>
+                      <span [class]="getStatusClass(TrxPayment.PaymentStatus)">
+                        {{ getStatusLabel(TrxPayment.PaymentStatus) }}
+                      </span>
+                    </div>
+
+                    <div class="my-2">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                      <span class="text-600 text-90">Fecha:</span>
+                      {{ TrxPayment.CreationDate | date: 'dd/MM/yyyy HH:mm:ss' }}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <hr class="brc-secondary-l3 border-t-2 mt-4">
+
+              <div class="row">
+                <div class="col-sm-6">
+                  <h5 class="text-dark-m3 text-110 mb-3">
+                    <i class="fa fa-money-bill mr-1 text-primary"></i>
+                    Importes
+                  </h5>
+
+                  <div class="row my-2">
+                    <div class="col-6 text-600">Moneda</div>
+                    <div class="col-6">{{ getCurrencyName(TrxPayment.CurrencyCod) }}</div>
+                  </div>
+                  <div class="row my-2">
+                    <div class="col-6 text-600">Moneda sistema</div>
+                    <div class="col-6">{{ getCurrencyName(TrxPayment.CurrencyCodSys) }}</div>
+                  </div>
+                  <div class="row my-2">
+                    <div class="col-6 text-600">Tipo de cambio</div>
+                    <div class="col-6">{{ TrxPayment.NumExchangevalue | number: '1.2-4' }}</div>
+                  </div>
+                  <div class="row my-2">
+                    <div class="col-6 text-600">Monto pagado</div>
+                    <div class="col-6 text-primary text-600">{{ TrxPayment.AmountPaid | FormatoMonedaPeruana : true }}</div>
+                  </div>
+                  <div class="row my-2">
+                    <div class="col-6 text-600">Vuelto</div>
+                    <div class="col-6">{{ TrxPayment.AmountReturned | FormatoMonedaPeruana : true }}</div>
+                  </div>
+                </div>
+
+                <div class="col-sm-6">
+                  <h5 class="text-dark-m3 text-110 mb-3">
+                    <i class="fa fa-id-card mr-1 text-primary"></i>
+                    Datos de tarjeta
+                  </h5>
+
+                  <div class="row my-2">
+                    <div class="col-6 text-600">Numero</div>
+                    <div class="col-6">{{ TrxPayment.CardNumber || '-' }}</div>
+                  </div>
+                  <div class="row my-2">
+                    <div class="col-6 text-600">Titular</div>
+                    <div class="col-6">{{ TrxPayment.CardHolderName || '-' }}</div>
+                  </div>
+                  <div class="row my-2">
+                    <div class="col-6 text-600">Vencimiento</div>
+                    <div class="col-6">{{ TrxPayment.CardExpirationDate | date: 'MM/yyyy' }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
+                <div class="offset-md-5 col-md-9 text-nowrap">
+                  <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4" (click)="goBack()"
+                    style="cursor:pointer;">
+                    <i class="fa fa-undo mr-1"></i>
+                    Volver
+                  </a>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

@@ -1,0 +1,64 @@
+<div role="main" class="main-content">
+    <div class="page-content container container-plus">
+        <div class="card-header">
+            <h3 class="card-title text-125 text-primary-d2">
+                <i class="far fa-edit text-dark-l3 mr-1"></i>
+                Solicitudes de transferencia
+            </h3>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card dcard">
+                    <div class="card-body px-1 px-md-3">
+                        <div autocomplete="off">
+                            <div class="d-flex justify-content-between flex-column flex-sm-row mb-3 px-2 px-sm-0">
+                                <div class="mb-2 mb-sm-0">
+                                    <a class="btn px-4 btn-primary mb-1"
+                                        href="enterprise/transfer/pages/createtransferrequest">
+                                        Nueva solicitud
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-2 mb-2">
+                                    <input type="text" class="form-control" placeholder="Código" #txtTransferCod />
+                                </div>
+                                <div class="col-md-2 mb-2">
+                                    <select class="form-control" #cboStoreOrigin>
+                                        <option value="">Local</option>
+                                        <option *ngFor="let store of getStoreList()" [value]="store.StoreCod">
+                                            {{ store.Name }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2 mb-2">
+                                    <select class="form-control" #cboStatus>
+                                        <option *ngFor="let status of statusList" [value]="status.Code">
+                                            {{ status.Name }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="col-md-2 mb-2">
+                                    <input type="date" class="form-control" #txtDateStart />
+                                </div>
+                                <div class="col-md-2 mb-2">
+                                    <input type="date" class="form-control" #txtDateEnd />
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <button class="btn px-4 btn-primary" (click)="filter(1)">
+                                    Buscar
+                                </button>
+                            </div>
+
+                            <app-table [data]="dataTablaGenetic" [action]="this"></app-table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

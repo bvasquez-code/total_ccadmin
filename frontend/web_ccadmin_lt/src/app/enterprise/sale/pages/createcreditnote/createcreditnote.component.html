@@ -1,0 +1,230 @@
+<div role="main" class="main-content">
+  <div class="page-content container container-plus">
+    <div class="card acard mt-2 mt-lg-3">
+      <div class="card-header">
+        <h3 class="card-title text-125 text-primary-d2">
+          <i class="far fa-edit text-dark-l3 mr-1"></i>
+          Crear nota de crédito
+        </h3>
+      </div>
+
+      <form class="mt-lg-3" autocomplete="off">
+        <div class="card-body px-3 pb-1">
+          <div class="form-group row">
+            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+              <label class="mb-0">Documento de venta</label>
+            </div>
+            <div class="input-group col-sm-4">
+              <input
+                type="text"
+                class="form-control"
+                placeholder="Busca el documento de venta ..."
+                [readonly]="txtDocumentCodReadOnly"
+                #txtDocumentCod
+              />
+              <div class="input-group-append">
+                <button class="btn btn-blue px-3 btn-sm" type="button" (click)="FindByDocumentCod()">
+                  <i class="fa fa-search-plus text-105"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-body px-3 pb-1">
+          <!-- Cabecera -->
+          <div class="form-group row">
+            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+              <label class="mb-0">Código de venta</label>
+            </div>
+            <div class="col-sm-9">
+              <input
+                type="text"
+                class="form-control col-sm-8 col-md-6"
+                [value]="SaleDetail.Headboard.SaleCod || ''"
+                [readonly]="true"
+              />
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+              <label class="mb-0">Cliente</label>
+            </div>
+            <div class="col-sm-9">
+              <input
+                type="text"
+                class="form-control col-sm-8 col-md-6"
+                [value]="getClient()"
+                [readonly]="true"
+              />
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+              <label class="mb-0">Fecha de creación</label>
+            </div>
+            <div class="col-sm-9">
+              <input
+                type="text"
+                class="form-control col-sm-8 col-md-6"
+                [value]="SaleDetail.Headboard.SaleCod ? (SaleDetail.Headboard.CreationDate | date:'dd/MM/yyyy HH:mm:ss') : ''"
+                [readonly]="true"
+              />
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+              <label class="mb-0">Total de la venta</label>
+            </div>
+            <div class="col-sm-9">
+              <input
+                type="text"
+                class="form-control col-sm-8 col-md-6"
+                [value]="(SaleDetail.Headboard.CurrencyCod || '') + ' ' + (SaleDetail.Headboard.NumTotalTax | FormatoMonedaPeruana : false)"
+                [readonly]="true"
+              />
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+              <label class="mb-0">Motivo de la nota de crédito</label>
+            </div>
+            <div class="col-sm-9">
+              <textarea
+                class="form-control col-sm-8 col-md-6"
+                #txtCommenter
+                maxlength="128"
+                rows="2"
+                placeholder="Describe el motivo (máx. 128 caracteres)"
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- Tipo de nota -->
+        <div class="form-group row">
+        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+            <label class="mb-0">Tipo de nota</label>
+        </div>
+        <div class="col-sm-9 d-flex align-items-center">
+            <div class="custom-control custom-switch">
+            <input
+                type="checkbox"
+                class="custom-control-input"
+                id="switchTotalNC"
+                [checked]="isTotalMode"
+                (change)="OnToggleTotalMode($event)"
+            />
+            <label class="custom-control-label" for="switchTotalNC">
+                {{ isTotalMode ? 'Nota de crédito total' : 'Nota de crédito parcial' }}
+            </label>
+            </div>
+        </div>
+        </div>
+
+
+          <!-- Detalle -->
+          <div class="form-group row">
+            <div class="col-sm-12">
+              <div class="card dcard">
+                <div class="card-body px-1 px-md-3">
+                  <table class="mb-0 table table-borderless table-bordered-x brc-secondary-l3 text-dark-m2 radius-1 overflow-hidden">
+                    <thead class="text-dark-tp3 bgc-grey-l4 text-90 border-b-1 brc-transparent">
+                      <tr>
+                        <th>Código</th>
+                        <th>Descripción</th>
+                        <th>Cantidad</th>
+                        <th>Precio</th>
+                        <th>Total</th>
+                        <th>Cantidad a devolver</th>
+                      </tr>
+                    </thead>
+
+                    <tbody class="mt-1">
+                      <tr class="bgc-h-yellow-l4 d-style"
+                          *ngFor="let item of SaleDetail.DetailList; trackBy: trackBySaleDet">
+                        <td class="text-600">{{ item.ProductCod }}</td>
+                        <td class="text-800">{{ item.Product.ProductName }}</td>
+                        <td class="text-800">{{ item.NumUnit }}</td>
+                        <td class="text-800">{{ item.NumUnitPrice | FormatoMonedaPeruana : false }}</td>
+                        <td class="text-800">{{ item.NumTotalPrice | FormatoMonedaPeruana : false }}</td>
+                        <td>
+                          <div class="btn-group" role="group" aria-label="Cambiar cantidad a devolver">
+                            <button type="button" 
+                                class="btn btn-danger" 
+                                (click)="SubtractUnit(item)" 
+                                [disabled]="isTotalMode">-</button>
+
+                            <input type="text" class="form-control" 
+                                [value]="getUnit(item)" 
+                                readonly style="width: 80px; text-align: center;" />
+
+                            <button type="button" 
+                                class="btn btn-success" 
+                                (click)="AddUnit(item)" 
+                                [disabled]="isTotalMode">+</button>
+
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  <!-- Resumen -->
+                  <div class="d-flex justify-content-end mt-3">
+                    <div class="text-right">
+                      <div><strong>Ítems a devolver:</strong> {{ totalQty }}</div>
+                      <div>
+                        <strong>Total NC:</strong> {{ currencyCode }}
+                        {{ totalAmount | FormatoMonedaPeruana : false }}
+                      </div>
+                    </div>
+                  </div>
+                </div> <!-- /.card-body -->
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
+            <div class="offset-md-3 col-md-9 text-nowrap">
+                <a class="btn btn-info btn-bold px-4"
+                    (click)="saveCreditNote()">
+                    <i class="fa fa-check mr-1"></i>
+                    {{ isLoading ? 'Guardando...' : 'Guardar' }}
+                </a>
+
+                <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4"
+                    type="reset" href="/enterprise/sale/pages/listcreditnote">
+                    <i class="fa fa-undo mr-1"></i>
+                    Cancelar
+                </a>
+            </div>
+          </div>
+        </div> <!-- /.card-body -->
+      </form>
+    </div>
+  </div>
+</div>
+
+<button type="button" class="d-none" data-toggle="modal" data-target="#TrxPaymentReversalModal" #btnOpenTrxPaymentReversalModal></button>
+
+<div class="modal fade" id="TrxPaymentReversalModal" tabindex="-1" role="dialog" aria-labelledby="TrxPaymentReversalModal"
+  aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content" style="width: 180%;">
+      <div class="modal-body">
+        <app-createtrxpayment
+          [TrxPaymentComponenRequest]="TrxPaymentComponenRequest"
+          (ResultForm)="ResponseResultFormTrxPaymentReversal($event)"
+        >
+        </app-createtrxpayment>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="d-none" data-dismiss="modal" #btnCloseTrxPaymentReversalModal></button>
+      </div>
+    </div>
+  </div>
+</div>

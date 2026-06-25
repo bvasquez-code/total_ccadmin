@@ -1,0 +1,154 @@
+<div role="main" class="main-content">
+
+    <div class="page-content container container-plus">
+        <div class="card acard mt-2 mt-lg-3">
+            <div class="card-header">
+                <h3 class="card-title text-125 text-primary-d2">
+                    <i class="far fa-edit text-dark-l3 mr-1"></i>
+                    {{ PaymentMethodCod !== '' ? 'Editar metodo de pago' : 'Registrar metodo de pago' }}
+                </h3>
+            </div>
+
+            <div class="card-body px-3 pb-1">
+                <form class="mt-lg-3" autocomplete="off">
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0">Codigo</label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <input type="text"
+                                [readonly]="txtPaymentMethodCodReadonly"
+                                [maxLength]="8"
+                                (keypress)="validateKeypress($event,'txtPaymentMethodCod')"
+                                class="form-control col-sm-8 col-md-6"
+                                [(ngModel)]="paymentMethod.PaymentMethodCod"
+                                name="PaymentMethodCod">
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0">Nombre</label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <input type="text"
+                                [maxLength]="32"
+                                class="form-control col-sm-8 col-md-6"
+                                [(ngModel)]="paymentMethod.Name"
+                                name="Name">
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0">Descripcion</label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <input type="text"
+                                [maxLength]="64"
+                                class="form-control col-sm-8 col-md-6"
+                                [(ngModel)]="paymentMethod.Description"
+                                name="Description">
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0">Tipo</label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <select class="form-control col-sm-8 col-md-6"
+                                [(ngModel)]="paymentMethod.PaymentMethodType"
+                                name="PaymentMethodType">
+                                <option value="">Seleccione</option>
+                                <option *ngFor="let item of paymentMethodTypeList" [value]="item.Code">
+                                    {{ item.Code }} - {{ item.Description }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0">Imagen</label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <a class="btn btn-info btn-bold px-4"
+                                type="button"
+                                data-toggle="modal"
+                                data-target="#PaymentMethodAppFileModal">
+                                Agregar imagen
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="form-group row" *ngIf="paymentMethod.Route">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                        </div>
+
+                        <div class="col-sm-9">
+                            <div class="d-flex align-items-center">
+                                <img
+                                    [src]="paymentMethod.Route"
+                                    alt="Imagen del metodo de pago"
+                                    style="width: 100px; height: 100px; object-fit: contain;"
+                                    class="border-1 brc-secondary-l2 p-1 mr-3">
+
+                                <a class="mx-2px btn radius-1 border-2
+                                    btn-xs btn-brc-tp btn-light-secondary
+                                    btn-h-lighter-success btn-a-lighter-success"
+                                    href="#"
+                                    (click)="$event.preventDefault(); clearImage()">
+                                    <i ng-reflect-ng-class="fa fa-trash-alt" class="fa fa-trash-alt"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
+                        <div class="offset-md-3 col-md-9 text-nowrap">
+                            <a
+                                class="btn btn-info btn-bold px-4"
+                                type="button"
+                                (click)="Save()">
+                                <i class="fa fa-check mr-1"></i>
+                                Guardar
+                            </a>
+
+                            <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4"
+                                type="reset"
+                                href="/enterprise/system/pages/listpaymentmethod">
+                                <i class="fa fa-undo mr-1"></i>
+                                Volver
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="modal fade" id="PaymentMethodAppFileModal" tabindex="-1" role="dialog" aria-labelledby="PaymentMethodAppFileModal"
+  aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content" style="width: 150%;">
+
+      <div class="modal-body">
+        <app-appfile
+          [AppfileComponentRequest]="appfileComponentRequest"
+          (ResultForm)="ResponseResultFormAppFile($event)">
+        </app-appfile>
+      </div>
+      <div class="modal-footer">
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,272 @@
+<div role="main" class="main-content">
+
+    <div class="page-content container container-plus">
+        <div class="card acard mt-2 mt-lg-3">
+            <div class="card-header">
+                <h3 class="card-title text-125 text-primary-d2">
+                    <i class="far fa-edit text-dark-l3 mr-1"></i>
+                    Registrar Producto
+                </h3>
+            </div>
+
+            <div class="card-body px-3 pb-1">
+                <form class="mt-lg-3" autocomplete="off">
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                Codigo
+                            </label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <input type="text" 
+                                [maxLength]="20"
+                                [readonly]="txtProductCodreadonly"
+                                (keypress)="validateKeypress($event,'txtProductCod')"
+                                id="txtProductCod"
+                                class="form-control col-sm-8 col-md-6" 
+                                #txtProductCod>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                Codigo de barras
+                            </label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <input type="text" 
+                                [maxLength]="20"
+                                id="txtBarCode"
+                                (keydown)="ProductCodEnter($event)"
+                                class="form-control col-sm-8 col-md-6" 
+                                #txtBarCode>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                Nombre
+                            </label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <input type="text"
+                                id="txtProductName"
+                                class="form-control col-sm-8 col-md-6"
+                                #txtProductName>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                Descripción
+                            </label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <input type="text"
+                                id="txtProductDesc"
+                                class="form-control col-sm-8 col-md-6" 
+                                #txtProductDesc>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                Marca
+                            </label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <div class="position-relative">
+                                <input type="text" class="form-control col-sm-8 col-md-6"
+                                    placeholder="[--SELECCIONAR MARCA--]"
+                                    [(ngModel)]="searchBrandTerm"
+                                    (ngModelChange)="showBrandDropdown = true"
+                                    (focus)="showBrandDropdown = true"
+                                    (blur)="onBrandBlur()"
+                                    [ngModelOptions]="{standalone: true}">
+                                <input type="hidden" id="cboBrandCod" #cboBrandCod>
+                                <div class="dropdown-menu" [class.show]="showBrandDropdown" style="width: 100%; max-width: 50%; max-height: 200px; overflow-y: auto; position: absolute; top: 100%; left: 0; z-index: 1000;">
+                                    <a class="dropdown-item" style="cursor: pointer;" (mousedown)="selectBrand(null)">[--SELECCIONAR MARCA--]</a>
+                                    <a class="dropdown-item" style="cursor: pointer;" *ngFor="let item of filteredBrands" (mousedown)="selectBrand(item)">
+                                        {{ item.BrandName }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                Categoria
+                            </label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <div class="position-relative">
+                                <input type="text" class="form-control col-sm-8 col-md-6"
+                                    placeholder="[--SELECCIONAR CATEGORIA--]"
+                                    [(ngModel)]="searchCategoryTerm"
+                                    (ngModelChange)="showCategoryDropdown = true"
+                                    (focus)="showCategoryDropdown = true"
+                                    (blur)="onCategoryBlur()"
+                                    [ngModelOptions]="{standalone: true}">
+                                <input type="hidden" id="cboCategoryCod" #cboCategoryCod>
+                                <div class="dropdown-menu" [class.show]="showCategoryDropdown" style="width: 100%; max-width: 50%; max-height: 200px; overflow-y: auto; position: absolute; top: 100%; left: 0; z-index: 1000;">
+                                    <a class="dropdown-item" style="cursor: pointer;" (mousedown)="selectCategory(null)">[--SELECCIONAR CATEGORIA--]</a>
+                                    <a class="dropdown-item" style="cursor: pointer;" *ngFor="let item of filteredCategories" (mousedown)="selectCategory(item)">
+                                        {{ item.CategoryName }}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                Precio
+                            </label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <input type="number"
+                                id="txtNumPrice"
+                                class="form-control col-sm-8 col-md-6" 
+                                #txtNumPrice>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                Stock maximo
+                            </label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <input type="number"
+                                id="txtNumMaxStock"
+                                class="form-control col-sm-8 col-md-6" 
+                                #txtNumMaxStock>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                Stock minimo
+                            </label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <input type="number"
+                                id="txtNumMinStock"
+                                class="form-control col-sm-8 col-md-6" 
+                                #txtNumMinStock>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                        </div>
+
+                        <div class="col-sm-9">
+                            <a class="btn btn-info btn-bold px-4" type="button" style="width: 50%;" data-toggle="modal" data-target="#AppFileModal">
+                                Agregar imagen
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                        </div>
+                        <div class="col-sm-9">
+                            <table id="simple-table" class="mb-0 table table-borderless table-bordered-x brc-secondary-l3 text-dark-m2 radius-1 overflow-hidden">
+                                <thead class="text-dark-tp3 bgc-grey-l4 text-90 border-b-1 brc-transparent">
+                                  <tr>           
+                                    <th>
+                                      Imagen
+                                    </th>
+        
+                                    <th>
+                                      ¿Elige la imagen principal?
+                                    </th>
+                                    <th>Eliminar</th>                                             
+                                  </tr>
+                                </thead>
+        
+                                <tbody class="mt-1" *ngIf="(ProductRegister)">
+                                  <tr class="bgc-h-yellow-l4 d-style" *ngFor="let item of ProductRegister.pictureList">            
+                                    <td>
+                                        <img 
+                                            *ngIf="item.appFile" 
+                                            [src]="item.appFile.Route" 
+                                            alt="Imagen cargada"
+                                            style="width: 100px; height: 100px;"
+                                        >
+                                    </td>
+                                    <td>
+                                      <input type="checkbox" [checked]="item.IsPrincipal==='S'" (click)="setImagePrincipal(item.FileCod)">
+                                    </td>
+                                    <td>
+                                        <a class="mx-2px btn radius-1 border-2 
+                                            btn-xs btn-brc-tp btn-light-secondary 
+                                            btn-h-lighter-success btn-a-lighter-success" href="#"
+                                            (click)="deleteImage(item)"
+                                        >
+                                            <i ng-reflect-ng-class="fa fa-trash-alt" class="fa fa-trash-alt"></i>
+                                        </a>
+                                    </td>  
+                                  </tr>       
+                                </tbody>
+                              </table>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
+                        <div class="offset-md-3 col-md-9 text-nowrap">
+                            <a class="btn btn-info btn-bold px-4" type="button" (click)="save()">
+                                <i class="fa fa-check mr-1"></i>
+                                Guardar
+                            </a>
+
+                            <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4" type="reset"
+                                (click)="cancel()">
+                                <i class="fa fa-undo mr-1"></i>
+                                Volver
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="modal fade" id="AppFileModal" tabindex="-1" role="dialog" aria-labelledby="AppFileModal"
+  aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content" style="width: 150%;">
+
+      <div class="modal-body">
+        <app-appfile
+          (ResultForm)="ResponseResultFormAppFile($event)"
+        >
+        </app-appfile>
+      </div>
+      <div class="modal-footer">
+      </div>
+    </div>
+  </div>
+</div>

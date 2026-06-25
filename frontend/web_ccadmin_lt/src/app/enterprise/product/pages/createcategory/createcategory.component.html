@@ -1,0 +1,117 @@
+<div role="main" class="main-content">
+
+    <div class="page-content container container-plus">
+        <div class="card acard mt-2 mt-lg-3">
+            <div class="card-header">
+                <h3 class="card-title text-125 text-primary-d2">
+                    <i class="far fa-edit text-dark-l3 mr-1"></i>
+                    Registrar Categoria
+                </h3>
+            </div>
+
+            <div class="card-body px-3 pb-1">
+                <form class="mt-lg-3" autocomplete="off">
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                Codigo
+                            </label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <input type="text"
+                                [readonly]="txtCategoryCodReadOnly"
+                                [maxLength]="10"
+                                (keypress)="validateKeypress($event,'txtCategoryCod')"
+                                id="txtCategoryCod"
+                                class="form-control col-sm-8 col-md-6" 
+                                #txtCategoryCod>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                Nombre
+                            </label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <input type="text"
+                                id="txtCategoryName"
+                                class="form-control col-sm-8 col-md-6" 
+                                #txtCategoryName>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                Es digital
+                            </label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <select class="form-control col-sm-8 col-md-6" #cboIsDigital>
+                                <option value="S">SI</option>
+                                <option value="N">NO</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                Es categoria padre
+                            </label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <select class="form-control col-sm-8 col-md-6" #cboIsCategoryDad (change)="IsCategoryDad()">
+                                <option value="S">SI</option>
+                                <option value="N">NO</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group row" [style.visibility]="cboCategoryDadCodvisibility === true ? 'visible' : 'hidden'">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                categoria padre
+                            </label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <select class="form-control col-sm-8 col-md-6" #cboCategoryDadCod>
+                                <option value="">[--SELECCIONAR CATEGORIA PADRE--]</option>
+                                <option [value]="item.CategoryCod" *ngFor="let item of CategoryDadList">{{ item.CategoryName }}</option>
+                            </select>
+                        </div>
+                    </div>
+
+
+                    <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
+                        <div class="offset-md-3 col-md-9 text-nowrap">
+                            <a 
+                                class="btn btn-info btn-bold px-4" 
+                                type="button"
+                                (click)="Save()"
+                            >
+                                <i class="fa fa-check mr-1"></i>
+                                Guardar
+                            </a>
+
+                            <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4" 
+                                type="reset"
+                                href="/enterprise/product/pages/listCategory"
+                            >
+                                <i class="fa fa-undo mr-1"></i>
+                                Volver
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>

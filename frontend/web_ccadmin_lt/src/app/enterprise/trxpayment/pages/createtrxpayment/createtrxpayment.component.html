@@ -1,0 +1,259 @@
+<div role="main" class="main-content">
+
+    <div class="page-content container container-plus">
+        <div class="card acard mt-2 mt-lg-3">
+            <div class="card-header">
+                <h3 class="card-title text-125 text-primary-d2">
+                    <i class="far fa-edit text-dark-l3 mr-1"></i>
+                    {{ getTitle() }}
+                </h3>
+            </div>
+
+            <div class="card-body px-3 pb-1">
+                <form class="mt-lg-3" autocomplete="off">
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                {{ getInputAmountLabel() }}
+                            </label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <input type="text" 
+                                    class="form-control col-sm-8" 
+                                    value="{{ getInputAmount() | FormatoMonedaPeruana : false }}"
+                                    [disabled]="true"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-group row" [hidden]="isReversalMode()">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                Tipo de medio de pago
+                            </label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <input type="hidden" [value]="selectedPaymentMethodCod" #cboPaymentMethodCod>
+
+                            <div class="dropdown col-sm-8 px-0">
+                                <button
+                                    type="button"
+                                    class="btn btn-white btn-bold border-1 brc-secondary-l2 d-flex align-items-center justify-content-between w-100"
+                                    (click)="togglePaymentMethodDropdown()"
+                                    (blur)="closePaymentMethodDropdown()">
+
+                                    <span class="d-flex align-items-center text-left">
+                                        <img
+                                            *ngIf="getSelectedPaymentMethod()?.Route"
+                                            [src]="getSelectedPaymentMethod()?.Route"
+                                            alt="Medio de pago"
+                                            style="width: 36px; height: 36px; object-fit: contain;"
+                                            class="mr-2">
+
+                                        <i
+                                            *ngIf="!getSelectedPaymentMethod()?.Route"
+                                            [class]="getPaymentMethodIconClassByCod(selectedPaymentMethodCod)"
+                                            class="mr-2">
+                                        </i>
+
+                                        <span>{{ getSelectedPaymentMethod()?.Name || getSelectedPaymentMethod()?.Description || 'Seleccione' }}</span>
+                                    </span>
+
+                                    <i class="fa fa-chevron-down text-80 ml-2"></i>
+                                </button>
+
+                                <div
+                                    class="dropdown-menu w-100 shadow-sm"
+                                    [class.show]="showPaymentMethodDropdown"
+                                    style="max-height: 240px; overflow-y: auto;">
+
+                                    <button
+                                        type="button"
+                                        class="dropdown-item d-flex align-items-center"
+                                        [ngClass]="isPaymentMethodSelected(item) ? 'active' : ''"
+                                        *ngFor="let item of paymentMethodList"
+                                        (mousedown)="selectPaymentMethod(item)">
+
+                                        <img
+                                            *ngIf="hasPaymentMethodRoute(item.PaymentMethodCod)"
+                                            [src]="item.Route"
+                                            alt="Medio de pago"
+                                            style="width: 36px; height: 36px; object-fit: contain;"
+                                            class="mr-2">
+
+                                        <i
+                                            *ngIf="!hasPaymentMethodRoute(item.PaymentMethodCod)"
+                                            [class]="getPaymentMethodIconClassByCod(item.PaymentMethodCod)"
+                                            class="mr-2">
+                                        </i>
+
+                                        <span>{{ item.Name || item.Description }}</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group row" [hidden]="!txtDocumentVisible">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                Nota de crédito
+                            </label>
+                        </div>
+
+                        <div class="input-group col-sm-6">
+                            <input type="text" 
+                                class="form-control" 
+                                placeholder="Busca el documento de venta ..."
+                                #txtDocumentCod />
+                            <div class="input-group-append">
+                              <button class="btn btn-blue px-3 btn-sm" type="button" (click)="FindByDocumentCod()">
+                                <i class="fa fa-search-plus text-105"></i>
+                              </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group row" [hidden]="isReversalMode()">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                Moneda
+                            </label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <select class="form-control col-sm-8" 
+                                #cboCurrencyCod
+                                [disabled]="cboCurrencyCodConfigHtml.ReadOnly"
+                                >
+                                <option *ngFor="let item of currencyList" [value]="item.CurrencyCod">({{ item.CurrencyAbbr }}) - {{ item.CurrencyName }}</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                {{ getAmountLabel() }}
+                            </label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <input type="number" 
+                                    class="form-control col-sm-8"
+                                    value="{{ isReversalMode() ? getCurrentReversalAmount() : getInputAmount() }}"
+                                    [readOnly]="txtAmountPaidConfigHtml.ReadOnly || isReversalMode()"
+                                    #txtAmountPaid
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-group row" [hidden]="!isReversalMode()">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0">
+                                Devuelto hasta ahora
+                            </label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <input type="text" 
+                                    class="form-control col-sm-8" 
+                                    value="{{ getReturnedAmount() | FormatoMonedaPeruana : false }}"
+                                    [disabled]="true"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-12">
+                          <div class="card dcard">
+                              <div class="card-body px-1 px-md-3">
+            
+                                <form autocomplete="off">            
+                                  <table id="simple-table" class="mb-0 table table-borderless table-bordered-x brc-secondary-l3 text-dark-m2 radius-1 overflow-hidden">
+                                    <thead class="text-dark-tp3 bgc-grey-l4 text-90 border-b-1 brc-transparent">
+                                      <tr>           
+                                        <th>Id</th>
+                                        <th *ngIf="isReversalMode()">Estado</th>
+                                        <th>Forma Pago</th>        
+                                        <th>{{ isReversalMode() ? 'Monto' : 'Monto Pagado' }}</th>
+                                        <th>Vuelto</th>
+                                        <th>Fecha transaccion</th>                                         
+                                      </tr>
+                                    </thead>
+            
+                                    <tbody class="mt-1">
+                                      <tr class="bgc-h-yellow-l4 d-style" 
+                                        [ngClass]="{
+                                          'text-danger': item.TypeMovement === 'E',
+                                          'bgc-red-l4': item.TypeMovement === 'E',
+                                          'text-grey-m2': isPaymentFullyReversed(item)
+                                        }"
+                                        *ngFor="let item of getVisiblePaymentList()">            
+                                        <td class="text-600">
+                                          <i class="fa fa-times-circle text-danger mr-1" *ngIf="isPaymentFullyReversed(item)"></i>
+                                          <i class="fa fa-undo text-danger mr-1" *ngIf="item.TypeMovement === 'E'"></i>
+                                          {{ item.TrxPaymentId }}
+                                        </td>
+                                        <td class="text-600" *ngIf="isReversalMode()">
+                                            <span class="badge badge-danger" *ngIf="isPaymentFullyReversed(item)">Anulado</span>
+                                            <span class="badge badge-warning" *ngIf="isPaymentPartiallyReversed(item)">Parcial</span>
+                                            <span class="badge badge-info" *ngIf="item.TypeMovement === 'E'">Reversion</span>
+                                            <span class="badge badge-light" *ngIf="item.TypeMovement !== 'E' && !isPaymentFullyReversed(item) && !isPaymentPartiallyReversed(item)">Pendiente</span>
+                                        </td>
+                                        <td class="text-600">
+                                            <img
+                                                *ngIf="hasPaymentMethodRoute(item.PaymentMethodCod)"
+                                                [src]="getPaymentMethodRoute(item.PaymentMethodCod)"
+                                                alt="Medio de pago"
+                                                style="width: 22px; height: 22px; object-fit: contain;"
+                                                class="mr-1">
+                                            <i
+                                                *ngIf="!hasPaymentMethodRoute(item.PaymentMethodCod)"
+                                                [class]="getPaymentMethodIconClass(item)"
+                                                class="mr-1">
+                                            </i>
+                                            {{ getPaymentDescription(item.PaymentMethodCod) }}
+                                        </td>
+                                        <td class="text-800">
+                                         {{ item.AmountPaid | currency: item.CurrencyCod + ' '}}
+                                        </td>
+                                        <td class="text-800">
+                                            {{ item.AmountReturned | currency: item.CurrencyCod + ' '}}
+                                        </td>
+                                        <td class="text-800">
+                                            {{ item.CreationDate | date : 'dd/MM/yyyy hh:mm:ss' }}
+                                        </td>
+                                      </tr>       
+                                    </tbody>
+                                  </table>
+            
+                                </form>
+            
+                              </div><!-- /.card-body -->
+                            </div>
+                        </div>
+                        
+                    </div>
+
+                    <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
+                        <div class="offset-md-3 col-md-9 text-nowrap">
+                            <a 
+                                class="btn btn-info btn-bold col-sm-8" 
+                                type="button"
+                                (click)="Save()"
+                            >
+                                <i class="fa fa-check mr-1"></i>
+                                {{ getSaveButtonLabel() }}
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+        </div>
+
+    </div>

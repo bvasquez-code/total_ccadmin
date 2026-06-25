@@ -1,0 +1,16 @@
+target/
+*.log
+*.tmp
+.idea/
+.vscode/
+/pending/
+/processing/
+/approved/
+/rejected/
+/cancelled/
+/timeout/
+/error/
+/unknown/
+/read/
+/logs/
+/archive/

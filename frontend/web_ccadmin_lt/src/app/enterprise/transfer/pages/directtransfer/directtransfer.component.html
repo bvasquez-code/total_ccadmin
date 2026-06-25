@@ -1,0 +1,182 @@
+<div role="main" class="main-content">
+  <div class="page-content container container-plus">
+    <div class="card-header">
+      <h3 class="card-title text-125 text-primary-d2">
+        <i class="fa fa-truck text-dark-l3 mr-1"></i>
+        Envío directo de transferencia
+      </h3>
+    </div>
+
+    <div class="card dcard">
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <label>Local destino</label>
+            <select class="form-control" #cboStoreDest (change)="FindAllProduct(1)">
+              <option value="">Seleccione</option>
+              <option *ngFor="let store of storeList" [value]="store.StoreCod">
+                {{ store.Name }}
+              </option>
+            </select>
+          </div>
+          <div class="col-md-8 mb-3">
+            <label>Observaciones</label>
+            <textarea class="form-control" rows="2" #txtObservation></textarea>
+          </div>
+        </div>
+
+        <hr />
+
+        <div class="row">
+          <div class="col-md-8">
+            <h5 class="text-primary">Productos</h5>
+            <div class="d-flex align-items-center mb-2">
+              <input type="text" class="form-control mr-2" placeholder="Buscar producto" #txtSearch />
+              <button class="btn btn-primary" (click)="FindAllProduct(1)">Buscar</button>
+            </div>
+
+            <div class="table-responsive">
+              <table class="table table-bordered">
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Producto</th>
+                    <th class="text-center">Stock</th>
+                    <th class="text-center">Seleccionar</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let product of productList">
+                    <td>{{ product.ProductCod }}</td>
+                    <td>{{ product.ProductName }}</td>
+                    <td class="text-center">{{ product.NumPhysicalStock }}</td>
+                    <td class="text-center">
+                      <button class="btn btn-sm btn-outline-primary" (click)="selectProduct(product)"
+                        data-toggle="modal" data-target="#modalProduct">
+                        Elegir
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="col-md-4">
+            <h5 class="text-primary">Detalle</h5>
+            <div class="table-responsive">
+              <table class="table table-bordered">
+                <thead>
+                  <tr>
+                    <th>Producto</th>
+                    <th class="text-center">Cantidad</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let detail of transferRegister.transferDetList">
+                    <td>{{ detail.Product.ProductName }}</td>
+                    <td class="text-center">{{ detail.NumUnit }}</td>
+                    <td class="text-center">
+                      <button class="btn btn-sm btn-danger" (click)="removeProduct(detail)">
+                        <i class="fa fa-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                  <tr *ngIf="transferRegister.transferDetList.length === 0">
+                    <td colspan="3" class="text-center text-muted">Sin productos seleccionados</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <hr />
+
+        <h5 class="text-primary">Datos de transporte</h5>
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <label>Modalidad</label>
+            <select class="form-control" #cboTransportMode>
+              <option value="">Seleccione</option>
+              <option *ngFor="let mode of transportModeList" [value]="mode.Code">
+                {{ mode.Name }}
+              </option>
+            </select>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label>Motivo de traslado</label>
+            <select class="form-control" #cboReason>
+              <option value="">Seleccione</option>
+              <option *ngFor="let reason of reasonTransferList" [value]="reason.Code">
+                {{ reason.Name }}
+              </option>
+            </select>
+          </div>
+          <div class="col-md-4 mb-3">
+            <label>Placa vehículo</label>
+            <input type="text" class="form-control" #txtVehiclePlate />
+          </div>
+          <div class="col-md-4 mb-3">
+            <label>Tipo doc. conductor</label>
+            <input type="text" class="form-control" #txtDriverDocType />
+          </div>
+          <div class="col-md-4 mb-3">
+            <label>N° doc. conductor</label>
+            <input type="text" class="form-control" #txtDriverDocNumber />
+          </div>
+          <div class="col-md-4 mb-3">
+            <label>Licencia conductor</label>
+            <input type="text" class="form-control" #txtDriverLicenseNumber />
+          </div>
+          <div class="col-md-4 mb-3">
+            <label>RUC transportista</label>
+            <input type="text" class="form-control" #txtCarrierRuc />
+          </div>
+          <div class="col-md-8 mb-3">
+            <label>Nombre transportista</label>
+            <input type="text" class="form-control" #txtCarrierName />
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <button class="btn btn-success" (click)="Save()">Registrar envío</button>
+          <a class="btn btn-secondary ml-2" href="enterprise/transfer/pages/listtransferdispatch">Cancelar</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Product -->
+<div class="modal fade" id="modalProduct" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-primary-d3">
+          Agregar Producto
+        </h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close" #btnCloseModal>
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Producto:</label>
+          <input type="text" class="form-control" [value]="productSelect.ProductName" disabled>
+        </div>
+        <div class="form-group">
+          <label>Cantidad:</label>
+          <input type="number" class="form-control" #txtNumUnit (keyup.enter)="AddProduct()">
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" (click)="AddProduct()">Agregar</button>
+      </div>
+    </div>
+  </div>
+</div>

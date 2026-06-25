@@ -1,0 +1,183 @@
+<div role="main" class="main-content">
+
+    <div class="page-content container container-plus">
+        <div class="card acard mt-2 mt-lg-3">
+            <div class="card-header">
+                <h3 class="card-title text-125 text-primary-d2">
+                    <i class="far fa-edit text-dark-l3 mr-1"></i>
+                    Reingresar el stock de la nota de credito
+                </h3>
+            </div>
+
+            <div class="card-body px-3 pb-1">
+                <form class="mt-lg-3" autocomplete="off">
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                Documento de venta
+                            </label>
+                        </div>
+                        <div class="input-group col-sm-4">
+                            <input type="text" 
+                                class="form-control" 
+                                placeholder="Busca el documento de venta ..."
+                                [readOnly]="txtDocumentCodReadOnly"
+                                #txtDocumentCod />
+                            <div class="input-group-append">
+                              <button class="btn btn-blue px-3 btn-sm" type="button" (click)="FindByDocumentCod()">
+                                <i class="fa fa-search-plus text-105"></i>
+                              </button>
+                            </div>
+                          </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="card-body px-3 pb-1">
+                <form class="mt-lg-3" autocomplete="off">
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                Codigo de venta
+                            </label>
+                        </div>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control col-sm-8 col-md-6" 
+                            [value]="SaleDetail.Headboard.SaleCod"
+                            [readOnly]="true">
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                Cliente
+                            </label>
+                        </div>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control col-sm-8 col-md-6" 
+                            [value]="(SaleDetail.Headboard.Client!=null) ? SaleDetail.Headboard.Client.Person.DocumentNum : ''"
+                            [readOnly]="true">
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                Fecha de creación
+                            </label>
+                        </div>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control col-sm-8 col-md-6" 
+                            [value]="(SaleDetail.Headboard.SaleCod!=='') ? (SaleDetail.Headboard.CreationDate | date: 'dd/MM/yyyy hh:mm:ss') : ''"
+                            [readOnly]="true">
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label for="id-form-field-1" class="mb-0">
+                                Total de la venta
+                            </label>
+                        </div>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control col-sm-8 col-md-6" 
+                            [value]="SaleDetail.Headboard.CurrencyCod + ' ' + (SaleDetail.Headboard.NumTotalTax | FormatoMonedaPeruana : false)"
+                            [readOnly]="true">
+                        </div>
+                    </div>
+                    <div class="form-group row">
+                      <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                          <label for="id-form-field-1" class="mb-0">
+                              Motivo de la nota de credito
+                          </label>
+                      </div>
+                      <div class="col-sm-9">
+                          <input type="text" 
+                            class="form-control col-sm-8 col-md-6"
+                            #txtCommenter
+                            [readOnly]="true">
+                      </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-12">
+                          <div class="card dcard">
+                              <div class="card-body px-1 px-md-3">
+            
+                                <form autocomplete="off">            
+                                  <table id="simple-table" class="mb-0 table table-borderless table-bordered-x brc-secondary-l3 text-dark-m2 radius-1 overflow-hidden">
+                                    <thead class="text-dark-tp3 bgc-grey-l4 text-90 border-b-1 brc-transparent">
+                                      <tr>           
+                                        <th>
+                                          Codigo
+                                        </th>            
+                                        <th>
+                                          Descripción
+                                        </th>
+                                        <th>
+                                          Cantidad
+                                        </th>
+                                        <th>
+                                            Cantidad a devolver
+                                        </th>                                             
+                                      </tr>
+                                    </thead>
+            
+                                    <tbody class="mt-1">
+                                      <tr class="bgc-h-yellow-l4 d-style" *ngFor="let item of CreditNoteDetail.DetailList">            
+                                        <td class="text-600">
+                                          {{ item.Product.ProductCod }}
+                                        </td>
+                                        <td class="text-800">
+                                         {{ item.Product.ProductName }}
+                                        </td>
+                                        <td class="text-800">
+                                          {{ item.CreditNoteDet.NumUnit }}
+                                         </td>
+                                         <td>
+                                            <div class="btn-group" role="group" aria-label="Basic mixed styles example">
+                                                <button type="button" class="btn btn-danger" (click)="SubtractUnit(item)">-</button>
+                                                <input type="text" 
+                                                        value="{{ getUnit(item) }}" 
+                                                        class="form-control"
+                                                        style="width: 80px; text-align: center;"
+                                                        (input)="validateUnit($event, item)">
+                                                <button type="button" class="btn btn-success" (click)="AddUnit(item)">+</button>
+                                              </div>
+                                         </td>
+                                      </tr>       
+                                    </tbody>
+                                  </table>
+            
+                                </form>
+            
+                              </div><!-- /.card-body -->
+                            </div>
+                        </div>
+                        
+                    </div>
+
+                    <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
+                        <div class="offset-md-3 col-md-9 text-nowrap">
+                            <a 
+                                class="btn btn-info btn-bold px-4" 
+                                type="button"
+                                (click)="Save()"
+                            >
+                                <i class="fa fa-check mr-1"></i>
+                                Guardar
+                            </a>
+
+                            <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4" 
+                                type="reset"
+                                href="/enterprise/sale/pages/listcreditnote"
+                            >
+                                <i class="fa fa-undo mr-1"></i>
+                                Cancelar
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>

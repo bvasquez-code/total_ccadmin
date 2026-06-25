@@ -1,0 +1,44 @@
+<div role="main" class="main-content">
+
+    <div class="page-content container container-plus">
+
+        <div class="card-header">
+            <h3 class="card-title text-125 text-primary-d2">
+                <i class="far fa-edit text-dark-l3 mr-1"></i>
+                Sesión de Caja: {{ CashSessionID }}
+            </h3>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card dcard">
+                    <div class="card-body px-1 px-md-3">
+
+                        <div autocomplete="off">
+                            <div class="d-flex justify-content-between flex-column flex-sm-row mb-3 px-2 px-sm-0">
+
+                                <div class="mb-2 mb-sm-0">
+                                    <a class="btn px-4 btn-light mb-1"
+                                        href="enterprise/cash/pages/listcashregister">Volver</a>
+                                </div>
+
+                                <div class="mb-2 mb-sm-0">
+                                    <a class="btn px-4 btn-danger mb-1" (click)="goClose()">
+                                        Cerrar Caja
+                                    </a>
+                                </div>
+
+                            </div>
+
+                            <app-table [data]="table.dataTablaGenetic" [action]="this"></app-table>
+
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>

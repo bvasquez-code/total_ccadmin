@@ -1,0 +1,52 @@
+<div role="main" class="main-content">
+
+    <div class="page-content container container-plus">
+        <div class="col-12 col-md-12 mt-12 mt-md-0">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="card-title text-orange-d4">
+                        Cargar archivos
+                    </h5>
+                </div>
+
+                <div class="card-body">
+                    <div>
+                        <div class="form-group row">
+                            <div class="col-sm-8">
+                                <input type="file"
+                                    #FileInput
+                                    class="form-control col-sm-12 col-md-12" 
+                                    (change)="onFileChange($event)"
+                                >
+                            </div>
+                            <div class="col-sm-4">
+                                <a class="btn btn-info btn-bold px-4" type="button" (click)="Save()">
+                                    <i class="fa fa-check mr-1"></i>
+                                    Guardar
+                                </a>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <div class="col-sm-3"></div>
+                            <div class="col-sm-6">
+                                <img 
+                                    *ngIf="base64textString" 
+                                    [src]="appFileSelect.type + base64textString" 
+                                    alt="Imagen cargada"
+                                    style="width: 200px; height: 200px;"
+                                >
+                            </div>
+                        </div>
+
+                       
+
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+</div>

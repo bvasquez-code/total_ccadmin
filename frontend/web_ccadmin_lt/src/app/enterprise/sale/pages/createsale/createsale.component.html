@@ -1,0 +1,466 @@
+<div role="main" class="main-content">
+
+    <div class="page-content container container-plus">
+      <div class="container px-0">
+
+        <div class="row mt-4">
+          <div class="col-12">
+
+            <div class="page-header border-0 mb-0">
+              <h1 class="page-title text-dark-l3 text-115">
+                Venta
+                <i class="fa fa-angle-right text-80 ml-1"></i>
+                <small class="page-info text-dark-m3">
+                  {{ SaleDetail.Headboard.SaleCod }}
+                </small>
+              </h1>
+              <div class="page-tools">
+                <div class="action-buttons">
+                  <a class="btn bg-white btn-light mx-1px text-95 shadow-sm" 
+                      href="#" 
+                      data-title="Print"
+                      (click)="print()">
+                    <i class="mr-1 fa fa-print text-primary text-120 w-2"></i>
+                    Print
+                  </a>
+                  <a class="btn bg-white btn-light mx-1px text-95 shadow-sm" href="#" data-title="PDF">
+                    <i class="mr-1 far fa-file-pdf text-danger text-120 w-2"></i>
+                    Export
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <div class="card dcard mb-4">
+              <div class="card-body px-4 px-lg-5">
+
+                <div class="row mt-4">
+                  <div class="col-sm-6">
+                    <div *ngIf="(SaleDetail.Headboard.Client!=null)">
+                      <div class="text-100 text-grey-m1 align-middle">
+                        Cliente :
+                      </div>
+
+                      <div class="text-600 text-110 text-primary mt-2">
+                        {{ getNameClient() }}
+                      </div>
+
+                      <div class="text-dark-l1">
+                        <div class="my-1">
+                          N° Documento : {{ SaleDetail.Headboard.Client.Person.DocumentNum }}
+                        </div>
+                        <div class="my-1">
+                          <i class="fa fa-phone fa-flip-horizontal text-purple"></i> <b class="text-600">
+                            {{ SaleDetail.Headboard.Client.Person.CellPhone }}
+                          </b>
+                        </div>
+                      </div>
+                    </div>
+                    <div *ngIf="(SaleDetail.Headboard.ClientCod === '' || SaleDetail.Headboard.ClientCod === null)">
+                      <div class="alert bgc-warning-l4 brc-warning-m3 border-1 text-dark-m2" *ngIf="requiresClientForSelectedDocument()">
+                        Debe seleccionar un cliente para el documento de venta seleccionado.
+                        <button class="btn btn-sm btn-primary ml-2" type="button" (click)="OpenClientModal()">
+                          Buscar cliente
+                        </button>
+                      </div>
+                    </div>
+                    <div class="mt-2" *ngIf="(SaleDetail.Headboard.SaleStatus !== 'C')">
+                      <button class="btn btn-sm btn-outline-primary" type="button" (click)="OpenClientModal()">
+                        {{ hasClient() ? 'Cambiar cliente' : 'Agregar cliente' }}
+                      </button>
+                    </div>
+                  </div><!-- /.col -->
+
+
+                  <div class="col-sm-6 align-self-start d-sm-flex justify-content-end text-95">
+                    <hr class="d-sm-none">
+                    <div class="text-dark-l1">
+                      <div class="mt-1 mb-2 text-secondary-d1 text-600 text-125">
+                        Datos de venta
+                      </div>
+
+                      <div class="my-2" *ngIf="(SaleDetail.Headboard.SaleStatus === 'C')">
+                        <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                        <span class="text-600 text-90">
+                              Documento de venta :
+                          </span>
+                        {{ SaleDetail.SaleDocument.DocumentCod }}
+                      </div>
+
+                      <div class="my-2">
+                        <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                        <span class="text-600 text-90">
+                              ID:
+                          </span>
+                        {{ SaleDetail.Headboard.SaleCod }}
+                      </div>
+
+                      <div class="my-2">
+                        <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                        <span class="text-600 text-90">
+                              Fecha operación:
+                          </span>
+                        {{ SaleDetail.Headboard.CreationDate | date: 'dd/MM/yyyy hh:mm:ss'}}
+                      </div>
+
+                      <div class="my-2">
+                        <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                        <span class="text-600 text-90">
+                              Estado:
+                          </span>
+                          <span class="badge bgc-orange-d1 text-white badge-pill px-25">
+                            {{ SaleDetail.Headboard.SaleStatus| SaleStatusPipe }}
+                          </span>
+                      </div>
+                    </div>
+                  </div><!-- /.col -->
+                </div><!-- /.قخص -->
+
+
+                <div class="mt-4">
+                  <div class="row text-600 text-95 text-secondary-d3 brc-green-l1 py-25 border-y-2">
+
+                    <div class="d-none d-sm-block col-sm-3">
+                      Producto
+                    </div>
+
+                    <div class="d-none d-sm-block col-sm-1">
+                      Unid
+                    </div>
+
+                    <div class="d-none d-sm-block col-sm-2">
+                      Precio unitario
+                    </div>
+                    
+                    <div class="d-none d-sm-block col-sm-2">
+                      SubTotal
+                    </div>
+                    <div class="d-none d-sm-block col-sm-2">
+                        Descuento
+                      </div>
+                      <div class="d-none d-sm-block col-sm-2">
+                        Total
+                      </div>
+                  </div>
+
+                  <div class="text-95 text-dark-m3">
+                    <div class="row mb-2 mb-sm-0 py-25" [ngClass]="(indexOfelement + 1)%2 == 0 ? 'bgc-green-l4' : ''"
+                     *ngFor="let item of SaleDetail.DetailList,let indexOfelement=index;"
+                    >
+
+                      <div class="col-7 col-sm-3">
+                        ({{ item.Product.ProductCod }}) - {{ item.Product.ProductName }}
+                      </div>
+
+                      <div class="d-none d-sm-block col-1">
+                        {{ item.NumUnit }}
+                      </div>
+
+                      <div class="d-none d-sm-block col-2 text-95">
+                        {{ SaleDetail.Headboard.CurrencyCod }} {{ item.NumUnitPriceSale | FormatoMonedaPeruana : false}}
+                      </div>
+
+                      <div class="d-none d-sm-block col-2 text-95">
+                        {{ SaleDetail.Headboard.CurrencyCod }} {{ item.NumTotalPrice | FormatoMonedaPeruana : false}}
+                      </div>
+                      <div class="d-none d-sm-block col-2 text-95">
+                        {{ SaleDetail.Headboard.CurrencyCod }} {{ item.NumDiscount | FormatoMonedaPeruana : false}}
+                      </div>
+                      <div class="col-5 col-sm-2 text-secondary-d3 text-600">
+                        {{ SaleDetail.Headboard.CurrencyCod }} {{ item.NumTotalPrice | FormatoMonedaPeruana : false}}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="row border-b-2 brc-green-l1"></div>
+
+                  <div class="row mt-4">
+                    <div class="col-12 col-sm-7 mt-2 mt-lg-0">
+                      
+                      <div class="d-inline-block text-center" *ngIf="(SaleDetail.Headboard.SaleStatus !== 'C')">
+                        <p class="text-95 text-dark-m2">
+                          <i class="fa fa-exclamation-triangle text-danger-m2 mr-1"></i>
+                          Seleccione el tipo de
+                          <br>
+                           documento de venta
+                        </p>
+
+                        <div>
+                          <form autocomplete="off" class="p-2 p-sm-3 bgc-secondary-l4 radius-1 btn-group btn-group-toggle mx-n3 mx-sm-0" data-toggle="buttons">
+                            <div role="button" (click)="selectDocumentType('03')" 
+                              class="mr-1 p-3 border-2 btn btn-brc-tp shadow-sm btn-light btn-text-blue btn-h-lighter-blue btn-a-light-blue bgc-white">
+                              <input type="radio" name="place" id="place1" value="1">
+                              BOLETA
+                            </div>
+
+                            <div role="button" (click)="selectDocumentType('01')" 
+                              class="mr-1 p-3 border-2 btn btn-brc-tp shadow-sm btn-text-purple btn-light btn-h-lighter-purple btn-a-light-purple bgc-white">
+                              <input type="radio" name="place" id="place2" value="1">
+                              FACTURA
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+
+                    </div>
+
+
+                    <div class="col-12 col-sm-5 text-dark-l1 text-90 order-first order-sm-last">
+                      <div class="row my-2">
+                        <div class="col-7 text-right">
+                          SubTotal
+                        </div>
+
+                        <div class="col-5">
+                          <span class="text-125 text-secondary-d3">
+                            {{  SaleDetail.Headboard.CurrencyCod }} {{ SaleDetail.Headboard.NumTotalPriceNoTax | FormatoMonedaPeruana : false  }}
+                              </span>
+                        </div>
+                      </div>
+
+                      <div class="row my-2">
+                        <div class="col-7 text-right">
+                          IGV (18%)
+                        </div>
+
+                        <div class="col-5">
+                          <span class="text-115 text-secondary-d3">
+                            {{  SaleDetail.Headboard.CurrencyCod }} {{ SaleDetail.Headboard.NumTotalTax | FormatoMonedaPeruana : false }}
+                              </span>
+                        </div>
+                      </div>                      
+
+                      <a *ngIf="(SaleDetail.Headboard.SaleStatus !== 'C' && enableButtonPay)"
+                        class="row my-3 align-items-center bgc-green-d3 p-2 radius-1" 
+                        style="cursor: pointer;"
+                        data-toggle="modal" 
+                        data-target="#TrxPaymentModal" 
+                        (click)="OpenTrxPaymentModal()"
+                      >
+                        <div class="col-7 text-right text-white text-110">
+                          Monto Total
+                        </div>
+
+                        <div class="col-5">
+                          <span class="text-150 text-white">
+                            {{  SaleDetail.Headboard.CurrencyCod }} {{ SaleDetail.Headboard.NumTotalPrice | FormatoMonedaPeruana : false  }}
+                              </span>
+                        </div>
+                      </a>
+
+                      <a *ngIf="(SaleDetail.Headboard.SaleStatus !== 'C' && !enableButtonPay)"
+                        class="row my-3 align-items-center bgc-green-d3 p-2 radius-1" 
+                        style="cursor: pointer;"
+                        (click)="viewAlertSelectDocumentType()"
+                      >
+                        <div class="col-7 text-right text-white text-110">
+                          Monto Total
+                        </div>
+                        <div class="col-5">
+                          <span class="text-150 text-white">
+                            {{  SaleDetail.Headboard.CurrencyCod }} {{ SaleDetail.Headboard.NumTotalPrice | FormatoMonedaPeruana : false  }}
+                              </span>
+                        </div>
+                      </a>
+                      
+                      <div class="row my-2">
+                        <div class="col-2 text-right"></div>
+                        <div class="col-10" *ngIf="(SaleDetail.Headboard.SaleStatus === 'C')">
+                          <div class="alert d-flex bgc-green-l4 brc-green-m4 border-1 border-l-0 pl-3 radius-l-0" 
+                            role="alert"
+                          >
+                            <div class="position-tl h-102 border-l-4 brc-green mt-n1px"></div>
+                            <i class="fa fa-check mr-3 text-180 text-green"></i>
+
+                            <span class="align-self-center text-green-d2 text-120">
+                              Pago total realizado de <b>{{  SaleDetail.Headboard.CurrencyCod }} {{ SaleDetail.Headboard.NumTotalPrice | FormatoMonedaPeruana : false }}</b>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="row my-2">
+                        <div class="col-7 text-right">
+                          Vuelto
+                        </div>
+
+                        <div class="col-5">
+                          <span class="text-115 text-secondary-d3">
+                            {{  SaleDetail.Headboard.CurrencyCod }} {{ getAmountReturned() | FormatoMonedaPeruana : false }}
+                              </span>
+                        </div>
+                      </div>
+
+                    </div>
+                  </div>
+
+                  <hr class="brc-secondary-l3 border-t-2">
+
+                  <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
+                    <div class="offset-md-5 col-md-9 text-nowrap">
+                        <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4" 
+                            type="reset"
+                            href="/enterprise/sale/pages/listsale"
+                        >
+                            <i class="fa fa-undo mr-1"></i>
+                            Volver
+                        </a>
+                    </div>
+                </div>
+
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+</div>
+
+<button type="button" class="d-none" data-toggle="modal" data-target="#ClientModal" #btnOpenClientModal></button>
+
+<div class="modal fade" id="TrxPaymentModal" tabindex="-1" role="dialog" aria-labelledby="TrxPaymentModal"
+  aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content" style="width: 180%;" *ngIf="(SaleDetail.Headboard.SaleStatus !== 'C')">
+
+      <div class="modal-body">
+        <app-createtrxpayment
+          [TrxPaymentComponenRequest]="TrxPaymentComponenRequest"
+          (ResultForm)="ResponseResultFormClient($event)"
+        >
+        </app-createtrxpayment>
+      </div>
+      <div class="modal-footer">
+      </div>
+
+    </div>
+
+    <div class="modal-content" style="width: 100%;" *ngIf="(SaleDetail.Headboard.SaleStatus === 'C')">
+      <div class="modal-body">
+        <div class="alert fade show bgc-white text-dark-tp3 border-1 brc-secondary-l2 shadow-sm radius-0 py-3 d-flex align-items-start">
+          <div class="position-tl w-102 m-n1px border-t-4 brc-success"></div>
+          <div class="bgc-success-l4 px-3 py-3 radius-round mr-4 border-2 brc-success-m2">
+            <i class="fa fa-check text-140 text-success mx-2px"></i>
+          </div>
+  
+          <div class="text-dark-tp3">
+            <h3 class="text-success-d1 text-130">Operación realizada con exito!</h3>
+            Pago completado <b>exitosamente</b> ya puede retirar sus productos.
+          </div>
+        </div>
+        <div class="alert fade show bgc-white text-dark-tp3 border-1 brc-secondary-l2 shadow-sm radius-0 py-3 d-flex align-items-start">
+          <div class="text-dark-tp3" *ngIf="(getAmountReturned() > 0)">
+              <h3 class="text-success-d1 text-130">Entrega el vuelto al cliente</h3>
+              <b>vuelto : </b> {{  SaleDetail.Headboard.CurrencyCod }} {{ getAmountReturned() | FormatoMonedaPeruana : false }}
+          </div>
+        </div>
+      
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-dismiss="modal">
+          Ok
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="modal fade" id="ClientModal" tabindex="-1" role="dialog" aria-labelledby="ClientModalLabel"
+  aria-hidden="true">
+  <div class="modal-dialog" role="document" *ngIf="(ShowClientSearch === true)">
+    <div class="modal-content" style="width: 100%;">
+      <div class="modal-header">
+        <h5 class="modal-title text-primary-d3" id="ClientModalLabel">
+          Buscar cliente
+        </h5>
+
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+      <div class="modal-body">
+
+        <div class="mb-3 row">
+          <label class="col-sm-4 col-form-label">Tipo documento</label>
+          <div class="col-sm-8">
+            <select class="form-control" #cboDocumentType [disabled]="DocumentType === '01'">
+              <option value="06" *ngIf="DocumentType === '01'">RUC</option>
+              <option value="01" *ngIf="DocumentType === '03'">DNI</option>
+              <option value="04" *ngIf="DocumentType === '03'">CARNET DE EXTRANJERIA</option>
+              <option value="06" *ngIf="DocumentType === '03'">RUC</option>
+            </select>
+          </div>
+        </div>
+        <div class="mb-3 row">
+          <label class="col-sm-4 col-form-label">N° Documento</label>
+          <div class="col-sm-8">
+            <input type="text" class="form-control" #txtDocumentNum>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-dismiss="modal">
+          Cerrar
+        </button>
+        <button type="button" class="btn btn-primary" (click)="findByDocumentNum()">
+          Buscar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-dialog" role="document" *ngIf="(ShowClientRegister === true)">
+    <div class="modal-content" style="width: 180%;">
+
+      <div class="modal-body">
+        <app-createclient
+          (ResultForm)="ResponseResultFormSaleClient($event)"
+          [InputDocumentNum]="ClientDocumentNum"
+          [InputDocumentType]="ClientDocumentType"
+          [InvokeType]="'modal'">
+        </app-createclient>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-dismiss="modal">
+          Ok
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-dialog" role="document" *ngIf="(ShowClient === true)">
+    <div class="modal-content" style="width: 120%;">
+
+      <div class="modal-body" *ngIf="(SaleDetail.Headboard.Client!=null)">
+        <div class="p-2 py-lg-3 d-flex pos-rel mx-1 justify-content-start justify-content-lg-center ccard">
+          <div class="pl-1">
+            <span class="d-inline-block bgc-purple-tp1 p-3 radius-round text-center border-2 brc-black-tp11">
+              <i class="far fa-user text-white text-170 w-3 mx-3px"></i>
+            </span>
+          </div>
+          <div class="pl-25">
+            <div class="d-flex align-items-center justify-content-between justify-content-md-start">
+              <span class="text-grey-d3 text-160 mr-4">
+                {{ getInfoClient() }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-dismiss="modal">
+          Ok
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>

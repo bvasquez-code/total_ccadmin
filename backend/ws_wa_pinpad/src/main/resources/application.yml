@@ -1,0 +1,19 @@
+server:
+  address: 127.0.0.1
+  port: 6669
+
+pinpad:
+  agent-token: "change-me-local-token"
+  storage-path: "C:/pinpad-agent"
+  timeout-seconds: 120
+  simulator-enabled: true
+  wait-final-result-on-register: true
+  register-wait-timeout-seconds: 5
+  simulator-min-delay-millis: 1000
+  simulator-max-delay-millis: 3000
+  terminal-id: "TERM-DEMO-001"
+  merchant-id: "MERCHANT-DEMO-001"
+  allowed-currency: "PEN"
+  allowed-origins:
+    - "http://localhost:4200"
+    - "http://127.0.0.1:4200"

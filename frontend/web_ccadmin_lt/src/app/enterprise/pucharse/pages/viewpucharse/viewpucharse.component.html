@@ -1,0 +1,202 @@
+<div role="main" class="main-content">
+
+  <div class="page-content container container-plus">
+    <div class="container px-0">
+
+      <div class="row mt-4">
+        <div class="col-12">
+
+          <div class="page-header border-0 mb-0">
+            <h1 class="page-title text-dark-l3 text-115">
+              Compras
+              <i class="fa fa-angle-right text-80 ml-1"></i>
+              <small class="page-info text-dark-m3">
+                Detalle de compra — {{ PucharseDetails.Headboard.PucharseCod }}
+              </small>
+            </h1>
+            <div class="page-tools">
+              <div class="action-buttons">
+                <a class="btn bg-white btn-light mx-1px text-95 shadow-sm" (click)="goBack()" style="cursor:pointer;">
+                  <i class="mr-1 fa fa-arrow-left text-primary text-120 w-2"></i>
+                  Volver
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- CABECERA -->
+          <div class="card dcard mb-4">
+            <div class="card-body px-4 px-lg-5">
+
+              <!-- INFO GENERAL -->
+              <div class="row mt-4">
+
+                <!-- Columna izquierda: datos del proveedor / solicitud -->
+                <div class="col-sm-6">
+                  <div class="text-100 text-grey-m1 align-middle mb-1">Proveedor</div>
+                  <div class="text-600 text-110 text-primary mt-1 mb-2">
+                    {{ PucharseDetails.Headboard.DealerCod || '—' }}
+                  </div>
+
+                  <div class="text-dark-l1">
+                    <div class="my-1">
+                      <i class="fa fa-file-alt text-purple mr-1"></i>
+                      <b class="text-600">Solicitud:</b>
+                      {{ PucharseDetails.Headboard.PucharseReqCod || '—' }}
+                    </div>
+                    <div class="my-1">
+                      <i class="fa fa-tag text-info mr-1"></i>
+                      <b class="text-600">Op. Referencia:</b>
+                      {{ PucharseDetails.Headboard.ExternalCod || '—' }}
+                    </div>
+                    <div class="my-1" *ngIf="PucharseDetails.Headboard.Commenter">
+                      <i class="fa fa-comment text-orange mr-1"></i>
+                      <b class="text-600">Comentario:</b>
+                      {{ PucharseDetails.Headboard.Commenter }}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Columna derecha: datos de la compra -->
+                <div class="col-sm-6 align-self-start d-sm-flex justify-content-end text-95">
+                  <hr class="d-sm-none">
+                  <div class="text-dark-l1">
+                    <div class="mt-1 mb-2 text-secondary-d1 text-600 text-125">Datos de compra</div>
+
+                    <div class="my-2">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                      <span class="text-600 text-90">ID:</span>
+                      {{ PucharseDetails.Headboard.PucharseCod }}
+                    </div>
+
+                    <div class="my-2">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                      <span class="text-600 text-90">Tienda:</span>
+                      {{ PucharseDetails.Headboard.StoreCod }}
+                    </div>
+
+                    <div class="my-2">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                      <span class="text-600 text-90">Moneda:</span>
+                      {{ PucharseDetails.Headboard.CurrencyCod }}
+                    </div>
+
+                    <div class="my-2">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                      <span class="text-600 text-90">Estado:</span>
+                      <span [class]="getStatusClass(PucharseDetails.Headboard.PurchaseStatus)">
+                        {{ getStatusLabel(PucharseDetails.Headboard.PurchaseStatus) }}
+                      </span>
+                    </div>
+
+                    <div class="my-2">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                      <span class="text-600 text-90">Modificación:</span>
+                      {{ PucharseDetails.Headboard.ModifyDate | date: 'dd/MM/yyyy HH:mm:ss' }}
+                    </div>
+                  </div>
+                </div>
+
+              </div><!-- /.row -->
+
+              <!-- DETALLE DE PRODUCTOS -->
+              <div class="mt-4">
+
+                <div class="row text-600 text-95 text-secondary-d3 brc-green-l1 py-25 border-y-2">
+                  <div class="d-none d-sm-block col-sm-2">Código</div>
+                  <div class="d-none d-sm-block col-sm-4">Producto</div>
+                  <div class="d-none d-sm-block col-sm-1 text-center">Cant.</div>
+                  <div class="d-none d-sm-block col-sm-2 text-right">P. Unitario</div>
+                  <div class="d-none d-sm-block col-sm-2 text-right">Total</div>
+                  <div class="d-none d-sm-block col-sm-1 text-center">Recepción</div>
+                </div>
+
+                <div class="text-95 text-dark-m3">
+                  <div class="row mb-2 mb-sm-0 py-25" [ngClass]="(i + 1) % 2 === 0 ? 'bgc-green-l4' : ''"
+                    *ngFor="let item of PucharseDetails.DetailList; let i = index">
+                    <div class="col-7 col-sm-2 text-secondary-d3 text-600">
+                      {{ item.ProductCod }}
+                    </div>
+
+                    <div class="col-7 col-sm-4">
+                      {{ item.Product.ProductName || '—' }}
+                    </div>
+
+                    <div class="d-none d-sm-block col-1 text-center">
+                      {{ item.NumUnit }}
+                    </div>
+
+                    <div class="d-none d-sm-block col-2 text-right">
+                      {{ PucharseDetails.Headboard.CurrencyCod }}
+                      {{ item.NumUnitPrice | number: '1.2-2' }}
+                    </div>
+
+                    <div class="d-none d-sm-block col-2 text-right">
+                      {{ PucharseDetails.Headboard.CurrencyCod }}
+                      {{ item.NumTotalPrice | number: '1.2-2' }}
+                    </div>
+
+                    <div class="d-none d-sm-block col-1 text-center">
+                      <span [class]="getKardexClass(item.IsKardexAffected)">
+                        {{ getKardexLabel(item.IsKardexAffected) }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row border-b-2 brc-green-l1"></div>
+
+                <!-- TOTALES -->
+                <div class="row mt-4 justify-content-end">
+                  <div class="col-12 col-sm-4 text-dark-l1 text-90">
+                    <div class="row my-2">
+                      <div class="col-7 text-right font-weight-bold">Monto Total</div>
+                      <div class="col-5">
+                        <span class="text-125 text-secondary-d3">
+                          {{ PucharseDetails.Headboard.CurrencyCod }}
+                          {{ NumTotalPrice | number: '1.2-2' }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- BODEGA -->
+              <div class="mt-4" *ngIf="WarehouseList && WarehouseList.length > 0">
+                <hr class="brc-secondary-l3 border-t-2">
+                <h5 class="text-dark-m3 text-110 mb-3">
+                  <i class="fa fa-warehouse mr-1 text-primary"></i>
+                  Almacén destino
+                </h5>
+                <div class="row">
+                  <div class="col-sm-4" *ngFor="let wh of WarehouseList">
+                    <div class="card border-1 brc-secondary-l3 radius-1 p-3">
+                      <div class="text-600 text-105">{{ wh.WarehouseCod }}</div>
+                      <div class="text-dark-l1 text-95 mt-1">{{ wh.WarehouseName }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- BOTONES -->
+              <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
+                <div class="offset-md-5 col-md-9 text-nowrap">
+                  <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4" (click)="goBack()"
+                    style="cursor:pointer;">
+                    <i class="fa fa-undo mr-1"></i>
+                    Volver
+                  </a>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

@@ -1,0 +1,201 @@
+<div role="main" class="main-content">
+  <div class="page-content container container-plus">
+    <div class="container px-0">
+
+      <div class="row mt-4">
+        <div class="col-12">
+
+          <div class="page-header border-0 mb-0">
+            <h1 class="page-title text-dark-l3 text-115">
+              Nota de crédito
+              <i class="fa fa-angle-right text-80 ml-1" aria-hidden="true"></i>
+              <small class="page-info text-dark-m3">
+                {{ Detail.Headboard.CreditNoteCod }}
+              </small>
+            </h1>
+
+            <div class="page-tools">
+              <div class="action-buttons">
+                <!-- Solo visualización: puedes dejar estos botones para imprimir/exportar si luego agregas el servicio -->
+                <button 
+                  type="button" 
+                  class="btn bg-white btn-light mx-1px text-95 shadow-sm" 
+                  [disabled]="loading"
+                  (click)="print()">
+                  <i class="mr-1 fa fa-print text-primary text-120 w-2" aria-hidden="true"></i>
+                  Print
+                </button>
+
+                <button type="button" class="btn bg-white btn-light mx-1px text-95 shadow-sm" [disabled]="loading">
+                  <i class="mr-1 far fa-file-pdf text-danger text-120 w-2" aria-hidden="true"></i>
+                  Export
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card dcard mb-4">
+            <div class="card-body px-4 px-lg-5">
+
+              <div class="row mt-4">
+                <!-- Cliente -->
+                <div class="col-sm-6">
+                  <div *ngIf="Detail.Client">
+                    <div class="text-100 text-grey-m1 align-middle">
+                      Cliente :
+                    </div>
+
+                    <div class="text-600 text-110 text-primary mt-2">
+                      {{ Detail.Client.Person.Names }} {{ Detail.Client.Person.LastNames }}
+                    </div>
+
+                    <div class="text-dark-l1">
+                      <div class="my-1">
+                        N° Documento : {{ Detail.Client.Person.DocumentNum }}
+                      </div>
+                      <div class="my-1" *ngIf="Detail.Client.Person.CellPhone">
+                        <i class="fa fa-phone fa-flip-horizontal text-purple" aria-hidden="true"></i>
+                        <b class="text-600">
+                          {{ Detail.Client.Person.CellPhone }}
+                        </b>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Datos cabecera -->
+                <div class="col-sm-6 align-self-start d-sm-flex justify-content-end text-95">
+                  <hr class="d-sm-none">
+                  <div class="text-dark-l1">
+
+                    <div class="mt-1 mb-2 text-secondary-d1 text-600 text-125">
+                      Datos de la nota
+                    </div>
+
+                    <div class="my-2" *ngIf="Detail.Document.DocumentCod">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1" aria-hidden="true"></i>
+                      <span class="text-600 text-90">Documento:</span>
+                      {{ Detail.Document.DocumentCod }}
+                    </div>
+
+                    <div class="my-2" *ngIf="Detail.Headboard.SaleCod">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1" aria-hidden="true"></i>
+                      <span class="text-600 text-90">Venta origen:</span>
+                      {{ Detail.Headboard.SaleCod }}
+                    </div>
+
+                    <div class="my-2">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1" aria-hidden="true"></i>
+                      <span class="text-600 text-90">Fecha de emisión:</span>
+                      {{ Detail.Headboard.CreationDate | date:'dd/MM/yyyy HH:mm:ss' }}
+                    </div>
+
+                    <div class="my-2">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1" aria-hidden="true"></i>
+                      <span class="text-600 text-90">Estado:</span>
+                      <span class="badge bgc-orange-d1 text-white badge-pill px-25">
+                        {{ statusLabel(Detail.Headboard.CreditNoteStatus) }}
+                      </span>
+                    </div>
+
+                    <div class="my-2">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1" aria-hidden="true"></i>
+                      <span class="text-600 text-90">Tipo de nota:</span>
+                      {{ typeLabel(Detail.Headboard.TypeCreditNote) }}
+                    </div>
+
+                    <div class="my-2" *ngIf="Detail.Headboard.IsStockReturned">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1" aria-hidden="true"></i>
+                      <span class="text-600 text-90">Stock:</span>
+                      {{ stockReturnedLabel(Detail.Headboard.IsStockReturned) }}
+                    </div>
+
+                    <div class="my-2" *ngIf="Detail.Headboard.Commenter">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1" aria-hidden="true"></i>
+                      <span class="text-600 text-90">Comentario:</span>
+                      {{ Detail.Headboard.Commenter }}
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+
+              <!-- Detalle -->
+              <div class="mt-4">
+                <div class="row text-600 text-95 text-secondary-d3 brc-green-l1 py-25 border-y-2">
+                  <div class="d-none d-sm-block col-sm-4">Producto</div>
+                  <div class="d-none d-sm-block col-sm-2">Unid</div>
+                  <div class="d-none d-sm-block col-sm-3">Precio unitario</div>
+                  <div class="d-none d-sm-block col-sm-3">Total</div>
+                </div>
+
+                <div class="text-95 text-dark-m3">
+                  <div class="row mb-2 mb-sm-0 py-25"
+                       *ngFor="let item of Detail.DetailList; let i = index; trackBy: trackByDet"
+                       [ngClass]="(i + 1) % 2 === 0 ? 'bgc-green-l4' : ''">
+
+                    <div class="col-7 col-sm-4">
+                      ({{ item.CreditNoteDet.ProductCod }})
+                      - {{ item.Product.ProductName }}
+                    </div>
+
+                    <div class="d-none d-sm-block col-sm-2">
+                      {{ item.CreditNoteDet.NumUnit }}
+                    </div>
+
+                    <div class="d-none d-sm-block col-sm-3 text-95">
+                      {{ Detail.Headboard.CurrencyCod }}
+                      {{ item.CreditNoteDet.NumUnitPriceSale | FormatoMonedaPeruana:false }}
+                    </div>
+
+                    <div class="col-5 col-sm-3 text-secondary-d3 text-600">
+                      {{ Detail.Headboard.CurrencyCod }}
+                      {{ item.CreditNoteDet.NumTotalPrice | FormatoMonedaPeruana:false }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row border-b-2 brc-green-l1"></div>
+
+                <!-- Totales -->
+                <div class="row mt-4">
+                  <div class="col-12 col-sm-7 mt-2 mt-lg-0"><!-- vacío, reservado por si agregas más info --></div>
+
+                  <div class="col-12 col-sm-5 text-dark-l1 text-90 order-first order-sm-last">
+                    <div class="row my-2">
+                      <div class="col-7 text-right">
+                        <span class="text-150 text-secondary-d3"><b>Monto Total :</b></span>
+                      </div>
+                      <div class="col-5">
+                        <span class="text-150 text-secondary-d3">
+                          {{ Detail.Headboard.CurrencyCod }}
+                          {{ Detail.Headboard.NumTotalPrice | FormatoMonedaPeruana:false }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <hr class="brc-secondary-l3 border-t-2">
+
+                <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
+                  <div class="offset-md-5 col-md-9 text-nowrap">
+                    <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4"
+                       type="reset"
+                       href="/enterprise/sale/pages/listcreditnote">
+                      <i class="fa fa-undo mr-1" aria-hidden="true"></i>
+                      Volver
+                    </a>
+                  </div>
+                </div>
+
+              </div><!-- mt-4 -->
+
+            </div><!-- card-body -->
+          </div><!-- card -->
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
