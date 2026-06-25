@@ -12,9 +12,23 @@
 
         <div class="d-flex justify-content-between align-items-center mb-2">
           <h5 class="text-primary mb-0">Productos solicitados</h5>
-          <button class="btn btn-sm btn-outline-success" (click)="confirmAll()">
+          <button class="btn btn-sm btn-outline-success" (click)="confirmAll()" *ngIf="!isDispatchWithLots">
             <i class="fa fa-check-double mr-1"></i> Confirmar Todos
           </button>
+        </div>
+
+        <div class="d-flex justify-content-end mb-3">
+          <div class="custom-control custom-switch">
+            <input
+              type="checkbox"
+              class="custom-control-input"
+              id="switchDispatchWithLots"
+              name="switchDispatchWithLots"
+              [(ngModel)]="isDispatchWithLots">
+            <label class="custom-control-label" for="switchDispatchWithLots">
+              Despachar con lotes y fecha de vencimiento
+            </label>
+          </div>
         </div>
 
         <div class="form-group mb-3">
@@ -40,22 +54,30 @@
                 <th>Producto</th>
                 <th class="text-center">Cantidad Solicitada</th>
                 <th class="text-center">Cantidad Despachada</th>
+                <th *ngIf="isDispatchWithLots">Lote</th>
+                <th *ngIf="isDispatchWithLots">Vencimiento</th>
                 <th class="text-center">Acciones</th>
               </tr>
             </thead>
             <tbody>
               <tr *ngFor="let det of detailList" [class.bg-light-success]="numUnitDispatchConfirm(det)">
                 <td class="text-center">
-                  <input type="checkbox" [checked]="numUnitDispatchConfirm(det)" style="transform: scale(1.5);"
+                  <input *ngIf="!isDispatchWithLots" type="checkbox" [checked]="numUnitDispatchConfirm(det)" style="transform: scale(1.5);"
                     (change)="checkQuantity(det, $event)">
                 </td>
                 <td>{{ det.ProductCod +' - '+ det.Product.ProductName || det.ProductCod }}</td>
                 <td class="text-center">{{ det.NumUnit }}</td>
                 <td class="text-center">{{ det.NumUnitDispatch }}</td>
+                <td *ngIf="isDispatchWithLots">{{ det.LotNumber || 'SN' }}</td>
+                <td *ngIf="isDispatchWithLots">{{ det.ExpirationDate ? (det.ExpirationDate | date:'dd/MM/yyyy') : '' }}</td>
                 <td class="text-center">
-                  <button class="btn btn-sm btn-info" (click)="openEditModal(det)" data-toggle="modal"
+                  <button *ngIf="!isDispatchWithLots" class="btn btn-sm btn-info" (click)="openEditModal(det)" data-toggle="modal"
                     data-target="#modalEditQty">
                     <i class="fa fa-edit"></i>
+                  </button>
+                  <button *ngIf="isDispatchWithLots && !numUnitDispatchConfirm(det)" class="btn btn-sm btn-info" (click)="openLotDispatchModal(det)" data-toggle="modal"
+                    data-target="#modalLotDispatch">
+                    <i class="fa fa-boxes"></i>
                   </button>
                 </td>
               </tr>
@@ -132,6 +154,96 @@
           </button>
           <a class="btn btn-secondary ml-2" href="enterprise/transfer/pages/listtransferdispatch">Cancelar</a>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Lot Dispatch -->
+<div class="modal fade" id="modalLotDispatch" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document" style="max-width: 780px;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-primary-d3">
+          Despachar por lotes
+        </h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close" #btnCloseLotDispatchModal>
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+      <div class="modal-body py-3">
+        <div class="mb-2">
+          <div class="text-600">{{ selectedDetail.Product.ProductName }}</div>
+          <div class="text-muted text-90">
+            Solicitado: {{ selectedDetail.NumUnit }} |
+            Despachado: {{ getLotDispatchTotal() }} |
+            Pendiente: {{ getLotDispatchPending() }}
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-3">
+            <label class="mb-1">Cantidad</label>
+            <input type="number" min="1" class="form-control" #txtLotNumUnit>
+          </div>
+          <div class="col-md-4">
+            <label class="mb-1">Lote</label>
+            <input type="text" class="form-control" maxlength="32" #txtLotNumber>
+          </div>
+          <div class="col-md-3">
+            <label class="mb-1">Vencimiento</label>
+            <input type="date" class="form-control" #txtExpirationDate>
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <button type="button" class="btn btn-blue btn-bold w-100" (click)="addLotDispatchLine()">
+              Agregar
+            </button>
+          </div>
+        </div>
+
+        <div class="alert alert-warning py-2 mt-2 mb-0" *ngIf="lotDispatchList.length > 0 && getLotDispatchTotal() < selectedDetail.NumUnit">
+          La cantidad despachada es menor a la cantidad solicitada.
+        </div>
+
+        <div class="table-responsive mt-2" style="max-height: 220px; overflow-y: auto;">
+          <table class="table table-bordered table-hover mb-0">
+            <thead class="bgc-grey-l4 text-90">
+              <tr>
+                <th>Cantidad</th>
+                <th>Lote</th>
+                <th>Vencimiento</th>
+                <th style="width: 70px;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let item of lotDispatchList; let i = index">
+                <td>{{ item.NumUnit }}</td>
+                <td>{{ item.LotNumber }}</td>
+                <td>{{ item.ExpirationDate | date:'dd/MM/yyyy' }}</td>
+                <td class="text-center">
+                  <button type="button" class="btn btn-xs btn-danger" (click)="removeLotDispatchLine(i)">
+                    <i class="fa fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="lotDispatchList.length === 0">
+                <td colspan="4" class="text-center text-muted">
+                  Sin lotes agregados
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-secondary px-4" data-dismiss="modal">
+          Cerrar
+        </button>
+        <button type="button" class="btn btn-primary" (click)="confirmLotDispatch()">
+          Confirmar despacho
+        </button>
       </div>
     </div>
   </div>

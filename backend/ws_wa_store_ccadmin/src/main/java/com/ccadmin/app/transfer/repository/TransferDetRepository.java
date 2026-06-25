@@ -34,6 +34,12 @@ public interface TransferDetRepository extends JpaRepository<TransferDetEntity, 
             @Param("transferCod") String transferCod
     );
 
+    @Query(value = """
+            select coalesce(max(ItemNumber),0) from transfer_det
+            where TransferCod = :transferCod
+            """, nativeQuery = true)
+    int findMaxItemNumber(@Param("transferCod") String transferCod);
+
     @Modifying
     @Transactional
     @Query(value = """

@@ -70,6 +70,14 @@ export class ListkardexComponent implements OnInit,ActionTableService<KardexDto>
 
       return kardexDto.kardex.NumStockAfter;
     }
+    const viewLotNumber = (kardexDto : KardexDto) =>{
+
+      return kardexDto.kardex.LotNumber && kardexDto.kardex.LotNumber.trim() ? kardexDto.kardex.LotNumber : "SN";
+    }
+    const viewExpirationDate = (kardexDto : KardexDto) =>{
+
+      return this.formatDateOnly(kardexDto.kardex.ExpirationDate);
+    }
     const viewTypeOperation = (kardexDto : KardexDto) =>{
 
       return kardexDto.dataTypeOperation.ConfigVal;
@@ -82,6 +90,8 @@ export class ListkardexComponent implements OnInit,ActionTableService<KardexDto>
         { Name :  "Stock Anter" , key : "viewNumStockBefore" , FunctionKey : viewNumStockBefore } ,
         { Name :  "Movimiento Stock" , key : "viewNumStockMoved" , FunctionKey : viewNumStockMoved } ,
         { Name :  "Stock Resultante" , key : "NumStockAfter" , FunctionKey : viewNumStockAfter } ,
+        { Name :  "Lote" , key : "viewLotNumber" , FunctionKey : viewLotNumber } ,
+        { Name :  "Fecha venc." , key : "viewExpirationDate" , FunctionKey : viewExpirationDate } ,
         { Name :  "Tipo de operación" , key : "viewTypeOperation" , FunctionKey : viewTypeOperation} ,
         { Name :  "Cod. Operación" , key : "viewOperationCod" , FunctionKey : viewOperationCod} ,
         { Name :  "Fecha de venta", key : "viewCreationDate" , FunctionKey : viewCreationDate , IsDate : true },
@@ -121,6 +131,23 @@ export class ListkardexComponent implements OnInit,ActionTableService<KardexDto>
   }
   getDataRow(item: any): void {
     console.log({ item : item });
+  }
+
+  private formatDateOnly(value: any): string {
+    if (!value) {
+      return "";
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return "";
+    }
+
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+
+    return `${day}/${month}/${year}`;
   }
   
 

@@ -55,6 +55,9 @@ public class TransferDetEntity extends AuditTableEntity implements Serializable 
         if (this.NumUnit <= 0) {
             throw new TransferException("La cantidad debe ser mayor a cero");
         }
+        if (this.LotNumber != null && this.LotNumber.length() > 32) {
+            throw new TransferException("El lote no puede superar 32 caracteres");
+        }
         return this;
     }
 

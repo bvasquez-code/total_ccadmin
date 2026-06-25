@@ -2,6 +2,7 @@ package com.ccadmin.app.pucharse.service;
 
 import com.ccadmin.app.product.model.entity.KardexEntity;
 import com.ccadmin.app.product.shared.KardexShared;
+import com.ccadmin.app.pucharse.exception.PucharseException;
 import com.ccadmin.app.pucharse.model.dto.PucharseDetConfirmDto;
 import com.ccadmin.app.pucharse.model.dto.PucharseDetLotConfirmDto;
 import com.ccadmin.app.pucharse.model.entity.PucharseHeadEntity;
@@ -31,7 +32,7 @@ public class PucharseDetService extends SessionService {
     @Autowired
     private KardexShared kardexShared;
     @Transactional
-    public PucharseDetConfirmDto confirm(PucharseDetConfirmDto pucharseDetConfirm){
+    public PucharseDetConfirmDto confirm(PucharseDetConfirmDto pucharseDetConfirm) throws PucharseException {
 
         PucharseHeadEntity pucharseHead = this.pucharseHeadRepository.findById(pucharseDetConfirm.pucharseDet.PucharseCod).get();
         pucharseDetConfirm.pucharseDetDelivery.PucharseCod = pucharseDetConfirm.pucharseDet.PucharseCod;
@@ -40,6 +41,8 @@ public class PucharseDetService extends SessionService {
         pucharseDetConfirm.pucharseDetDelivery.Variant = pucharseDetConfirm.pucharseDet.Variant;
         pucharseDetConfirm.pucharseDetDelivery.LotNumber = pucharseDetConfirm.pucharseDet.LotNumber;
         pucharseDetConfirm.pucharseDetDelivery.ExpirationDate = pucharseDetConfirm.pucharseDet.ExpirationDate;
+        pucharseDetConfirm.pucharseDet.validate();
+        pucharseDetConfirm.pucharseDetDelivery.validate();
 
         KardexEntity kardexLast = this.kardexShared.findLastMovement(
                 pucharseDetConfirm.pucharseDet.ProductCod,
@@ -64,7 +67,7 @@ public class PucharseDetService extends SessionService {
     }
 
     @Transactional
-    public PucharseDetLotConfirmDto confirmWithLots(PucharseDetLotConfirmDto pucharseDetLotConfirm){
+    public PucharseDetLotConfirmDto confirmWithLots(PucharseDetLotConfirmDto pucharseDetLotConfirm) throws PucharseException {
 
         if (pucharseDetLotConfirm.lotDetailList == null || pucharseDetLotConfirm.lotDetailList.isEmpty()) {
             throw new RuntimeException("Debe ingresar al menos un lote para confirmar la recepcion");
@@ -94,6 +97,7 @@ public class PucharseDetService extends SessionService {
 
         for (int index = 0; index < pucharseDetLotConfirm.lotDetailList.size(); index++) {
             PucharseDetEntity lotDet = pucharseDetLotConfirm.lotDetailList.get(index);
+            lotDet.validate();
             int itemNumber = index == 0 ? originDet.ItemNumber : nextItemNumber++;
             PucharseDetEntity detail = this.buildLotDetail(originDet, lotDet, itemNumber, index == 0);
             PucharseDetDeliveryEntity delivery = this.buildLotDelivery(detail, pucharseDetLotConfirm.WarehouseCod);
@@ -150,4 +154,5 @@ public class PucharseDetService extends SessionService {
 
         return delivery;
     }
+
 }

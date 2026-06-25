@@ -1,6 +1,7 @@
 package com.ccadmin.app.pucharse.model.entity;
 
 import com.ccadmin.app.product.model.entity.ProductEntity;
+import com.ccadmin.app.pucharse.exception.PucharseException;
 import com.ccadmin.app.pucharse.model.entity.id.PucharseDetId;
 import com.ccadmin.app.shared.model.entity.AuditTableEntity;
 import jakarta.persistence.*;
@@ -42,6 +43,13 @@ public class PucharseDetEntity extends AuditTableEntity implements Serializable 
         this.NumUnit = pucharseRequestDet.NumUnit;
         this.NumUnitPrice = pucharseRequestDet.NumUnitPrice;
         this.NumTotalPrice = pucharseRequestDet.NumTotalPrice;
+    }
+
+    public PucharseDetEntity validate() throws PucharseException {
+        if (this.LotNumber != null && this.LotNumber.length() > 32) {
+            throw new PucharseException("El lote no puede superar 32 caracteres");
+        }
+        return this;
     }
 
 }

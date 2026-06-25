@@ -203,11 +203,38 @@ public class TransferCreateService extends SessionService {
             throw new TransferException("Detalle de transferencia TS no encontrado");
         }
 
+        int nextItemNumber = this.transferDetRepository.findMaxItemNumber(request.transferCod) + 1;
+
         for(var detRequest : request.detailListRequest){
-            detList.stream()
+            detRequest.validate();
+            Optional<TransferDetEntity> detOptional = detList.stream()
                     .filter(e -> e.ItemNumber == detRequest.ItemNumber)
-                    .findFirst()
-                    .ifPresent(det -> det.NumUnitDispatch = detRequest.NumUnitDispatch);
+                    .findFirst();
+
+            if (detOptional.isPresent()) {
+                TransferDetEntity det = detOptional.get();
+                det.NumUnit = detRequest.NumUnit > 0 ? detRequest.NumUnit : det.NumUnit;
+                det.NumUnitDispatch = detRequest.NumUnitDispatch;
+                det.LotNumber = detRequest.LotNumber;
+                det.ExpirationDate = detRequest.ExpirationDate;
+            } else if (detRequest.NumUnitDispatch > 0) {
+                TransferDetEntity det = new TransferDetEntity();
+                det.TransferCod = request.transferCod;
+                det.TypeOperation = detRequest.TypeOperation;
+                det.ProductCod = detRequest.ProductCod;
+                det.Variant = detRequest.Variant;
+                det.ItemNumber = nextItemNumber++;
+                det.WarehouseCodOrigin = detRequest.WarehouseCodOrigin;
+                det.WarehouseCodDest = detRequest.WarehouseCodDest;
+                det.NumUnit = detRequest.NumUnit > 0 ? detRequest.NumUnit : detRequest.NumUnitDispatch;
+                det.NumUnitDispatch = detRequest.NumUnitDispatch;
+                det.NumUnitReception = 0;
+                det.FlgRequested = detRequest.FlgRequested;
+                det.LotNumber = detRequest.LotNumber;
+                det.ExpirationDate = detRequest.ExpirationDate;
+                det.addSession(getUserSession(request.user), true);
+                detList.add(det);
+            }
         }
 
         List<KardexEntity> kardexList = new ArrayList<>();

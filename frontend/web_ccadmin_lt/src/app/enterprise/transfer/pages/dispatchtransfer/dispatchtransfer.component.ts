@@ -16,6 +16,7 @@ import { ProductService } from 'src/app/enterprise/product/service/product.servi
 import { ProductEntity } from 'src/app/enterprise/product/model/entity/ProductEntity';
 import { CarrierService } from '../../service/CarrierService';
 import { CarrierEntity } from '../../model/entity/CarrierEntity';
+import { TransferLotDispatchDto } from '../../model/dto/TransferLotDispatchDto';
 
 @Component({
   selector: 'app-dispatchtransfer',
@@ -44,10 +45,17 @@ export class DispatchtransferComponent implements OnInit, ActionModalConfirmServ
   @ViewChild('txtSearchBarcode') txtSearchBarcode!: ElementRef<HTMLInputElement>;
   @ViewChild('txtSearchBarcodeModal') txtSearchBarcodeModal!: ElementRef<HTMLInputElement>;
   @ViewChild('btnCloseScanModal') btnCloseScanModal!: ElementRef<HTMLButtonElement>;
+  @ViewChild('txtLotNumUnit') txtLotNumUnit!: ElementRef<HTMLInputElement>;
+  @ViewChild('txtLotNumber') txtLotNumber!: ElementRef<HTMLInputElement>;
+  @ViewChild('txtExpirationDate') txtExpirationDate!: ElementRef<HTMLInputElement>;
+  @ViewChild('btnCloseLotDispatchModal') btnCloseLotDispatchModal!: ElementRef<HTMLButtonElement>;
 
   scanSearchQuery: string = '';
   scannedProduct: ProductEntity | null = null;
   scanCounter: number = 0;
+  isDispatchWithLots: boolean = false;
+  lotDispatchList: TransferLotDispatchDto[] = [];
+  private readonly maxLotNumberLength: number = 32;
 
   transportModeList = [
     { Code: '01', Name: 'Transporte público' },
@@ -220,6 +228,121 @@ export class DispatchtransferComponent implements OnInit, ActionModalConfirmServ
       return;
     }
     (window as any).$('#modal_dispatch').modal('show');
+  }
+
+  openLotDispatchModal(det: TransferDetEntity) {
+    this.selectedDetail = det;
+    this.lotDispatchList = [];
+    this.clearLotDispatchForm();
+  }
+
+  addLotDispatchLine(): void {
+    try {
+      const numUnit = Number(this.txtLotNumUnit.nativeElement.value);
+      const lotNumber = this.txtLotNumber.nativeElement.value.trim();
+      const expirationDate = this.txtExpirationDate.nativeElement.value;
+
+      if (!numUnit || numUnit <= 0) {
+        throw new Error('Ingrese una cantidad valida');
+      }
+
+      if (!lotNumber) {
+        throw new Error('Ingrese el lote');
+      }
+
+      if (lotNumber.length > this.maxLotNumberLength) {
+        throw new Error('El lote no puede superar 32 caracteres');
+      }
+
+      if (!expirationDate) {
+        throw new Error('Ingrese la fecha de vencimiento');
+      }
+
+      if ((this.getLotDispatchTotal() + numUnit) > this.selectedDetail.NumUnit) {
+        throw new Error('La cantidad despachada no puede superar la cantidad solicitada');
+      }
+
+      const existingLot = this.lotDispatchList.find(e => e.LotNumber === lotNumber && e.ExpirationDate === expirationDate);
+
+      if (existingLot) {
+        existingLot.NumUnit += numUnit;
+      } else {
+        this.lotDispatchList.push(new TransferLotDispatchDto({
+          NumUnit: numUnit,
+          LotNumber: lotNumber,
+          ExpirationDate: expirationDate
+        }));
+      }
+
+      this.clearLotDispatchForm();
+    } catch (e: any) {
+      this.toastrService.error(e.message);
+    }
+  }
+
+  removeLotDispatchLine(index: number): void {
+    this.lotDispatchList.splice(index, 1);
+  }
+
+  getLotDispatchTotal(): number {
+    return this.lotDispatchList.reduce((total, item) => total + Number(item.NumUnit || 0), 0);
+  }
+
+  getLotDispatchPending(): number {
+    return Number(this.selectedDetail.NumUnit || 0) - this.getLotDispatchTotal();
+  }
+
+  confirmLotDispatch(): void {
+    try {
+      if (this.lotDispatchList.length === 0) {
+        throw new Error('Debe agregar al menos un lote');
+      }
+
+      if (this.getLotDispatchTotal() < this.selectedDetail.NumUnit) {
+        this.toastrService.warning('La cantidad despachada es menor a la cantidad solicitada');
+      }
+
+      this.replaceDispatchLine(this.selectedDetail, this.lotDispatchList.map((item, index) => this.createLotDetail(item, index)));
+      this.lotDispatchList = [];
+      this.btnCloseLotDispatchModal.nativeElement.click();
+    } catch (e: any) {
+      this.toastrService.error(e.message);
+    }
+  }
+
+  private createLotDetail(item: TransferLotDispatchDto, index: number): TransferDetEntity {
+    const detail = new TransferDetEntity();
+    detail.TransferCod = this.selectedDetail.TransferCod;
+    detail.TypeOperation = this.selectedDetail.TypeOperation;
+    detail.ProductCod = this.selectedDetail.ProductCod;
+    detail.Variant = this.selectedDetail.Variant;
+    detail.ItemNumber = index === 0 ? this.selectedDetail.ItemNumber : 0;
+    detail.WarehouseCodOrigin = this.selectedDetail.WarehouseCodOrigin;
+    detail.WarehouseCodDest = this.selectedDetail.WarehouseCodDest;
+    detail.NumUnit = item.NumUnit;
+    detail.NumUnitDispatch = item.NumUnit;
+    detail.NumUnitReception = 0;
+    detail.FlgRequested = this.selectedDetail.FlgRequested;
+    detail.LotNumber = item.LotNumber;
+    detail.ExpirationDate = item.ExpirationDate;
+    detail.Product = this.selectedDetail.Product;
+
+    return detail;
+  }
+
+  private replaceDispatchLine(origin: TransferDetEntity, detailList: TransferDetEntity[]): void {
+    const index = this.detailList.indexOf(origin);
+    if (index >= 0) {
+      this.detailList.splice(index, 1, ...detailList);
+    }
+  }
+
+  private clearLotDispatchForm(): void {
+    setTimeout(() => {
+      if (this.txtLotNumUnit) this.txtLotNumUnit.nativeElement.value = '';
+      if (this.txtLotNumber) this.txtLotNumber.nativeElement.value = '';
+      if (this.txtExpirationDate) this.txtExpirationDate.nativeElement.value = '';
+    });
   }
 
   actionModal(ModalId: string): void {

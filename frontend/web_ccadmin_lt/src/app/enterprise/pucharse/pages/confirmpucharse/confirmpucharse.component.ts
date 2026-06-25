@@ -41,6 +41,7 @@ export class ConfirmpucharseComponent implements IRegisterForm<PucharseRegisterD
   pucharseDetSelect : PucharseDetEntity = new PucharseDetEntity();
   IsReceptionWithLots: boolean = false;
   LotReceptionList: PucharseLotReceptionDto[] = [];
+  private readonly maxLotNumberLength: number = 32;
 
   constructor(
     private pucharseService : PucharseService,
@@ -242,6 +243,10 @@ export class ConfirmpucharseComponent implements IRegisterForm<PucharseRegisterD
 
       if (!lotNumber) {
         throw new Error("Ingrese el lote");
+      }
+
+      if (lotNumber.length > this.maxLotNumberLength) {
+        throw new Error("El lote no puede superar 32 caracteres");
       }
 
       if (!expirationDate) {
