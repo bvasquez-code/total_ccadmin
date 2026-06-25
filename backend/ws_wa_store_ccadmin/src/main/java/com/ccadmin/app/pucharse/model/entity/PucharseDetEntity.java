@@ -52,4 +52,25 @@ public class PucharseDetEntity extends AuditTableEntity implements Serializable 
         return this;
     }
 
+    public static PucharseDetEntity buildLotDetail(PucharseDetEntity originDet, PucharseDetEntity lotDet, int itemNumber, boolean isOriginLine, String userCod) {
+        PucharseDetEntity detail = isOriginLine ? originDet : new PucharseDetEntity();
+        int numUnit = lotDet.NumUnitDelivered > 0 ? lotDet.NumUnitDelivered : lotDet.NumUnit;
+
+        detail.PucharseCod = originDet.PucharseCod;
+        detail.ItemNumber = itemNumber;
+        detail.ProductCod = originDet.ProductCod;
+        detail.Variant = originDet.Variant;
+        detail.NumUnit = numUnit;
+        detail.NumUnitDelivered = numUnit;
+        detail.NumUnitPrice = originDet.NumUnitPrice;
+        detail.NumTotalPrice = originDet.NumUnitPrice == null ? BigDecimal.ZERO : originDet.NumUnitPrice.multiply(BigDecimal.valueOf(numUnit));
+        detail.IsKardexAffected = "S";
+        detail.LotNumber = lotDet.LotNumber;
+        detail.ExpirationDate = lotDet.ExpirationDate;
+        detail.Status = "A";
+        detail.addSession(userCod, !isOriginLine);
+
+        return detail;
+    }
+
 }

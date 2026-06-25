@@ -33,4 +33,19 @@ public class PucharseDetDeliveryEntity extends AuditTableEntity implements Seria
         }
         return this;
     }
+
+    public static PucharseDetDeliveryEntity buildLotDelivery(PucharseDetEntity detail, String warehouseCod, String userCod) {
+        PucharseDetDeliveryEntity delivery = new PucharseDetDeliveryEntity();
+        delivery.PucharseCod = detail.PucharseCod;
+        delivery.ItemNumber = detail.ItemNumber;
+        delivery.ProductCod = detail.ProductCod;
+        delivery.Variant = detail.Variant;
+        delivery.WarehouseCod = warehouseCod;
+        delivery.NumUnit = detail.NumUnitDelivered;
+        delivery.LotNumber = detail.LotNumber;
+        delivery.ExpirationDate = detail.ExpirationDate;
+        delivery.addSession(userCod, true);
+
+        return delivery;
+    }
 }

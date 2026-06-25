@@ -17,7 +17,6 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -99,8 +98,8 @@ public class PucharseDetService extends SessionService {
             PucharseDetEntity lotDet = pucharseDetLotConfirm.lotDetailList.get(index);
             lotDet.validate();
             int itemNumber = index == 0 ? originDet.ItemNumber : nextItemNumber++;
-            PucharseDetEntity detail = this.buildLotDetail(originDet, lotDet, itemNumber, index == 0);
-            PucharseDetDeliveryEntity delivery = this.buildLotDelivery(detail, pucharseDetLotConfirm.WarehouseCod);
+            PucharseDetEntity detail = PucharseDetEntity.buildLotDetail(originDet, lotDet, itemNumber, index == 0, getUserCod());
+            PucharseDetDeliveryEntity delivery = PucharseDetDeliveryEntity.buildLotDelivery(detail, pucharseDetLotConfirm.WarehouseCod, getUserCod());
 
             KardexEntity kardex = new KardexEntity(kardexLast, delivery, pucharseHead.StoreCod);
             kardex.addSession(getUserCod(), true);
@@ -117,42 +116,6 @@ public class PucharseDetService extends SessionService {
 
         pucharseDetLotConfirm.lotDetailList = detailList;
         return pucharseDetLotConfirm;
-    }
-
-    private PucharseDetEntity buildLotDetail(PucharseDetEntity originDet, PucharseDetEntity lotDet, int itemNumber, boolean isOriginLine) {
-        PucharseDetEntity detail = isOriginLine ? originDet : new PucharseDetEntity();
-        int numUnit = lotDet.NumUnitDelivered > 0 ? lotDet.NumUnitDelivered : lotDet.NumUnit;
-
-        detail.PucharseCod = originDet.PucharseCod;
-        detail.ItemNumber = itemNumber;
-        detail.ProductCod = originDet.ProductCod;
-        detail.Variant = originDet.Variant;
-        detail.NumUnit = numUnit;
-        detail.NumUnitDelivered = numUnit;
-        detail.NumUnitPrice = originDet.NumUnitPrice;
-        detail.NumTotalPrice = originDet.NumUnitPrice == null ? BigDecimal.ZERO : originDet.NumUnitPrice.multiply(BigDecimal.valueOf(numUnit));
-        detail.IsKardexAffected = "S";
-        detail.LotNumber = lotDet.LotNumber;
-        detail.ExpirationDate = lotDet.ExpirationDate;
-        detail.Status = "A";
-        detail.addSession(getUserCod(), !isOriginLine);
-
-        return detail;
-    }
-
-    private PucharseDetDeliveryEntity buildLotDelivery(PucharseDetEntity detail, String warehouseCod) {
-        PucharseDetDeliveryEntity delivery = new PucharseDetDeliveryEntity();
-        delivery.PucharseCod = detail.PucharseCod;
-        delivery.ItemNumber = detail.ItemNumber;
-        delivery.ProductCod = detail.ProductCod;
-        delivery.Variant = detail.Variant;
-        delivery.WarehouseCod = warehouseCod;
-        delivery.NumUnit = detail.NumUnitDelivered;
-        delivery.LotNumber = detail.LotNumber;
-        delivery.ExpirationDate = detail.ExpirationDate;
-        delivery.addSession(getUserCod(), true);
-
-        return delivery;
     }
 
 }
