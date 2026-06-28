@@ -27,8 +27,8 @@ export class TransferService {
         return await this.apiService.ExecuteGetService(url, { TransferCod: TransferCod });
     }
 
-    async RegisterBundle(Entity: TransferRegisterBundleDto): Promise<ResponseWsDto> {
-        const url: string = `${AppSetting.API}/api/v1/transfers/register-bundle`;
+    async Save(Entity: TransferRegisterBundleDto): Promise<ResponseWsDto> {
+        const url: string = `${AppSetting.API}/api/v1/transfers/save`;
         return await this.apiService.ExecutePostService(url, Entity);
     }
 

@@ -126,13 +126,13 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
         return det;
       });
 
-      const rpt: ResponseWsDto = await this.transferRequestService.RegisterBundle(this.transferRequestRegister);
+      const rpt: ResponseWsDto = await this.transferRequestService.Save(this.transferRequestRegister);
 
       if (!rpt.ErrorStatus) {
 
         this.transferRequestRegister.transferHead.TypeOperation = TransferConstants.TYPE_OPERATION_SEND;
         this.transferRequestRegister.transferHead.TransferStatus = TransferConstants.STATUS_PENDING;
-        const rptTs: ResponseWsDto = await this.transferService.RegisterBundle(this.transferRequestRegister.buildTransferRegister());
+        const rptTs: ResponseWsDto = await this.transferService.Save(this.transferRequestRegister.buildTransferRegister());
 
         if (!rptTs.ErrorStatus) {
           this.toastrService.success(rptTs.Message || 'Transferencia registrada correctamente');

@@ -18,7 +18,7 @@ public class TransferRequestController {
     @Autowired
     private TransferRequestSearchService transferSearchService;
 
-    @PostMapping
+    @PostMapping("save")
     public ResponseEntity<ResponseWsDto> save(@RequestBody TransferRequestRegisterBundleDto request) {
         try {
             return new ResponseEntity<>(

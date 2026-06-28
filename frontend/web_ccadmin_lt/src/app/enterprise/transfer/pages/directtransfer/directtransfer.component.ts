@@ -400,7 +400,7 @@ export class DirecttransferComponent implements OnInit {
       const transferReqCod = await this.createRequestCode(originStore);
       const requestRegister = this.buildTransferRequestRegister(transferReqCod, originStore, destStore, observation);
 
-      const rptRequest: ResponseWsDto = await this.transferRequestService.RegisterBundle(requestRegister);
+      const rptRequest: ResponseWsDto = await this.transferRequestService.Save(requestRegister);
       if (rptRequest.ErrorStatus) {
         this.toastrService.error(rptRequest.Message || 'Ocurrio un error al registrar la solicitud');
         return;
@@ -419,7 +419,7 @@ export class DirecttransferComponent implements OnInit {
       this.transferRegister.transferDocument.CarrierRuc = this.txtCarrierRuc?.nativeElement.value ?? '';
       this.transferRegister.transferDocument.CarrierName = this.txtCarrierName?.nativeElement.value ?? '';
 
-      const rpt: ResponseWsDto = await this.transferService.RegisterBundle(this.transferRegister);
+      const rpt: ResponseWsDto = await this.transferService.Save(this.transferRegister);
 
       if (!rpt.ErrorStatus) {
         const rptDispatch: ResponseWsDto = await this.dispatchDirectTransfer(this.transferRegister);
