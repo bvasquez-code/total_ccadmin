@@ -6,6 +6,9 @@ export class ProductSearchEntity{
     public ProductDesc : string = "";
     public NumDigitalStock  : number = 0;
     public NumPhysicalStock  : number = 0;
+    public NumUnavailableStock  : number = 0;
+    public NumReservedStock  : number = 0;
+    public NumTotalStock  : number = 0;
     public NumPrice  : number = 0;
     public NumMaxStock  : number = 0;
     public NumMinStock  : number = 0;

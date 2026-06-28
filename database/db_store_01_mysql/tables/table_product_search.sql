@@ -25,6 +25,9 @@ CREATE TABLE `product_search` (
   `ProductDesc` varchar(256) DEFAULT NULL,
   `NumDigitalStock` int DEFAULT '0',
   `NumPhysicalStock` int DEFAULT '0',
+  `NumUnavailableStock` int NOT NULL DEFAULT '0',
+  `NumReservedStock` int NOT NULL DEFAULT '0',
+  `NumTotalStock` int NOT NULL DEFAULT '0',
   `NumPrice` decimal(16,2) DEFAULT '0.00',
   `NumMaxStock` int DEFAULT '0',
   `NumMinStock` int DEFAULT '0',
@@ -75,7 +78,29 @@ CREATE TABLE `product_search` (
         -- CASO: LA TABLA YA EXISTE -> APLICAR ALTERS
         -- =============================================
         
-        -- Aqui puedes agregar bloques IF NOT EXISTS para futuros ALTERs
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'product_search'
+            AND column_name = 'NumUnavailableStock'
+        ) THEN
+            ALTER TABLE `product_search` ADD COLUMN `NumUnavailableStock` int NOT NULL DEFAULT '0' AFTER `NumPhysicalStock`;
+            SELECT 'Columna NumUnavailableStock agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'product_search'
+            AND column_name = 'NumReservedStock'
+        ) THEN
+            ALTER TABLE `product_search` ADD COLUMN `NumReservedStock` int NOT NULL DEFAULT '0' AFTER `NumUnavailableStock`;
+            SELECT 'Columna NumReservedStock agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'product_search'
+            AND column_name = 'NumTotalStock'
+        ) THEN
+            ALTER TABLE `product_search` ADD COLUMN `NumTotalStock` int NOT NULL DEFAULT '0' AFTER `NumReservedStock`;
+            SELECT 'Columna NumTotalStock agregada exitosamente.' AS Mensaje;
+        END IF;
         
         SELECT 'Tabla product_search ya existe. No se realizaron cambios estructurales.' AS Mensaje;
 

@@ -74,6 +74,12 @@ public class KardexService extends SessionService {
         return kardexList;
     }
 
+    @Transactional
+    public List<KardexEntity> saveAllLedgerOnly(List<KardexEntity> kardexList) {
+        kardexList.forEach(KardexEntity::validateNonNegativeStock);
+        return this.kardexRepository.saveAll(kardexList);
+    }
+
     public KardexEntity findLastMovement(String ProductCod, String Variant, String WarehouseCod, String StoreCod) {
         return this.kardexRepository.findLastMovement(ProductCod, Variant, WarehouseCod, StoreCod);
     }
@@ -127,10 +133,11 @@ public class KardexService extends SessionService {
 
                     ProductInfoEntity productInfo = this.productInfoShared.findById(
                             new ProductInfoId(product.ProductCod, product.Variant, product.StoreCod));
-                    productInfo.NumDigitalStock = ProductInfoWarehouseList.stream().mapToInt(e -> e.NumDigitalStock)
-                            .sum();
-                    productInfo.NumPhysicalStock = ProductInfoWarehouseList.stream().mapToInt(e -> e.NumPhysicalStock)
-                            .sum();
+                    productInfo.NumDigitalStock = ProductInfoWarehouseList.stream().mapToInt(e -> e.NumDigitalStock).sum();
+                    productInfo.NumPhysicalStock = ProductInfoWarehouseList.stream().mapToInt(e -> e.NumPhysicalStock).sum();
+                    productInfo.NumUnavailableStock = ProductInfoWarehouseList.stream().mapToInt(e -> e.NumUnavailableStock).sum();
+                    productInfo.NumReservedStock = ProductInfoWarehouseList.stream().mapToInt(e -> e.NumReservedStock).sum();
+                    productInfo.normalizeStockTotal();
                     this.productInfoShared.save(productInfo);
                     this.productFindCreateShared.save(product.ProductCod, product.StoreCod);
                 }
@@ -151,11 +158,19 @@ public class KardexService extends SessionService {
             KardexEntity kardex = this.kardexRepository.findLastMovement(
                     productInfoWarehouse.ProductCod, productInfoWarehouse.Variant, productInfoWarehouse.WarehouseCod, store.StoreCod);
             log.info("STOCK IN kardex : {}", kardex.NumStockAfter);
-            log.info("STOCK IN productInfoWarehouse : {}", productInfoWarehouse.NumDigitalStock);
+            log.info("STOCK TOTAL IN productInfoWarehouse : {}", productInfoWarehouse.NumTotalStock);
 
-            if (kardex.NumStockAfter != productInfoWarehouse.NumDigitalStock) {
-                productInfoWarehouse.NumDigitalStock = kardex.NumStockAfter;
-                productInfoWarehouse.NumPhysicalStock = kardex.NumStockAfter;
+            if (kardex.NumStockAfter != productInfoWarehouse.NumTotalStock) {
+                productInfoWarehouse.NumTotalStock = kardex.NumStockAfter;
+                productInfoWarehouse.NumPhysicalStock = kardex.NumStockAfter
+                        - productInfoWarehouse.NumUnavailableStock
+                        - productInfoWarehouse.NumReservedStock;
+                if (productInfoWarehouse.NumPhysicalStock < 0) {
+                    productInfoWarehouse.NumUnavailableStock = 0;
+                    productInfoWarehouse.NumReservedStock = 0;
+                    productInfoWarehouse.NumPhysicalStock = kardex.NumStockAfter;
+                }
+                productInfoWarehouse.normalizeStockTotal();
                 this.productInfoWarehouseShared.save(productInfoWarehouse);
                 existDiff = true;
                 log.info("UPDATE OK");

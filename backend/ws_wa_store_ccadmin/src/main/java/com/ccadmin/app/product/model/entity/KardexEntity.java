@@ -2,6 +2,7 @@ package com.ccadmin.app.product.model.entity;
 
 import com.ccadmin.app.product.exception.KardexExcepcion;
 import com.ccadmin.app.pucharse.model.entity.PucharseDetDeliveryEntity;
+import com.ccadmin.app.sale.model.entity.CreditNoteDetEntity;
 import com.ccadmin.app.sale.model.entity.CreditNoteDetWarehouseEntity;
 import com.ccadmin.app.sale.model.entity.SaleDetWarehouseEntity;
 import com.ccadmin.app.shared.model.entity.AuditTableEntity;
@@ -91,6 +92,36 @@ public class KardexEntity extends AuditTableEntity implements Serializable {
         this.LotNumber = creditNoteDetWarehouse.LotNumber;
         this.ExpirationDate = creditNoteDetWarehouse.ExpirationDate;
         this.TypeOperationCod = 4;
+    }
+
+    public KardexEntity(
+            KardexEntity kardexLast,
+            CreditNoteDetEntity creditNoteDet,
+            String storeCod,
+            String warehouseCod,
+            int numStockMoved,
+            String typeOperation
+    ) {
+        this.OperationCod = creditNoteDet.CreditNoteCod;
+        this.ItemNumber = creditNoteDet.ItemNumber;
+        this.SourceTable = "credit_note_head";
+        this.TypeOperation = typeOperation;
+        this.ProductCod = creditNoteDet.ProductCod;
+        this.Variant = creditNoteDet.Variant;
+        this.StoreCod = storeCod;
+        this.WarehouseCod = warehouseCod;
+        this.NumStockBefore = (kardexLast == null) ? 0 : kardexLast.NumStockAfter;
+        this.NumStockMoved = numStockMoved;
+        this.NumStockAfter = "R".equals(typeOperation)
+                ? this.NumStockBefore - numStockMoved
+                : this.NumStockBefore + numStockMoved;
+        this.LotNumber = creditNoteDet.LotNumber;
+        this.ExpirationDate = creditNoteDet.ExpirationDate;
+        this.TypeOperationCod = 4;
+
+        if ("R".equals(typeOperation)) {
+            validateNonNegativeStock();
+        }
     }
 
     public KardexEntity(KardexEntity kardexLast, TransferDetEntity transferDet, String storeCod, String warehouseCod, String typeOperation) {

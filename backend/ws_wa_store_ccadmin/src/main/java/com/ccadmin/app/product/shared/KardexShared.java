@@ -27,4 +27,9 @@ public class KardexShared {
     {
         return this.kardexService.saveAll(kardexList);
     }
+
+    public List<KardexEntity> saveAllLedgerOnly(List<KardexEntity> kardexList)
+    {
+        return this.kardexService.saveAllLedgerOnly(kardexList);
+    }
 }

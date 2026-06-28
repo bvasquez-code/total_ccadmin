@@ -20,9 +20,9 @@ public interface ProductInfoRepository  extends JpaRepository<ProductInfoEntity,
     @Modifying
     @Query( value = """
              INSERT INTO product_info
-             ( ProductCod , Variant , StoreCod , NumDigitalStock , NumPhysicalStock , CreationUser , CreationDate , Status  )
+             ( ProductCod , Variant , StoreCod , NumDigitalStock , NumPhysicalStock , NumUnavailableStock , NumReservedStock , NumTotalStock , CreationUser , CreationDate , Status  )
              SELECT
-               prv.ProductCod , prv.Variant ,str.StoreCod , 0 , 0 , pro.CreationUser , NOW() , 'A'
+               prv.ProductCod , prv.Variant ,str.StoreCod , 0 , 0 , 0 , 0 , 0 , pro.CreationUser , NOW() , 'A'
              FROM product pro, store str,product_variant prv
              WHERE prv.ProductCod = pro.ProductCod
              AND pro.ProductCod = :ProductCod
@@ -32,9 +32,9 @@ public interface ProductInfoRepository  extends JpaRepository<ProductInfoEntity,
     @Modifying
     @Query( value = """
              INSERT INTO product_info
-             ( ProductCod , Variant , StoreCod , NumDigitalStock , NumPhysicalStock , CreationUser , CreationDate , Status  )
+             ( ProductCod , Variant , StoreCod , NumDigitalStock , NumPhysicalStock , NumUnavailableStock , NumReservedStock , NumTotalStock , CreationUser , CreationDate , Status  )
              SELECT
-               prv.ProductCod , prv.Variant ,str.StoreCod , 0 , 0 , pro.CreationUser , NOW() , 'A'
+               prv.ProductCod , prv.Variant ,str.StoreCod , 0 , 0 , 0 , 0 , 0 , pro.CreationUser , NOW() , 'A'
              FROM product pro, store str,product_variant prv
              WHERE prv.ProductCod = pro.ProductCod
              AND pro.ProductCod IN :ProductCodList

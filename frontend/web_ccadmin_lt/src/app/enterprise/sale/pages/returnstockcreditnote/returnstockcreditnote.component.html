@@ -5,7 +5,7 @@
             <div class="card-header">
                 <h3 class="card-title text-125 text-primary-d2">
                     <i class="far fa-edit text-dark-l3 mr-1"></i>
-                    Reingresar el stock de la nota de credito
+                    Procesar stock no disponible de la nota de credito
                 </h3>
             </div>
 
@@ -116,7 +116,7 @@
                                           Cantidad
                                         </th>
                                         <th>
-                                            Cantidad a devolver
+                                            Cantidad aceptada para stock fisico
                                         </th>                                             
                                       </tr>
                                     </thead>
@@ -135,11 +135,13 @@
                                          <td>
                                             <div class="btn-group" role="group" aria-label="Basic mixed styles example">
                                                 <button type="button" class="btn btn-danger" (click)="SubtractUnit(item)">-</button>
-                                                <input type="text" 
-                                                        value="{{ getUnit(item) }}" 
+                                                <input type="number" 
+                                                        [value]="getUnit(item)" 
                                                         class="form-control"
+                                                        min="0"
+                                                        [max]="item.CreditNoteDet.NumUnit"
                                                         style="width: 80px; text-align: center;"
-                                                        (input)="validateUnit($event, item)">
+                                                        (input)="setUnit($event, item)">
                                                 <button type="button" class="btn btn-success" (click)="AddUnit(item)">+</button>
                                               </div>
                                          </td>

@@ -188,8 +188,7 @@ public class PucharseService extends SessionService {
                 ProductInfoWarehouseEntity productInfoWarehouse = this.productInfoWarehouseShared.findById(
                         new ProductInfoWarehouseId(item.ProductCod,item.Variant,itemWarehouse.WarehouseCod)
                 );
-                productInfoWarehouse.NumDigitalStock = productInfoWarehouse.NumDigitalStock + itemWarehouse.NumUnit;
-                productInfoWarehouse.NumPhysicalStock = productInfoWarehouse.NumPhysicalStock + itemWarehouse.NumUnit;
+                productInfoWarehouse.addStock(itemWarehouse.NumUnit);
                 productInfoWarehouse.addSession(getUserCod(),false);
                 productWarehouseList.add(productInfoWarehouse);
 
@@ -199,8 +198,7 @@ public class PucharseService extends SessionService {
             ProductInfoEntity productInfo = this.productInfoShared.findById(
                     new ProductInfoId(item.ProductCod,item.Variant,Headboard.StoreCod)
             );
-            productInfo.NumDigitalStock = productInfo.NumDigitalStock + item.NumUnit;
-            productInfo.NumPhysicalStock = productInfo.NumPhysicalStock + item.NumUnit;
+            productInfo.addStock(item.NumUnit);
             productInfo.addSession(getUserCod(),false);
             productInfoList.add(productInfo);
         }

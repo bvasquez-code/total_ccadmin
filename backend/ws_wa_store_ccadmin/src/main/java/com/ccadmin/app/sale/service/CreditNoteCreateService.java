@@ -5,6 +5,7 @@ import com.ccadmin.app.payment.model.entity.TrxPaymentEntity;
 import com.ccadmin.app.payment.shared.TrxPaymentShared;
 import com.ccadmin.app.product.model.entity.KardexEntity;
 import com.ccadmin.app.product.shared.KardexShared;
+import com.ccadmin.app.product.shared.StockZoneMovementShared;
 import com.ccadmin.app.sale.exception.SaleException;
 import com.ccadmin.app.sale.exception.SalePaymentException;
 import com.ccadmin.app.sale.model.constants.SaleConstants;
@@ -59,6 +60,8 @@ public class CreditNoteCreateService extends SessionService {
     private WarehouseShared warehouseShared;
     @Autowired
     private KardexShared kardexShared;
+    @Autowired
+    private StockZoneMovementShared stockZoneMovementShared;
     @Autowired
     private TrxPaymentShared trxPaymentShared;
 
@@ -116,6 +119,8 @@ public class CreditNoteCreateService extends SessionService {
         }
 
         creditNoteHead.CreditNoteStatus = SaleConstants.CONFIRMED;
+        List<CreditNoteDetEntity> detailList = this.creditNoteDetRepository.findByCreditNoteCod(creditNoteHead.CreditNoteCod);
+        WarehouseEntity warehouseDefault = this.warehouseShared.findByStore(creditNoteHead.StoreCod).get(0);
         CreditNoteDocumentEntity creditNoteDocument = this.creditNoteDocumentRepository.findByCreditNoteCod(creditNoteHead.CreditNoteCod);
 
         if (creditNoteDocument == null) {
@@ -127,7 +132,11 @@ public class CreditNoteCreateService extends SessionService {
         }
 
         this.creditNoteHeadRepository.save(creditNoteHead);
-        this.saleHeadRepository.updateHasCreditNote(creditNoteRegister.Headboard.SaleCod,"S");
+        this.saleHeadRepository.updateHasCreditNote(creditNoteHead.SaleCod,"S");
+        this.stockZoneMovementShared.addCreditNoteUnavailableStock(creditNoteHead, detailList, warehouseDefault, getUserCod());
+        this.kardexShared.saveAllLedgerOnly(
+                this.createCreditNoteKardexList(detailList, warehouseDefault, "S", false)
+        );
 
         return this.creditNoteSearchService.findById(creditNoteRegister.Headboard.CreditNoteCod);
     }
@@ -177,43 +186,49 @@ public class CreditNoteCreateService extends SessionService {
     public CreditNoteDetailDto saveReturnStock(CreditNoteRegisterDto creditNoteRegister) throws SaleException {
 
         CreditNoteHeadEntity creditNoteHead = this.creditNoteHeadRepository.findById(creditNoteRegister.Headboard.CreditNoteCod).get();
-        WarehouseEntity warehouseDefault = this.warehouseShared.findByStore(getStoreCod()).get(0);
+        WarehouseEntity warehouseDefault = this.warehouseShared.findByStore(creditNoteHead.StoreCod).get(0);
+
+        if(!creditNoteHead.CreditNoteStatus.equals(SaleConstants.CONFIRMED)){
+            throw new SaleException("Nota de credito debe estar confirmada para retornar stock");
+        }
+        if("S".equals(creditNoteHead.IsStockReturned)){
+            throw new SaleException("Stock de nota de credito ya fue procesado");
+        }
 
         creditNoteHead.IsStockReturned = "S";
         creditNoteHead.addSessionModify(getUserCod());
 
-        List<CreditNoteDetWarehouseEntity> creditNoteDetWarehouseList = creditNoteRegister.DetailList.stream()
-                .map( e -> {
-                   return new CreditNoteDetWarehouseEntity(
-                            e.CreditNoteCod
-                           ,e.ItemNumber
-                           ,e.ProductCod
-                           ,e.Variant
-                           ,warehouseDefault.WarehouseCod
-                           ,e.NumUnitStockReturned
-                           ,e.LotNumber
-                           ,e.ExpirationDate
-                   ).session(getUserCod());
-                }).toList();
+        List<CreditNoteDetEntity> creditNoteDetList = this.creditNoteDetRepository.findByCreditNoteCod(creditNoteHead.CreditNoteCod);
+        this.applyReturnedUnits(creditNoteDetList, creditNoteRegister.DetailList);
 
-        List<KardexEntity> KardexList = new ArrayList<>();
-        Map<String, KardexEntity> lastMovementByStock = new HashMap<>();
-        for(var item : creditNoteDetWarehouseList){
-            String key = this.stockKey(item.ProductCod, item.Variant, warehouseDefault.StoreCod, item.WarehouseCod);
-            KardexEntity kardexLast = lastMovementByStock.computeIfAbsent(
-                    key,
-                    ignored -> this.kardexShared.findLastMovement(item.ProductCod,item.Variant,item.WarehouseCod,warehouseDefault.StoreCod)
+        if(!this.stockZoneMovementShared.existsCreditNoteUnavailableStock(creditNoteHead.CreditNoteCod)){
+            this.stockZoneMovementShared.addCreditNoteUnavailableStock(creditNoteHead, creditNoteDetList, warehouseDefault, getUserCod());
+            this.kardexShared.saveAllLedgerOnly(
+                    this.createCreditNoteKardexList(creditNoteDetList, warehouseDefault, "S", false)
             );
-            KardexEntity kardexNoteDetWarehouse = new KardexEntity(kardexLast,item,warehouseDefault.StoreCod);
-            kardexNoteDetWarehouse.addSession(getUserCod());
-            KardexList.add(kardexNoteDetWarehouse);
-            lastMovementByStock.put(key, kardexNoteDetWarehouse);
         }
 
-        this.creditNoteDetRepository.saveAll(creditNoteRegister.DetailList);
+        List<CreditNoteDetWarehouseEntity> creditNoteDetWarehouseList = creditNoteDetList.stream()
+                .filter(e -> e.NumUnitStockReturned != null && e.NumUnitStockReturned > 0)
+                .map(e -> new CreditNoteDetWarehouseEntity(
+                        e.CreditNoteCod,
+                        e.ItemNumber,
+                        e.ProductCod,
+                        e.Variant,
+                        warehouseDefault.WarehouseCod,
+                        e.NumUnitStockReturned,
+                        e.LotNumber,
+                        e.ExpirationDate
+                ).session(getUserCod()))
+                .toList();
+
+        List<KardexEntity> kardexRejectedList = this.createCreditNoteKardexList(creditNoteDetList, warehouseDefault, "R", true);
+
+        this.stockZoneMovementShared.resolveCreditNoteUnavailableStock(creditNoteHead, creditNoteDetList, warehouseDefault, getUserCod());
+        this.creditNoteDetRepository.saveAll(creditNoteDetList);
         this.creditNoteHeadRepository.save(creditNoteHead);
         this.creditNoteDetWarehouseRepository.saveAll(creditNoteDetWarehouseList);
-        this.kardexShared.saveAll(KardexList);
+        this.kardexShared.saveAllLedgerOnly(kardexRejectedList);
 
         return this.creditNoteSearchService.findById(creditNoteRegister.Headboard.CreditNoteCod);
     }
@@ -267,6 +282,65 @@ public class CreditNoteCreateService extends SessionService {
 
     private String stockKey(String productCod, String variant, String storeCod, String warehouseCod) {
         return productCod + "|" + variant + "|" + storeCod + "|" + warehouseCod;
+    }
+
+    private List<KardexEntity> createCreditNoteKardexList(
+            List<CreditNoteDetEntity> detailList,
+            WarehouseEntity warehouseDefault,
+            String typeOperation,
+            boolean onlyRejected
+    ) {
+        List<KardexEntity> kardexList = new ArrayList<>();
+        Map<String, KardexEntity> lastMovementByStock = new HashMap<>();
+
+        for (var detail : detailList) {
+            int numStockMoved = detail.NumUnit;
+            if (onlyRejected) {
+                int returned = detail.NumUnitStockReturned == null ? 0 : detail.NumUnitStockReturned;
+                numStockMoved = detail.NumUnit - returned;
+            }
+            if (numStockMoved <= 0) {
+                continue;
+            }
+
+            String key = this.stockKey(detail.ProductCod, detail.Variant, warehouseDefault.StoreCod, warehouseDefault.WarehouseCod);
+            KardexEntity kardexLast = lastMovementByStock.computeIfAbsent(
+                    key,
+                    ignored -> this.kardexShared.findLastMovement(detail.ProductCod, detail.Variant, warehouseDefault.WarehouseCod, warehouseDefault.StoreCod)
+            );
+            KardexEntity kardex = new KardexEntity(
+                    kardexLast,
+                    detail,
+                    warehouseDefault.StoreCod,
+                    warehouseDefault.WarehouseCod,
+                    numStockMoved,
+                    typeOperation
+            ).session(getUserCod());
+            kardexList.add(kardex);
+            lastMovementByStock.put(key, kardex);
+        }
+
+        return kardexList;
+    }
+
+    private void applyReturnedUnits(List<CreditNoteDetEntity> creditNoteDetList, List<CreditNoteDetEntity> requestDetailList) throws SaleException {
+        if(requestDetailList == null || requestDetailList.isEmpty()){
+            throw new SaleException("Detalle de retorno de stock esta vacio");
+        }
+
+        for(var detail : creditNoteDetList){
+            CreditNoteDetEntity detailRequest = requestDetailList.stream()
+                    .filter(e -> e.ItemNumber == detail.ItemNumber)
+                    .findFirst()
+                    .orElseThrow(() -> new SaleException("Detalle de nota de credito incompleto para retorno de stock"));
+
+            int returned = detailRequest.NumUnitStockReturned == null ? 0 : detailRequest.NumUnitStockReturned;
+            if(returned < 0 || returned > detail.NumUnit){
+                throw new SaleException("Cantidad de retorno invalida para el producto " + detail.ProductCod);
+            }
+            detail.NumUnitStockReturned = returned;
+            detail.addSessionModify(getUserCod());
+        }
     }
 
     private void saveReversalPayment(CreditNoteHeadEntity creditNoteHead) throws SalePaymentException{

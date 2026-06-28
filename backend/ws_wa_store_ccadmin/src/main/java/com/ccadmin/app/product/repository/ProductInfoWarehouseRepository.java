@@ -21,9 +21,9 @@ public interface ProductInfoWarehouseRepository  extends JpaRepository<ProductIn
     @Modifying
     @Query( value = """
              INSERT product_info_warehouse
-             	(ProductCod , Variant , WarehouseCod , NumDigitalStock , NumPhysicalStock , CreationUser , CreationDate )
+             	(ProductCod , Variant , WarehouseCod , NumDigitalStock , NumPhysicalStock , NumUnavailableStock , NumReservedStock , NumTotalStock , CreationUser , CreationDate )
              SELECT
-             	PV.ProductCod , PV.Variant, WH.WarehouseCod , 0 ,0 ,  PR.CreationUser , NOW()
+             	PV.ProductCod , PV.Variant, WH.WarehouseCod , 0 ,0 , 0 , 0 , 0 ,  PR.CreationUser , NOW()
              FROM
              	product PR, product_variant PV, warehouse WH
              WHERE
@@ -41,9 +41,9 @@ public interface ProductInfoWarehouseRepository  extends JpaRepository<ProductIn
     @Modifying
     @Query( value = """
              INSERT product_info_warehouse
-             	(ProductCod , Variant , WarehouseCod , NumDigitalStock , NumPhysicalStock , CreationUser , CreationDate )
+             	(ProductCod , Variant , WarehouseCod , NumDigitalStock , NumPhysicalStock , NumUnavailableStock , NumReservedStock , NumTotalStock , CreationUser , CreationDate )
              SELECT
-             	PV.ProductCod , PV.Variant, WH.WarehouseCod , 0 ,0 ,  PR.CreationUser , NOW()
+             	PV.ProductCod , PV.Variant, WH.WarehouseCod , 0 ,0 , 0 , 0 , 0 ,  PR.CreationUser , NOW()
              FROM
              	product PR, product_variant PV, warehouse WH
              WHERE

@@ -26,6 +26,9 @@ public class ProductSearchEntity extends AuditTableEntity implements Serializabl
     public String ProductDesc;
     public int NumDigitalStock;
     public int NumPhysicalStock;
+    public int NumUnavailableStock;
+    public int NumReservedStock;
+    public int NumTotalStock;
     public BigDecimal NumPrice;
     public int NumMaxStock;
     public int NumMinStock;
@@ -59,6 +62,9 @@ public class ProductSearchEntity extends AuditTableEntity implements Serializabl
         this.ProductDesc = product.ProductDesc;
         this.NumDigitalStock = productInfoList.stream().mapToInt(e -> e.NumDigitalStock).sum();
         this.NumPhysicalStock = productInfoList.stream().mapToInt(e -> e.NumPhysicalStock).sum();
+        this.NumUnavailableStock = productInfoList.stream().mapToInt(e -> e.NumUnavailableStock).sum();
+        this.NumReservedStock = productInfoList.stream().mapToInt(e -> e.NumReservedStock).sum();
+        this.NumTotalStock = productInfoList.stream().mapToInt(e -> e.NumTotalStock).sum();
         this.NumPrice = productConfig.NumPrice;
         this.NumMaxStock = productConfig.NumMaxStock;
         this.NumMinStock = productConfig.NumMinStock;
@@ -90,6 +96,9 @@ public class ProductSearchEntity extends AuditTableEntity implements Serializabl
                 ", ProductDesc='" + ProductDesc + '\'' +
                 ", NumDigitalStock=" + NumDigitalStock +
                 ", NumPhysicalStock=" + NumPhysicalStock +
+                ", NumUnavailableStock=" + NumUnavailableStock +
+                ", NumReservedStock=" + NumReservedStock +
+                ", NumTotalStock=" + NumTotalStock +
                 ", NumPrice=" + NumPrice +
                 ", NumMaxStock=" + NumMaxStock +
                 ", NumMinStock=" + NumMinStock +

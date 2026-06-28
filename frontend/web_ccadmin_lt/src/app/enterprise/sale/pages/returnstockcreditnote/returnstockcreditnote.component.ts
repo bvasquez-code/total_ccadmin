@@ -65,7 +65,7 @@ export class ReturnstockcreditnoteComponent implements IRegisterFormV2<CreditNot
 
   async Save(): Promise<void> {
 
-    this.alertService.waring("¿Deseas realizar el retorno de stock?, esta acción no se puede deshacer.").then(async (result) => {
+    this.alertService.waring("¿Deseas procesar el retorno de stock? La cantidad aceptada pasará a stock físico y la diferencia saldrá definitivamente del stock. Esta acción no se puede deshacer.").then(async (result) => {
       if (result && result.isConfirmed) {
 
         this.CreditNoteRegister.DetailList = this.CreditNoteDetail.DetailList.map(e => e.CreditNoteDet);
@@ -157,15 +157,17 @@ export class ReturnstockcreditnoteComponent implements IRegisterFormV2<CreditNot
     return String(rpt.Data);
   }
 
-  validateUnit(event: any, item: any) {
-    const inputValue = event.target.value;
+  setUnit(event: any, item: CreditNoteDetDto) {
+    let inputValue = Number(event.target.value);
     const maxUnits = item.CreditNoteDet.NumUnit;
 
     if (inputValue > maxUnits) {
-      event.target.value = maxUnits;
+      inputValue = maxUnits;
     } else if (inputValue < 0) {
-      event.target.value = 0;
+      inputValue = 0;
     }
+    item.CreditNoteDet.NumUnitStockReturned = inputValue;
+    event.target.value = inputValue;
   }
 
 }

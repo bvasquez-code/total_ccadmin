@@ -7,4 +7,7 @@ export class ProductInfoEntity extends AuditTableEntity
     public StoreCod: string = "";
     public NumDigitalStock: number = 0;
     public NumPhysicalStock: number = 0;
+    public NumUnavailableStock: number = 0;
+    public NumReservedStock: number = 0;
+    public NumTotalStock: number = 0;
 }
