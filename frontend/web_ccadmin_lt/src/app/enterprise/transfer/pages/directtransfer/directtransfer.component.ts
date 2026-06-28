@@ -145,14 +145,27 @@ export class DirecttransferComponent implements OnInit {
     }
   }
 
-  selectProduct(product: ProductSearchEntity) {
-    this.txtNumUnit.nativeElement.value = '';
+  async selectProduct(product: ProductSearchEntity) {
     this.productSelect = product;
 
+    if (this.isTransferWithLots) {
+      const transferDet = await this.buildTransferDetail(product, 0);
+      this.openLotDispatchModal(transferDet);
+      setTimeout(() => {
+        (window as any).$('#modalLotDispatch').modal('show');
+      });
+      return;
+    }
+
+    this.txtNumUnit.nativeElement.value = '';
     const existing = this.transferRegister.transferDetList.find(e => e.ProductCod === product.ProductCod && !e.LotNumber);
     if (existing) {
       this.txtNumUnit.nativeElement.value = String(existing.NumUnit);
     }
+
+    setTimeout(() => {
+      (window as any).$('#modalProduct').modal('show');
+    });
   }
 
   async AddProduct() {
@@ -173,17 +186,11 @@ export class DirecttransferComponent implements OnInit {
 
     if (transferDetExist) {
       transferDet = transferDetExist;
+    } else {
+      transferDet = await this.buildTransferDetail(product, numUnit);
     }
 
-    let productInfoDto: ProductInfoDto = await this.findDetailById(product.ProductCod);
-    const productEntity: ProductEntity = new ProductEntity();
-    productEntity.ProductCod = product.ProductCod;
-    productEntity.ProductName = product.ProductName;
-
-    transferDet.ProductCod = product.ProductCod;
-    transferDet.Variant = productInfoDto.VariantList[0]?.Variant ?? '0000';
     transferDet.NumUnit = numUnit;
-    transferDet.Product = productEntity;
 
     if (!transferDetExist) {
       this.transferRegister.transferDetList.push(transferDet);
@@ -198,6 +205,21 @@ export class DirecttransferComponent implements OnInit {
         (window as any).$('#modalLotDispatch').modal('show');
       }, 300);
     }
+  }
+
+  private async buildTransferDetail(product: ProductSearchEntity, numUnit: number): Promise<TransferDetEntity> {
+    const productInfoDto: ProductInfoDto = await this.findDetailById(product.ProductCod);
+    const productEntity: ProductEntity = new ProductEntity();
+    productEntity.ProductCod = product.ProductCod;
+    productEntity.ProductName = product.ProductName;
+
+    const transferDet = new TransferDetEntity();
+    transferDet.ProductCod = product.ProductCod;
+    transferDet.Variant = productInfoDto.VariantList[0]?.Variant ?? '0000';
+    transferDet.NumUnit = numUnit;
+    transferDet.Product = productEntity;
+
+    return transferDet;
   }
 
   closeModal() {
@@ -242,7 +264,7 @@ export class DirecttransferComponent implements OnInit {
         throw new Error('El lote no puede superar 32 caracteres');
       }
 
-      if ((this.getLotDispatchTotal() + numUnit) > this.selectedDetail.NumUnit) {
+      if (this.selectedDetail.NumUnit > 0 && (this.getLotDispatchTotal() + numUnit) > this.selectedDetail.NumUnit) {
         throw new Error('La cantidad no puede superar la cantidad solicitada');
       }
 
@@ -282,7 +304,7 @@ export class DirecttransferComponent implements OnInit {
         throw new Error('Debe agregar al menos un lote');
       }
 
-      if (this.getLotDispatchTotal() < this.selectedDetail.NumUnit) {
+      if (this.selectedDetail.NumUnit > 0 && this.getLotDispatchTotal() < this.selectedDetail.NumUnit) {
         this.toastrService.warning('La cantidad despachada es menor a la cantidad solicitada');
       }
 
@@ -318,6 +340,8 @@ export class DirecttransferComponent implements OnInit {
     const index = this.transferRegister.transferDetList.indexOf(origin);
     if (index >= 0) {
       this.transferRegister.transferDetList.splice(index, 1, ...detailList);
+    } else {
+      this.transferRegister.transferDetList.push(...detailList);
     }
   }
 

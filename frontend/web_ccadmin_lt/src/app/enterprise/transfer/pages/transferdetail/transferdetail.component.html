@@ -12,7 +12,7 @@
     </div>
 
     <div class="row">
-      <div class="col-md-6 mb-3">
+      <div class="col-md-5 mb-3">
         <div class="card" *ngIf="transferDetail.transferHeadRequest">
           <div class="card-body">
             <h5 class="text-primary">Solicitud</h5>
@@ -26,7 +26,7 @@
           </div>
         </div>
       </div>
-      <div class="col-md-6 mb-3">
+      <div class="col-md-7 mb-3">
         <div class="card" *ngIf="transferDetail.transferHead">
           <div class="card-body">
             <h5 class="text-primary">Despacho</h5>
@@ -42,7 +42,7 @@
     </div>
 
     <div class="row">
-      <div class="col-md-6 mb-3">
+      <div class="col-md-5 mb-3">
         <div class="card" *ngIf="transferDetail.transferDetRequestList">
           <div class="card-body">
             <h5 class="text-primary">Detalle solicitud</h5>
@@ -50,17 +50,23 @@
               <table class="table table-bordered">
                 <thead>
                   <tr>
+                    <th class="text-center">Item</th>
                     <th>Producto</th>
+                    <th>Lote</th>
+                    <th>Vencimiento</th>
                     <th class="text-center">Cantidad</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr *ngFor="let det of transferDetail.transferDetRequestList">
+                    <td class="text-center">{{ det.ItemNumber }}</td>
                     <td>{{ det.Product.ProductName || det.ProductCod }}</td>
+                    <td>{{ det.LotNumber || 'SN' }}</td>
+                    <td>{{ det.ExpirationDate ? (det.ExpirationDate | date:'dd/MM/yyyy') : '' }}</td>
                     <td class="text-center">{{ det.NumUnit }}</td>
                   </tr>
                   <tr *ngIf="transferDetail.transferDetRequestList.length === 0">
-                    <td colspan="2" class="text-center text-muted">Sin registros</td>
+                    <td colspan="5" class="text-center text-muted">Sin registros</td>
                   </tr>
                 </tbody>
               </table>
@@ -69,7 +75,7 @@
         </div>
       </div>
 
-      <div class="col-md-6 mb-3">
+      <div class="col-md-7 mb-3">
         <div class="card" *ngIf="transferDetail.transferDetList">
           <div class="card-body">
             <h5 class="text-primary">Detalle despacho</h5>
@@ -77,19 +83,25 @@
               <table class="table table-bordered">
                 <thead>
                   <tr>
+                    <th class="text-center">Item</th>
                     <th>Producto</th>
+                    <th>Lote</th>
+                    <th>Vencimiento</th>
                     <th class="text-center">Cantidad despachada</th>
                     <th class="text-center">Cantidad recepcionada</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr *ngFor="let det of transferDetail.transferDetList">
+                    <td class="text-center">{{ det.ItemNumber }}</td>
                     <td>{{ det.Product.ProductName || det.ProductCod }}</td>
+                    <td>{{ det.LotNumber || 'SN' }}</td>
+                    <td>{{ det.ExpirationDate ? (det.ExpirationDate | date:'dd/MM/yyyy') : '' }}</td>
                     <td class="text-center">{{ det.NumUnitDispatch }}</td>
                     <td class="text-center">{{ det.NumUnitReception }}</td>
                   </tr>
                   <tr *ngIf="transferDetail.transferDetList.length === 0">
-                    <td colspan="2" class="text-center text-muted">Sin registros</td>
+                    <td colspan="6" class="text-center text-muted">Sin registros</td>
                   </tr>
                 </tbody>
               </table>

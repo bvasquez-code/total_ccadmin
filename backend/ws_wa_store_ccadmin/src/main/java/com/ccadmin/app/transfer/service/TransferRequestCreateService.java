@@ -45,19 +45,11 @@ public class TransferRequestCreateService extends SessionService {
     @Autowired
     private CounterfoilShared counterfoilShared;
 
-    public TransferRequestRegisterBundleDto create(TransferRequestRegisterBundleDto request) throws Exception {
-        return this.save(request, true);
-    }
-
-    public TransferRequestRegisterBundleDto update(TransferRequestRegisterBundleDto request) throws Exception {
-        return this.save(request, false);
-    }
-
     public String createCode(String storeCod){
         return this.transferRequestHeadRepository.getTransferCod(storeCod);
     }
 
-    private TransferRequestRegisterBundleDto save(TransferRequestRegisterBundleDto request, boolean isCreate) throws Exception {
+    public TransferRequestRegisterBundleDto save(TransferRequestRegisterBundleDto request) throws Exception {
         if (request == null || request.transferHead == null) {
             throw new TransferException("Información de transferencia es obligatoria");
         }

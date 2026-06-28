@@ -19,10 +19,10 @@ public class TransferRequestController {
     private TransferRequestSearchService transferSearchService;
 
     @PostMapping
-    public ResponseEntity<ResponseWsDto> create(@RequestBody TransferRequestRegisterBundleDto request) {
+    public ResponseEntity<ResponseWsDto> save(@RequestBody TransferRequestRegisterBundleDto request) {
         try {
             return new ResponseEntity<>(
-                    new ResponseWsDto(this.transferCreateService.create(request)),
+                    new ResponseWsDto(this.transferCreateService.save(request)),
                     HttpStatus.OK
             );
         } catch (Exception ex) {
@@ -30,17 +30,6 @@ public class TransferRequestController {
         }
     }
 
-    @PutMapping
-    public ResponseEntity<ResponseWsDto> update(@RequestBody TransferRequestRegisterBundleDto request) {
-        try {
-            return new ResponseEntity<>(
-                    new ResponseWsDto(this.transferCreateService.update(request)),
-                    HttpStatus.OK
-            );
-        } catch (Exception ex) {
-            return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
-        }
-    }
 
     @DeleteMapping("{transferCod}")
     public ResponseEntity<ResponseWsDto> delete(@PathVariable String transferCod) {
@@ -70,7 +59,7 @@ public class TransferRequestController {
     public ResponseEntity<ResponseWsDto> registerBundle(@RequestBody TransferRequestRegisterBundleDto request) {
         try {
             return new ResponseEntity<>(
-                    new ResponseWsDto(this.transferCreateService.create(request)),
+                    new ResponseWsDto(this.transferCreateService.save(request)),
                     HttpStatus.OK
             );
         } catch (Exception ex) {

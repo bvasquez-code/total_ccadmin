@@ -10,13 +10,13 @@
     <div class="card dcard">
       <div class="card-body">
         <div class="row">
-          <div class="col-md-6 mb-3">
+          <div class="col-md-4 mb-3">
             <h5 class="text-primary">Datos de la solicitud</h5>
             <p><strong>Origen:</strong> {{ transferDetail.transferHead.StoreCodOrigin }}</p>
             <p><strong>Destino:</strong> {{ transferDetail.transferHead.StoreCodDest }}</p>
             <p><strong>Estado:</strong> {{ transferDetail.transferHead.TransferStatus }}</p>
           </div>
-          <div class="col-md-6 mb-3">
+          <div class="col-md-8 mb-3">
 
             <div class="d-flex justify-content-between align-items-center mb-2">
               <h5 class="text-primary mb-0">Detalle de productos</h5>
@@ -46,6 +46,9 @@
                       <i class="fa fa-check"></i>
                     </th>
                     <th>Producto</th>
+                    <th class="text-center">Item</th>
+                    <th>Lote</th>
+                    <th>Vencimiento</th>
                     <th class="text-center">Cant. Env.</th>
                     <th class="text-center">Cant. Rec.</th>
                     <th class="text-center">Acciones</th>
@@ -58,6 +61,9 @@
                         (change)="toggleProductCheck(det, $event)" style="transform: scale(1.5);">
                     </td>
                     <td class="align-middle">{{ det.ProductCod +' - '+ det.Product.ProductName || det.ProductCod }}</td>
+                    <td class="text-center align-middle">{{ det.ItemNumber }}</td>
+                    <td class="align-middle">{{ det.LotNumber || 'SN' }}</td>
+                    <td class="align-middle">{{ det.ExpirationDate ? (det.ExpirationDate | date:'dd/MM/yyyy') : '' }}</td>
                     <td class="text-center align-middle">{{ det.NumUnit }}</td>
                     <td class="text-center align-middle">{{ det.NumUnitReception }}</td>
                     <td class="text-center align-middle">
@@ -68,7 +74,7 @@
                     </td>
                   </tr>
                   <tr *ngIf="detailList.length === 0">
-                    <td colspan="5" class="text-center text-muted">Sin productos</td>
+                    <td colspan="8" class="text-center text-muted">Sin productos</td>
                   </tr>
                 </tbody>
               </table>

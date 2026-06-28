@@ -28,7 +28,7 @@
         <hr />
 
         <div class="row">
-          <div class="col-md-8">
+          <div class="col-md-5">
             <h5 class="text-primary">Productos</h5>
             <div class="d-flex align-items-center mb-2">
               <input type="text" class="form-control mr-2" placeholder="Buscar producto" #txtSearch />
@@ -51,8 +51,7 @@
                     <td>{{ product.ProductName }}</td>
                     <td class="text-center">{{ product.NumPhysicalStock }}</td>
                     <td class="text-center">
-                      <button class="btn btn-sm btn-outline-primary" (click)="selectProduct(product)"
-                        data-toggle="modal" data-target="#modalProduct">
+                      <button class="btn btn-sm btn-outline-primary" (click)="selectProduct(product)">
                         Elegir
                       </button>
                     </td>
@@ -62,7 +61,7 @@
             </div>
           </div>
 
-          <div class="col-md-4">
+          <div class="col-md-7">
             <div class="d-flex justify-content-between align-items-center mb-2">
               <h5 class="text-primary mb-0">Detalle</h5>
             </div>
@@ -198,9 +197,11 @@
         <div class="mb-2">
           <div class="text-600">{{ selectedDetail.Product.ProductName }}</div>
           <div class="text-muted text-90">
-            Solicitado: {{ selectedDetail.NumUnit }} |
-            Asignado: {{ getLotDispatchTotal() }} |
-            Pendiente: {{ getLotDispatchPending() }}
+            <ng-container *ngIf="selectedDetail.NumUnit > 0">
+              Solicitado: {{ selectedDetail.NumUnit }} |
+              Pendiente: {{ getLotDispatchPending() }} |
+            </ng-container>
+            Asignado: {{ getLotDispatchTotal() }}
           </div>
         </div>
 
@@ -224,7 +225,7 @@
           </div>
         </div>
 
-        <div class="alert alert-warning py-2 mt-2 mb-0" *ngIf="lotDispatchList.length > 0 && getLotDispatchTotal() < selectedDetail.NumUnit">
+        <div class="alert alert-warning py-2 mt-2 mb-0" *ngIf="selectedDetail.NumUnit > 0 && lotDispatchList.length > 0 && getLotDispatchTotal() < selectedDetail.NumUnit">
           La cantidad asignada es menor a la cantidad solicitada.
         </div>
 
@@ -298,7 +299,7 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
         <button type="button" class="btn btn-primary" (click)="AddProduct()">
-          {{ isTransferWithLots ? 'Continuar a lotes' : 'Agregar' }}
+          Agregar
         </button>
       </div>
     </div>

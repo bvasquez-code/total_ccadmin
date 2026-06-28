@@ -108,7 +108,8 @@
 
                 <div class="row text-600 text-95 text-secondary-d3 brc-green-l1 py-25 border-y-2">
                   <div class="d-none d-sm-block col-sm-1">Código</div>
-                  <div class="d-none d-sm-block col-sm-3">Producto</div>
+                  <div class="d-none d-sm-block col-sm-1 text-center">Item</div>
+                  <div class="d-none d-sm-block col-sm-2">Producto</div>
                   <div class="d-none d-sm-block col-sm-1 text-center">Cant.</div>
                   <div class="d-none d-sm-block col-sm-1">Lote</div>
                   <div class="d-none d-sm-block col-sm-1">Venc.</div>
@@ -124,7 +125,11 @@
                       {{ item.ProductCod }}
                     </div>
 
-                    <div class="col-7 col-sm-3">
+                    <div class="col-7 col-sm-1 text-center text-secondary-d3 text-600">
+                      {{ item.ItemNumber }}
+                    </div>
+
+                    <div class="col-7 col-sm-2">
                       {{ item.Product.ProductName || '—' }}
                     </div>
 
