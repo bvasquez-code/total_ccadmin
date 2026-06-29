@@ -42,6 +42,7 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
   productList: ProductEntity[] = [];
   responsePageSearch: ResponsePageSearch<ProductEntity> = new ResponsePageSearch();
   productSelect: ProductEntity = new ProductEntity();
+  productSelectInfo : ProductInfoDto = new ProductInfoDto();
   currentSearchQuery: string = '';
   supplierInfo: string = '';
   supplierNotFound: boolean = false;
@@ -189,17 +190,28 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
     this.FindAllProduct(this.Page);
   }
 
-  selectProduct(product: ProductEntity) {
+  async selectProduct(product: ProductEntity) {
     this.txtNumUnit.nativeElement.value = '';
     this.txtNumUnitPrice.nativeElement.value = '';
     this.productSelect = product;
 
-    const existing = this.pucharseRequestRegister.DetailList.find(e => e.ProductCod === product.ProductCod);
+    const rpt : ResponseWsDto = await this.productService.findDetailById(product.ProductCod,this.session.getSessionStorageDto().StoreCod);
 
-    if (existing) {
-      this.txtNumUnit.nativeElement.value = String(this.toVisibleQuantity(existing.NumUnit, existing.ProductUnitFactor));
-      this.txtNumUnitPrice.nativeElement.value = String(existing.NumUnitPrice);
+    if(!rpt.ErrorStatus){
+
+      this.productSelectInfo = rpt.Data;
+
+      console.log( { aaa : this.productSelectInfo })
+
+      const existing = this.pucharseRequestRegister.DetailList.find(e => e.ProductCod === product.ProductCod);
+
+      if (existing) {
+        this.txtNumUnit.nativeElement.value = String(this.toVisibleQuantity(existing.NumUnit, existing.ProductUnitFactor));
+        this.txtNumUnitPrice.nativeElement.value = String(existing.NumUnitPrice);
+      }
+
     }
+
   }
 
   editDetail(detail: PucharseRequestDetEntity) {

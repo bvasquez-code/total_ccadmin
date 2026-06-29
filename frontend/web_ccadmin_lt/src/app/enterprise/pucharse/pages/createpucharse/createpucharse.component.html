@@ -197,14 +197,24 @@
           <input type="text" class="form-control" [value]="productSelect.ProductName" disabled>
         </div>
         <div class="form-group row">
-          <div class="col-sm-6">
+          <div class="col-sm-4">
             <label>Cantidad:</label>
             <input type="number" class="form-control" #txtNumUnit (keyup.enter)="AddProduct()">
           </div>
-          <div class="col-sm-6">
+          <div class="col-sm-4">
+            <label>Unidad:</label>
+            <input type="text" class="form-control" [value]="productSelectInfo.Config.ProductUnitName" disabled>
+          </div>
+          <div class="col-sm-4">
             <label>Precio Unitario:</label>
             <input type="number" class="form-control" #txtNumUnitPrice (keyup.enter)="AddProduct()">
           </div>
+        </div>
+        <div>
+          <label style="color: red;">
+            Una <b>{{productSelectInfo.Config.ProductUnitName}}</b> contiene 
+            <b>{{productSelectInfo.Config.ProductUnitFactor}}</b> NIU (Unidades)
+          </label>
         </div>
       </div>
 
