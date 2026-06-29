@@ -25,6 +25,8 @@ public class PresaleDetWarehouseEntity extends AuditTableEntity implements Seria
     public String Variant;
     public String WarehouseCod;
     public int NumUnit;
+    public String ProductUnitName = "NIU";
+    public int ProductUnitFactor = 1;
     public String LotNumber;
     public Date ExpirationDate;
 
@@ -38,6 +40,8 @@ public class PresaleDetWarehouseEntity extends AuditTableEntity implements Seria
         this.ProductCod = presaleDet.ProductCod;
         this.Variant = presaleDet.Variant;
         this.NumUnit = presaleDet.NumUnit;
+        this.ProductUnitName = presaleDet.ProductUnitName;
+        this.ProductUnitFactor = presaleDet.ProductUnitFactor;
         this.WarehouseCod = warehouseDefault.WarehouseCod;
         this.LotNumber = presaleDet.LotNumber;
         this.ExpirationDate = presaleDet.ExpirationDate;

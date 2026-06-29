@@ -25,6 +25,8 @@ BEGIN
           `WarehouseCodOrigin` varchar(8) DEFAULT NULL COMMENT 'Codigo de almacen origen (FK warehouse.WarehouseCod). Null si no se usa almacen',
           `WarehouseCodDest` varchar(8) DEFAULT NULL COMMENT 'Codigo de almacen destino (FK warehouse.WarehouseCod). Null si no se usa almacen',
           `NumUnit` decimal(16,3) NOT NULL COMMENT 'Cantidad de unidades a transferir (permite decimales si aplica)',
+          `ProductUnitName` varchar(32) NOT NULL DEFAULT 'NIU' COMMENT 'Unidad visible usada al registrar el detalle',
+          `ProductUnitFactor` int NOT NULL DEFAULT '1' COMMENT 'Factor usado al registrar el detalle',
           `NumUnitDispatch` decimal(16,3) DEFAULT NULL COMMENT 'Cantidad de unidades efectivamente despachadas',
           `NumUnitReception` decimal(16,3) DEFAULT NULL COMMENT 'Cantidad de unidades efectivamente recepcionadas',
           `LotNumber` varchar(32) DEFAULT NULL COMMENT 'Numero de lote del producto (si aplica)',
@@ -84,6 +86,22 @@ BEGIN
         ) THEN
             ALTER TABLE `transfer_request_det` ADD COLUMN `NumUnitDispatch` decimal(16,3) DEFAULT NULL COMMENT 'Cantidad de unidades efectivamente despachadas' AFTER `NumUnit`;
             SELECT 'Columna NumUnitDispatch agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'transfer_request_det'
+            AND column_name = 'ProductUnitName'
+        ) THEN
+            ALTER TABLE `transfer_request_det` ADD COLUMN `ProductUnitName` varchar(32) NOT NULL DEFAULT 'NIU' COMMENT 'Unidad visible usada al registrar el detalle' AFTER `NumUnit`;
+            SELECT 'Columna ProductUnitName agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'transfer_request_det'
+            AND column_name = 'ProductUnitFactor'
+        ) THEN
+            ALTER TABLE `transfer_request_det` ADD COLUMN `ProductUnitFactor` int NOT NULL DEFAULT '1' COMMENT 'Factor usado al registrar el detalle' AFTER `ProductUnitName`;
+            SELECT 'Columna ProductUnitFactor agregada exitosamente.' AS Mensaje;
         END IF;
 
         -- AGREGANDO COLUMNA NumUnitReception

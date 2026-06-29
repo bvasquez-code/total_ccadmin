@@ -38,6 +38,8 @@ public class PucharseDetService extends SessionService {
         pucharseDetConfirm.pucharseDetDelivery.ItemNumber = pucharseDetConfirm.pucharseDet.ItemNumber;
         pucharseDetConfirm.pucharseDetDelivery.ProductCod = pucharseDetConfirm.pucharseDet.ProductCod;
         pucharseDetConfirm.pucharseDetDelivery.Variant = pucharseDetConfirm.pucharseDet.Variant;
+        pucharseDetConfirm.pucharseDetDelivery.ProductUnitName = pucharseDetConfirm.pucharseDet.ProductUnitName;
+        pucharseDetConfirm.pucharseDetDelivery.ProductUnitFactor = pucharseDetConfirm.pucharseDet.ProductUnitFactor;
         pucharseDetConfirm.pucharseDetDelivery.LotNumber = pucharseDetConfirm.pucharseDet.LotNumber;
         pucharseDetConfirm.pucharseDetDelivery.ExpirationDate = pucharseDetConfirm.pucharseDet.ExpirationDate;
         pucharseDetConfirm.pucharseDet.validate();

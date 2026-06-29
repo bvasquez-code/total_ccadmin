@@ -23,6 +23,8 @@ public class SaleDetWarehouseEntity extends AuditTableEntity implements Serializ
     public String Variant;
     public String WarehouseCod;
     public int NumUnit;
+    public String ProductUnitName = "NIU";
+    public int ProductUnitFactor = 1;
     public String LotNumber;
     public Date ExpirationDate;
 
@@ -39,6 +41,8 @@ public class SaleDetWarehouseEntity extends AuditTableEntity implements Serializ
         this.Variant = detWarehouse.Variant;
         this.WarehouseCod = detWarehouse.WarehouseCod;
         this.NumUnit = detWarehouse.NumUnit;
+        this.ProductUnitName = detWarehouse.ProductUnitName;
+        this.ProductUnitFactor = detWarehouse.ProductUnitFactor;
         this.LotNumber = detWarehouse.LotNumber;
         this.ExpirationDate = detWarehouse.ExpirationDate;
     }
@@ -51,6 +55,8 @@ public class SaleDetWarehouseEntity extends AuditTableEntity implements Serializ
         this.Variant = detWarehouse.Variant;
         this.WarehouseCod = detWarehouse.WarehouseCod;
         this.NumUnit = detWarehouse.NumUnit;
+        this.ProductUnitName = detWarehouse.ProductUnitName;
+        this.ProductUnitFactor = detWarehouse.ProductUnitFactor;
         this.LotNumber = detWarehouse.LotNumber;
         this.ExpirationDate = detWarehouse.ExpirationDate;
         return this;

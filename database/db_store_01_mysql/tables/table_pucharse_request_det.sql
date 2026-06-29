@@ -25,6 +25,8 @@ CREATE TABLE `pucharse_request_det` (
   `NumUnit` int DEFAULT NULL,
   `NumUnitPrice` decimal(16,2) DEFAULT NULL,
   `NumTotalPrice` decimal(16,2) DEFAULT NULL,
+  `ProductUnitName` varchar(32) NOT NULL DEFAULT 'NIU' COMMENT 'Unidad visible usada al registrar el detalle',
+  `ProductUnitFactor` int NOT NULL DEFAULT '1' COMMENT 'Factor usado al registrar el detalle',
   `CreationUser` varchar(16) NOT NULL,
   `CreationDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `ModifyUser` varchar(16) DEFAULT NULL,
@@ -49,7 +51,21 @@ CREATE TABLE `pucharse_request_det` (
         -- CASO: LA TABLA YA EXISTE -> APLICAR ALTERS
         -- =============================================
         
-        -- Aqui puedes agregar bloques IF NOT EXISTS para futuros ALTERs
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'pucharse_request_det'
+            AND column_name = 'ProductUnitName'
+        ) THEN
+            ALTER TABLE `pucharse_request_det` ADD COLUMN `ProductUnitName` varchar(32) NOT NULL DEFAULT 'NIU' COMMENT 'Unidad visible usada al registrar el detalle' AFTER `NumTotalPrice`;
+            SELECT 'Columna ProductUnitName agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'pucharse_request_det'
+            AND column_name = 'ProductUnitFactor'
+        ) THEN
+            ALTER TABLE `pucharse_request_det` ADD COLUMN `ProductUnitFactor` int NOT NULL DEFAULT '1' COMMENT 'Factor usado al registrar el detalle' AFTER `ProductUnitName`;
+            SELECT 'Columna ProductUnitFactor agregada exitosamente.' AS Mensaje;
+        END IF;
         
         SELECT 'Tabla pucharse_request_det ya existe. No se realizaron cambios estructurales.' AS Mensaje;
 

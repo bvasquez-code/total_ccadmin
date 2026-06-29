@@ -6,9 +6,11 @@ import com.ccadmin.app.product.model.dto.ProductRegisterMassiveDto;
 import com.ccadmin.app.product.model.entity.*;
 import com.ccadmin.app.product.model.entity.id.ProductPictureID;
 import com.ccadmin.app.product.repository.*;
+import com.ccadmin.app.product.shared.ProductOperationConfigShared;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import com.ccadmin.app.shared.service.GenericQueuedService;
 import com.ccadmin.app.shared.service.SessionService;
+import com.ccadmin.app.store.shared.StoreShared;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +38,10 @@ public class ProductCreateService extends SessionService {
 
     @Autowired
     private ProductBarcodeRepository productBarcodeRepository;
+    @Autowired
+    private ProductOperationConfigShared productOperationConfigShared;
+    @Autowired
+    private StoreShared storeShared;
 
     @Autowired
     private ProductFindCreateService productFindCreateService;
@@ -46,6 +52,7 @@ public class ProductCreateService extends SessionService {
     public ProductRegisterDto save(ProductRegisterDto productRegister) {
         productRegister.product.session(getUserCod());
         productRegister.config.session(getUserCod()).ProductCod = productRegister.product.ProductCod;
+        this.productOperationConfigShared.normalize(productRegister.config);
 
         if (!productRegister.productBarcode.ProductCod.isEmpty() && !productRegister.productBarcode.BarCode.isEmpty()) {
             Optional<ProductBarcodeEntity> productBarcode = this.productBarcodeRepository
@@ -64,7 +71,12 @@ public class ProductCreateService extends SessionService {
         boolean existProduct = this.productRepository.existsById(productRegister.product.ProductCod);
 
         this.productRepository.save(productRegister.product);
-        this.productConfigRepository.save(productRegister.config);
+        if (existProduct) {
+            productRegister.config.StoreCod = getStoreCod();
+            this.productConfigRepository.save(productRegister.config);
+        } else {
+            this.productConfigRepository.saveAll(this.buildConfigForAllStores(productRegister.config));
+        }
 
         if (!existProduct) {
             this.productVariantRepository.save(variant);
@@ -119,10 +131,11 @@ public class ProductCreateService extends SessionService {
 
         List<ProductConfigEntity> configList = registerMassiveOk.productList
                 .stream()
-                .map(productRegister -> {
+                .flatMap(productRegister -> {
                     productRegister.config.session(getUserCod());
                     productRegister.config.ProductCod = productRegister.product.ProductCod;
-                    return productRegister.config;
+                    this.productOperationConfigShared.normalize(productRegister.config);
+                    return this.buildConfigForAllStores(productRegister.config).stream();
                 })
                 .toList();
 
@@ -163,5 +176,30 @@ public class ProductCreateService extends SessionService {
         ProductCreateTaskService productCreateTaskService = new ProductCreateTaskService(
                 this.productFindCreateService, productCodList);
         this.genericQueuedService.addQueued(productCreateTaskService);
+    }
+
+    private List<ProductConfigEntity> buildConfigForAllStores(ProductConfigEntity source) {
+        return this.storeShared.findAll()
+                .stream()
+                .map(store -> this.buildConfigForStore(source, store.StoreCod))
+                .toList();
+    }
+
+    private ProductConfigEntity buildConfigForStore(ProductConfigEntity source, String storeCod) {
+        ProductConfigEntity config = new ProductConfigEntity();
+        config.ProductCod = source.ProductCod;
+        config.StoreCod = storeCod;
+        config.NumPrice = source.NumPrice;
+        config.NumMaxStock = source.NumMaxStock;
+        config.NumMinStock = source.NumMinStock;
+        config.IsDiscontable = source.IsDiscontable;
+        config.DiscountType = source.DiscountType;
+        config.NumDiscountMax = source.NumDiscountMax;
+        config.ProductUnitName = source.ProductUnitName;
+        config.ProductUnitFactor = source.ProductUnitFactor;
+        config.Version = source.Version;
+        config.session(getUserCod());
+        this.productOperationConfigShared.normalize(config);
+        return config;
     }
 }

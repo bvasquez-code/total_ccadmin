@@ -63,7 +63,7 @@
                           {{ product.ProductName }}
                           <i class="fa fa-check text-success ml-2" *ngIf="isProductSelected(product)"></i>
                         </td>
-                        <td class="text-center">{{ product.NumPhysicalStock }}</td>
+                        <td class="text-center">{{ toVisibleQuantity(product.NumPhysicalStock, product.ProductUnitFactor) }} {{ product.ProductUnitName }}</td>
                         <td class="text-center">
                           <button class="btn btn-sm btn-outline-primary" (click)="selectProduct(product)"
                             data-toggle="modal" data-target="#modalProduct">
@@ -96,7 +96,7 @@
                     <tbody>
                       <tr *ngFor="let detail of transferRequestRegister.transferDetList">
                         <td>{{ detail.Product.ProductName }}</td>
-                        <td class="text-center">{{ detail.NumUnit }}</td>
+                        <td class="text-center">{{ toVisibleQuantity(detail.NumUnit, detail.ProductUnitFactor) }} {{ detail.ProductUnitName }}</td>
                         <td class="text-center">
                           <a class="btn btn-sm btn-info mr-1" (click)="editDetail(detail)" data-toggle="modal"
                             data-target="#modalProduct">

@@ -2,6 +2,7 @@ package com.ccadmin.app.product.service;
 
 import com.ccadmin.app.product.model.entity.*;
 import com.ccadmin.app.product.model.entity.id.ProductInfoId;
+import com.ccadmin.app.product.model.entity.id.ProductConfigID;
 import com.ccadmin.app.product.model.entity.id.ProductRankingID;
 import com.ccadmin.app.product.repository.*;
 import com.ccadmin.app.shared.service.SessionService;
@@ -54,7 +55,8 @@ public class ProductFindCreateService extends SessionService {
     {
         log.info("GENERAR INFO PRODUCTO : {} PARA LA TIENDA {}",ProductCod,StoreCod);
         ProductEntity product = this.productRepository.findById(ProductCod).get();
-        ProductConfigEntity productConfig = this.productConfigRepository.findById(ProductCod).get();
+        ProductConfigEntity productConfig = this.productConfigRepository.findById(new ProductConfigID(ProductCod, StoreCod))
+                .orElseGet(() -> this.productConfigRepository.findAnyByProductCod(ProductCod));
         List<ProductVariantEntity> variantList = this.productVariantRepository.findAllVariantProduct(ProductCod);
         List<ProductInfoEntity> productInfoList = this.productInfoRepository.findAllById(
                 variantList.stream().map( variant -> new ProductInfoId(variant.ProductCod,variant.Variant,StoreCod)).toList()

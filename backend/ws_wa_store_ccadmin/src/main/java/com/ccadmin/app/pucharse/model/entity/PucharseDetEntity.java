@@ -24,6 +24,8 @@ public class PucharseDetEntity extends AuditTableEntity implements Serializable 
     public int NumUnit;
     public BigDecimal NumUnitPrice;
     public BigDecimal NumTotalPrice;
+    public String ProductUnitName = "NIU";
+    public int ProductUnitFactor = 1;
     public String IsKardexAffected;
     public int NumUnitDelivered;
     public String LotNumber;
@@ -43,6 +45,8 @@ public class PucharseDetEntity extends AuditTableEntity implements Serializable 
         this.NumUnit = pucharseRequestDet.NumUnit;
         this.NumUnitPrice = pucharseRequestDet.NumUnitPrice;
         this.NumTotalPrice = pucharseRequestDet.NumTotalPrice;
+        this.ProductUnitName = pucharseRequestDet.ProductUnitName;
+        this.ProductUnitFactor = pucharseRequestDet.ProductUnitFactor;
     }
 
     public PucharseDetEntity validate() throws PucharseException {
@@ -64,6 +68,8 @@ public class PucharseDetEntity extends AuditTableEntity implements Serializable 
         detail.NumUnitDelivered = numUnit;
         detail.NumUnitPrice = originDet.NumUnitPrice;
         detail.NumTotalPrice = originDet.NumUnitPrice == null ? BigDecimal.ZERO : originDet.NumUnitPrice.multiply(BigDecimal.valueOf(numUnit));
+        detail.ProductUnitName = originDet.ProductUnitName;
+        detail.ProductUnitFactor = originDet.ProductUnitFactor;
         detail.IsKardexAffected = "S";
         detail.LotNumber = lotDet.LotNumber;
         detail.ExpirationDate = lotDet.ExpirationDate;

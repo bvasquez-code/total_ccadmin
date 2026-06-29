@@ -188,7 +188,7 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
 
     const existing = this.transferRequestRegister.transferDetList.find(e => e.ProductCod === product.ProductCod);
     if (existing) {
-      this.txtNumUnit.nativeElement.value = String(existing.NumUnit);
+      this.txtNumUnit.nativeElement.value = String(this.toVisibleQuantity(existing.NumUnit, existing.ProductUnitFactor));
     }
   }
 
@@ -219,7 +219,10 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
 
     transferDet.ProductCod = product.ProductCod;
     transferDet.Variant = productInfoDto.VariantList[0]?.Variant ?? '0000';
-    transferDet.NumUnit = numUnit;
+    const ProductUnitFactor = productInfoDto.Config.ProductUnitFactor > 0 ? productInfoDto.Config.ProductUnitFactor : 1;
+    transferDet.NumUnit = numUnit * ProductUnitFactor;
+    transferDet.ProductUnitName = productInfoDto.Config.ProductUnitName || 'NIU';
+    transferDet.ProductUnitFactor = ProductUnitFactor;
     transferDet.Product = productEntity;
 
     if (!transferDetExist) {
@@ -273,7 +276,12 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
     this.productSelect.ProductCod = detail.ProductCod;
     this.productSelect.ProductName = detail.Product.ProductName;
 
-    this.txtNumUnit.nativeElement.value = String(detail.NumUnit);
+    this.txtNumUnit.nativeElement.value = String(this.toVisibleQuantity(detail.NumUnit, detail.ProductUnitFactor));
+  }
+
+  toVisibleQuantity(internalQuantity: number, ProductUnitFactor: number): number {
+    const factor = ProductUnitFactor > 0 ? ProductUnitFactor : 1;
+    return internalQuantity / factor;
   }
 
   isProductSelected(product: ProductSearchEntity): boolean {

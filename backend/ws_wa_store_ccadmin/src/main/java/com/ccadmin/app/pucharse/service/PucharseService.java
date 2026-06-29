@@ -154,6 +154,8 @@ public class PucharseService extends SessionService {
                 detDelivery.ProductCod = item.ProductCod;
                 detDelivery.Variant = item.Variant;
                 detDelivery.NumUnit = item.NumUnit;
+                detDelivery.ProductUnitName = item.ProductUnitName;
+                detDelivery.ProductUnitFactor = item.ProductUnitFactor;
                 detDelivery.WarehouseCod = warehouseUnit.WarehouseCod;
                 detDelivery.LotNumber = item.LotNumber;
                 detDelivery.ExpirationDate = item.ExpirationDate;
@@ -168,6 +170,8 @@ public class PucharseService extends SessionService {
                 itemWarehouse.ItemNumber = item.ItemNumber;
                 itemWarehouse.ProductCod = item.ProductCod;
                 itemWarehouse.Variant = item.Variant;
+                itemWarehouse.ProductUnitName = item.ProductUnitName;
+                itemWarehouse.ProductUnitFactor = item.ProductUnitFactor;
                 itemWarehouse.LotNumber = item.LotNumber;
                 itemWarehouse.ExpirationDate = item.ExpirationDate;
                 itemWarehouse.addSession(getUserCod(),true);

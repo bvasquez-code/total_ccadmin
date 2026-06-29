@@ -115,7 +115,7 @@
                     <tbody>
                       <tr *ngFor="let detail of pucharseRequestRegister.DetailList">
                         <td>{{ detail.Product.ProductName }}</td>
-                        <td class="text-center">{{ detail.NumUnit }}</td>
+                        <td class="text-center">{{ toVisibleQuantity(detail.NumUnit, detail.ProductUnitFactor) }} {{ detail.ProductUnitName }}</td>
                         <td class="text-right">{{ detail.NumUnitPrice | FormatoMonedaPeruana : false }}</td>
                         <td class="text-right">{{ detail.NumTotalPrice | FormatoMonedaPeruana : false }}</td>
                         <td class="text-center">

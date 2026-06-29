@@ -35,6 +35,8 @@ public class ProductSearchEntity extends AuditTableEntity implements Serializabl
     public String IsDiscontable;
     public String DiscountType;
     public BigDecimal NumDiscountMax;
+    public String ProductUnitName;
+    public int ProductUnitFactor;
     public String BrandCod;
     public String BrandName;
     public String CategoryCod;
@@ -71,6 +73,8 @@ public class ProductSearchEntity extends AuditTableEntity implements Serializabl
         this.IsDiscontable = productConfig.IsDiscontable;
         this.DiscountType = productConfig.DiscountType;
         this.NumDiscountMax = productConfig.NumDiscountMax;
+        this.ProductUnitName = productConfig.ProductUnitName;
+        this.ProductUnitFactor = productConfig.ProductUnitFactor <= 0 ? 1 : productConfig.ProductUnitFactor;
         this.BrandCod = brand.BrandCod;
         this.BrandName = brand.BrandName;
         this.CategoryCod = category.CategoryCod;

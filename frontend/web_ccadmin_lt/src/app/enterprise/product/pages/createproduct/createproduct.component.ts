@@ -47,6 +47,8 @@ export class CreateproductComponent implements OnInit {
   @ViewChild('txtNumPrice') txtNumPrice!: ElementRef<HTMLInputElement>;
   @ViewChild('txtNumMaxStock') txtNumMaxStock!: ElementRef<HTMLInputElement>;
   @ViewChild('txtNumMinStock') txtNumMinStock!: ElementRef<HTMLInputElement>;
+  @ViewChild('txtProductUnitName') txtProductUnitName!: ElementRef<HTMLInputElement>;
+  @ViewChild('txtProductUnitFactor') txtProductUnitFactor!: ElementRef<HTMLInputElement>;
 
   constructor(
     private productService: ProductService,
@@ -97,6 +99,8 @@ export class CreateproductComponent implements OnInit {
     this.txtNumPrice.nativeElement.value = String(this.ProductRegister.config.NumPrice);
     this.txtNumMaxStock.nativeElement.value = String(this.ProductRegister.config.NumMaxStock);
     this.txtNumMinStock.nativeElement.value = String(this.ProductRegister.config.NumMinStock);
+    this.txtProductUnitName.nativeElement.value = this.ProductRegister.config.ProductUnitName || "NIU";
+    this.txtProductUnitFactor.nativeElement.value = String(this.ProductRegister.config.ProductUnitFactor || 1);
     this.txtProductCodreadonly = true;
 
     if (this.ProductRegister.productBarcode) {
@@ -118,6 +122,8 @@ export class CreateproductComponent implements OnInit {
     this.ProductRegister.config.NumPrice = Number(this.txtNumPrice.nativeElement.value);
     this.ProductRegister.config.NumMaxStock = Number(this.txtNumMaxStock.nativeElement.value);
     this.ProductRegister.config.NumMinStock = Number(this.txtNumMinStock.nativeElement.value);
+    this.ProductRegister.config.ProductUnitName = this.txtProductUnitName.nativeElement.value || "NIU";
+    this.ProductRegister.config.ProductUnitFactor = Number(this.txtProductUnitFactor.nativeElement.value || 1);
     this.ProductRegister.config.IsDiscontable = "N";
     this.ProductRegister.config.DiscountType = "-";
     this.ProductRegister.config.NumDiscountMax = 0;
@@ -232,6 +238,8 @@ export class CreateproductComponent implements OnInit {
 
       ValidationHelper.validateIsNotEmpty(productRegister.config.NumPrice, "Debe ingresar un precio para el producto");
       ValidationHelper.validNumber(productRegister.config.NumPrice, null, 0, "Precio no valido");
+      ValidationHelper.validateIsNotEmpty(productRegister.config.ProductUnitName, "Debe ingresar la unidad de venta");
+      ValidationHelper.validNumber(productRegister.config.ProductUnitFactor, null, 1, "Factor de operacion no valido");
 
       return true;
     } catch (e: any) {

@@ -15,6 +15,8 @@ export class ProductSearchEntity{
     public IsDiscontable : string = "";
     public DiscountType : string = "";
     public NumDiscountMax : number = 0;
+    public ProductUnitName : string = "NIU";
+    public ProductUnitFactor : number = 1;
     public BrandCod : string = "";
     public BrandName : string = "";
     public CategoryCod : string = "";

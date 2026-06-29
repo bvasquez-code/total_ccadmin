@@ -12,6 +12,8 @@ export class PresaleDetEntity extends AuditTableEntity
     public NumDiscount : number = 0;
     public NumUnitPriceSale : number = 0;
     public NumTotalPrice : number = 0;
+    public ProductUnitName : string = "NIU";
+    public ProductUnitFactor : number = 1;
     public LotNumber : string = "";
     public ExpirationDate : Date | any = null;
 
@@ -31,6 +33,8 @@ export class PresaleDetEntity extends AuditTableEntity
         this.NumDiscount = 0;
         this.NumUnitPriceSale = this.NumUnitPrice - this.NumDiscount;
         this.NumTotalPrice = this.NumUnitPriceSale * this.NumUnit;
+        this.ProductUnitName = ProductInfo.Config.ProductUnitName || "NIU";
+        this.ProductUnitFactor = ProductInfo.Config.ProductUnitFactor > 0 ? ProductInfo.Config.ProductUnitFactor : 1;
         this.ProductInfo = ProductInfo;
 
     }
@@ -61,6 +65,8 @@ export class PresaleDetEntity extends AuditTableEntity
         this.NumDiscount = DataSession.NumDiscount;
         this.NumUnitPriceSale = DataSession.NumUnitPriceSale;
         this.NumTotalPrice = DataSession.NumTotalPrice;
+        this.ProductUnitName = DataSession.ProductUnitName ?? "NIU";
+        this.ProductUnitFactor = DataSession.ProductUnitFactor > 0 ? DataSession.ProductUnitFactor : 1;
         this.LotNumber = DataSession.LotNumber ?? "";
         this.ExpirationDate = DataSession.ExpirationDate ?? null;
         this.ProductInfo.SetDataSession(DataSession.ProductInfo);

@@ -243,6 +243,23 @@ export class CreatepresaleComponent implements OnInit {
     return this.shoppingCartService.getTotalProductVariant(ProductCod, Variant);
   }
 
+  getTotalProductVisible(ProductCod: string): number {
+    return this.shoppingCartService.getTotalProductVisible(ProductCod);
+  }
+
+  getTotalProductVariantVisible(ProductCod: string, Variant: string): number {
+    return this.shoppingCartService.getTotalProductVariantVisible(ProductCod, Variant);
+  }
+
+  getVisibleStock(stock: number, ProductUnitFactor: number): number {
+    const factor = ProductUnitFactor > 0 ? ProductUnitFactor : 1;
+    return stock / factor;
+  }
+
+  getProductUnitName(): string {
+    return this.productInfoDtoSelect.Config.ProductUnitName || 'NIU';
+  }
+
   DeleteProduct(ProductCod: string) {
     Swal.fire({
       title: '¿Estás seguro?',

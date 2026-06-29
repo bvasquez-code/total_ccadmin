@@ -22,6 +22,8 @@ public class PucharseRequestDetEntity extends AuditTableEntity implements Serial
     public int NumUnit;
     public BigDecimal NumUnitPrice;
     public BigDecimal NumTotalPrice;
+    public String ProductUnitName = "NIU";
+    public int ProductUnitFactor = 1;
 
     @Transient
     public ProductEntity Product;

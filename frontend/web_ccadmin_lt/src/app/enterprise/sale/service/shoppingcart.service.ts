@@ -25,6 +25,20 @@ export class ShoppingCartService
         return det.ProductCod === ProductCod && det.Variant === Variant;
     }
 
+    private getProductUnitFactor(ProductInfo: ProductInfoDto): number {
+        const factor = ProductInfo.Config?.ProductUnitFactor || 1;
+        return factor > 0 ? factor : 1;
+    }
+
+    private toInternalQuantity(ProductInfo: ProductInfoDto, visibleQuantity: number): number {
+        return visibleQuantity * this.getProductUnitFactor(ProductInfo);
+    }
+
+    public toVisibleQuantity(internalQuantity: number, ProductUnitFactor: number): number {
+        const factor = ProductUnitFactor > 0 ? ProductUnitFactor : 1;
+        return internalQuantity / factor;
+    }
+
     public Init()
     {
         this.ShoppingCart = new PresaleRegisterDto();
@@ -78,18 +92,19 @@ export class ShoppingCartService
     public addUnit(ProductInfo : ProductInfoDto,ProductVariant : ProductVariantEntity):void
     {
         let presaleDetEntity : PresaleDetEntity | undefined = this.GetProductInCart(ProductInfo.Product.ProductCod,ProductVariant.Variant);
+        const ProductUnitFactor = this.getProductUnitFactor(ProductInfo);
 
         if(presaleDetEntity)
         {
             presaleDetEntity.Update(
-                this.GetExistsStock(presaleDetEntity.NumUnit + 1,ProductInfo,ProductVariant)
+                this.GetExistsStock(presaleDetEntity.NumUnit + ProductUnitFactor,ProductInfo,ProductVariant)
             );
         }
         else
         {   presaleDetEntity = new PresaleDetEntity();
             presaleDetEntity.Build(ProductInfo,ProductVariant.Variant);
             presaleDetEntity.Update(
-                this.GetExistsStock(1,ProductInfo,ProductVariant)
+                this.GetExistsStock(ProductUnitFactor,ProductInfo,ProductVariant)
             );
             this.ShoppingCart.DetailList.push(presaleDetEntity);
         }
@@ -100,17 +115,18 @@ export class ShoppingCartService
     public HandbookUnit(ProductInfo : ProductInfoDto,ProductVariant : ProductVariantEntity, NumUnit : number):void
     {
         let presaleDetEntity : PresaleDetEntity | undefined = this.GetProductInCart(ProductInfo.Product.ProductCod,ProductVariant.Variant);
+        const internalQuantity = this.toInternalQuantity(ProductInfo, NumUnit);
         
         if(presaleDetEntity)
         {
-            if( NumUnit === 0)
+            if( internalQuantity === 0)
             {
                 this.ShoppingCart.DetailList = this.ShoppingCart.DetailList.filter( e => !this.sameProductVariant(e, ProductInfo.Product.ProductCod, ProductVariant.Variant) );
             }
             else
             {
                 presaleDetEntity.Update(
-                    this.GetExistsStock(NumUnit,ProductInfo,ProductVariant)
+                    this.GetExistsStock(internalQuantity,ProductInfo,ProductVariant)
                 );
             }            
         }
@@ -118,7 +134,7 @@ export class ShoppingCartService
         {   presaleDetEntity = new PresaleDetEntity();
             presaleDetEntity.Build(ProductInfo,ProductVariant.Variant);
             presaleDetEntity.Update(
-                this.GetExistsStock(NumUnit,ProductInfo,ProductVariant)
+                this.GetExistsStock(internalQuantity,ProductInfo,ProductVariant)
             );
             this.ShoppingCart.DetailList.push(presaleDetEntity);
         }
@@ -129,9 +145,10 @@ export class ShoppingCartService
     public preventZeroSubtract(ProductInfo : ProductInfoDto,ProductVariant : ProductVariantEntity){
 
         let presaleDetEntity : PresaleDetEntity | undefined = this.GetProductInCart(ProductInfo.Product.ProductCod,ProductVariant.Variant);
+        const ProductUnitFactor = this.getProductUnitFactor(ProductInfo);
 
         if(presaleDetEntity){
-            return ( presaleDetEntity.NumUnit - 1  === 0);
+            return ( presaleDetEntity.NumUnit - ProductUnitFactor  === 0);
         }
         return false;
     }
@@ -139,17 +156,18 @@ export class ShoppingCartService
     public subtractUnit(ProductInfo : ProductInfoDto,ProductVariant : ProductVariantEntity):void
     {
         let presaleDetEntity : PresaleDetEntity | undefined = this.GetProductInCart(ProductInfo.Product.ProductCod,ProductVariant.Variant);
+        const ProductUnitFactor = this.getProductUnitFactor(ProductInfo);
 
         if(presaleDetEntity)
         {
-            if( presaleDetEntity.NumUnit - 1  === 0)
+            if( presaleDetEntity.NumUnit - ProductUnitFactor  === 0)
             {
                 this.ShoppingCart.DetailList = this.ShoppingCart.DetailList.filter( e => !this.sameProductVariant(e, ProductInfo.Product.ProductCod, ProductVariant.Variant) );
             }
             else
             {
                 presaleDetEntity.Update(
-                    this.GetExistsStock(presaleDetEntity.NumUnit - 1,ProductInfo,ProductVariant)                
+                    this.GetExistsStock(presaleDetEntity.NumUnit - ProductUnitFactor,ProductInfo,ProductVariant)                
                 );
             }
         }
@@ -213,6 +231,22 @@ export class ShoppingCartService
       let result = this.ShoppingCart.DetailList.filter( e => this.sameProductVariant(e, ProductCod, Variant));
       NumUnit = result.map( item => item.NumUnit).reduce((a, b) => a + b, 0);
       return NumUnit;
+    }
+
+    getTotalProductVisible(ProductCod : string):number
+    {
+      return this.ShoppingCart.DetailList
+        .filter(e => e.ProductCod === ProductCod)
+        .map(item => this.toVisibleQuantity(item.NumUnit, item.ProductUnitFactor))
+        .reduce((a, b) => a + b, 0);
+    }
+  
+    getTotalProductVariantVisible(ProductCod : string,Variant : string):number
+    {
+      return this.ShoppingCart.DetailList
+        .filter(e => this.sameProductVariant(e, ProductCod, Variant))
+        .map(item => this.toVisibleQuantity(item.NumUnit, item.ProductUnitFactor))
+        .reduce((a, b) => a + b, 0);
     }
 
     ReBuild():void

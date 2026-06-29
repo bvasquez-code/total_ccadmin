@@ -54,6 +54,8 @@ public interface ProductSearchRepository extends JpaRepository<ProductSearchEnti
              ,pc.IsDiscontable
              ,pc.DiscountType
              ,pc.NumDiscountMax
+             ,pc.ProductUnitName
+             ,pc.ProductUnitFactor
              ,b.BrandCod
              ,b.BrandName
              ,c.CategoryCod
@@ -72,7 +74,7 @@ public interface ProductSearchRepository extends JpaRepository<ProductSearchEnti
              ,p.Status
             from product p
             inner join product_info pi2 on pi2.ProductCod = p.ProductCod
-            inner join product_config pc on pc.ProductCod = p.ProductCod
+            inner join product_config pc on pc.ProductCod = p.ProductCod and pc.StoreCod = pi2.StoreCod
             inner join brand b on b.BrandCod = p.BrandCod
             inner join category c on c.CategoryCod = p.CategoryCod
             inner join category cp on cp.CategoryCod = c.CategoryDadCod

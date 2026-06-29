@@ -28,6 +28,8 @@ public class CreditNoteDetWarehouseEntity extends AuditTableEntity implements Se
     public String WarehouseCod;
 
     public Integer NumUnit;
+    public String ProductUnitName = "NIU";
+    public int ProductUnitFactor = 1;
     public String LotNumber;
     public Date ExpirationDate;
 
@@ -43,6 +45,12 @@ public class CreditNoteDetWarehouseEntity extends AuditTableEntity implements Se
         NumUnit = numUnit;
         LotNumber = lotNumber;
         ExpirationDate = expirationDate;
+    }
+
+    public CreditNoteDetWarehouseEntity(String creditNoteCod, int itemNumber, String productCod, String variant, String warehouseCod, Integer numUnit, String ProductUnitName, int ProductUnitFactor, String lotNumber, Date expirationDate) {
+        this(creditNoteCod, itemNumber, productCod, variant, warehouseCod, numUnit, lotNumber, expirationDate);
+        ProductUnitName = ProductUnitName;
+        ProductUnitFactor = ProductUnitFactor;
     }
 
     /**

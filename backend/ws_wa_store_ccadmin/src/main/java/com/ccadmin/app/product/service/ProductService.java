@@ -3,7 +3,9 @@ package com.ccadmin.app.product.service;
 import com.ccadmin.app.product.model.dto.ProductInfoDto;
 import com.ccadmin.app.product.model.dto.ProductRegisterDto;
 import com.ccadmin.app.product.model.entity.ProductBarcodeEntity;
+import com.ccadmin.app.product.model.entity.ProductConfigEntity;
 import com.ccadmin.app.product.model.entity.ProductEntity;
+import com.ccadmin.app.product.model.entity.id.ProductConfigID;
 import com.ccadmin.app.product.repository.*;
 import com.ccadmin.app.shared.model.dto.ResponsePageSearch;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
@@ -74,7 +76,8 @@ public class ProductService extends SessionService {
         ProductInfoDto productInfoDto = new ProductInfoDto();
 
         productInfoDto.Product = productRepository.findById(ProductCod).get();
-        productInfoDto.Config = productConfigRepository.findById(ProductCod).get();
+        productInfoDto.Config = productConfigRepository.findById(new ProductConfigID(ProductCod, StoreCod))
+                .orElseGet(() -> this.productConfigRepository.findAnyByProductCod(ProductCod));
         productInfoDto.VariantList = productVariantRepository.findAllVariantProduct(ProductCod);
         productInfoDto.InfoList = productInfoRepository.findInfoStore(ProductCod, StoreCod);
         productInfoDto.InfoWarehouseList = productInfoWarehouseRepository.findInfoWarehouse(StoreCod, ProductCod);
@@ -89,7 +92,9 @@ public class ProductService extends SessionService {
         if (ProductCod != null && ProductCod.length() > 0) {
             ProductRegisterDto productRegister = new ProductRegisterDto();
             productRegister.product = this.findById(ProductCod);
-            productRegister.config = this.productConfigRepository.findById(ProductCod).get();
+            ProductConfigEntity config = this.productConfigRepository.findById(new ProductConfigID(ProductCod, getStoreCod()))
+                    .orElseGet(() -> this.productConfigRepository.findAnyByProductCod(ProductCod));
+            productRegister.config = config;
             productRegister.pictureList = this.productPictureRepository.findAllByProductCod(ProductCod);
 
             for (var image : productRegister.pictureList) {

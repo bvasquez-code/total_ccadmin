@@ -160,7 +160,7 @@ export class DirecttransferComponent implements OnInit {
     this.txtNumUnit.nativeElement.value = '';
     const existing = this.transferRegister.transferDetList.find(e => e.ProductCod === product.ProductCod && !e.LotNumber);
     if (existing) {
-      this.txtNumUnit.nativeElement.value = String(existing.NumUnit);
+      this.txtNumUnit.nativeElement.value = String(this.toVisibleQuantity(existing.NumUnit, existing.ProductUnitFactor));
     }
 
     setTimeout(() => {
@@ -190,7 +190,8 @@ export class DirecttransferComponent implements OnInit {
       transferDet = await this.buildTransferDetail(product, numUnit);
     }
 
-    transferDet.NumUnit = numUnit;
+    const ProductUnitFactor = transferDet.ProductUnitFactor > 0 ? transferDet.ProductUnitFactor : 1;
+    transferDet.NumUnit = numUnit * ProductUnitFactor;
 
     if (!transferDetExist) {
       this.transferRegister.transferDetList.push(transferDet);
@@ -217,6 +218,8 @@ export class DirecttransferComponent implements OnInit {
     transferDet.ProductCod = product.ProductCod;
     transferDet.Variant = productInfoDto.VariantList[0]?.Variant ?? '0000';
     transferDet.NumUnit = numUnit;
+    transferDet.ProductUnitName = productInfoDto.Config.ProductUnitName || 'NIU';
+    transferDet.ProductUnitFactor = productInfoDto.Config.ProductUnitFactor > 0 ? productInfoDto.Config.ProductUnitFactor : 1;
     transferDet.Product = productEntity;
 
     return transferDet;
@@ -264,17 +267,19 @@ export class DirecttransferComponent implements OnInit {
         throw new Error('El lote no puede superar 32 caracteres');
       }
 
-      if (this.selectedDetail.NumUnit > 0 && (this.getLotDispatchTotal() + numUnit) > this.selectedDetail.NumUnit) {
+      const internalQuantity = numUnit * (this.selectedDetail.ProductUnitFactor > 0 ? this.selectedDetail.ProductUnitFactor : 1);
+
+      if (this.selectedDetail.NumUnit > 0 && (this.getLotDispatchTotal() + internalQuantity) > this.selectedDetail.NumUnit) {
         throw new Error('La cantidad no puede superar la cantidad solicitada');
       }
 
       const existingLot = this.lotDispatchList.find(e => e.LotNumber === lotNumber && e.ExpirationDate === expirationDate);
 
       if (existingLot) {
-        existingLot.NumUnit += numUnit;
+        existingLot.NumUnit += internalQuantity;
       } else {
         this.lotDispatchList.push(new TransferLotDispatchDto({
-          NumUnit: numUnit,
+          NumUnit: internalQuantity,
           LotNumber: lotNumber,
           ExpirationDate: expirationDate
         }));
@@ -329,6 +334,8 @@ export class DirecttransferComponent implements OnInit {
     detail.NumUnitDispatch = item.NumUnit;
     detail.NumUnitReception = 0;
     detail.FlgRequested = this.selectedDetail.FlgRequested;
+    detail.ProductUnitName = this.selectedDetail.ProductUnitName;
+    detail.ProductUnitFactor = this.selectedDetail.ProductUnitFactor;
     detail.LotNumber = item.LotNumber;
     detail.ExpirationDate = item.ExpirationDate;
     detail.Product = this.selectedDetail.Product;
@@ -468,6 +475,8 @@ export class DirecttransferComponent implements OnInit {
       requestDet.NumUnit = det.NumUnit;
       requestDet.NumUnitDispatch = det.NumUnit;
       requestDet.NumUnitReception = 0;
+      requestDet.ProductUnitName = det.ProductUnitName;
+      requestDet.ProductUnitFactor = det.ProductUnitFactor;
       requestDet.LotNumber = det.LotNumber;
       requestDet.ExpirationDate = det.ExpirationDate;
       requestDet.Product = det.Product;
@@ -533,5 +542,10 @@ export class DirecttransferComponent implements OnInit {
       throw new Error(rpt.Message);
     }
     return String(rpt.Data);
+  }
+
+  toVisibleQuantity(internalQuantity: number, ProductUnitFactor: number): number {
+    const factor = ProductUnitFactor > 0 ? ProductUnitFactor : 1;
+    return internalQuantity / factor;
   }
 }

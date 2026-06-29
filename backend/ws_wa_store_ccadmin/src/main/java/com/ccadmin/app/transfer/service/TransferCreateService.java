@@ -1,8 +1,10 @@
 package com.ccadmin.app.transfer.service;
 
 import com.ccadmin.app.product.model.entity.KardexEntity;
+import com.ccadmin.app.product.model.entity.ProductConfigEntity;
 import com.ccadmin.app.product.model.entity.ProductEntity;
 import com.ccadmin.app.product.shared.KardexShared;
+import com.ccadmin.app.product.shared.ProductOperationConfigShared;
 import com.ccadmin.app.product.shared.ProductShared;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import com.ccadmin.app.shared.service.SessionService;
@@ -45,6 +47,8 @@ public class TransferCreateService extends SessionService {
     private CarrierRepository carrierRepository;
     @Autowired
     private ProductShared productShared;
+    @Autowired
+    private ProductOperationConfigShared productOperationConfigShared;
     @Autowired
     private WarehouseRepository warehouseRepository;
     @Autowired
@@ -208,6 +212,12 @@ public class TransferCreateService extends SessionService {
                 TransferDetEntity det = detOptional.get();
                 det.NumUnit = detRequest.NumUnit > 0 ? detRequest.NumUnit : det.NumUnit;
                 det.NumUnitDispatch = detRequest.NumUnitDispatch;
+                if (StringUtil.isNotEmpty(detRequest.ProductUnitName)) {
+                    det.ProductUnitName = detRequest.ProductUnitName;
+                }
+                if (detRequest.ProductUnitFactor > 0) {
+                    det.ProductUnitFactor = detRequest.ProductUnitFactor;
+                }
                 det.LotNumber = detRequest.LotNumber;
                 det.ExpirationDate = detRequest.ExpirationDate;
             } else if (detRequest.NumUnitDispatch > 0) {
@@ -222,6 +232,8 @@ public class TransferCreateService extends SessionService {
                 det.NumUnit = detRequest.NumUnit > 0 ? detRequest.NumUnit : detRequest.NumUnitDispatch;
                 det.NumUnitDispatch = detRequest.NumUnitDispatch;
                 det.NumUnitReception = 0;
+                det.ProductUnitName = detRequest.ProductUnitName;
+                det.ProductUnitFactor = detRequest.ProductUnitFactor;
                 det.FlgRequested = detRequest.FlgRequested;
                 det.LotNumber = detRequest.LotNumber;
                 det.ExpirationDate = detRequest.ExpirationDate;
@@ -474,6 +486,17 @@ public class TransferCreateService extends SessionService {
             if (product == null || !"A".equals(product.Status)) {
                 throw new TransferException("Producto inválido o inactivo: "+det.ProductCod);
             }
+
+            ProductConfigEntity configOrigin = this.productOperationConfigShared.findByProduct(det.ProductCod, head.StoreCodOrigin);
+            ProductConfigEntity config = this.productOperationConfigShared.findByProduct(det.ProductCod, head.StoreCodDest);
+            if (StringUtil.isEmpty(det.ProductUnitName)) {
+                det.ProductUnitName = config.ProductUnitName;
+            }
+            if (det.ProductUnitFactor <= 0) {
+                det.ProductUnitFactor = config.ProductUnitFactor;
+            }
+            this.productOperationConfigShared.validateInternalQuantity(det.ProductCod, det.NumUnit, configOrigin.ProductUnitFactor);
+            this.productOperationConfigShared.validateInternalQuantity(det.ProductCod, det.NumUnit, det.ProductUnitFactor);
 
             if (StringUtil.isNotEmpty(det.WarehouseCodOrigin)) {
                 WarehouseEntity whOrigin = this.warehouseRepository.findById(det.WarehouseCodOrigin)

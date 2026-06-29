@@ -9,6 +9,8 @@ export class PucharseDetEntity extends AuditTableEntity {
     public NumUnit: number;
     public NumUnitPrice: number;
     public NumTotalPrice: number;
+    public ProductUnitName : string;
+    public ProductUnitFactor : number;
     public IsKardexAffected : string;
     public NumUnitDelivered : number;
     public LotNumber: string;
@@ -24,6 +26,8 @@ export class PucharseDetEntity extends AuditTableEntity {
       this.NumUnit = 0;
       this.NumUnitPrice = 0;
       this.NumTotalPrice = 0;
+      this.ProductUnitName = 'NIU';
+      this.ProductUnitFactor = 1;
       this.IsKardexAffected = "N";
       this.NumUnitDelivered = 0;
       this.LotNumber = '';

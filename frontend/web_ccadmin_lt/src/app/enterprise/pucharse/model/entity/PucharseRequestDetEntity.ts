@@ -10,6 +10,8 @@ export class PucharseRequestDetEntity extends AuditTableEntity
     public NumUnit: number;
     public NumUnitPrice: number;
     public NumTotalPrice: number;
+    public ProductUnitName: string;
+    public ProductUnitFactor: number;
     public LotNumber: string;
     public ExpirationDate: Date | any;
 
@@ -24,6 +26,8 @@ export class PucharseRequestDetEntity extends AuditTableEntity
         this.NumUnit = 0;
         this.NumUnitPrice = 0;
         this.NumTotalPrice = 0;
+        this.ProductUnitName = 'NIU';
+        this.ProductUnitFactor = 1;
         this.LotNumber = '';
         this.ExpirationDate = null;
         this.Product = new ProductEntity();

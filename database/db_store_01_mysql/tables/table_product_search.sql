@@ -34,6 +34,8 @@ CREATE TABLE `product_search` (
   `IsDiscontable` char(1) DEFAULT 'N',
   `DiscountType` char(2) DEFAULT NULL,
   `NumDiscountMax` decimal(16,2) DEFAULT '0.00',
+  `ProductUnitName` varchar(32) NOT NULL DEFAULT 'NIU',
+  `ProductUnitFactor` int NOT NULL DEFAULT '1',
   `BrandCod` varchar(10) NOT NULL,
   `BrandName` varchar(128) NOT NULL,
   `CategoryCod` varchar(10) NOT NULL,
@@ -100,6 +102,22 @@ CREATE TABLE `product_search` (
         ) THEN
             ALTER TABLE `product_search` ADD COLUMN `NumTotalStock` int NOT NULL DEFAULT '0' AFTER `NumReservedStock`;
             SELECT 'Columna NumTotalStock agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'product_search'
+            AND column_name = 'ProductUnitName'
+        ) THEN
+            ALTER TABLE `product_search` ADD COLUMN `ProductUnitName` varchar(32) NOT NULL DEFAULT 'NIU' AFTER `NumDiscountMax`;
+            SELECT 'Columna ProductUnitName agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'product_search'
+            AND column_name = 'ProductUnitFactor'
+        ) THEN
+            ALTER TABLE `product_search` ADD COLUMN `ProductUnitFactor` int NOT NULL DEFAULT '1' AFTER `ProductUnitName`;
+            SELECT 'Columna ProductUnitFactor agregada exitosamente.' AS Mensaje;
         END IF;
         
         SELECT 'Tabla product_search ya existe. No se realizaron cambios estructurales.' AS Mensaje;

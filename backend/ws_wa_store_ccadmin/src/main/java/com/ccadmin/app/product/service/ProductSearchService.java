@@ -3,12 +3,15 @@ package com.ccadmin.app.product.service;
 import com.ccadmin.app.product.model.dto.ProductInfoDto;
 import com.ccadmin.app.product.model.dto.ProductRegisterDto;
 import com.ccadmin.app.product.model.entity.ProductBarcodeEntity;
+import com.ccadmin.app.product.model.entity.ProductConfigEntity;
 import com.ccadmin.app.product.model.entity.ProductEntity;
+import com.ccadmin.app.product.model.entity.id.ProductConfigID;
 import com.ccadmin.app.product.repository.*;
 import com.ccadmin.app.shared.model.dto.ResponsePageSearchT;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import com.ccadmin.app.shared.model.dto.SearchDto;
 import com.ccadmin.app.shared.service.SearchTService;
+import com.ccadmin.app.shared.service.SessionService;
 import com.ccadmin.app.system.shared.AppFileShared;
 import com.ccadmin.app.system.shared.SystemDocumentShared;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +23,7 @@ import java.util.Optional;
 
 @Slf4j
 @Service
-public class ProductSearchService {
+public class ProductSearchService extends SessionService {
 
     @Autowired
     private ProductRepository productRepository;
@@ -76,7 +79,8 @@ public class ProductSearchService {
     {
         ProductInfoDto productInfoDto = new ProductInfoDto();
         productInfoDto.Product = productRepository.findById(ProductCod).orElse(null);
-        productInfoDto.Config = productConfigRepository.findById(ProductCod).orElse(null);
+        productInfoDto.Config = productConfigRepository.findById(new ProductConfigID(ProductCod, StoreCod))
+                .orElseGet(() -> this.productConfigRepository.findAnyByProductCod(ProductCod));
         productInfoDto.VariantList = productVariantRepository.findAllVariantProduct(ProductCod);
         productInfoDto.InfoList = productInfoRepository.findInfoStore(ProductCod,StoreCod);
         productInfoDto.InfoWarehouseList = productInfoWarehouseRepository.findInfoWarehouse(StoreCod,ProductCod);
@@ -92,7 +96,9 @@ public class ProductSearchService {
         {
             ProductRegisterDto productRegister = new ProductRegisterDto();
             productRegister.product = this.findById(ProductCod);
-            productRegister.config = this.productConfigRepository.findById(ProductCod).orElse(null);
+            ProductConfigEntity config = this.productConfigRepository.findById(new ProductConfigID(ProductCod, getStoreCod()))
+                    .orElseGet(() -> this.productConfigRepository.findAnyByProductCod(ProductCod));
+            productRegister.config = config;
             productRegister.pictureList = this.productPictureRepository.findAllByProductCod(ProductCod);
             productRegister.productBarcode = this.productBarcodeRepository.findByProductCod(ProductCod);
 

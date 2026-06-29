@@ -10,6 +10,8 @@ export class TransferDetEntity extends AuditTableEntity {
     public WarehouseCodOrigin: string
     public WarehouseCodDest: string;
     public NumUnit: number;
+    public ProductUnitName: string;
+    public ProductUnitFactor: number;
     public NumUnitDispatch: number;
     public NumUnitReception: number;
     public FlgRequested: string;
@@ -28,6 +30,8 @@ export class TransferDetEntity extends AuditTableEntity {
         this.WarehouseCodOrigin = '';
         this.WarehouseCodDest = '';
         this.NumUnit = 0;
+        this.ProductUnitName = 'NIU';
+        this.ProductUnitFactor = 1;
         this.NumUnitDispatch = 0;
         this.NumUnitReception = 0;
         this.FlgRequested = 'S';

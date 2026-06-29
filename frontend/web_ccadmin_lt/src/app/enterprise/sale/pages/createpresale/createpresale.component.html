@@ -166,7 +166,7 @@
                     <div class="btn-group" role="group" aria-label="Basic mixed styles example">
                       <button type="button" class="btn btn-danger"
                         (click)="subtractUnitDirect(Product.ProductCod)">-</button>
-                      <input type="text" value="{{ Product.NumUnit }}" class="form-control" [disabled]="true"
+                      <input type="text" value="{{ Product.NumUnit / Product.ProductUnitFactor }}" class="form-control" [disabled]="true"
                         style="width: 80px; text-align: center;">
                       <button type="button" class="btn btn-success"
                         (click)="addUnitDirect(Product.ProductCod)">+</button>
@@ -421,7 +421,7 @@
                 PRECIO : {{ product.NumPrice | currency: product.CurrencyCod + ' '}}
               </h3>
               <h4 class="text-danger text-100">
-                STOCK : {{product.NumDigitalStock }}
+                STOCK : {{ getVisibleStock(product.NumDigitalStock, product.ProductUnitFactor) }} {{ product.ProductUnitName }}
               </h4>
               <div>
                 {{product.ProductName}}
@@ -533,7 +533,7 @@
               <div class="mb-2">
                 <div class="text-grey-m2 text-75 text-uppercase">Stock</div>
                 <div class="text-105">
-                  {{ NumPhysicalStockTotal }}
+                  {{ getVisibleStock(NumPhysicalStockTotal, productInfoDtoSelect.Config.ProductUnitFactor) }} {{ getProductUnitName() }}
                 </div>
               </div>
               <div class="mb-2">
@@ -548,7 +548,7 @@
             <hr class="my-3" *ngIf="(productInfoDtoSelect.VariantList.length == 1)">
 
             <div class="mt-2" *ngIf="(productInfoDtoSelect.VariantList.length == 1)">
-              <div class="text-grey-m2 text-75 text-uppercase mb-1">Cantidad</div>
+                <div class="text-grey-m2 text-75 text-uppercase mb-1">Cantidad ({{ getProductUnitName() }})</div>
               <div class="btn-group" role="group" aria-label="Basic mixed styles example">
                 <button type="button" class="btn btn-danger"
                   (click)="subtractUnit(productInfoDtoSelect,productInfoDtoSelect.VariantList[0])">-</button>
@@ -556,7 +556,7 @@
                 <input type="text" #txt_NumUnit
                   (change)="HandbookUnit(productInfoDtoSelect,productInfoDtoSelect.VariantList[0])" class="form-control"
                   style="width: 80px; text-align: center;"
-                  [value]="getTotalProduct(productInfoDtoSelect.Product.ProductCod)">
+                  [value]="getTotalProductVisible(productInfoDtoSelect.Product.ProductCod)">
 
                 <button type="button" class="btn btn-success"
                   (click)="addUnit(productInfoDtoSelect,productInfoDtoSelect.VariantList[0])">+</button>
@@ -587,7 +587,7 @@
                       (click)="subtractUnit(productInfoDtoSelect,VariaProduct)">-</button>
 
                     <input #txt_NumUnit type="text" class="form-control" style="width: 80px; text-align: center;"
-                      [value]="getTotalProductVariant(productInfoDtoSelect.Product.ProductCod, VariaProduct.Variant)"
+                      [value]="getTotalProductVariantVisible(productInfoDtoSelect.Product.ProductCod, VariaProduct.Variant)"
                       (change)="HandbookUnit(productInfoDtoSelect, VariaProduct)">
 
                     <button type="button" class="btn btn-success"

@@ -62,11 +62,37 @@ BEGIN
     );
 
     -- 3.4 Inicializar información de búsqueda (product_search)
+    INSERT INTO product_config (
+        ProductCod, StoreCod, NumPrice, NumMaxStock, NumMinStock,
+        IsDiscontable, DiscountType, NumDiscountMax, ProductUnitName,
+        ProductUnitFactor, Version, CreationUser, CreationDate,
+        ModifyUser, ModifyDate, Status
+    )
+    SELECT
+        base.ProductCod, p_StoreCod, base.NumPrice, base.NumMaxStock, base.NumMinStock,
+        base.IsDiscontable, base.DiscountType, base.NumDiscountMax, base.ProductUnitName,
+        base.ProductUnitFactor, base.Version, 'SYSTEM', NOW(),
+        NULL, NOW(), 'A'
+    FROM (
+        SELECT pc.*
+        FROM product_config pc
+        JOIN (
+            SELECT ProductCod, MIN(StoreCod) AS StoreCod
+            FROM product_config
+            GROUP BY ProductCod
+        ) b ON b.ProductCod = pc.ProductCod AND b.StoreCod = pc.StoreCod
+    ) base
+    WHERE NOT EXISTS (
+        SELECT 1 FROM product_config pc2
+        WHERE pc2.ProductCod = base.ProductCod
+        AND pc2.StoreCod = p_StoreCod
+    );
+
     INSERT INTO product_search (
         ProductCod, StoreCod, ProductName, ProductDesc,
         NumDigitalStock, NumPhysicalStock, NumPrice,
         NumMaxStock, NumMinStock, IsDiscontable,
-        DiscountType, NumDiscountMax,
+        DiscountType, NumDiscountMax, ProductUnitName, ProductUnitFactor,
         BrandCod, BrandName,
         CategoryCod, CategoryName, CategoryDadCod, CategoryDadName,
         CurrencyCod, CurrencySymbol,
@@ -87,6 +113,8 @@ BEGIN
         pc.IsDiscontable,
         pc.DiscountType,
         pc.NumDiscountMax,
+        pc.ProductUnitName,
+        pc.ProductUnitFactor,
         b.BrandCod,
         b.BrandName,
         c.CategoryCod,
@@ -105,7 +133,7 @@ BEGIN
     JOIN brand b ON p.BrandCod = b.BrandCod
     JOIN category c ON p.CategoryCod = c.CategoryCod
     LEFT JOIN category d ON c.CategoryDadCod = d.CategoryCod
-    JOIN product_config pc ON p.ProductCod = pc.ProductCod
+    JOIN product_config pc ON p.ProductCod = pc.ProductCod AND pc.StoreCod = p_StoreCod
     LEFT JOIN product_picture pp ON p.ProductCod = pp.ProductCod AND pp.IsPrincipal = 'S' AND pp.Status = 'A'
     LEFT JOIN app_file ap ON ap.FileCod = pp.FileCod 
     CROSS JOIN currency cur

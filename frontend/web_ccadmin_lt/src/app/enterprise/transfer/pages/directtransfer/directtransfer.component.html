@@ -49,7 +49,7 @@
                   <tr *ngFor="let product of productList">
                     <td>{{ product.ProductCod }}</td>
                     <td>{{ product.ProductName }}</td>
-                    <td class="text-center">{{ product.NumPhysicalStock }}</td>
+                    <td class="text-center">{{ toVisibleQuantity(product.NumPhysicalStock, product.ProductUnitFactor) }} {{ product.ProductUnitName }}</td>
                     <td class="text-center">
                       <button class="btn btn-sm btn-outline-primary" (click)="selectProduct(product)">
                         Elegir
@@ -91,7 +91,7 @@
                 <tbody>
                   <tr *ngFor="let detail of transferRegister.transferDetList">
                     <td>{{ detail.ProductCod +' - '+ detail.Product.ProductName || detail.ProductCod }}</td>
-                    <td class="text-center">{{ detail.NumUnit }}</td>
+                    <td class="text-center">{{ toVisibleQuantity(detail.NumUnit, detail.ProductUnitFactor) }} {{ detail.ProductUnitName }}</td>
                     <td *ngIf="isTransferWithLots">{{ detail.LotNumber || 'SN' }}</td>
                     <td *ngIf="isTransferWithLots">{{ detail.ExpirationDate ? (detail.ExpirationDate | date:'dd/MM/yyyy') : '' }}</td>
                     <td class="text-center">
@@ -198,10 +198,10 @@
           <div class="text-600">{{ selectedDetail.Product.ProductName }}</div>
           <div class="text-muted text-90">
             <ng-container *ngIf="selectedDetail.NumUnit > 0">
-              Solicitado: {{ selectedDetail.NumUnit }} |
-              Pendiente: {{ getLotDispatchPending() }} |
+              Solicitado: {{ toVisibleQuantity(selectedDetail.NumUnit, selectedDetail.ProductUnitFactor) }} {{ selectedDetail.ProductUnitName }} |
+              Pendiente: {{ toVisibleQuantity(getLotDispatchPending(), selectedDetail.ProductUnitFactor) }} {{ selectedDetail.ProductUnitName }} |
             </ng-container>
-            Asignado: {{ getLotDispatchTotal() }}
+            Asignado: {{ toVisibleQuantity(getLotDispatchTotal(), selectedDetail.ProductUnitFactor) }} {{ selectedDetail.ProductUnitName }}
           </div>
         </div>
 
@@ -241,7 +241,7 @@
             </thead>
             <tbody>
               <tr *ngFor="let item of lotDispatchList; let i = index">
-                <td>{{ item.NumUnit }}</td>
+                <td>{{ toVisibleQuantity(item.NumUnit, selectedDetail.ProductUnitFactor) }} {{ selectedDetail.ProductUnitName }}</td>
                 <td>{{ item.LotNumber }}</td>
                 <td>{{ item.ExpirationDate | date:'dd/MM/yyyy' }}</td>
                 <td class="text-center">

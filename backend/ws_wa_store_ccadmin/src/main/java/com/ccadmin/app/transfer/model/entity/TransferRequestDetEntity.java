@@ -23,6 +23,8 @@ public class TransferRequestDetEntity extends AuditTableEntity implements Serial
     public String WarehouseCodOrigin;
     public String WarehouseCodDest;
     public int NumUnit;
+    public String ProductUnitName = "NIU";
+    public int ProductUnitFactor = 1;
     public int NumUnitDispatch;
     public int NumUnitReception;
     public String LotNumber;
@@ -49,6 +51,9 @@ public class TransferRequestDetEntity extends AuditTableEntity implements Serial
         }
         if (this.NumUnit <= 0) {
             throw new TransferException("La cantidad debe ser mayor a cero");
+        }
+        if (this.ProductUnitFactor <= 0) {
+            throw new TransferException("Factor de operaciÃ³n debe ser mayor a cero");
         }
         return this;
     }

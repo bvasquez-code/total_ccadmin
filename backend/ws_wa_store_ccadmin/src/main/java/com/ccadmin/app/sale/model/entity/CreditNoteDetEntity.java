@@ -31,6 +31,8 @@ public class CreditNoteDetEntity extends AuditTableEntity implements Serializabl
     public BigDecimal NumUnitPriceSale;
     public BigDecimal NumTotalPrice;
     public Integer NumUnitStockReturned;
+    public String ProductUnitName = "NIU";
+    public int ProductUnitFactor = 1;
     public String LotNumber;
     public Date ExpirationDate;
 

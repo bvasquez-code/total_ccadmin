@@ -1,5 +1,7 @@
 package com.ccadmin.app.pucharse.service;
 
+import com.ccadmin.app.product.model.entity.ProductConfigEntity;
+import com.ccadmin.app.product.shared.ProductOperationConfigShared;
 import com.ccadmin.app.product.shared.ProductShared;
 import com.ccadmin.app.pucharse.model.dto.PucharseRequestDetailsDto;
 import com.ccadmin.app.pucharse.model.dto.PucharseRequestRegisterDto;
@@ -35,6 +37,8 @@ public class PucharseRequestHeadService extends SessionService {
     private SearchService searchService;
     @Autowired
     private ProductShared productShared;
+    @Autowired
+    private ProductOperationConfigShared productOperationConfigShared;
 
     @Transactional
     public PucharseRequestRegisterDto save(PucharseRequestRegisterDto pucharseRegister)
@@ -70,6 +74,14 @@ public class PucharseRequestHeadService extends SessionService {
 
         for(var product : pucharseRegister.DetailList)
         {
+            ProductConfigEntity config = this.productOperationConfigShared.findByProduct(product.ProductCod, getStoreCod());
+            if (product.ProductUnitName == null || product.ProductUnitName.trim().isEmpty()) {
+                product.ProductUnitName = config.ProductUnitName;
+            }
+            if (product.ProductUnitFactor <= 0) {
+                product.ProductUnitFactor = config.ProductUnitFactor;
+            }
+            this.productOperationConfigShared.validateInternalQuantity(product.ProductCod, product.NumUnit, product.ProductUnitFactor);
             product.addSession(getUserCod(),isNew);
             product.PucharseReqCod = pucharseRegister.Headboard.PucharseReqCod;
             product.NumTotalPrice = product.NumUnitPrice.multiply(new BigDecimal(product.NumUnit));

@@ -24,6 +24,8 @@ public class PucharseDetDeliveryEntity extends AuditTableEntity implements Seria
     public String Variant;
     public String WarehouseCod;
     public int NumUnit;
+    public String ProductUnitName = "NIU";
+    public int ProductUnitFactor = 1;
     public String LotNumber;
     public Date ExpirationDate;
 
@@ -42,6 +44,8 @@ public class PucharseDetDeliveryEntity extends AuditTableEntity implements Seria
         delivery.Variant = detail.Variant;
         delivery.WarehouseCod = warehouseCod;
         delivery.NumUnit = detail.NumUnitDelivered;
+        delivery.ProductUnitName = detail.ProductUnitName;
+        delivery.ProductUnitFactor = detail.ProductUnitFactor;
         delivery.LotNumber = detail.LotNumber;
         delivery.ExpirationDate = detail.ExpirationDate;
         delivery.addSession(userCod, true);

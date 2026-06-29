@@ -25,6 +25,8 @@ CREATE TABLE `pucharse_det_delivery` (
   `Variant` varchar(4) NOT NULL DEFAULT (_utf8mb4'0000'),
   `WarehouseCod` varchar(8) NOT NULL COMMENT 'codigo de almacen',
   `NumUnit` int DEFAULT NULL,
+  `ProductUnitName` varchar(32) NOT NULL DEFAULT 'NIU' COMMENT 'Unidad visible usada al registrar el detalle',
+  `ProductUnitFactor` int NOT NULL DEFAULT '1' COMMENT 'Factor usado al registrar el detalle',
   `LotNumber` varchar(32) DEFAULT NULL COMMENT 'Número de lote del producto (si aplica)',
   `ExpirationDate` date DEFAULT NULL COMMENT 'Fecha de vencimiento (si aplica)',
   `CreationUser` varchar(16) NOT NULL,
@@ -85,6 +87,22 @@ CREATE TABLE `pucharse_det_delivery` (
         ) THEN
             ALTER TABLE `pucharse_det_delivery` ADD COLUMN `LotNumber` varchar(32) DEFAULT NULL COMMENT 'Número de lote del producto (si aplica)' AFTER `NumUnit`;
             SELECT 'Columna LotNumber agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'pucharse_det_delivery'
+            AND column_name = 'ProductUnitName'
+        ) THEN
+            ALTER TABLE `pucharse_det_delivery` ADD COLUMN `ProductUnitName` varchar(32) NOT NULL DEFAULT 'NIU' COMMENT 'Unidad visible usada al registrar el detalle' AFTER `NumUnit`;
+            SELECT 'Columna ProductUnitName agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'pucharse_det_delivery'
+            AND column_name = 'ProductUnitFactor'
+        ) THEN
+            ALTER TABLE `pucharse_det_delivery` ADD COLUMN `ProductUnitFactor` int NOT NULL DEFAULT '1' COMMENT 'Factor usado al registrar el detalle' AFTER `ProductUnitName`;
+            SELECT 'Columna ProductUnitFactor agregada exitosamente.' AS Mensaje;
         END IF;
 
         -- AGREGANDO COLUMNA ExpirationDate

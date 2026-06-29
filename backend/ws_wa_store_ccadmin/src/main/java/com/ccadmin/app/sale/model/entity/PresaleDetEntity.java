@@ -27,6 +27,8 @@ public class PresaleDetEntity extends AuditTableEntity implements Serializable {
     public BigDecimal NumDiscount;
     public BigDecimal NumUnitPriceSale;
     public BigDecimal NumTotalPrice;
+    public String ProductUnitName = "NIU";
+    public int ProductUnitFactor = 1;
     public String LotNumber;
     public Date ExpirationDate;
 

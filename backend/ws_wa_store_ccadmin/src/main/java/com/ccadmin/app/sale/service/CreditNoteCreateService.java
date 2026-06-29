@@ -80,11 +80,20 @@ public class CreditNoteCreateService extends SessionService {
         SaleHeadEntity saleHead = this.saleHeadRepository.findById(creditNoteRegister.Headboard.SaleCod).get();
 
         int itemNumber = 1;
+        List<SaleDetEntity> saleDetList = this.saleDetRepository.findBySaleCod(creditNoteRegister.Headboard.SaleCod);
         for (var product : creditNoteRegister.DetailList) {
             product.CreditNoteCod = creditNoteRegister.Headboard.CreditNoteCod;
             if (product.ItemNumber <= 0) {
                 product.ItemNumber = itemNumber;
             }
+            SaleDetEntity originDetail = saleDetList.stream()
+                    .filter(e -> e.ItemNumber == product.ItemNumber
+                            && e.ProductCod.equals(product.ProductCod)
+                            && e.Variant.equals(product.Variant))
+                    .findFirst()
+                    .orElseThrow(() -> new SaleException(" producto no existe en la compra de origen  "+ product.ProductCod));
+            product.ProductUnitName = originDetail.ProductUnitName;
+            product.ProductUnitFactor = originDetail.ProductUnitFactor;
             product.NumTotalPrice = product.NumUnitPriceSale.multiply(BigDecimal.valueOf(product.NumUnit));
             product.validate().session(getUserCod());
             itemNumber++;
@@ -217,6 +226,8 @@ public class CreditNoteCreateService extends SessionService {
                         e.Variant,
                         warehouseDefault.WarehouseCod,
                         e.NumUnitStockReturned,
+                        e.ProductUnitName,
+                        e.ProductUnitFactor,
                         e.LotNumber,
                         e.ExpirationDate
                 ).session(getUserCod()))

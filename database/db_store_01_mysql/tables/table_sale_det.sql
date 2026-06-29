@@ -28,6 +28,8 @@ CREATE TABLE `sale_det` (
   `NumDiscount` decimal(16,2) DEFAULT NULL COMMENT 'descuento',
   `NumUnitPriceSale` decimal(16,2) DEFAULT NULL COMMENT 'Precio unitario de venta final',
   `NumTotalPrice` decimal(16,2) DEFAULT NULL COMMENT 'Precio Total',
+  `ProductUnitName` varchar(32) NOT NULL DEFAULT 'NIU' COMMENT 'Unidad visible usada al registrar el detalle',
+  `ProductUnitFactor` int NOT NULL DEFAULT '1' COMMENT 'Factor usado al registrar el detalle',
   `IsAppliedTax` char(1) DEFAULT 'S',
   `CreationUser` varchar(16) NOT NULL,
   `CreationDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -87,6 +89,22 @@ CREATE TABLE `sale_det` (
         ) THEN
             ALTER TABLE `sale_det` ADD COLUMN `LotNumber` varchar(32) DEFAULT NULL COMMENT 'Número de lote del producto (si aplica)' AFTER `Status`;
             SELECT 'Columna LotNumber agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sale_det'
+            AND column_name = 'ProductUnitName'
+        ) THEN
+            ALTER TABLE `sale_det` ADD COLUMN `ProductUnitName` varchar(32) NOT NULL DEFAULT 'NIU' COMMENT 'Unidad visible usada al registrar el detalle' AFTER `NumTotalPrice`;
+            SELECT 'Columna ProductUnitName agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sale_det'
+            AND column_name = 'ProductUnitFactor'
+        ) THEN
+            ALTER TABLE `sale_det` ADD COLUMN `ProductUnitFactor` int NOT NULL DEFAULT '1' COMMENT 'Factor usado al registrar el detalle' AFTER `ProductUnitName`;
+            SELECT 'Columna ProductUnitFactor agregada exitosamente.' AS Mensaje;
         END IF;
 
         -- AGREGANDO COLUMNA ExpirationDate

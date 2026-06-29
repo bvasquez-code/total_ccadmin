@@ -8,6 +8,8 @@ export class PucharseDetDeliveryEntity extends AuditTableEntity
     public Variant: string;
     public WarehouseCod: string;
     public NumUnit: number;
+    public ProductUnitName: string;
+    public ProductUnitFactor: number;
     public LotNumber: string;
     public ExpirationDate: Date | any;
 
@@ -19,6 +21,8 @@ export class PucharseDetDeliveryEntity extends AuditTableEntity
         this.Variant = '';
         this.WarehouseCod = '';
         this.NumUnit = 0;
+        this.ProductUnitName = 'NIU';
+        this.ProductUnitFactor = 1;
         this.LotNumber = '';
         this.ExpirationDate = null;
     }

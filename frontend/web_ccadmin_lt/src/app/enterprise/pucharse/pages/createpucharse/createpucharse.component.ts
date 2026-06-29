@@ -197,14 +197,14 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
     const existing = this.pucharseRequestRegister.DetailList.find(e => e.ProductCod === product.ProductCod);
 
     if (existing) {
-      this.txtNumUnit.nativeElement.value = String(existing.NumUnit);
+      this.txtNumUnit.nativeElement.value = String(this.toVisibleQuantity(existing.NumUnit, existing.ProductUnitFactor));
       this.txtNumUnitPrice.nativeElement.value = String(existing.NumUnitPrice);
     }
   }
 
   editDetail(detail: PucharseRequestDetEntity) {
     this.productSelect = detail.Product;
-    this.txtNumUnit.nativeElement.value = String(detail.NumUnit);
+    this.txtNumUnit.nativeElement.value = String(this.toVisibleQuantity(detail.NumUnit, detail.ProductUnitFactor));
     this.txtNumUnitPrice.nativeElement.value = String(detail.NumUnitPrice);
   }
 
@@ -245,9 +245,13 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
 
     purchaseDet.ProductCod = product.ProductCod;
     purchaseDet.Variant = productInfoDto.VariantList[0]?.Variant || '0000';
-    purchaseDet.NumUnit = numUnit;
+    const ProductUnitFactor = productInfoDto.Config.ProductUnitFactor > 0 ? productInfoDto.Config.ProductUnitFactor : 1;
+    const internalQuantity = numUnit * ProductUnitFactor;
+    purchaseDet.NumUnit = internalQuantity;
     purchaseDet.NumUnitPrice = numUnitPrice;
-    purchaseDet.NumTotalPrice = numUnit * numUnitPrice;
+    purchaseDet.NumTotalPrice = internalQuantity * numUnitPrice;
+    purchaseDet.ProductUnitName = productInfoDto.Config.ProductUnitName || 'NIU';
+    purchaseDet.ProductUnitFactor = ProductUnitFactor;
     purchaseDet.Product = product;
 
     if (!existing) {
@@ -289,6 +293,11 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
 
   isProductSelected(product: ProductEntity): boolean {
     return this.pucharseRequestRegister.DetailList.some(e => e.ProductCod === product.ProductCod);
+  }
+
+  toVisibleQuantity(internalQuantity: number, ProductUnitFactor: number): number {
+    const factor = ProductUnitFactor > 0 ? ProductUnitFactor : 1;
+    return internalQuantity / factor;
   }
 
   handleProductCreated(event: ProductRegisterDto) {

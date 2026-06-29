@@ -1,6 +1,8 @@
 package com.ccadmin.app.sale.service;
 
+import com.ccadmin.app.product.model.entity.ProductConfigEntity;
 import com.ccadmin.app.product.service.ProductRankingService;
+import com.ccadmin.app.product.shared.ProductOperationConfigShared;
 import com.ccadmin.app.sale.exception.PresaleBuildException;
 import com.ccadmin.app.sale.exception.PresaleException;
 import com.ccadmin.app.sale.exception.SaleBuildException;
@@ -50,6 +52,8 @@ public class PresaleCreateService extends SessionService {
     private GenericQueuedService genericQueuedService;
     @Autowired
     private ProductRankingService productRankingService;
+    @Autowired
+    private ProductOperationConfigShared productOperationConfigShared;
     @Autowired
     private CurrencyShared currencyShared;
     @Autowired
@@ -127,6 +131,14 @@ public class PresaleCreateService extends SessionService {
             if (product.ItemNumber <= 0) {
                 product.ItemNumber = itemNumber;
             }
+            ProductConfigEntity config = this.productOperationConfigShared.findByProduct(product.ProductCod, getStoreCod());
+            if (product.ProductUnitName == null || product.ProductUnitName.trim().isEmpty()) {
+                product.ProductUnitName = config.ProductUnitName;
+            }
+            if (product.ProductUnitFactor <= 0) {
+                product.ProductUnitFactor = config.ProductUnitFactor;
+            }
+            this.productOperationConfigShared.validateInternalQuantity(product.ProductCod, product.NumUnit, product.ProductUnitFactor);
             product.NumUnitPriceSale = product.NumUnitPrice.subtract( product.NumDiscount );
             product.NumTotalPrice = product.NumUnitPriceSale.multiply(new BigDecimal(product.NumUnit));
             product.addSession(getUserCod());

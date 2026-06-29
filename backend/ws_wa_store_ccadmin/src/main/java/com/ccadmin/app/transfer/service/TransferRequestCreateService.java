@@ -1,8 +1,10 @@
 package com.ccadmin.app.transfer.service;
 
 import com.ccadmin.app.product.model.entity.KardexEntity;
+import com.ccadmin.app.product.model.entity.ProductConfigEntity;
 import com.ccadmin.app.product.model.entity.ProductEntity;
 import com.ccadmin.app.product.shared.KardexShared;
+import com.ccadmin.app.product.shared.ProductOperationConfigShared;
 import com.ccadmin.app.product.shared.ProductShared;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import com.ccadmin.app.shared.service.SessionService;
@@ -36,6 +38,8 @@ public class TransferRequestCreateService extends SessionService {
     private TransferDocumentRepository transferDocumentRepository;
     @Autowired
     private ProductShared productShared;
+    @Autowired
+    private ProductOperationConfigShared productOperationConfigShared;
     @Autowired
     private WarehouseRepository warehouseRepository;
     @Autowired
@@ -382,6 +386,17 @@ public class TransferRequestCreateService extends SessionService {
             if (product == null || !"A".equals(product.Status)) {
                 throw new TransferException("Producto inválido o inactivo: "+det.ProductCod);
             }
+
+            ProductConfigEntity configOrigin = this.productOperationConfigShared.findByProduct(det.ProductCod, head.StoreCodOrigin);
+            ProductConfigEntity config = this.productOperationConfigShared.findByProduct(det.ProductCod, head.StoreCodDest);
+            if (StringUtil.isEmpty(det.ProductUnitName)) {
+                det.ProductUnitName = config.ProductUnitName;
+            }
+            if (det.ProductUnitFactor <= 0) {
+                det.ProductUnitFactor = config.ProductUnitFactor;
+            }
+            this.productOperationConfigShared.validateInternalQuantity(det.ProductCod, det.NumUnit, configOrigin.ProductUnitFactor);
+            this.productOperationConfigShared.validateInternalQuantity(det.ProductCod, det.NumUnit, det.ProductUnitFactor);
 
             if (StringUtil.isNotEmpty(det.WarehouseCodOrigin)) {
                 WarehouseEntity whOrigin = this.warehouseRepository.findById(det.WarehouseCodOrigin)
