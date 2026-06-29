@@ -24,6 +24,9 @@ import { TransferReceiveDto } from '../../model/dto/TransferReceiveDto';
 import { CarrierService } from '../../service/CarrierService';
 import { CarrierEntity } from '../../model/entity/CarrierEntity';
 import { TransferLotDispatchDto } from '../../model/dto/TransferLotDispatchDto';
+import { ProductConversionRequestDto } from 'src/app/enterprise/product/model/dto/ProductConversionRequestDto';
+import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
+import { ProductConversionResultDto } from 'src/app/enterprise/product/model/dto/ProductConversionResultDto';
 
 @Component({
   selector: 'app-directtransfer',
@@ -193,6 +196,10 @@ export class DirecttransferComponent implements OnInit {
     const ProductUnitFactor = transferDet.ProductUnitFactor > 0 ? transferDet.ProductUnitFactor : 1;
     transferDet.NumUnit = numUnit * ProductUnitFactor;
 
+    if(!await this.validateConvertProductBetweenStores(transferDet)){
+      return;
+    }
+
     if (!transferDetExist) {
       this.transferRegister.transferDetList.push(transferDet);
     }
@@ -303,7 +310,7 @@ export class DirecttransferComponent implements OnInit {
     return Number(this.selectedDetail.NumUnit || 0) - this.getLotDispatchTotal();
   }
 
-  confirmLotDispatch(): void {
+  async confirmLotDispatch(): Promise<void> {
     try {
       if (this.lotDispatchList.length === 0) {
         throw new Error('Debe agregar al menos un lote');
@@ -313,7 +320,15 @@ export class DirecttransferComponent implements OnInit {
         this.toastrService.warning('La cantidad despachada es menor a la cantidad solicitada');
       }
 
-      this.replaceTransferLine(this.selectedDetail, this.lotDispatchList.map((item, index) => this.createLotDetail(item, index)));
+      const detailList : TransferDetEntity[] = this.lotDispatchList.map((item, index) => this.createLotDetail(item, index))
+
+      for(const item of detailList){
+        if(!await this.validateConvertProductBetweenStores(item)){
+          return;
+        }
+      }
+
+      this.replaceTransferLine(this.selectedDetail,detailList );
       this.lotDispatchList = [];
       this.btnCloseLotDispatchModal.nativeElement.click();
     } catch (e: any) {
@@ -548,4 +563,38 @@ export class DirecttransferComponent implements OnInit {
     const factor = ProductUnitFactor > 0 ? ProductUnitFactor : 1;
     return internalQuantity / factor;
   }
+
+  async validateConvertProductBetweenStores(transferDet: TransferDetEntity){
+
+    const request : ProductConversionRequestDto = new ProductConversionRequestDto();
+    
+    request.ProductCod = transferDet.ProductCod;
+    request.quantityToConvert =  ProductUnitHelper.toVisibleQuantity(transferDet.NumUnit,transferDet.ProductUnitFactor);
+    request.StoredCodDestination = this.getStoredCodDestination();
+    request.StoredCodOrigin = this.getStoredCodOrigin();
+
+    const rpt : ResponseWsDto = await this.transferRequestService.validateConvertProductBetweenStores(request);
+
+    if(!rpt.ErrorStatus){
+      const ProductConversionResult : ProductConversionResultDto = rpt.Data;
+
+      if(!ProductConversionResult.valid){
+        this.toastrService.error(ProductConversionResult.message);
+      }
+      return ProductConversionResult.valid;
+    }else{
+      this.toastrService.error("No se pudo evaluar la conversión de productos entre locales, intentelo nuevamente.");
+    }
+    return false;
+  }
+
+  getStoredCodOrigin(){
+    return this.getCurrentStoreCod();
+  }
+
+  getStoredCodDestination(){
+    return this.cboStoreDest.nativeElement.value;
+  }
+
+
 }

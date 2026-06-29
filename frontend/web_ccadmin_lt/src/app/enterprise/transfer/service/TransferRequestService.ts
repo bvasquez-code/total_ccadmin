@@ -7,6 +7,7 @@ import { TransferReceiveDto } from "../model/dto/TransferReceiveDto";
 import { TransferRegisterBundleDto } from "../model/dto/TransferRegisterBundleDto";
 import { TransferSearchDto } from "../model/dto/TransferSearchDto";
 import { TransferRequestRegisterBundleDto } from "../model/dto/TransferRequestRegisterBundleDto";
+import { ProductConversionRequestDto } from "../../product/model/dto/ProductConversionRequestDto";
 
 @Injectable({
     providedIn: 'root'
@@ -73,6 +74,11 @@ export class TransferRequestService {
 
     async ConfirmedTransfer(Request: TransferReceiveDto): Promise<ResponseWsDto> {
         const url: string = `${AppSetting.API}/api/v1/transfers-request/confirmed`;
+        return await this.apiService.ExecutePostService(url, Request);
+    }
+
+    async validateConvertProductBetweenStores(Request : ProductConversionRequestDto): Promise<ResponseWsDto>{
+        const url: string = `${AppSetting.API}/api/v1/transfers-request/validateConvertProductBetweenStores`;
         return await this.apiService.ExecutePostService(url, Request);
     }
 }

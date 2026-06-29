@@ -72,6 +72,9 @@
                                         (mousedown)="selectOneStore(store)">
                                         {{ store.StoreCod }} - {{ store.Name }}
                                     </a>
+                                    <span class="dropdown-item text-muted" *ngIf="filteredOneStores.length === 0">
+                                        Sin resultados
+                                    </span>
                                 </div>
                             </div>
                         </div>

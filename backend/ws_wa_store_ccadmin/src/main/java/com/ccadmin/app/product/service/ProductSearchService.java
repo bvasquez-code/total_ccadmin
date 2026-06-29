@@ -167,4 +167,9 @@ public class ProductSearchService extends SessionService {
         rpt.AddResponseAdditional("storeList", this.storeShared.findAll());
         return rpt;
     }
+
+    public ProductConfigEntity findConfigByIdAndStore(String ProductCod,String StoreCod){
+        return this.productConfigRepository.findById(new ProductConfigID(ProductCod, StoreCod)).orElse(null);
+    }
+
 }

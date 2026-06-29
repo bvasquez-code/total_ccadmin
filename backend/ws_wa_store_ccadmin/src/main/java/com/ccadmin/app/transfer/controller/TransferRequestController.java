@@ -55,18 +55,6 @@ public class TransferRequestController {
         }
     }
 
-    @PostMapping("register-bundle")
-    public ResponseEntity<ResponseWsDto> registerBundle(@RequestBody TransferRequestRegisterBundleDto request) {
-        try {
-            return new ResponseEntity<>(
-                    new ResponseWsDto(this.transferCreateService.save(request)),
-                    HttpStatus.OK
-            );
-        } catch (Exception ex) {
-            return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
-        }
-    }
-
     @PostMapping("dispatch")
     public ResponseEntity<ResponseWsDto> dispatch(@RequestBody TransferDispatchDto request) {
         try {
@@ -180,6 +168,18 @@ public class TransferRequestController {
         try {
             return new ResponseEntity<>(
                     new ResponseWsDto(this.transferSearchService.findAll(request)),
+                    HttpStatus.OK
+            );
+        } catch (Exception ex) {
+            return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("validateConvertProductBetweenStores")
+    public ResponseEntity<ResponseWsDto> validateConvertProductBetweenStores(@RequestBody ProductConversionRequestDto request) {
+        try {
+            return new ResponseEntity<>(
+                    new ResponseWsDto(this.transferSearchService.validateConvertProductBetweenStores(request)),
                     HttpStatus.OK
             );
         } catch (Exception ex) {

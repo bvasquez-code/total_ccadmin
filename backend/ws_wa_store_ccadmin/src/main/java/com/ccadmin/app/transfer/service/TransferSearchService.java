@@ -7,12 +7,9 @@ import com.ccadmin.app.shared.service.SessionService;
 import com.ccadmin.app.store.model.dto.StoreInfoDto;
 import com.ccadmin.app.store.shared.StoreShared;
 import com.ccadmin.app.store.shared.WarehouseShared;
-import com.ccadmin.app.transfer.exception.TransferException;
 import com.ccadmin.app.transfer.model.constants.TransferConstants;
 import com.ccadmin.app.transfer.model.dto.TransferDetailDto;
 import com.ccadmin.app.transfer.model.dto.TransferSearchDto;
-import com.ccadmin.app.transfer.model.entity.TransferDetEntity;
-import com.ccadmin.app.transfer.model.entity.TransferDocumentEntity;
 import com.ccadmin.app.transfer.model.entity.TransferHeadEntity;
 import com.ccadmin.app.transfer.repository.TransferDetRepository;
 import com.ccadmin.app.transfer.repository.TransferDocumentRepository;
@@ -40,6 +37,7 @@ public class TransferSearchService extends SessionService {
     private StoreShared storeShared;
     @Autowired
     private WarehouseShared warehouseShared;
+
 
     public TransferDetailDto findByTransferCod(String transferCod) {
         TransferDetailDto detail = new TransferDetailDto();
@@ -160,10 +158,5 @@ public class TransferSearchService extends SessionService {
 
         return new ResponsePageSearch(result, page, limit, total);
     }
-
-    private String normalize(String value) {
-        return (value == null) ? "" : value.trim();
-    }
-
 
 }

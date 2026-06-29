@@ -70,14 +70,14 @@ export class CreateproductconfigComponent implements OnInit {
       this.Config.ProductCod = this.ProductCod;
       this.Config.StoreCod = this.SelectedStoreCod;
       this.syncVisiblePriceFromInternal();
-      this.loadStores();
+      this.loadStores(this.SelectedStoreCod);
     } else {
       this.toastrService.error(rpt.Message);
     }
   }
 
-  async loadStores(): Promise<void> {
-    const currentStore = this.StoreList.find(e => e.StoreCod === this.CurrentStoreCod);
+  async loadStores(StoreCod : string): Promise<void> {
+    const currentStore = this.StoreList.find(e => e.StoreCod === StoreCod);
       if (currentStore) {
         this.SelectedStore = currentStore;
         this.OneStoreSearchTerm = this.getStoreLabel(currentStore);
@@ -124,7 +124,8 @@ export class CreateproductconfigComponent implements OnInit {
   storeMatchesQuery(store: StoreEntity, query: string): boolean {
     return this.normalize(store.StoreCod).includes(query)
       || this.normalize(store.Name).includes(query)
-      || this.normalize(store.Description).includes(query);
+      || this.normalize(store.Description).includes(query)
+      || this.normalize(this.getStoreLabel(store)).includes(query);
   }
 
   normalize(value: string): string {

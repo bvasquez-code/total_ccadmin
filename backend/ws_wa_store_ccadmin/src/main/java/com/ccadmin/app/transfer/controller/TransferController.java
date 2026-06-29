@@ -54,18 +54,6 @@ public class TransferController {
         }
     }
 
-    @PostMapping("register-bundle")
-    public ResponseEntity<ResponseWsDto> registerBundle(@RequestBody TransferRegisterBundleDto request) {
-        try {
-            return new ResponseEntity<>(
-                    new ResponseWsDto(this.transferCreateService.save(request)),
-                    HttpStatus.OK
-            );
-        } catch (Exception ex) {
-            return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
-        }
-    }
-
     @PostMapping("dispatch")
     public ResponseEntity<ResponseWsDto> dispatch(@RequestBody TransferDispatchDto request) {
         try {
