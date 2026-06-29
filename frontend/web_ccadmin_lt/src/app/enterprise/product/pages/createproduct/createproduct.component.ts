@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild, Input, Output, EventEmitter } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnInit, ViewChild, Input, Output, EventEmitter } from '@angular/core';
 import { ProductService } from '../../service/product.service';
 import { ResponseWsDto } from 'src/app/enterprise/shared/model/dto/ResponseWsDto';
 import { ProductEntity } from '../../model/entity/ProductEntity';
@@ -12,12 +12,13 @@ import { ProductPictureEntity } from '../../model/entity/ProductPictureEntity';
 import { ValidationHelper } from 'src/app/enterprise/shared/helper/ValidationHelper';
 import Swal from 'sweetalert2';
 import { ProductBarcodeEntity } from '../../model/entity/ProductBarcodeEntity';
+import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
 
 @Component({
   selector: 'app-createproduct',
   templateUrl: './createproduct.component.html'
 })
-export class CreateproductComponent implements OnInit {
+export class CreateproductComponent implements OnInit, AfterViewInit {
 
   @Input() isModal: boolean = false;
   @Output() ProductCreated = new EventEmitter<ProductRegisterDto>();
@@ -45,6 +46,7 @@ export class CreateproductComponent implements OnInit {
   @ViewChild('cboCategoryCod') cboCategoryCod!: ElementRef<HTMLInputElement>;
   @ViewChild('cboBrandCod') cboBrandCod!: ElementRef<HTMLInputElement>;
   @ViewChild('txtNumPrice') txtNumPrice!: ElementRef<HTMLInputElement>;
+  @ViewChild('txtVisibleUnitPrice') txtVisibleUnitPrice!: ElementRef<HTMLInputElement>;
   @ViewChild('txtNumMaxStock') txtNumMaxStock!: ElementRef<HTMLInputElement>;
   @ViewChild('txtNumMinStock') txtNumMinStock!: ElementRef<HTMLInputElement>;
   @ViewChild('txtProductUnitName') txtProductUnitName!: ElementRef<HTMLInputElement>;
@@ -61,6 +63,10 @@ export class CreateproductComponent implements OnInit {
   }
 
   ngOnInit(): void {
+  }
+
+  ngAfterViewInit(): void {
+    setTimeout(() => this.ensureUnitDefaults(), 0);
   }
 
   async FindDataForm(ProductCod: string) {
@@ -96,11 +102,12 @@ export class CreateproductComponent implements OnInit {
     }
 
     this.txtProductCod.nativeElement.value = this.ProductRegister.config.ProductCod;
-    this.txtNumPrice.nativeElement.value = String(this.ProductRegister.config.NumPrice);
     this.txtNumMaxStock.nativeElement.value = String(this.ProductRegister.config.NumMaxStock);
     this.txtNumMinStock.nativeElement.value = String(this.ProductRegister.config.NumMinStock);
     this.txtProductUnitName.nativeElement.value = this.ProductRegister.config.ProductUnitName || "NIU";
     this.txtProductUnitFactor.nativeElement.value = String(this.ProductRegister.config.ProductUnitFactor || 1);
+    this.txtNumPrice.nativeElement.value = String(this.ProductRegister.config.NumPrice || 0);
+    this.syncVisiblePriceFromInternal();
     this.txtProductCodreadonly = true;
 
     if (this.ProductRegister.productBarcode) {
@@ -246,6 +253,52 @@ export class CreateproductComponent implements OnInit {
       this.toastrService.error(e.message);
       return false;
     }
+  }
+
+  ensureUnitDefaults(): void {
+    if (this.txtProductUnitName && !this.txtProductUnitName.nativeElement.value) {
+      this.txtProductUnitName.nativeElement.value = "NIU";
+    }
+    if (this.txtProductUnitFactor && !Number(this.txtProductUnitFactor.nativeElement.value || 0)) {
+      this.txtProductUnitFactor.nativeElement.value = "1";
+    }
+    if (this.txtNumPrice && !this.txtNumPrice.nativeElement.value) {
+      this.txtNumPrice.nativeElement.value = "0";
+    }
+    this.syncVisiblePriceFromInternal();
+  }
+
+  getProductUnitFactor(): number {
+    return ProductUnitHelper.normalizeFactor(Number(this.txtProductUnitFactor?.nativeElement.value || 1));
+  }
+
+  getProductUnitName(): string {
+    return this.txtProductUnitName?.nativeElement.value || "NIU";
+  }
+
+  isUnitConfigReady(): boolean {
+    return Boolean(this.getProductUnitName()) && Number(this.txtProductUnitFactor?.nativeElement.value || 0) > 0;
+  }
+
+  onUnitConfigChange(): void {
+    if (!this.txtProductUnitName.nativeElement.value) {
+      this.txtProductUnitName.nativeElement.value = "NIU";
+    }
+    this.syncVisiblePriceFromInternal();
+  }
+
+  syncVisiblePriceFromInternal(): void {
+    if (!this.txtVisibleUnitPrice || !this.txtNumPrice || !this.isUnitConfigReady()) return;
+    this.txtVisibleUnitPrice.nativeElement.value = String(
+      ProductUnitHelper.toVisibleUnitPrice(Number(this.txtNumPrice.nativeElement.value || 0), this.getProductUnitFactor())
+    );
+  }
+
+  syncInternalPriceFromVisible(): void {
+    if (!this.txtVisibleUnitPrice || !this.txtNumPrice || !this.isUnitConfigReady()) return;
+    this.txtNumPrice.nativeElement.value = String(
+      ProductUnitHelper.toInternalUnitPrice(Number(this.txtVisibleUnitPrice.nativeElement.value || 0), this.getProductUnitFactor())
+    );
   }
 
   validateKeypress(event: KeyboardEvent, id: string) {

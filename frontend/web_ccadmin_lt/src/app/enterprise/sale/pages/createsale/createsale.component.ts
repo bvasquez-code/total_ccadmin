@@ -12,6 +12,7 @@ import { ToastrService } from 'ngx-toastr';
 import { ClientService } from '../../../client/service/client.service';
 import { ClientEntity } from '../../../client/model/entity/ClientEntity';
 import { SaleConfirmDto } from '../../model/dto/SaleConfirmDto';
+import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
 
 @Component({
   selector: 'app-createsale',
@@ -180,6 +181,14 @@ export class CreatesaleComponent implements OnInit {
 
   getAmountReturned(): number {
     return this.SaleDetail.DetailPayment.reduce((sum, e) => sum + (e.NumAmountReturned ? e.NumAmountReturned : 0), 0);
+  }
+
+  getVisibleQuantity(internalQuantity: number, productUnitFactor: number): number {
+    return ProductUnitHelper.toVisibleQuantity(internalQuantity, productUnitFactor);
+  }
+
+  getVisibleUnitPrice(internalUnitPrice: number, productUnitFactor: number): number {
+    return ProductUnitHelper.toVisibleUnitPrice(internalUnitPrice, productUnitFactor);
   }
 
   hasClient(): boolean {

@@ -140,12 +140,12 @@
                     </div>
 
                     <div class="d-none d-sm-block col-sm-2">
-                      {{ item.CreditNoteDet.NumUnit }}
+                      {{ getVisibleQuantity(item.CreditNoteDet.NumUnit, item.CreditNoteDet.ProductUnitFactor) }} {{ getProductUnitName(item.CreditNoteDet) }}
                     </div>
 
                     <div class="d-none d-sm-block col-sm-3 text-95">
                       {{ Detail.Headboard.CurrencyCod }}
-                      {{ item.CreditNoteDet.NumUnitPriceSale | FormatoMonedaPeruana:false }}
+                      {{ getVisibleUnitPrice(item.CreditNoteDet.NumUnitPriceSale, item.CreditNoteDet.ProductUnitFactor) | FormatoMonedaPeruana:false }}
                     </div>
 
                     <div class="col-5 col-sm-3 text-secondary-d3 text-600">

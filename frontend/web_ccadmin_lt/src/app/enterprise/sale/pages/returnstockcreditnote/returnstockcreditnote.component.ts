@@ -10,6 +10,7 @@ import { ToastrService } from 'ngx-toastr';
 import { IRegisterFormV2 } from 'src/app/enterprise/shared/interface/IRegisterFormV2';
 import { CreditNoteDetDto } from '../../model/dto/CreditNoteDetDto';
 import { AlertService } from 'src/app/enterprise/shared/service/AlertService';
+import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
 
 @Component({
   selector: 'app-returnstockcreditnote',
@@ -122,28 +123,44 @@ export class ReturnstockcreditnoteComponent implements IRegisterFormV2<CreditNot
 
   AddUnit(saleDet: CreditNoteDetDto) {
     if (saleDet) {
+      const productUnitFactor = ProductUnitHelper.normalizeFactor(saleDet.CreditNoteDet.ProductUnitFactor);
       if ((saleDet.CreditNoteDet.NumUnitStockReturned >= saleDet.CreditNoteDet.NumUnit)) {
         return;
       }
-      saleDet.CreditNoteDet.NumUnitStockReturned = saleDet.CreditNoteDet.NumUnitStockReturned + 1;
+      saleDet.CreditNoteDet.NumUnitStockReturned = Math.min(
+        saleDet.CreditNoteDet.NumUnitStockReturned + productUnitFactor,
+        saleDet.CreditNoteDet.NumUnit
+      );
     }
   }
 
   SubtractUnit(saleDet: CreditNoteDetDto) {
     if (saleDet) {
-      if ((saleDet.CreditNoteDet.NumUnitStockReturned - 1 === -1)) {
+      const productUnitFactor = ProductUnitHelper.normalizeFactor(saleDet.CreditNoteDet.ProductUnitFactor);
+      if ((saleDet.CreditNoteDet.NumUnitStockReturned - productUnitFactor < 0)) {
         return;
       }
-      saleDet.CreditNoteDet.NumUnitStockReturned = saleDet.CreditNoteDet.NumUnitStockReturned - 1;
+      saleDet.CreditNoteDet.NumUnitStockReturned = saleDet.CreditNoteDet.NumUnitStockReturned - productUnitFactor;
     }
   }
 
   getUnit(saleDet: CreditNoteDetDto): number {
 
     if (saleDet) {
-      return saleDet.CreditNoteDet.NumUnitStockReturned;
+      return ProductUnitHelper.toVisibleQuantity(
+        saleDet.CreditNoteDet.NumUnitStockReturned,
+        saleDet.CreditNoteDet.ProductUnitFactor
+      );
     }
     return 0;
+  }
+
+  getVisibleQuantity(internalQuantity: number, productUnitFactor: number): number {
+    return ProductUnitHelper.toVisibleQuantity(internalQuantity, productUnitFactor);
+  }
+
+  getProductUnitName(item: { ProductUnitName?: string }): string {
+    return item?.ProductUnitName || 'NIU';
   }
 
   async CreateCode(): Promise<string> {
@@ -159,14 +176,20 @@ export class ReturnstockcreditnoteComponent implements IRegisterFormV2<CreditNot
 
   setUnit(event: any, item: CreditNoteDetDto) {
     let inputValue = Number(event.target.value);
-    const maxUnits = item.CreditNoteDet.NumUnit;
+    const maxUnits = ProductUnitHelper.toVisibleQuantity(
+      item.CreditNoteDet.NumUnit,
+      item.CreditNoteDet.ProductUnitFactor
+    );
 
     if (inputValue > maxUnits) {
       inputValue = maxUnits;
     } else if (inputValue < 0) {
       inputValue = 0;
     }
-    item.CreditNoteDet.NumUnitStockReturned = inputValue;
+    item.CreditNoteDet.NumUnitStockReturned = ProductUnitHelper.toInternalQuantity(
+      inputValue,
+      item.CreditNoteDet.ProductUnitFactor
+    );
     event.target.value = inputValue;
   }
 

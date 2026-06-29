@@ -148,8 +148,8 @@
                           *ngFor="let item of SaleDetail.DetailList; trackBy: trackBySaleDet">
                         <td class="text-600">{{ item.ProductCod }}</td>
                         <td class="text-800">{{ item.Product.ProductName }}</td>
-                        <td class="text-800">{{ item.NumUnit }}</td>
-                        <td class="text-800">{{ item.NumUnitPrice | FormatoMonedaPeruana : false }}</td>
+                        <td class="text-800">{{ getVisibleQuantity(item.NumUnit, item.ProductUnitFactor) }} {{ getProductUnitName(item) }}</td>
+                        <td class="text-800">{{ getVisibleUnitPrice(item.NumUnitPriceSale || item.NumUnitPrice, item.ProductUnitFactor) | FormatoMonedaPeruana : false }}</td>
                         <td class="text-800">{{ item.NumTotalPrice | FormatoMonedaPeruana : false }}</td>
                         <td>
                           <div class="btn-group" role="group" aria-label="Cambiar cantidad a devolver">
@@ -161,6 +161,9 @@
                             <input type="text" class="form-control" 
                                 [value]="getUnit(item)" 
                                 readonly style="width: 80px; text-align: center;" />
+                            <span class="btn btn-light disabled">
+                              {{ getProductUnitName(item) }}
+                            </span>
 
                             <button type="button" 
                                 class="btn btn-success" 

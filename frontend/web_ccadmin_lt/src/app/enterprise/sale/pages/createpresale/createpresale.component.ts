@@ -22,6 +22,7 @@ import { ClientService } from '../../../client/service/client.service';
 import { ClientEntity } from '../../../client/model/entity/ClientEntity';
 import Swal from 'sweetalert2';
 import { PaginationUtil } from '../../utility/PaginationUtility';
+import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
 
 @Component({
   selector: 'app-createpresale',
@@ -252,8 +253,15 @@ export class CreatepresaleComponent implements OnInit {
   }
 
   getVisibleStock(stock: number, ProductUnitFactor: number): number {
-    const factor = ProductUnitFactor > 0 ? ProductUnitFactor : 1;
-    return stock / factor;
+    return ProductUnitHelper.toVisibleQuantity(stock, ProductUnitFactor);
+  }
+
+  getVisibleQuantity(internalQuantity: number, ProductUnitFactor: number): number {
+    return ProductUnitHelper.toVisibleQuantity(internalQuantity, ProductUnitFactor);
+  }
+
+  getVisibleUnitPrice(internalUnitPrice: number, ProductUnitFactor: number): number {
+    return ProductUnitHelper.toVisibleUnitPrice(internalUnitPrice, ProductUnitFactor);
   }
 
   getProductUnitName(): string {

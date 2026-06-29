@@ -130,7 +130,8 @@
                                          {{ item.Product.ProductName }}
                                         </td>
                                         <td class="text-800">
-                                          {{ item.CreditNoteDet.NumUnit }}
+                                          {{ getVisibleQuantity(item.CreditNoteDet.NumUnit, item.CreditNoteDet.ProductUnitFactor) }}
+                                          {{ getProductUnitName(item.CreditNoteDet) }}
                                          </td>
                                          <td>
                                             <div class="btn-group" role="group" aria-label="Basic mixed styles example">
@@ -139,9 +140,12 @@
                                                         [value]="getUnit(item)" 
                                                         class="form-control"
                                                         min="0"
-                                                        [max]="item.CreditNoteDet.NumUnit"
+                                                        [max]="getVisibleQuantity(item.CreditNoteDet.NumUnit, item.CreditNoteDet.ProductUnitFactor)"
                                                         style="width: 80px; text-align: center;"
                                                         (input)="setUnit($event, item)">
+                                                <span class="input-group-text">
+                                                  {{ getProductUnitName(item.CreditNoteDet) }}
+                                                </span>
                                                 <button type="button" class="btn btn-success" (click)="AddUnit(item)">+</button>
                                               </div>
                                          </td>

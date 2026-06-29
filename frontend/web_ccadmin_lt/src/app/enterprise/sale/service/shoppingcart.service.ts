@@ -6,6 +6,7 @@ import { ProductVariantEntity } from "../../product/model/entity/ProductVariantE
 import { ToastrService } from "ngx-toastr";
 import { ClientEntity } from '../../client/model/entity/ClientEntity';
 import { PresaleDetailDto } from "../model/dto/PresaleDetailDto";
+import { ProductUnitHelper } from "../../shared/helper/ProductUnitHelper";
 
 @Injectable({
     providedIn: 'root'
@@ -26,17 +27,15 @@ export class ShoppingCartService
     }
 
     private getProductUnitFactor(ProductInfo: ProductInfoDto): number {
-        const factor = ProductInfo.Config?.ProductUnitFactor || 1;
-        return factor > 0 ? factor : 1;
+        return ProductUnitHelper.normalizeFactor(ProductInfo.Config?.ProductUnitFactor || 1);
     }
 
     private toInternalQuantity(ProductInfo: ProductInfoDto, visibleQuantity: number): number {
-        return visibleQuantity * this.getProductUnitFactor(ProductInfo);
+        return ProductUnitHelper.toInternalQuantity(visibleQuantity, this.getProductUnitFactor(ProductInfo));
     }
 
     public toVisibleQuantity(internalQuantity: number, ProductUnitFactor: number): number {
-        const factor = ProductUnitFactor > 0 ? ProductUnitFactor : 1;
-        return internalQuantity / factor;
+        return ProductUnitHelper.toVisibleQuantity(internalQuantity, ProductUnitFactor);
     }
 
     public Init()

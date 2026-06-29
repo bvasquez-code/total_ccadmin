@@ -5,6 +5,7 @@ import { CreditNoteService } from '../../service/CreditNote.service';
 import { ToastrService } from 'ngx-toastr';
 import { ResponseWsDto } from 'src/app/enterprise/shared/model/dto/ResponseWsDto';
 import { TicketSunatService } from '../../service/TicketSunatService';
+import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
 
 @Component({
   selector: 'app-viewcreditnote',
@@ -75,6 +76,18 @@ export class ViewcreditnoteComponent implements OnInit {
     if (flag === 'Y') return 'Stock devuelto';
     if (flag === 'N') return 'Sin devolución de stock';
     return '-';
+  }
+
+  getVisibleQuantity(internalQuantity: number, productUnitFactor: number): number {
+    return ProductUnitHelper.toVisibleQuantity(internalQuantity, productUnitFactor);
+  }
+
+  getVisibleUnitPrice(internalUnitPrice: number, productUnitFactor: number): number {
+    return ProductUnitHelper.toVisibleUnitPrice(internalUnitPrice, productUnitFactor);
+  }
+
+  getProductUnitName(item: { ProductUnitName?: string }): string {
+    return item?.ProductUnitName || 'NIU';
   }
 
   trackByDet = (_: number, it: any) =>

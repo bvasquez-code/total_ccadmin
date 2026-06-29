@@ -134,21 +134,6 @@
                     <div class="form-group row">
                         <div class="col-sm-3 col-form-label text-sm-right pr-0">
                             <label for="id-form-field-1" class="mb-0">
-                                Precio
-                            </label>
-                        </div>
-
-                        <div class="col-sm-9">
-                            <input type="number"
-                                id="txtNumPrice"
-                                class="form-control col-sm-8 col-md-6" 
-                                #txtNumPrice>
-                        </div>
-                    </div>
-
-                    <div class="form-group row">
-                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
-                            <label for="id-form-field-1" class="mb-0">
                                 Stock maximo
                             </label>
                         </div>
@@ -187,7 +172,9 @@
                             <input type="text"
                                 id="txtProductUnitName"
                                 class="form-control col-sm-8 col-md-6"
-                                placeholder="Unidad, bolsa, caja"
+                                placeholder="NIU, CAJA, BOLSA"
+                                (input)="onUnitConfigChange()"
+                                (blur)="onUnitConfigChange()"
                                 #txtProductUnitName>
                         </div>
                     </div>
@@ -204,9 +191,51 @@
                                 id="txtProductUnitFactor"
                                 class="form-control col-sm-8 col-md-6"
                                 min="1"
+                                (input)="onUnitConfigChange()"
+                                (blur)="onUnitConfigChange()"
                                 #txtProductUnitFactor>
                             <small class="form-text text-muted col-sm-8 col-md-6 pl-0">
                                 Cantidad minima interna por cada unidad visible.
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0">
+                                Precio por {{ getProductUnitName() }}
+                            </label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <input type="number"
+                                id="txtVisibleUnitPrice"
+                                class="form-control col-sm-8 col-md-6"
+                                [disabled]="!isUnitConfigReady()"
+                                (input)="syncInternalPriceFromVisible()"
+                                #txtVisibleUnitPrice>
+                            <small class="form-text text-muted col-sm-8 col-md-6 pl-0">
+                                Precio que el usuario cobra por la unidad visible configurada.
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0">
+                                Precio por NIU
+                            </label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <input type="number"
+                                id="txtNumPrice"
+                                class="form-control col-sm-8 col-md-6"
+                                [disabled]="!isUnitConfigReady()"
+                                (input)="syncVisiblePriceFromInternal()"
+                                #txtNumPrice>
+                            <small class="form-text text-muted col-sm-8 col-md-6 pl-0">
+                                Precio interno por unidad minima que se guardara en el producto.
                             </small>
                         </div>
                     </div>

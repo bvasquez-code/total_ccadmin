@@ -18,6 +18,7 @@ import { AlertService } from 'src/app/enterprise/shared/service/AlertService';
 import { TrxPaymentComponenRequestDto } from 'src/app/enterprise/trxpayment/model/dto/TrxPaymentComponenRequestDto';
 import { TrxPaymentEntity } from 'src/app/enterprise/trxpayment/model/entity/TrxPaymentEntity';
 import { CreditNoteReturnPaymentRegisterDto } from '../../model/dto/CreditNoteReturnPaymentRegisterDto';
+import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
 
 @Component({
   selector: 'app-createcreditnote',
@@ -76,7 +77,7 @@ export class CreatecreditnoteComponent
   // -------------------- Getters de UI --------------------
   get totalQty(): number {
     return (this.CreditNoteRegister.DetailList ?? [])
-      .reduce((acc, d) => acc + (d?.NumUnit ?? 0), 0);
+      .reduce((acc, d) => acc + ProductUnitHelper.toVisibleQuantity(d?.NumUnit ?? 0, d?.ProductUnitFactor ?? 1), 0);
   }
 
   get totalAmount(): number {
@@ -122,6 +123,18 @@ export class CreatecreditnoteComponent
   private clampReturn(saleDet: SaleDetEntity, wanted: number): number {
     const max = saleDet?.NumUnit ?? 0;
     return Math.min(Math.max(wanted, 0), max);
+  }
+
+  getVisibleQuantity(internalQuantity: number, productUnitFactor: number): number {
+    return ProductUnitHelper.toVisibleQuantity(internalQuantity, productUnitFactor);
+  }
+
+  getVisibleUnitPrice(internalUnitPrice: number, productUnitFactor: number): number {
+    return ProductUnitHelper.toVisibleUnitPrice(internalUnitPrice, productUnitFactor);
+  }
+
+  getProductUnitName(item: { ProductUnitName?: string }): string {
+    return item?.ProductUnitName || 'NIU';
   }
 
   private recalcTotals(): void {
@@ -262,8 +275,9 @@ export class CreatecreditnoteComponent
     if (this.isTotalMode) return; // bloqueado en NC total
 
     const det = this.findCreditDet(saleDet);
+    const productUnitFactor = ProductUnitHelper.normalizeFactor(saleDet.ProductUnitFactor);
     if (det) {
-      det.NumUnit = this.clampReturn(saleDet, (det.NumUnit ?? 0) + 1);
+      det.NumUnit = this.clampReturn(saleDet, (det.NumUnit ?? 0) + productUnitFactor);
     } else {
       const unitPriceSale: number = (saleDet.NumUnitPriceSale && saleDet.NumUnitPriceSale > 0)
         ? saleDet.NumUnitPriceSale
@@ -274,9 +288,11 @@ export class CreatecreditnoteComponent
       creditNoteDetNew.ItemNumber = saleDet.ItemNumber ?? 0;
       creditNoteDetNew.ProductCod = saleDet.ProductCod;
       creditNoteDetNew.Variant = saleDet.Variant;
-      creditNoteDetNew.NumUnit = 1;
+      creditNoteDetNew.NumUnit = this.clampReturn(saleDet, productUnitFactor);
       creditNoteDetNew.NumUnitPriceSale = unitPriceSale;
-      creditNoteDetNew.NumTotalPrice = unitPriceSale;
+      creditNoteDetNew.NumTotalPrice = creditNoteDetNew.NumUnit * unitPriceSale;
+      creditNoteDetNew.ProductUnitName = saleDet.ProductUnitName || 'NIU';
+      creditNoteDetNew.ProductUnitFactor = productUnitFactor;
       creditNoteDetNew.LotNumber = saleDet.LotNumber ?? '';
       creditNoteDetNew.ExpirationDate = saleDet.ExpirationDate ?? null;
 
@@ -294,7 +310,8 @@ export class CreatecreditnoteComponent
     const det = this.findCreditDet(saleDet);
     if (!det) return;
 
-    det.NumUnit = this.clampReturn(saleDet, (det.NumUnit ?? 0) - 1);
+    const productUnitFactor = ProductUnitHelper.normalizeFactor(saleDet.ProductUnitFactor);
+    det.NumUnit = this.clampReturn(saleDet, (det.NumUnit ?? 0) - productUnitFactor);
 
     if ((det.NumUnit ?? 0) === 0) {
       this.CreditNoteRegister.DetailList = (this.CreditNoteRegister.DetailList ?? [])
@@ -306,7 +323,7 @@ export class CreatecreditnoteComponent
 
   getUnit(saleDet: SaleDetEntity): number {
     const det = this.findCreditDet(saleDet);
-    return det?.NumUnit ?? 0;
+    return ProductUnitHelper.toVisibleQuantity(det?.NumUnit ?? 0, saleDet.ProductUnitFactor);
   }
 
   // -------------------- Persistencia --------------------
@@ -531,6 +548,8 @@ export class CreatecreditnoteComponent
         creditNoteDetNew.NumUnit = saleItem.NumUnit ?? 0;
         creditNoteDetNew.NumUnitPriceSale = unitPriceSale;
         creditNoteDetNew.NumTotalPrice = 0; // se recalcula abajo
+        creditNoteDetNew.ProductUnitName = saleItem.ProductUnitName || 'NIU';
+        creditNoteDetNew.ProductUnitFactor = ProductUnitHelper.normalizeFactor(saleItem.ProductUnitFactor);
         creditNoteDetNew.LotNumber = saleItem.LotNumber ?? '';
         creditNoteDetNew.ExpirationDate = saleItem.ExpirationDate ?? null;
 
@@ -542,6 +561,8 @@ export class CreatecreditnoteComponent
       } else {
         creditNoteDetail.NumUnit = saleItem.NumUnit ?? 0;
         creditNoteDetail.NumUnitPriceSale = unitPriceSale;
+        creditNoteDetail.ProductUnitName = creditNoteDetail.ProductUnitName || saleItem.ProductUnitName || 'NIU';
+        creditNoteDetail.ProductUnitFactor = ProductUnitHelper.normalizeFactor(creditNoteDetail.ProductUnitFactor || saleItem.ProductUnitFactor);
         // NumTotalPrice se recalcula en recalcTotals()
       }
     }

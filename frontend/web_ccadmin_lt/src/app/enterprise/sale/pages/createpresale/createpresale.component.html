@@ -159,14 +159,14 @@
                   </td>
 
                   <td class="text-600 text-orange-d2">
-                    PEN {{ Product.NumUnitPrice }}
+                    PEN {{ getVisibleUnitPrice(Product.NumUnitPrice, Product.ProductUnitFactor) }}
                   </td>
 
                   <td class="d-none d-sm-table-cell text-grey-d1">
                     <div class="btn-group" role="group" aria-label="Basic mixed styles example">
                       <button type="button" class="btn btn-danger"
                         (click)="subtractUnitDirect(Product.ProductCod)">-</button>
-                      <input type="text" value="{{ Product.NumUnit / Product.ProductUnitFactor }}" class="form-control" [disabled]="true"
+                      <input type="text" value="{{ getVisibleQuantity(Product.NumUnit, Product.ProductUnitFactor) }}" class="form-control" [disabled]="true"
                         style="width: 80px; text-align: center;">
                       <button type="button" class="btn btn-success"
                         (click)="addUnitDirect(Product.ProductCod)">+</button>
@@ -418,7 +418,7 @@
               </div>
 
               <h3 class="text-primary text-110">
-                PRECIO : {{ product.NumPrice | currency: product.CurrencyCod + ' '}}
+                PRECIO : {{ getVisibleUnitPrice(product.NumPrice, product.ProductUnitFactor) | currency: product.CurrencyCod + ' '}}
               </h3>
               <h4 class="text-danger text-100">
                 STOCK : {{ getVisibleStock(product.NumDigitalStock, product.ProductUnitFactor) }} {{ product.ProductUnitName }}
@@ -527,7 +527,7 @@
               <div class="mb-2">
                 <div class="text-grey-m2 text-75 text-uppercase">Precio</div>
                 <div class="text-primary-d3 text-115">
-                  {{ productInfoDtoSelect.Config.NumPrice | currency: CurrencySystem.CurrencyCod + ' ' }}
+                  {{ getVisibleUnitPrice(productInfoDtoSelect.Config.NumPrice, productInfoDtoSelect.Config.ProductUnitFactor) | currency: CurrencySystem.CurrencyCod + ' ' }}
                 </div>
               </div>
               <div class="mb-2">

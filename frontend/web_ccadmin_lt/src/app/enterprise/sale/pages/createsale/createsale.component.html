@@ -153,11 +153,11 @@
                       </div>
 
                       <div class="d-none d-sm-block col-1">
-                        {{ item.NumUnit }}
+                        {{ getVisibleQuantity(item.NumUnit, item.ProductUnitFactor) }} {{ item.ProductUnitName }}
                       </div>
 
                       <div class="d-none d-sm-block col-2 text-95">
-                        {{ SaleDetail.Headboard.CurrencyCod }} {{ item.NumUnitPriceSale | FormatoMonedaPeruana : false}}
+                        {{ SaleDetail.Headboard.CurrencyCod }} {{ getVisibleUnitPrice(item.NumUnitPriceSale, item.ProductUnitFactor) | FormatoMonedaPeruana : false}}
                       </div>
 
                       <div class="d-none d-sm-block col-2 text-95">
