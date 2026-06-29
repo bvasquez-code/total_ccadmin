@@ -116,7 +116,7 @@
                       <tr *ngFor="let detail of pucharseRequestRegister.DetailList">
                         <td>{{ detail.Product.ProductName }}</td>
                         <td class="text-center">{{ toVisibleQuantity(detail.NumUnit, detail.ProductUnitFactor) }} {{ detail.ProductUnitName }}</td>
-                        <td class="text-right">{{ detail.NumUnitPrice | FormatoMonedaPeruana : false }}</td>
+                        <td class="text-right">{{ toVisibleUnitPrice(detail.NumUnitPrice, detail.ProductUnitFactor) | FormatoMonedaPeruana : false }}</td>
                         <td class="text-right">{{ detail.NumTotalPrice | FormatoMonedaPeruana : false }}</td>
                         <td class="text-center">
                           <button class="btn btn-sm btn-info mr-1" (click)="editDetail(detail)" data-toggle="modal"
@@ -206,7 +206,7 @@
             <input type="text" class="form-control" [value]="productSelectInfo.Config.ProductUnitName" disabled>
           </div>
           <div class="col-sm-4">
-            <label>Precio Unitario:</label>
+            <label>Precio por {{ productSelectInfo.Config.ProductUnitName || 'NIU' }}:</label>
             <input type="number" class="form-control" #txtNumUnitPrice (keyup.enter)="AddProduct()">
           </div>
         </div>

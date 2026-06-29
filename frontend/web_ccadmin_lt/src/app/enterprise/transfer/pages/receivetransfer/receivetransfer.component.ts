@@ -17,6 +17,7 @@ import { WarehouseEntity } from 'src/app/enterprise/shared/model/entity/Warehous
 import { StoreEntity } from 'src/app/enterprise/shared/model/entity/StoreEntity';
 import { TransferDetRegisterMassiveDto } from '../../model/dto/TransferDetRegisterMassiveDto';
 import { TransferRequestDetailDto } from '../../model/dto/TransferRequestDetailDto';
+import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
 
 @Component({
   selector: 'app-receivetransfer',
@@ -162,6 +163,8 @@ export class ReceivetransferComponent implements OnInit, ActionModalConfirmServi
           inTransfer.WarehouseCodDest = this.getWarehouseMain(this.transferDetail.transferHead.StoreCodDest).WarehouseCod;
           inTransfer.NumUnit = 0;
           inTransfer.NumUnitReception = 0;
+          inTransfer.ProductUnitName = productInfoDto?.Config?.ProductUnitName || 'NIU';
+          inTransfer.ProductUnitFactor = productInfoDto?.Config?.ProductUnitFactor || 1;
           inTransfer.FlgRequested = 'N';
 
           if (await this.saveDet(TransferDetRegisterMassiveDto.buildSimple(inTransfer))) {
@@ -204,7 +207,8 @@ export class ReceivetransferComponent implements OnInit, ActionModalConfirmServi
     if (!this.scannedProduct) return;
     const det = this.findReceptionLineByProduct(this.scannedProduct.ProductCod);
     if (det) {
-      det.NumUnitReception = (det.NumUnitReception || 0) + this.scanCounter;
+      det.NumUnitReception = (det.NumUnitReception || 0)
+        + ProductUnitHelper.toInternalQuantity(this.scanCounter, det.ProductUnitFactor);
     }
     this.btnCloseScanModal.nativeElement.click();
     setTimeout(() => {
@@ -215,19 +219,26 @@ export class ReceivetransferComponent implements OnInit, ActionModalConfirmServi
   openEditModal(det: TransferDetEntity) {
     this.selectedDetail = det;
     setTimeout(() => {
-      if (this.txtEditQty) this.txtEditQty.nativeElement.value = String(det.NumUnitReception > 0 ? det.NumUnitReception : det.NumUnit);
+      if (this.txtEditQty) {
+        this.txtEditQty.nativeElement.value = String(
+          ProductUnitHelper.toVisibleQuantity(
+            det.NumUnitReception > 0 ? det.NumUnitReception : det.NumUnit,
+            det.ProductUnitFactor
+          )
+        );
+      }
     }, 100);
   }
 
   async saveQuantity() {
     if (!this.selectedDetail) return;
-    const qty = Number(this.txtEditQty.nativeElement.value);
-    if (qty < 0) {
+    const visibleQty = Number(this.txtEditQty.nativeElement.value);
+    if (visibleQty < 0) {
       this.toastrService.error('La cantidad no puede ser negativa');
       return;
     }
     const NumUnitReceptionOld: number = this.selectedDetail.NumUnitReception;
-    this.selectedDetail.NumUnitReception = qty;
+    this.selectedDetail.NumUnitReception = ProductUnitHelper.toInternalQuantity(visibleQty, this.selectedDetail.ProductUnitFactor);
     const rpt: TransferDetRegisterMassiveDto = await this.saveDet(TransferDetRegisterMassiveDto.buildSimple(this.selectedDetail));
     if (rpt.transferDetList.length > 0) {
       this.selectedDetail.NumUnitReception = rpt.transferDetList[0].NumUnitReception;
@@ -275,6 +286,23 @@ export class ReceivetransferComponent implements OnInit, ActionModalConfirmServi
 
   getWarehouseMain(StoreCod: String): WarehouseEntity {
     return this.warehouseList.filter(w => w.StoreCod === StoreCod)[0];
+  }
+
+  formatVisibleQuantity(det: TransferDetEntity, internalQuantity: number): string {
+    return ProductUnitHelper.formatVisibleQuantity(
+      internalQuantity,
+      det.ProductUnitFactor,
+      det.ProductUnitName
+    );
+  }
+
+  getSelectedUnitName(): string {
+    return this.selectedDetail?.ProductUnitName || 'NIU';
+  }
+
+  getScannedUnitName(): string {
+    if (!this.scannedProduct) return 'NIU';
+    return this.findReceptionLineByProduct(this.scannedProduct.ProductCod)?.ProductUnitName || 'NIU';
   }
 
   async saveDet(det: TransferDetRegisterMassiveDto): Promise<TransferDetRegisterMassiveDto> {

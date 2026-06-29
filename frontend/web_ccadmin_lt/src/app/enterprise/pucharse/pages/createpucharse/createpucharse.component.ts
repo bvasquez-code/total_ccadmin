@@ -16,6 +16,7 @@ import { ProductRegisterDto } from 'src/app/enterprise/product/model/dto/Product
 import { SupplierService } from 'src/app/enterprise/supplier/service/supplier.service';
 import { SupplierEntity } from 'src/app/enterprise/supplier/model/entity/SupplierEntity';
 import { PucharsePrintService } from '../../service/PucharsePrintService';
+import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
 
 @Component({
   selector: 'app-createpucharse',
@@ -195,11 +196,9 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
     this.txtNumUnitPrice.nativeElement.value = '';
     this.productSelect = product;
 
-    const rpt : ResponseWsDto = await this.productService.findDetailById(product.ProductCod,this.session.getSessionStorageDto().StoreCod);
+    this.productSelectInfo = await this.findDetailById(product.ProductCod);
 
-    if(!rpt.ErrorStatus){
-
-      this.productSelectInfo = rpt.Data;
+    if(this.productSelectInfo){
 
       console.log( { aaa : this.productSelectInfo })
 
@@ -207,7 +206,7 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
 
       if (existing) {
         this.txtNumUnit.nativeElement.value = String(this.toVisibleQuantity(existing.NumUnit, existing.ProductUnitFactor));
-        this.txtNumUnitPrice.nativeElement.value = String(existing.NumUnitPrice);
+        this.txtNumUnitPrice.nativeElement.value = String(this.toVisibleUnitPrice(existing.NumUnitPrice, existing.ProductUnitFactor));
       }
 
     }
@@ -216,8 +215,13 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
 
   editDetail(detail: PucharseRequestDetEntity) {
     this.productSelect = detail.Product;
+    this.productSelectInfo = new ProductInfoDto();
+    this.productSelectInfo.Product = detail.Product;
+    this.productSelectInfo.Config.ProductCod = detail.ProductCod;
+    this.productSelectInfo.Config.ProductUnitName = detail.ProductUnitName || 'NIU';
+    this.productSelectInfo.Config.ProductUnitFactor = detail.ProductUnitFactor > 0 ? detail.ProductUnitFactor : 1;
     this.txtNumUnit.nativeElement.value = String(this.toVisibleQuantity(detail.NumUnit, detail.ProductUnitFactor));
-    this.txtNumUnitPrice.nativeElement.value = String(detail.NumUnitPrice);
+    this.txtNumUnitPrice.nativeElement.value = String(this.toVisibleUnitPrice(detail.NumUnitPrice, detail.ProductUnitFactor));
   }
 
   async removeProduct(detail: PucharseRequestDetEntity) {
@@ -233,7 +237,7 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
     }
 
     const numUnit = Number(this.txtNumUnit.nativeElement.value);
-    const numUnitPrice = Number(this.txtNumUnitPrice.nativeElement.value);
+    const visibleUnitPrice = Number(this.txtNumUnitPrice.nativeElement.value);
 
     if (numUnit <= 0) {
       this.toastrService.error('La cantidad debe ser mayor a cero');
@@ -241,7 +245,7 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
     }
 
     // Allow 0 price? Assuming yes for now, but usually it's cost. Let's warn if negative.
-    if (numUnitPrice < 0) {
+    if (visibleUnitPrice < 0) {
       this.toastrService.error('El precio no puede ser negativo');
       return;
     }
@@ -258,10 +262,11 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
     purchaseDet.ProductCod = product.ProductCod;
     purchaseDet.Variant = productInfoDto.VariantList[0]?.Variant || '0000';
     const ProductUnitFactor = productInfoDto.Config.ProductUnitFactor > 0 ? productInfoDto.Config.ProductUnitFactor : 1;
-    const internalQuantity = numUnit * ProductUnitFactor;
+    const internalQuantity = ProductUnitHelper.toInternalQuantity(numUnit, ProductUnitFactor);
+    const internalUnitPrice = this.toInternalUnitPrice(visibleUnitPrice, ProductUnitFactor);
     purchaseDet.NumUnit = internalQuantity;
-    purchaseDet.NumUnitPrice = numUnitPrice;
-    purchaseDet.NumTotalPrice = internalQuantity * numUnitPrice;
+    purchaseDet.NumUnitPrice = internalUnitPrice;
+    purchaseDet.NumTotalPrice = internalQuantity * internalUnitPrice;
     purchaseDet.ProductUnitName = productInfoDto.Config.ProductUnitName || 'NIU';
     purchaseDet.ProductUnitFactor = ProductUnitFactor;
     purchaseDet.Product = product;
@@ -308,8 +313,15 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
   }
 
   toVisibleQuantity(internalQuantity: number, ProductUnitFactor: number): number {
-    const factor = ProductUnitFactor > 0 ? ProductUnitFactor : 1;
-    return internalQuantity / factor;
+    return ProductUnitHelper.toVisibleQuantity(internalQuantity, ProductUnitFactor);
+  }
+
+  toVisibleUnitPrice(internalUnitPrice: number, ProductUnitFactor: number): number {
+    return ProductUnitHelper.toVisibleUnitPrice(internalUnitPrice, ProductUnitFactor);
+  }
+
+  toInternalUnitPrice(visibleUnitPrice: number, ProductUnitFactor: number): number {
+    return ProductUnitHelper.toInternalUnitPrice(visibleUnitPrice, ProductUnitFactor);
   }
 
   handleProductCreated(event: ProductRegisterDto) {

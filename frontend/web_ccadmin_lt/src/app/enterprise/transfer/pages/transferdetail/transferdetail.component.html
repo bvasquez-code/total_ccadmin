@@ -63,7 +63,7 @@
                     <td>{{ det.Product.ProductName || det.ProductCod }}</td>
                     <td>{{ det.LotNumber || 'SN' }}</td>
                     <td>{{ det.ExpirationDate ? (det.ExpirationDate | date:'dd/MM/yyyy') : '' }}</td>
-                    <td class="text-center">{{ det.NumUnit }}</td>
+                    <td class="text-center">{{ formatVisibleQuantity(det, det.NumUnit) }}</td>
                   </tr>
                   <tr *ngIf="transferDetail.transferDetRequestList.length === 0">
                     <td colspan="5" class="text-center text-muted">Sin registros</td>
@@ -97,8 +97,8 @@
                     <td>{{ det.Product.ProductName || det.ProductCod }}</td>
                     <td>{{ det.LotNumber || 'SN' }}</td>
                     <td>{{ det.ExpirationDate ? (det.ExpirationDate | date:'dd/MM/yyyy') : '' }}</td>
-                    <td class="text-center">{{ det.NumUnitDispatch }}</td>
-                    <td class="text-center">{{ det.NumUnitReception }}</td>
+                    <td class="text-center">{{ formatVisibleQuantity(det, det.NumUnitDispatch) }}</td>
+                    <td class="text-center">{{ formatVisibleQuantity(det, det.NumUnitReception) }}</td>
                   </tr>
                   <tr *ngIf="transferDetail.transferDetList.length === 0">
                     <td colspan="6" class="text-center text-muted">Sin registros</td>

@@ -4,6 +4,7 @@ import { PucharseDetailsDto } from "../model/dto/PucharseDetailsDto";
 import { PucharseDetEntity } from "../model/entity/PucharseDetEntity";
 import { StoreEntity } from "../../shared/model/entity/StoreEntity";
 import { WarehouseEntity } from "../../shared/model/entity/WarehouseEntity";
+import { ProductUnitHelper } from "../../shared/helper/ProductUnitHelper";
 
 @Injectable({
     providedIn: 'root'
@@ -30,10 +31,11 @@ export class PucharsePrintService {
             rows: rows.map(item => ({
                 productCod: item.ProductCod,
                 productName: item.Product?.ProductName || "",
-                numUnit: Number(item.NumUnit || 0),
+                numUnit: ProductUnitHelper.toVisibleQuantity(Number(item.NumUnit || 0), Number(item.ProductUnitFactor || 1)),
+                productUnitName: item.ProductUnitName || "NIU",
                 lotNumber: item.LotNumber,
                 expirationDate: item.ExpirationDate,
-                numUnitPrice: Number(item.NumUnitPrice || 0),
+                numUnitPrice: ProductUnitHelper.toVisibleUnitPrice(Number(item.NumUnitPrice || 0), Number(item.ProductUnitFactor || 1)),
                 numTotalPrice: Number(item.NumTotalPrice || 0)
             }))
         }, this.resolvePrintMode(head));
@@ -62,10 +64,11 @@ export class PucharsePrintService {
             rows: (receivedRows || []).map(item => ({
                 productCod: item.ProductCod,
                 productName: item.Product?.ProductName || "",
-                numUnit: Number(item.NumUnitDelivered || item.NumUnit || 0),
+                numUnit: ProductUnitHelper.toVisibleQuantity(Number(item.NumUnitDelivered || item.NumUnit || 0), Number(item.ProductUnitFactor || 1)),
+                productUnitName: item.ProductUnitName || "NIU",
                 lotNumber: item.LotNumber,
                 expirationDate: item.ExpirationDate,
-                numUnitPrice: Number(item.NumUnitPrice || 0),
+                numUnitPrice: ProductUnitHelper.toVisibleUnitPrice(Number(item.NumUnitPrice || 0), Number(item.ProductUnitFactor || 1)),
                 numTotalPrice: Number(item.NumTotalPrice || 0)
             }))
         }, this.resolvePrintMode(head));
@@ -85,7 +88,7 @@ export class PucharsePrintService {
             <tr>
                 <td>${this.escape(item.productCod)}</td>
                 <td>${this.escape(item.productName)}</td>
-                <td class="right">${this.formatNumber(item.numUnit, 0)}</td>
+                <td class="right">${this.escape(`${this.formatNumber(item.numUnit, 0)} ${item.productUnitName || ""}`.trim())}</td>
                 <td>${this.escape(this.lotText(item.lotNumber))}</td>
                 <td>${this.escape(this.formatDate(item.expirationDate))}</td>
                 <td class="right">${this.formatNumber(item.numUnitPrice, 2)}</td>
@@ -158,7 +161,7 @@ export class PucharsePrintService {
                     <span>${this.escape(this.formatDate(item.expirationDate))}</span>
                 </div>
                 <div class="amount-line">
-                    <span>${this.formatNumber(item.numUnit, 0)}</span>
+                    <span>${this.escape(`${this.formatNumber(item.numUnit, 0)} ${item.productUnitName || ""}`.trim())}</span>
                     <span>${this.formatNumber(item.numUnitPrice, 2)}</span>
                     <span>${this.formatNumber(item.numTotalPrice, 2)}</span>
                 </div>

@@ -8,6 +8,7 @@ import { TransferRequestDetailDto } from '../../model/dto/TransferRequestDetailD
 import { TransferService } from '../../service/TransferService';
 import { TicketSunatService } from 'src/app/enterprise/sale/service/TicketSunatService';
 import { ToastrService } from 'ngx-toastr';
+import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
 
 @Component({
   selector: 'app-transferdetail',
@@ -66,6 +67,14 @@ export class TransferdetailComponent implements OnInit {
   getStoreDescription(storeCod: string): string {
     const store: StoreEntity | any = this.storeList.find(e => e.StoreCod === storeCod);
     return store?.StoreCod + ' - ' + store?.Name;
+  }
+
+  formatVisibleQuantity(det: { ProductUnitFactor?: number, ProductUnitName?: string }, internalQuantity: number): string {
+    return ProductUnitHelper.formatVisibleQuantity(
+      internalQuantity,
+      det.ProductUnitFactor || 1,
+      det.ProductUnitName || 'NIU'
+    );
   }
 
 

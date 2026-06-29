@@ -17,6 +17,7 @@ import { ActionModalConfirmService } from 'src/app/enterprise/shared/interface/A
 import { PucharseLotReceptionDto } from '../../model/dto/PucharseLotReceptionDto';
 import { PucharseDetLotConfirmDto } from '../../model/dto/PucharseDetLotConfirmDto';
 import { PucharsePrintService } from '../../service/PucharsePrintService';
+import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
 
 @Component({
   selector: 'app-confirmpucharse',
@@ -142,14 +143,16 @@ export class ConfirmpucharseComponent implements IRegisterForm<PucharseRegisterD
 
         if( ProductDetailCount )
         {
-          ProductDetailCount.NumUnit = ProductDetailCount.NumUnit + 1;
+          ProductDetailCount.NumUnitDelivered = Number(ProductDetailCount.NumUnitDelivered || ProductDetailCount.NumUnit || 0)
+            + ProductUnitHelper.normalizeFactor(ProductDetailCount.ProductUnitFactor);
           return;
         }
   
         if( !ProductDetailCount && ProductDetailOrigin)
         {
           ProductDetailCount = ProductDetailOrigin;
-          ProductDetailCount.NumUnit = 1;
+          ProductDetailCount.NumUnit = ProductUnitHelper.normalizeFactor(ProductDetailCount.ProductUnitFactor);
+          ProductDetailCount.NumUnitDelivered = ProductDetailCount.NumUnit;
           ProductDetailCount.Product = Product;
           this.PucharseRegister.DetailList.push(ProductDetailCount);
           return;
@@ -162,6 +165,7 @@ export class ConfirmpucharseComponent implements IRegisterForm<PucharseRegisterD
           ProductDetailCount.ProductCod = Product.ProductCod;
           ProductDetailCount.Variant = '0000';
           ProductDetailCount.NumUnit = 1;
+          ProductDetailCount.NumUnitDelivered = 1;
           ProductDetailCount.NumUnitPrice = 0;
           ProductDetailCount.NumTotalPrice = 0;
           ProductDetailCount.Product = Product;
@@ -180,7 +184,10 @@ export class ConfirmpucharseComponent implements IRegisterForm<PucharseRegisterD
   }
 
   updateQuantity(){
-    this.pucharseDetSelect.NumUnitDelivered = Number(this.txtNumUnit.nativeElement.value);
+    this.pucharseDetSelect.NumUnitDelivered = ProductUnitHelper.toInternalQuantity(
+      Number(this.txtNumUnit.nativeElement.value),
+      this.pucharseDetSelect.ProductUnitFactor
+    );
   }
 
   async Confirm(pucharseDet : PucharseDetEntity){
@@ -220,7 +227,12 @@ export class ConfirmpucharseComponent implements IRegisterForm<PucharseRegisterD
   selectRowTable(pucharseDet : PucharseDetEntity)
   {
     this.pucharseDetSelect = pucharseDet;
-    this.txtNumUnit.nativeElement.value = String(pucharseDet.NumUnit);
+    this.txtNumUnit.nativeElement.value = String(
+      ProductUnitHelper.toVisibleQuantity(
+        pucharseDet.NumUnitDelivered || pucharseDet.NumUnit,
+        pucharseDet.ProductUnitFactor
+      )
+    );
   }
 
   selectRowTableLots(pucharseDet : PucharseDetEntity)
@@ -233,11 +245,12 @@ export class ConfirmpucharseComponent implements IRegisterForm<PucharseRegisterD
   addLotReceptionLine(): void
   {
     try {
-      const numUnit = Number(this.txtLotNumUnit.nativeElement.value);
+      const visibleNumUnit = Number(this.txtLotNumUnit.nativeElement.value);
+      const numUnit = ProductUnitHelper.toInternalQuantity(visibleNumUnit, this.pucharseDetSelect.ProductUnitFactor);
       const lotNumber = this.txtLotNumber.nativeElement.value.trim();
       const expirationDate = this.txtExpirationDate.nativeElement.value;
 
-      if (!numUnit || numUnit <= 0) {
+      if (!visibleNumUnit || visibleNumUnit <= 0) {
         throw new Error("Ingrese una cantidad valida");
       }
 
@@ -286,6 +299,21 @@ export class ConfirmpucharseComponent implements IRegisterForm<PucharseRegisterD
     return Number(this.pucharseDetSelect.NumUnit || 0) - this.getLotReceptionTotal();
   }
 
+  formatVisibleQuantity(internalQuantity: number, productUnitFactor: number, productUnitName: string): string
+  {
+    return ProductUnitHelper.formatVisibleQuantity(internalQuantity, productUnitFactor, productUnitName);
+  }
+
+  formatDetailVisibleQuantity(detail: PucharseDetEntity, internalQuantity: number): string
+  {
+    return this.formatVisibleQuantity(internalQuantity, detail.ProductUnitFactor, detail.ProductUnitName);
+  }
+
+  getProductUnitName(detail: PucharseDetEntity): string
+  {
+    return detail?.ProductUnitName || 'NIU';
+  }
+
   async ConfirmLotReception(): Promise<void>
   {
     try {
@@ -328,6 +356,8 @@ export class ConfirmpucharseComponent implements IRegisterForm<PucharseRegisterD
     detail.NumUnitDelivered = item.NumUnit;
     detail.NumUnitPrice = this.pucharseDetSelect.NumUnitPrice;
     detail.NumTotalPrice = Number(this.pucharseDetSelect.NumUnitPrice || 0) * item.NumUnit;
+    detail.ProductUnitName = this.pucharseDetSelect.ProductUnitName;
+    detail.ProductUnitFactor = this.pucharseDetSelect.ProductUnitFactor;
     detail.IsKardexAffected = "S";
     detail.LotNumber = item.LotNumber;
     detail.ExpirationDate = item.ExpirationDate;
@@ -342,6 +372,8 @@ export class ConfirmpucharseComponent implements IRegisterForm<PucharseRegisterD
     const detailList = confirmedDetailList.map(item => {
       item.Product = origin.Product;
       item.NumUnitDelivered = item.NumUnitDelivered || item.NumUnit;
+      item.ProductUnitName = item.ProductUnitName || origin.ProductUnitName;
+      item.ProductUnitFactor = item.ProductUnitFactor > 0 ? item.ProductUnitFactor : origin.ProductUnitFactor;
       item.IsKardexAffected = "S";
       return item;
     });

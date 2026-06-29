@@ -142,7 +142,7 @@
                             {{ item.Product.ProductName }}
                           </td>
                           <td class="text-600">
-                            {{ item.NumUnitDelivered }}
+                            {{ formatDetailVisibleQuantity(item, item.NumUnitDelivered) }}
                           </td>
                           <td *ngIf="IsReceptionWithLots">
                             {{ item.LotNumber || '-' }}
@@ -242,7 +242,7 @@
 
       <div class="modal-body">
         <div class="mb-3 row">
-          <label for="inputPassword" class="col-sm-4 col-form-label">Ingrese cantidad</label>
+          <label for="inputPassword" class="col-sm-4 col-form-label">Ingrese cantidad ({{ getProductUnitName(pucharseDetSelect) }})</label>
           <div class="col-sm-8">
             <input type="text" class="form-control" #txtNumUnit>
           </div>
@@ -279,15 +279,15 @@
         <div class="mb-2">
           <div class="text-600">{{ pucharseDetSelect.Product.ProductName }}</div>
           <div class="text-muted text-90">
-            Solicitado: {{ pucharseDetSelect.NumUnit }} |
-            Recepcionado: {{ getLotReceptionTotal() }} |
-            Pendiente: {{ getLotReceptionPending() }}
+            Solicitado: {{ formatDetailVisibleQuantity(pucharseDetSelect, pucharseDetSelect.NumUnit) }} |
+            Recepcionado: {{ formatDetailVisibleQuantity(pucharseDetSelect, getLotReceptionTotal()) }} |
+            Pendiente: {{ formatDetailVisibleQuantity(pucharseDetSelect, getLotReceptionPending()) }}
           </div>
         </div>
 
         <div class="row">
           <div class="col-md-3">
-            <label class="mb-1">Cantidad</label>
+            <label class="mb-1">Cantidad ({{ getProductUnitName(pucharseDetSelect) }})</label>
             <input type="number" min="1" class="form-control" #txtLotNumUnit>
           </div>
           <div class="col-md-4">
@@ -321,7 +321,7 @@
             </thead>
             <tbody>
               <tr *ngFor="let item of LotReceptionList; let i = index">
-                <td>{{ item.NumUnit }}</td>
+                <td>{{ formatVisibleQuantity(item.NumUnit, pucharseDetSelect.ProductUnitFactor, pucharseDetSelect.ProductUnitName) }}</td>
                 <td>{{ item.LotNumber }}</td>
                 <td>{{ item.ExpirationDate | date:'yyyy-MM-dd' }}</td>
                 <td class="text-center">
