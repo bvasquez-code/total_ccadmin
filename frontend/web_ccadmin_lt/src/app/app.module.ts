@@ -17,6 +17,7 @@ import { ModalDetalleProductoVentaComponent } from './enterprise/venta/pages/mod
 import { ModdetalleprodventaComponent } from './enterprise/venta/pages/moddetalleprodventa/moddetalleprodventa.component';
 import { CreatepresaleComponent } from './enterprise/sale/pages/createpresale/createpresale.component';
 import { CreateproductComponent } from './enterprise/product/pages/createproduct/createproduct.component';
+import { CreateproductconfigComponent } from './enterprise/product/pages/createproductconfig/createproductconfig.component';
 import { ListproductComponent } from './enterprise/product/pages/listproduct/listproduct.component';
 import { CreatemenuComponent } from './enterprise/menu/pages/createmenu/createmenu.component';
 import { ListmenuComponent } from './enterprise/menu/pages/listmenu/listmenu.component';
@@ -107,6 +108,7 @@ import { PermissiondeniedComponent } from './enterprise/shared/component/permiss
     ModdetalleprodventaComponent,
     CreatepresaleComponent,
     CreateproductComponent,
+    CreateproductconfigComponent,
     ListproductComponent,
     CreatemenuComponent,
     ListmenuComponent,

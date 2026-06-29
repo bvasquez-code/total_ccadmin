@@ -5,6 +5,7 @@ import { ResponseWsDto } from "../../shared/model/dto/ResponseWsDto";
 import { ProductRegisterDto } from "../model/dto/ProductRegisterDto";
 import { ProductPictureEntity } from "../model/entity/ProductPictureEntity";
 import { ProductRegisterMassiveDto } from "../model/dto/ProductRegisterMassiveDto";
+import { ProductConfigStoreUpdateDto } from "../model/dto/ProductConfigStoreUpdateDto";
 
 @Injectable({
     providedIn: 'root'
@@ -54,6 +55,15 @@ export class ProductService {
         return RespuestaWS;
     }
 
+    async FindDataConfigForm(ProductCod: string, StoreCod: string) {
+        let url: string = `${AppSetting.API}/api/v1/product/findDataConfigForm`;
+        let RespuestaWS: ResponseWsDto;
+
+        RespuestaWS = await this.apiService.ExecuteGetService(url, { ProductCod: ProductCod, StoreCod: StoreCod });
+
+        return RespuestaWS;
+    }
+
     async FindByBarCode(BarCode: string) {
         let url: string = `${AppSetting.API}/api/v1/product/findByBarCode`;
         let RespuestaWS: ResponseWsDto;
@@ -74,6 +84,15 @@ export class ProductService {
 
     async SaveAll(Request: ProductRegisterMassiveDto) {
         let url: string = `${AppSetting.API}/api/v1/product/saveAll`;
+        let RespuestaWS: ResponseWsDto;
+
+        RespuestaWS = await this.apiService.ExecutePostService(url, Request);
+
+        return RespuestaWS;
+    }
+
+    async SaveConfigByStores(Request: ProductConfigStoreUpdateDto) {
+        let url: string = `${AppSetting.API}/api/v1/product/saveConfigByStores`;
         let RespuestaWS: ResponseWsDto;
 
         RespuestaWS = await this.apiService.ExecutePostService(url, Request);

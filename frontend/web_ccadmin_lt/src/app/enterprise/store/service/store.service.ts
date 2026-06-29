@@ -30,6 +30,15 @@ export class StoreService {
         return RespuestaWS;
     }
 
+    async FindAllList() {
+        let url: string = `${AppSetting.API}/api/v1/store/findAllList`;
+        let RespuestaWS: ResponseWsDto;
+
+        RespuestaWS = await this.apiService.ExecuteGetService(url, {});
+
+        return RespuestaWS;
+    }
+
     async FindUbigeo(UbigeoCod: string) {
         let url: string = `${AppSetting.API}/api/v1/store/findUbigeo`;
         let RespuestaWS: ResponseWsDto;

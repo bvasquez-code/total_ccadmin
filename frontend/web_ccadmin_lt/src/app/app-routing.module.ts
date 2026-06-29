@@ -19,6 +19,7 @@ import { CreatesupplierComponent } from './enterprise/supplier/pages/createsuppl
 import { ListpresaleComponent } from './enterprise/sale/pages/listpresale/listpresale.component';
 import { ListproductComponent } from './enterprise/product/pages/listproduct/listproduct.component';
 import { CreateproductComponent } from './enterprise/product/pages/createproduct/createproduct.component';
+import { CreateproductconfigComponent } from './enterprise/product/pages/createproductconfig/createproductconfig.component';
 import { ListbrandComponent } from './enterprise/product/pages/listbrand/listbrand.component';
 import { CreatebrandComponent } from './enterprise/product/pages/createbrand/createbrand.component';
 import { ListcategoryComponent } from './enterprise/product/pages/listcategory/listcategory.component';
@@ -223,6 +224,10 @@ const routes: Routes = [
       {
         path: 'enterprise/product/pages/createProduct',
         component: CreateproductComponent
+      },
+      {
+        path: 'enterprise/product/pages/createproductconfig',
+        component: CreateproductconfigComponent
       },
       {
         path: 'enterprise/product/pages/listBrand',

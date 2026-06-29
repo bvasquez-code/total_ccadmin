@@ -51,6 +51,7 @@ export class ListproductComponent implements OnInit,ActionTableService<ProductEn
           Id : ["ProductCod"] , 
           Options : [
             { Type : "Url" , Name : "fa fa-pencil-alt" , Url : "/enterprise/product/pages/createProduct?ProductCod={ProductCod}" },
+            { Type : "Url" , Name : "fa fa-sliders-h" , Url : "/enterprise/product/pages/createproductconfig?ProductCod={ProductCod}" },
             { Type : "Url" , Name : "fa fa-trash-alt" , Url : "#" },
             { Type : "Url" , Name : "fa fa-check" , Url : "#" }
           ] 

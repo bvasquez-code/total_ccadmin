@@ -2,6 +2,7 @@ package com.ccadmin.app.product.controller;
 
 import com.ccadmin.app.product.model.dto.ProductRegisterDto;
 import com.ccadmin.app.product.model.dto.ProductRegisterMassiveDto;
+import com.ccadmin.app.product.model.dto.ProductConfigStoreUpdateDto;
 import com.ccadmin.app.product.model.entity.ProductPictureEntity;
 import com.ccadmin.app.product.service.ProductCreateService;
 import com.ccadmin.app.product.service.ProductSearchService;
@@ -60,6 +61,16 @@ public class ProductController {
         }
     }
 
+    @GetMapping("findDataConfigForm")
+    public ResponseEntity<ResponseWsDto> findDataConfigForm(@RequestParam String ProductCod, @RequestParam String StoreCod) {
+        try {
+            return new ResponseEntity<ResponseWsDto>(
+                    this.productSearchService.findDataConfigForm(ProductCod, StoreCod), HttpStatus.OK);
+        } catch (Exception ex) {
+            return new ResponseEntity<ResponseWsDto>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+
     @GetMapping("findByBarCode")
     public ResponseEntity<ResponseWsDto> findByBarCode(@RequestParam String BarCode) {
         try {
@@ -85,6 +96,16 @@ public class ProductController {
         try {
             return new ResponseEntity<ResponseWsDto>(
                     new ResponseWsDto(this.productCreateService.save(product)), HttpStatus.OK);
+        } catch (Exception ex) {
+            return new ResponseEntity<ResponseWsDto>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("saveConfigByStores")
+    public ResponseEntity<ResponseWsDto> saveConfigByStores(@RequestBody ProductConfigStoreUpdateDto request) {
+        try {
+            return new ResponseEntity<ResponseWsDto>(
+                    new ResponseWsDto(this.productCreateService.saveConfigByStores(request)), HttpStatus.OK);
         } catch (Exception ex) {
             return new ResponseEntity<ResponseWsDto>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
         }

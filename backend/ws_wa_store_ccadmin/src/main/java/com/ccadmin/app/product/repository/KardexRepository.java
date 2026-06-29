@@ -29,9 +29,8 @@ public interface KardexRepository extends JpaRepository<KardexEntity,Long>, CcAd
     @Override
     @Query( value = """
             select count(1) from kardex k
-            where k.ProductCod  = :id
-            or concat(k.OperationCod,' ',k.ProductCod) like %:query%
-            and k.StoreCod = :storeCod
+            where k.StoreCod = :storeCod
+            and (k.ProductCod  = :id or concat(k.OperationCod,' ',k.ProductCod) like %:query%)
             """,nativeQuery = true)
     public int countByQueryTextStore(
              @Param("id") String id
@@ -42,9 +41,8 @@ public interface KardexRepository extends JpaRepository<KardexEntity,Long>, CcAd
     @Override
     @Query( value = """
             select k.* from kardex k
-            where k.ProductCod  = :id
-            or concat(k.OperationCod,' ',k.ProductCod) like %:query%
-            and k.StoreCod = :storeCod
+            where k.StoreCod = :storeCod
+            and (k.ProductCod  = :id or concat(k.OperationCod,' ',k.ProductCod) like %:query%)
             order by k.kardexID desc
             limit :init,:limit
             """,nativeQuery = true)

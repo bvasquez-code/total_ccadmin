@@ -8,6 +8,22 @@ export class SidebarMenuConfigService {
 
     private readonly menuConfig: SidebarMenuConfigDto[] = [
         new SidebarMenuConfigDto({
+            permission: "VT000000",
+            label: "ventas",
+            icon: "nav-icon fa fa-shopping-bag",
+            children: [
+                { permission: "VT000001", label: "Realizar venta", url: "enterprise/sale/pages/createpresale" },
+                { permission: "VT000002", label: "Preventa", url: "enterprise/sale/pages/listpresale" },
+                { permission: "VT000003", label: "Facturacion", url: "enterprise/sale/pages/listsale" },
+                { permission: "VT000004", label: "Creacion de preventas", url: "enterprise/sale/pages/createpresale", urlShade: "enterprise/sale/pages/createpresale", isVisible: false },
+                { permission: "VT000005", label: "Proceso de facturacion de venta", url: "enterprise/sale/pages/createsale", urlShade: "enterprise/sale/pages/listsale", isVisible: false },
+                { permission: "VT000006", label: "Nota de credito", url: "enterprise/sale/pages/listcreditnote" },
+                { permission: "VT000007", label: "Crear nota de credito", url: "enterprise/sale/pages/createcreditnote", urlShade: "enterprise/sale/pages/listcreditnote", isVisible: false },
+                { permission: "VT000008", label: "Devolver stock de nota de credito", url: "enterprise/sale/pages/returnstockcreditnote", urlShade: "enterprise/sale/pages/listcreditnote", isVisible: false },
+                { permission: "VT000009", label: "Ver nota de credito", url: "enterprise/sale/pages/viewcreditnote", urlShade: "enterprise/sale/pages/listcreditnote", isVisible: false }
+            ]
+        }),
+        new SidebarMenuConfigDto({
             permission: "AT000000",
             label: "Administrar tienda",
             icon: "nav-icon fa fa-store",
@@ -53,6 +69,7 @@ export class SidebarMenuConfigService {
                 { permission: "PR000002", label: "Bandeja de Marcas", url: "enterprise/product/pages/listBrand" },
                 { permission: "PR000003", label: "Bandeja de Categorias", url: "enterprise/product/pages/listCategory" },
                 { permission: "PR000005", label: "Creacion de Productos", url: "enterprise/product/pages/createProduct", urlShade: "enterprise/product/pages/listProduct", isVisible: false },
+                { permission: "PR000005", label: "Configuracion de producto por tienda", url: "enterprise/product/pages/createproductconfig", urlShade: "enterprise/product/pages/listProduct", isVisible: false },
                 { permission: "PR000006", label: "Creacion de Marcas", url: "enterprise/product/pages/createBrand", urlShade: "enterprise/product/pages/listBrand", isVisible: false },
                 { permission: "PR000007", label: "Creacion de categorias", url: "enterprise/product/pages/createCategory", urlShade: "enterprise/product/pages/listCategory", isVisible: false },
                 { permission: "PR000009", label: "Creacion masiva de Productos", url: "enterprise/product/pages/createproductmassive", urlShade: "enterprise/product/pages/listProduct", isVisible: false },
@@ -113,22 +130,6 @@ export class SidebarMenuConfigService {
                 { permission: "US000002", label: "Bandeja de perfiles", url: "enterprise/user/pages/listprofile" },
                 { permission: "US000003", label: "Creacion de usuarios", url: "enterprise/user/pages/createuser", urlShade: "enterprise/user/pages/listuser", isVisible: false },
                 { permission: "US000004", label: "Creacion de perfiles", url: "enterprise/user/pages/createprofile", urlShade: "enterprise/user/pages/listprofile", isVisible: false }
-            ]
-        }),
-        new SidebarMenuConfigDto({
-            permission: "VT000000",
-            label: "ventas",
-            icon: "nav-icon fa fa-shopping-bag",
-            children: [
-                { permission: "VT000001", label: "Realizar venta", url: "enterprise/sale/pages/createpresale" },
-                { permission: "VT000002", label: "Preventa", url: "enterprise/sale/pages/listpresale" },
-                { permission: "VT000003", label: "Facturacion", url: "enterprise/sale/pages/listsale" },
-                { permission: "VT000004", label: "Creacion de preventas", url: "enterprise/sale/pages/createpresale", urlShade: "enterprise/sale/pages/createpresale", isVisible: false },
-                { permission: "VT000005", label: "Proceso de facturacion de venta", url: "enterprise/sale/pages/createsale", urlShade: "enterprise/sale/pages/listsale", isVisible: false },
-                { permission: "VT000006", label: "Nota de credito", url: "enterprise/sale/pages/listcreditnote" },
-                { permission: "VT000007", label: "Crear nota de credito", url: "enterprise/sale/pages/createcreditnote", urlShade: "enterprise/sale/pages/listcreditnote", isVisible: false },
-                { permission: "VT000008", label: "Devolver stock de nota de credito", url: "enterprise/sale/pages/returnstockcreditnote", urlShade: "enterprise/sale/pages/listcreditnote", isVisible: false },
-                { permission: "VT000009", label: "Ver nota de credito", url: "enterprise/sale/pages/viewcreditnote", urlShade: "enterprise/sale/pages/listcreditnote", isVisible: false }
             ]
         })
     ];

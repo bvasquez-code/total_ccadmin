@@ -12,6 +12,7 @@ import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import com.ccadmin.app.shared.model.dto.SearchDto;
 import com.ccadmin.app.shared.service.SearchTService;
 import com.ccadmin.app.shared.service.SessionService;
+import com.ccadmin.app.store.shared.StoreShared;
 import com.ccadmin.app.system.shared.AppFileShared;
 import com.ccadmin.app.system.shared.SystemDocumentShared;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +48,8 @@ public class ProductSearchService extends SessionService {
     private AppFileShared appFileShared;
     @Autowired
     private SystemDocumentShared systemDocumentShared;
+    @Autowired
+    private StoreShared storeShared;
     private SearchTService<ProductEntity> searchTService;
 
     public ProductEntity findById(String ProductCod)
@@ -143,6 +146,25 @@ public class ProductSearchService extends SessionService {
         rpt.AddResponseAdditional("brandList",this.brandRepository.findAllActive());
         rpt.AddResponseAdditional("categoryList",this.categoryRepository.findAllActiveNoDad());
         rpt.AddResponseAdditional("bulkUploadFormatProducts",this.systemDocumentShared.findById("EXCEL_REG_MASIVO_PROD"));
+        return rpt;
+    }
+
+    public ResponseWsDto findDataConfigForm(String ProductCod, String StoreCod) {
+
+        ResponseWsDto rpt = new ResponseWsDto();
+        String storeCod = StoreCod != null && !StoreCod.isEmpty() ? StoreCod : getStoreCod();
+        ProductConfigEntity config = this.productConfigRepository.findById(new ProductConfigID(ProductCod, storeCod))
+                .orElseGet(() -> this.productConfigRepository.findAnyByProductCod(ProductCod));
+        if (config == null) {
+            config = new ProductConfigEntity();
+            config.ProductCod = ProductCod;
+            config.StoreCod = storeCod;
+        }
+
+        rpt.AddResponseAdditional("product", this.findById(ProductCod));
+        rpt.AddResponseAdditional("config", config);
+        rpt.AddResponseAdditional("store", this.storeShared.findById(storeCod));
+        rpt.AddResponseAdditional("storeList", this.storeShared.findAll());
         return rpt;
     }
 }

@@ -40,6 +40,16 @@ public class StoreController {
         }
     }
 
+    @GetMapping("findAllList")
+    public ResponseEntity<ResponseWsDto> findAllList() {
+        try {
+            return new ResponseEntity<ResponseWsDto>(
+                    new ResponseWsDto(this.storeService.findAll()), HttpStatus.OK);
+        } catch (Exception ex) {
+            return new ResponseEntity<ResponseWsDto>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+
     @GetMapping("findUbigeo")
     public ResponseEntity<ResponseWsDto> findUbigeo(@RequestParam String UbigeoCod) {
         try {

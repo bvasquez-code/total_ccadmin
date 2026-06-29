@@ -69,6 +69,10 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
     setTimeout(() => this.ensureUnitDefaults(), 0);
   }
 
+  get IsEditMode(): boolean {
+    return Boolean(this.ProductCod);
+  }
+
   async FindDataForm(ProductCod: string) {
     const rpt: ResponseWsDto = await this.productService.FindDataForm(ProductCod);
 
@@ -101,13 +105,17 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
       this.searchCategoryTerm = selectedCategory.CategoryName;
     }
 
-    this.txtProductCod.nativeElement.value = this.ProductRegister.config.ProductCod;
-    this.txtNumMaxStock.nativeElement.value = String(this.ProductRegister.config.NumMaxStock);
-    this.txtNumMinStock.nativeElement.value = String(this.ProductRegister.config.NumMinStock);
-    this.txtProductUnitName.nativeElement.value = this.ProductRegister.config.ProductUnitName || "NIU";
-    this.txtProductUnitFactor.nativeElement.value = String(this.ProductRegister.config.ProductUnitFactor || 1);
-    this.txtNumPrice.nativeElement.value = String(this.ProductRegister.config.NumPrice || 0);
-    this.syncVisiblePriceFromInternal();
+    this.ProductRegister.config.ProductCod = this.txtProductCod.nativeElement.value;
+
+    if (!this.IsEditMode) {
+      this.txtNumMaxStock.nativeElement.value = String(this.ProductRegister.config.NumMaxStock);
+      this.txtNumMinStock.nativeElement.value = String(this.ProductRegister.config.NumMinStock);
+      this.txtProductUnitName.nativeElement.value = this.ProductRegister.config.ProductUnitName || "NIU";
+      this.txtProductUnitFactor.nativeElement.value = String(this.ProductRegister.config.ProductUnitFactor || 1);
+      this.txtNumPrice.nativeElement.value = String(this.ProductRegister.config.NumPrice || 0);
+      this.syncVisiblePriceFromInternal();
+    }
+
     this.txtProductCodreadonly = true;
 
     if (this.ProductRegister.productBarcode) {
@@ -126,11 +134,15 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
     this.ProductRegister.product.CategoryCod = this.cboCategoryCod.nativeElement.value;
 
     this.ProductRegister.config.ProductCod = this.txtProductCod.nativeElement.value;
-    this.ProductRegister.config.NumPrice = Number(this.txtNumPrice.nativeElement.value);
-    this.ProductRegister.config.NumMaxStock = Number(this.txtNumMaxStock.nativeElement.value);
-    this.ProductRegister.config.NumMinStock = Number(this.txtNumMinStock.nativeElement.value);
-    this.ProductRegister.config.ProductUnitName = this.txtProductUnitName.nativeElement.value || "NIU";
-    this.ProductRegister.config.ProductUnitFactor = Number(this.txtProductUnitFactor.nativeElement.value || 1);
+
+    if (!this.IsEditMode) {
+      this.ProductRegister.config.NumPrice = Number(this.txtNumPrice.nativeElement.value);
+      this.ProductRegister.config.NumMaxStock = Number(this.txtNumMaxStock.nativeElement.value);
+      this.ProductRegister.config.NumMinStock = Number(this.txtNumMinStock.nativeElement.value);
+      this.ProductRegister.config.ProductUnitName = this.txtProductUnitName.nativeElement.value || "NIU";
+      this.ProductRegister.config.ProductUnitFactor = Number(this.txtProductUnitFactor.nativeElement.value || 1);
+    }
+
     this.ProductRegister.config.IsDiscontable = "N";
     this.ProductRegister.config.DiscountType = "-";
     this.ProductRegister.config.NumDiscountMax = 0;
