@@ -190,12 +190,18 @@ Fase 3 implementada:
 - `generateZip` comprime el ultimo XML firmado, guarda el ZIP y cambia el estado a `ZIP`.
 - La firma usa `javax.xml.crypto.dsig` y la clave privada del certificado configurado en `sunat_config`.
 
-Fase 4:
+Fase 4 implementada:
 
 - Cliente SUNAT BETA/PRODUCCION.
 - Envio de comprobantes individuales, resumen diario y comunicacion de baja.
 - Consulta de tickets.
 - Procesamiento de CDR y actualizacion final de estados.
+- `send` usa el ZIP generado y llama `sendBill` para comprobantes individuales o `sendSummary` para resumen diario/comunicacion de baja.
+- `consultTicket` llama `getStatus` usando el ticket guardado en `sunat_document`.
+- Las respuestas SOAP se guardan como archivo `RESPONSE`.
+- El CDR se guarda como `CDR_ZIP`, se extrae el XML y se guarda como `CDR_XML`.
+- El estado final depende del CDR: `ACE`, `OBS` o `REJ`; el HTTP 200 no marca el comprobante como aceptado por si solo.
+- Si SUNAT devuelve ticket, el documento queda en `TCK` hasta consultar el resultado final.
 
 Fase 5:
 

@@ -3,6 +3,7 @@ package com.ccadmin.app.sunat.service;
 import com.ccadmin.app.sunat.model.entity.SunatConfigEntity;
 import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
 import javax.xml.crypto.dsig.CanonicalizationMethod;
@@ -56,19 +57,21 @@ public class SunatXmlSignatureService {
             XMLSignatureFactory factory = XMLSignatureFactory.getInstance("DOM");
             Reference reference = factory.newReference(
                     "",
-                    factory.newDigestMethod(DigestMethod.SHA256, null),
+                    factory.newDigestMethod(DigestMethod.SHA1, null),
                     Collections.singletonList(factory.newTransform(Transform.ENVELOPED, (TransformParameterSpec) null)),
                     null,
                     null
             );
             SignedInfo signedInfo = factory.newSignedInfo(
                     factory.newCanonicalizationMethod(CanonicalizationMethod.INCLUSIVE, (C14NMethodParameterSpec) null),
-                    factory.newSignatureMethod(SignatureMethod.RSA_SHA256, null),
+                    factory.newSignatureMethod(SignatureMethod.RSA_SHA1, null),
                     Collections.singletonList(reference)
             );
             KeyInfo keyInfo = buildKeyInfo(factory, certificate.certificate);
             XMLSignature signature = factory.newXMLSignature(signedInfo, keyInfo);
             signature.sign(signContext);
+            Element signatureElement = (Element) document.getElementsByTagNameNS(XMLSignature.XMLNS, "Signature").item(0);
+            signatureElement.setAttribute("Id", "SignatureSP");
             return toXml(document);
         } catch (Exception ex) {
             throw new IllegalArgumentException("No se pudo firmar XML SUNAT: " + ex.getMessage(), ex);

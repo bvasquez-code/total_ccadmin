@@ -35,6 +35,12 @@ public class SunatFileStorageService extends SessionService {
         return this.save(config, document, fileType, fileName, "application/zip", content);
     }
 
+    public SunatDocumentFileEntity saveText(SunatConfigEntity config, SunatDocumentEntity document,
+                                            String fileType, String fileName, String contentType, String content) {
+        return this.save(config, document, fileType, fileName, contentType,
+                content.getBytes(StandardCharsets.UTF_8));
+    }
+
     public byte[] read(SunatDocumentFileEntity file) {
         try {
             return Files.readAllBytes(Path.of(file.FilePath));

@@ -7,6 +7,9 @@ import com.ccadmin.app.sunat.model.constants.SunatOperationTypeConst;
 import com.ccadmin.app.sunat.model.dto.SunatElectronicDocumentDto;
 import com.ccadmin.app.sunat.model.dto.SunatFileProcessResultDto;
 import com.ccadmin.app.sunat.model.dto.SunatPendingOperationDto;
+import com.ccadmin.app.sunat.model.dto.SunatCdrResultDto;
+import com.ccadmin.app.sunat.model.dto.SunatSendResultDto;
+import com.ccadmin.app.sunat.model.dto.SunatSoapResponseDto;
 import com.ccadmin.app.sunat.model.dto.SunatXmlGenerateResultDto;
 import com.ccadmin.app.sunat.model.entity.SunatConfigEntity;
 import com.ccadmin.app.sunat.model.entity.SunatDocumentAttemptEntity;
@@ -63,6 +66,12 @@ public class SunatDocumentOperationService extends SessionService {
 
     @Autowired
     private SunatZipService sunatZipService;
+
+    @Autowired
+    private SunatSoapClientService sunatSoapClientService;
+
+    @Autowired
+    private SunatCdrProcessService sunatCdrProcessService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -180,12 +189,104 @@ public class SunatDocumentOperationService extends SessionService {
         }
     }
 
-    public SunatPendingOperationDto send(String sunatDocumentCod) {
-        return pending("SEND", "FASE_4", sunatDocumentCod);
+    public SunatSendResultDto send(String sunatDocumentCod) {
+        SunatDocumentEntity document = this.findDocumentForProcess(sunatDocumentCod);
+        if (SunatElectronicStatusConst.PENDIENTE_TICKET.equals(document.ElectronicStatus)) {
+            throw new IllegalArgumentException("Documento tiene ticket pendiente, consulte ticket antes de reenviar");
+        }
+        SunatConfigEntity config = this.findDocumentConfig(document);
+        SunatDocumentFileEntity zipFile = this.sunatDocumentFileRepository.findLastByDocumentAndType(
+                sunatDocumentCod,
+                SunatFileTypeConst.ZIP_SEND
+        ).orElseThrow(() -> new IllegalArgumentException("No existe ZIP generado para enviar"));
+        try {
+            byte[] zipContent = this.sunatFileStorageService.read(zipFile);
+            boolean summaryDocument = this.isSummaryDocument(document);
+            SunatSoapResponseDto response = summaryDocument
+                    ? this.sunatSoapClientService.sendSummary(config, zipFile.FileName, zipContent)
+                    : this.sunatSoapClientService.sendBill(config, zipFile.FileName, zipContent);
+            this.saveSoapResponse(config, document, SunatOperationTypeConst.SEND, response);
+
+            document.SendAttemptCount = document.SendAttemptCount + 1;
+            document.TechnicalResponse = response.RawResponse;
+            if (response.hasFault() || response.HttpStatusCode != 200) {
+                document.ElectronicStatus = SunatElectronicStatusConst.ERROR;
+                document.LastFunctionalError = response.FaultString;
+                document.LastTechnicalError = response.RawResponse;
+                this.saveAttempt(document, SunatOperationTypeConst.SEND, false, response.RawResponse, response.FaultString, response);
+                this.sunatDocumentRepository.save(document.session(this.getUserCod()));
+                return toSendResult(document, response.FaultString);
+            }
+
+            if (summaryDocument) {
+                if (!response.hasTicket()) {
+                    throw new IllegalArgumentException("SUNAT no devolvio ticket para resumen o baja");
+                }
+                document.TicketSunat = response.Ticket;
+                document.ElectronicStatus = SunatElectronicStatusConst.PENDIENTE_TICKET;
+                document.LastTechnicalError = null;
+                document.LastFunctionalError = null;
+                this.saveAttempt(document, SunatOperationTypeConst.SEND, true, response.RawResponse, null, response);
+                this.sunatDocumentRepository.save(document.session(this.getUserCod()));
+                return toSendResult(document, "Documento enviado, pendiente de consulta de ticket");
+            }
+
+            if (!response.hasApplicationResponse()) {
+                throw new IllegalArgumentException("SUNAT no devolvio CDR para comprobante individual");
+            }
+            SunatCdrResultDto cdr = this.sunatCdrProcessService.processBase64Cdr(config, document, response.ApplicationResponseBase64);
+            applyCdrResult(document, cdr);
+            this.saveAttempt(document, SunatOperationTypeConst.SEND, true, response.RawResponse, cdr.Description, response);
+            this.sunatDocumentRepository.save(document.session(this.getUserCod()));
+            return toSendResult(document, cdr.Description);
+        } catch (Exception ex) {
+            document.ElectronicStatus = SunatElectronicStatusConst.ERROR;
+            document.LastFunctionalError = "Error enviando documento SUNAT";
+            document.LastTechnicalError = ex.getMessage();
+            this.saveAttempt(document, SunatOperationTypeConst.SEND, false, ex.getMessage(), "Error enviando documento SUNAT", null);
+            this.sunatDocumentRepository.save(document.session(this.getUserCod()));
+            throw new IllegalArgumentException("No se pudo enviar documento SUNAT: " + ex.getMessage(), ex);
+        }
     }
 
-    public SunatPendingOperationDto consultTicket(String sunatDocumentCod) {
-        return pending("CONSULT_TICKET", "FASE_4", sunatDocumentCod);
+    public SunatSendResultDto consultTicket(String sunatDocumentCod) {
+        SunatDocumentEntity document = this.findDocumentForProcess(sunatDocumentCod);
+        if (document.TicketSunat == null || document.TicketSunat.isBlank()) {
+            throw new IllegalArgumentException("Documento no tiene ticket SUNAT pendiente");
+        }
+        SunatConfigEntity config = this.findDocumentConfig(document);
+        try {
+            SunatSoapResponseDto response = this.sunatSoapClientService.getStatus(config, document.TicketSunat);
+            this.saveSoapResponse(config, document, SunatOperationTypeConst.CONSULT_TICKET, response);
+            document.TicketAttemptCount = document.TicketAttemptCount + 1;
+            document.TechnicalResponse = response.RawResponse;
+            if (response.hasFault() || response.HttpStatusCode != 200) {
+                document.ElectronicStatus = SunatElectronicStatusConst.ERROR;
+                document.LastFunctionalError = response.FaultString;
+                document.LastTechnicalError = response.RawResponse;
+                this.saveAttempt(document, SunatOperationTypeConst.CONSULT_TICKET, false, response.RawResponse, response.FaultString, response);
+                this.sunatDocumentRepository.save(document.session(this.getUserCod()));
+                return toSendResult(document, response.FaultString);
+            }
+            if (!response.hasContent()) {
+                document.ElectronicStatus = SunatElectronicStatusConst.PENDIENTE_TICKET;
+                this.saveAttempt(document, SunatOperationTypeConst.CONSULT_TICKET, true, response.RawResponse, "Ticket aun sin CDR", response);
+                this.sunatDocumentRepository.save(document.session(this.getUserCod()));
+                return toSendResult(document, "Ticket consultado sin CDR final");
+            }
+            SunatCdrResultDto cdr = this.sunatCdrProcessService.processBase64Cdr(config, document, response.ContentBase64);
+            applyCdrResult(document, cdr);
+            this.saveAttempt(document, SunatOperationTypeConst.CONSULT_TICKET, true, response.RawResponse, cdr.Description, response);
+            this.sunatDocumentRepository.save(document.session(this.getUserCod()));
+            return toSendResult(document, cdr.Description);
+        } catch (Exception ex) {
+            document.ElectronicStatus = SunatElectronicStatusConst.ERROR;
+            document.LastFunctionalError = "Error consultando ticket SUNAT";
+            document.LastTechnicalError = ex.getMessage();
+            this.saveAttempt(document, SunatOperationTypeConst.CONSULT_TICKET, false, ex.getMessage(), "Error consultando ticket SUNAT", null);
+            this.sunatDocumentRepository.save(document.session(this.getUserCod()));
+            throw new IllegalArgumentException("No se pudo consultar ticket SUNAT: " + ex.getMessage(), ex);
+        }
     }
 
     public SunatPendingOperationDto retry(String sunatDocumentCod) {
@@ -254,6 +355,10 @@ public class SunatDocumentOperationService extends SessionService {
         return document;
     }
 
+    private boolean isSummaryDocument(SunatDocumentEntity document) {
+        return "RC".equals(document.SunatDocumentType) || "RA".equals(document.SunatDocumentType);
+    }
+
     private SunatConfigEntity findDocumentConfig(SunatDocumentEntity document) {
         return this.sunatConfigRepository.findById(document.SunatConfigCod)
                 .orElseThrow(() -> new IllegalArgumentException("Configuracion SUNAT del documento no encontrada"));
@@ -271,6 +376,48 @@ public class SunatDocumentOperationService extends SessionService {
         );
     }
 
+    private SunatSendResultDto toSendResult(SunatDocumentEntity document, String message) {
+        SunatSendResultDto result = new SunatSendResultDto();
+        result.SunatDocumentCod = document.SunatDocumentCod;
+        result.ElectronicStatus = document.ElectronicStatus;
+        result.TicketSunat = document.TicketSunat;
+        result.SunatResponseCode = document.SunatResponseCode;
+        result.SunatResponseDescription = document.SunatResponseDescription;
+        result.SunatObservations = document.SunatObservations;
+        result.Message = message;
+        return result;
+    }
+
+    private void applyCdrResult(SunatDocumentEntity document, SunatCdrResultDto cdr) {
+        document.SunatResponseCode = cdr.ResponseCode;
+        document.SunatResponseDescription = cdr.Description;
+        document.SunatObservations = cdr.Observations;
+        document.ElectronicStatus = cdr.ElectronicStatus;
+        document.LastTechnicalError = null;
+        document.LastFunctionalError = null;
+        if (cdr.Accepted || cdr.AcceptedWithObservations) {
+            document.AcceptedDate = new Date();
+        }
+        if (cdr.Rejected) {
+            document.RejectedDate = new Date();
+        }
+    }
+
+    private void saveSoapResponse(SunatConfigEntity config, SunatDocumentEntity document, String operationType, SunatSoapResponseDto response) {
+        if (response == null || response.RawResponse == null || response.RawResponse.isBlank()) {
+            return;
+        }
+        String fileName = operationType + "-" + System.currentTimeMillis() + ".xml";
+        this.sunatFileStorageService.saveText(
+                config,
+                document,
+                SunatFileTypeConst.RESPONSE,
+                fileName,
+                "text/xml",
+                response.RawResponse
+        );
+    }
+
     private void saveAttempt(SunatDocumentEntity document, String operationType, boolean success,
                              String technicalMessage, String functionalMessage) {
         SunatDocumentAttemptEntity attempt = new SunatDocumentAttemptEntity();
@@ -281,6 +428,22 @@ public class SunatDocumentOperationService extends SessionService {
         attempt.Success = success ? "S" : "N";
         attempt.TechnicalMessage = technicalMessage;
         attempt.FunctionalMessage = functionalMessage;
+        this.sunatDocumentAttemptCreateService.save(attempt);
+    }
+
+    private void saveAttempt(SunatDocumentEntity document, String operationType, boolean success,
+                             String technicalMessage, String functionalMessage, SunatSoapResponseDto response) {
+        SunatDocumentAttemptEntity attempt = new SunatDocumentAttemptEntity();
+        attempt.SunatDocumentCod = document.SunatDocumentCod;
+        attempt.OperationType = operationType;
+        attempt.Environment = document.Environment;
+        attempt.Endpoint = response == null ? null : response.Endpoint;
+        attempt.AttemptNumber = this.sunatDocumentAttemptRepository.findBySunatDocumentCod(document.SunatDocumentCod).size() + 1;
+        attempt.Success = success ? "S" : "N";
+        attempt.TechnicalMessage = technicalMessage;
+        attempt.FunctionalMessage = functionalMessage;
+        attempt.SunatTicket = response == null ? null : response.Ticket;
+        attempt.SunatResponseCode = response == null ? null : response.FaultCode;
         this.sunatDocumentAttemptCreateService.save(attempt);
     }
 }

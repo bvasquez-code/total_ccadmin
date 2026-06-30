@@ -6,6 +6,7 @@ com\ccadmin\app\ApplicationSunatCcadminApplication.class
 com\ccadmin\app\shared\model\dto\ResponsePageSearchT.class
 com\ccadmin\app\sunat\model\dto\SunatDocumentStatusDto.class
 com\ccadmin\app\sunat\repository\SunatDocumentPayloadRepository.class
+com\ccadmin\app\sunat\service\SunatCdrProcessService.class
 com\ccadmin\app\sunat\repository\SunatDocumentRepository.class
 com\ccadmin\app\shared\model\dto\SearchDto.class
 com\ccadmin\app\sunat\service\SunatXmlSignatureService$CertificateData.class
@@ -15,7 +16,9 @@ com\ccadmin\app\sunat\model\entity\SunatDocumentFileEntity.class
 com\ccadmin\app\sunat\model\constants\SunatDocumentTypeConst.class
 com\ccadmin\app\sunat\model\entity\SunatDocumentPayloadEntity.class
 com\ccadmin\app\sunat\service\SunatXmlSignatureService.class
+com\ccadmin\app\sunat\model\dto\SunatSendResultDto.class
 com\ccadmin\app\sunat\model\entity\SunatDocumentEntity.class
+com\ccadmin\app\sunat\service\SunatCdrProcessService$ExtractedXml.class
 com\ccadmin\app\sunat\model\dto\SunatDocumentTotalsDto.class
 com\ccadmin\app\sunat\model\constants\SunatOperationTypeConst.class
 com\ccadmin\app\sunat\service\SunatDocumentAttemptCreateService.class
@@ -41,14 +44,17 @@ com\ccadmin\app\security\config\WebSecurityConfig.class
 com\ccadmin\app\sunat\service\SunatDocumentSearchService.class
 com\ccadmin\app\sunat\model\entity\SunatDocumentAttemptEntity.class
 com\ccadmin\app\shared\interfaceccadmin\CcAdminRepository.class
+com\ccadmin\app\sunat\model\dto\SunatSoapResponseDto.class
 com\ccadmin\app\sunat\service\SunatConfigSearchService.class
 com\ccadmin\app\sunat\repository\SunatDocumentAttemptRepository.class
 com\ccadmin\app\sunat\repository\SunatDocumentFileRepository.class
 com\ccadmin\app\sunat\model\dto\SunatDocumentLineDto.class
 com\ccadmin\app\sunat\model\constants\SunatFileTypeConst.class
+com\ccadmin\app\sunat\service\SunatSoapClientService.class
 com\ccadmin\app\sunat\controller\SunatDocumentController.class
 com\ccadmin\app\sunat\model\dto\SunatElectronicDocumentDto.class
 com\ccadmin\app\sunat\model\dto\SunatPartyDto.class
 com\ccadmin\app\sunat\model\dto\SunatRelatedDocumentDto.class
 com\ccadmin\app\sunat\service\SunatDocumentCreateService.class
+com\ccadmin\app\sunat\model\dto\SunatCdrResultDto.class
 com\ccadmin\app\sunat\service\SunatSchedulerService.class
