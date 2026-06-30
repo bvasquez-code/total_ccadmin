@@ -18,6 +18,7 @@ import { CreditNoteDetailDto } from '../model/dto/CreditNoteDetailDto';
 import { TransferRequestDetailDto } from '../../transfer/model/dto/TransferRequestDetailDto';
 import { TransferDocumentEntity } from '../../transfer/model/entity/TransferDocumentEntity';
 import { TransferDetEntity } from '../../transfer/model/entity/TransferDetEntity';
+import { ProductUnitHelper } from '../../shared/helper/ProductUnitHelper';
 
 @Injectable({ providedIn: 'root' })
 export class TicketSunatService {
@@ -119,12 +120,22 @@ export class TicketSunatService {
         docNumber: customerDocNumber,
         name: customerFullName
       },
-      items: items.map((it: any) => ({
-        desc: (it?.Product?.ProductName || it?.Product?.ProductDesc || '').substring(0, 60), // más ancho -> puedes mostrar más
-        cant: it.NumUnit,
-        pUnit: it.NumUnitPriceSale ?? it.NumUnitPrice,
-        total: it.NumTotalPrice
-      })),
+      items: items.map((it: any, index: number) => {
+        const productCod = it?.ProductCod || '';
+        const productName = it?.Product?.ProductName || it?.Product?.ProductDesc || '';
+        const productUnitFactor = ProductUnitHelper.normalizeFactor(Number(it?.ProductUnitFactor || 1));
+
+        return {
+          item: it?.ItemNumber || index + 1,
+          desc: this.buildProductCodeName(productCod, productName),
+          cant: ProductUnitHelper.toVisibleQuantity(Number(it?.NumUnit || 0), productUnitFactor),
+          unit: it?.ProductUnitName || 'NIU',
+          pUnit: ProductUnitHelper.toVisibleUnitPrice(Number((it?.NumUnitPriceSale ?? it?.NumUnitPrice) || 0), productUnitFactor),
+          total: it.NumTotalPrice,
+          lot: it?.LotNumber || '',
+          expirationDate: this.formatDateOnlyDDMMYYYY(it?.ExpirationDate)
+        };
+      }),
       totals: {
         opGravada: this.fmtNum(cab.NumTotalPriceNoTax),
         igv: this.fmtNum(cab.NumTotalTax),
@@ -361,14 +372,20 @@ export class TicketSunatService {
         driverDocNumber: doc?.DriverDocNumber || '',
         driverLicense: doc?.DriverLicenseNumber || ''
       },
-      items: items.map((it: any, index: number) => ({
-        item: it?.ItemNumber || index + 1,
-        productCod: it?.ProductCod || '',
-        description: it?.Product?.ProductName || it?.Product?.ProductDesc || it?.ProductCod || '',
-        quantity: it?.NumUnitDispatch || it?.NumUnit || 0,
-        unit: 'NIU',
-        lot: it?.LotNumber || ''
-      })),
+      items: items.map((it: any, index: number) => {
+        const productCod = it?.ProductCod || '';
+        const productName = it?.Product?.ProductName || it?.Product?.ProductDesc || '';
+        const internalQuantity = Number((it?.NumUnitDispatch ?? it?.NumUnit) || 0);
+
+        return {
+          item: it?.ItemNumber || index + 1,
+          description: this.buildProductCodeName(productCod, productName),
+          quantity: ProductUnitHelper.toVisibleQuantity(internalQuantity, it?.ProductUnitFactor),
+          unit: it?.ProductUnitName || 'NIU',
+          lot: it?.LotNumber || '',
+          expirationDate: this.formatDateOnlyDDMMYYYY(it?.ExpirationDate)
+        };
+      }),
       observation: head?.Observation || '',
       qrDataUrl,
       qrText
@@ -382,6 +399,12 @@ export class TicketSunatService {
   /** ========= Helpers ========= */
   private fmtNum(n: number): string { return (Number(n || 0)).toFixed(2); }
 
+  private formatQuantity(value: number): string {
+    const number = Number(value || 0);
+    if (Number.isInteger(number)) return number.toFixed(0);
+    return number.toFixed(2).replace(/\.?0+$/, '');
+  }
+
   private formatDateDDMMYYYY(iso: string): string {
     if (!iso) return '';
     const d = new Date(iso);
@@ -389,6 +412,19 @@ export class TicketSunatService {
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const yyyy = d.getFullYear();
     return `${dd}/${mm}/${yyyy}`;
+  }
+  private formatDateOnlyDDMMYYYY(value: any): string {
+    if (!value) return '';
+    const text = String(value);
+    const dateOnly = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (dateOnly) return `${dateOnly[3]}/${dateOnly[2]}/${dateOnly[1]}`;
+    return this.formatDateDDMMYYYY(text);
+  }
+  private buildProductCodeName(productCod: string, productName: string): string {
+    const code = (productCod || '').trim();
+    const name = (productName || '').trim();
+    if (code && name) return `${code} : ${name}`;
+    return code || name;
   }
   private formatTimeHHMM(iso: string): string {
     if (!iso) return '';
@@ -530,15 +566,21 @@ export class TicketSunatService {
     qrText: string
   }): string {
     const lines = (arr: any[]) => arr.join('');
-    const itemRows = lines(data.items.map((it: any) => `
+    const itemRows = lines(data.items.map((it: any) => {
+      const meta = [
+        it.lot ? `LOTE: ${this.escape(it.lot)}` : '',
+        it.expirationDate ? `VENCIMIENTO: ${this.escape(it.expirationDate)}` : ''
+      ].filter(Boolean).join(' | ');
+
+      return `
       <div class="item">
         <div class="row">
           <div class="desc">${this.escape(it.item)}. ${this.escape(it.description)}</div>
           <div class="amt">${this.escape(it.quantity)} ${this.escape(it.unit)}</div>
         </div>
-        <div class="small">${this.escape(it.productCod)}${it.lot ? ` | Lote: ${this.escape(it.lot)}` : ''}</div>
-      </div>`
-    ));
+        ${meta ? `<div class="small">${meta}</div>` : ''}
+      </div>`;
+    }));
 
     const LEFT = this.LEFT_OFFSET_MM;
     const PAD = this.H_PADDING_MM;
@@ -572,6 +614,7 @@ export class TicketSunatService {
       .amt { width: 28%; text-align: right; }
       .line { margin: 2px 0; word-wrap: break-word; }
       .label { font-weight: bold; }
+      .table-head { font-weight: bold; margin-bottom: 4px; }
       .item { margin-bottom: 4px; }
       .qr { display:flex; justify-content:center; margin-top:6px; }
       .qr img { width: 28mm; height: 28mm; }
@@ -637,6 +680,11 @@ export class TicketSunatService {
 
       <div class="sep"></div>
       <div class="small bold">BIENES TRANSPORTADOS</div>
+      <div class="sep"></div>
+      <div class="table-head">
+        <div class="row"><span>PRODUCTO</span><span>CANT.</span></div>
+      </div>
+      <div class="sep"></div>
       ${itemRows}
 
       ${data.observation ? `<div class="sep"></div><div class="small bold">OBSERVACION</div><div class="small line">${this.escape(data.observation)}</div>` : ''}
@@ -663,16 +711,29 @@ export class TicketSunatService {
   }): string {
 
     const lines = (arr: any[]) => arr.join('');
-    const itemRows = lines(data.items.map(i =>
-      `<div class="row item">
-         <div class="desc">${this.escape(i.desc)}</div>
-         <div class="amt">${this.escape(i.cant)} x ${this.fmtNum(i.pUnit)}</div>
-       </div>
+    const itemRows = lines(data.items.map(i => {
+      const meta = [
+        i.lot ? `LOTE: ${this.escape(i.lot)}` : '',
+        i.expirationDate ? `VENCIMIENTO: ${this.escape(i.expirationDate)}` : ''
+      ].filter(Boolean).join(' | ');
+      const desc = i.item ? `${this.escape(i.item)}. ${this.escape(i.desc)}` : this.escape(i.desc);
+      const quantity = i.unit
+        ? `${this.formatQuantity(i.cant)} ${this.escape(i.unit)}`
+        : this.escape(i.cant);
+
+      return `<div class="item">
        <div class="row">
-         <div class="spacer"></div>
-         <div class="imp">${this.fmtNum(i.total)}</div>
-       </div>`
-    ));
+         <div class="desc">${desc}</div>
+         <div class="amt">${quantity}</div>
+       </div>
+       ${meta ? `<div class="small">${meta}</div>` : ''}
+       <div class="amount-line">
+         <span></span>
+         <span>${this.fmtNum(i.pUnit)}</span>
+         <span>${this.fmtNum(i.total)}</span>
+       </div>
+      </div>`;
+    }));
     const pagoRows = lines(data.payments.map(p =>
       `<div class="row"><div class="desc">${this.escape(p.medio)} <br>${this.escape(p.ref)}</div><div class="imp">${p.monto}</div></div>`
     ));
@@ -716,6 +777,15 @@ export class TicketSunatService {
       .amt  { width: 28%; text-align: right; }
       .imp  { width: 28%; text-align: right; }
       .spacer { width: 70%; }
+      .table-head { font-weight: bold; margin-bottom: 4px; }
+      .amount-line {
+        display: grid;
+        grid-template-columns: 1fr 1.25fr 1.35fr;
+        gap: 5px;
+        margin-top: 2px;
+      }
+      .amount-line span { text-align: right; }
+      .amount-line span:first-child { text-align: left; }
 
       .kv, .subttl { display: flex; justify-content: space-between; }
       .qr { display:flex; justify-content:center; margin-top:6px; }
@@ -770,7 +840,13 @@ export class TicketSunatService {
       </div>
 
       <div class="sep"></div>
-      <div class="small bold">DETALLE</div>
+      <div class="row"><span><b>DETALLE DE VENTA</b></span></div>
+      <div class="sep"></div>
+      <div class="table-head">
+        <div class="row"><span>PRODUCTO</span><span>CANT.</span></div>
+        <div class="amount-line"><span></span><span>PREC. UNI.</span><span>TOTAL</span></div>
+      </div>
+      <div class="sep"></div>
       ${itemRows}
 
       <div class="sep"></div>
