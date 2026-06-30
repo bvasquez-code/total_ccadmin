@@ -99,7 +99,7 @@ export class PucharsePrintService {
             <tr>
                 <td>
                     <div>${this.escape(this.productDetailText(item))}</div>
-                    ${meta ? `<div class="small">${meta}</div>` : ""}
+                    ${meta ? `<div class="item-meta">${meta}</div>` : ""}
                 </td>
                 <td class="right">${this.escape(this.quantityText(item))}</td>
                 <td class="right">${this.formatNumber(item.numUnitPrice, 2)}</td>
@@ -125,6 +125,7 @@ export class PucharsePrintService {
                     th { background: #f1f3f5; font-size: ${this.BASE_FONT_PX}px; }
                     .right { text-align: right; }
                     .small { font-size: ${Math.max(this.BASE_FONT_PX - 1, 8)}px; color: #333; margin-top: 2px; }
+                    .item-meta { font-size: ${this.BASE_FONT_PX}px; color: #333; margin-top: 2px; }
                     .total { margin-top: 12px; text-align: right; font-weight: bold; font-size: ${this.BASE_FONT_PX}px; }
                     @media print { body { margin: 10mm; } }
                 </style>
@@ -172,7 +173,7 @@ export class PucharsePrintService {
                     <div class="desc">${this.escape(this.productDetailText(item))}</div>
                     <div class="amt">${this.escape(this.quantityText(item))}</div>
                 </div>
-                ${meta ? `<div class="small">${meta}</div>` : ""}
+                ${meta ? `<div class="item-meta">${meta}</div>` : ""}
                 <div class="amount-line">
                     <span></span>
                     <span>${this.formatNumber(item.numUnitPrice, 2)}</span>
@@ -206,6 +207,7 @@ export class PucharsePrintService {
                     .center { text-align: center; }
                     .bold { font-weight: bold; }
                     .small { font-size: ${Math.max(this.BASE_FONT_PX - 1, 8)}px; }
+                    .item-meta { font-size: ${this.BASE_FONT_PX}px; }
                     .sep { border-top: 1px dashed #000; margin: 6px 0; }
                     .row { display: flex; flex-direction: row; justify-content: space-between; gap: 6px; }
                     .label { font-weight: bold; }
@@ -290,10 +292,17 @@ export class PucharsePrintService {
     }
 
     private productMetaText(item: any): string {
+        const lotNumber = this.printLotNumber(item.lotNumber);
+
         return [
-            item.lotNumber ? `LOTE: ${this.escape(item.lotNumber)}` : "",
+            lotNumber ? `LOTE: ${this.escape(lotNumber)}` : "",
             item.expirationDate ? `VENCIMIENTO: ${this.escape(this.formatDate(item.expirationDate))}` : ""
         ].filter(Boolean).join(" | ");
+    }
+
+    private printLotNumber(value: any): string {
+        const text = String(value ?? "").trim();
+        return text && text.toUpperCase() !== "SN" ? text : "";
     }
 
     private quantityText(item: any): string {

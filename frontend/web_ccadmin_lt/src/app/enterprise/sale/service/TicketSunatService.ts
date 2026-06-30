@@ -104,7 +104,7 @@ export class TicketSunatService {
     const qrDataUrl = await QRCode.toDataURL(qrText, { margin: 0 });
 
     // === HTML y a imprimir ===
-    const html = this.renderHTML({
+    const html = this.renderSalesHTML({
       issuer: issuer,
       document: {
         typeText: docTypeCode === '03' ? 'BOLETA DE VENTA ELECTRÓNICA' : 'FACTURA ELECTRÓNICA',
@@ -132,7 +132,7 @@ export class TicketSunatService {
           unit: it?.ProductUnitName || 'NIU',
           pUnit: ProductUnitHelper.toVisibleUnitPrice(Number((it?.NumUnitPriceSale ?? it?.NumUnitPrice) || 0), productUnitFactor),
           total: it.NumTotalPrice,
-          lot: it?.LotNumber || '',
+          lot: this.printLotNumber(it?.LotNumber),
           expirationDate: this.formatDateOnlyDDMMYYYY(it?.ExpirationDate)
         };
       }),
@@ -231,14 +231,22 @@ export class TicketSunatService {
     try { qrDataUrl = await (QRCode as any).toDataURL(qrText, { margin: 0 }); } catch { /* noop */ }
 
     // === Items — SOLO con lo que viene: CreditNoteDet y Product ===
-    const items = rows.map((r: any) => {
+    const items = rows.map((r: any, index: number) => {
       const det = r?.CreditNoteDet || {};
       const prod = r?.Product || {};
+      const productCod = det?.ProductCod || prod?.ProductCod || '';
+      const productName = prod?.ProductName || prod?.ProductDesc || '';
+      const productUnitFactor = ProductUnitHelper.normalizeFactor(Number(det?.ProductUnitFactor || 1));
+
       return {
-        desc: (prod?.ProductName || prod?.ProductDesc || '').toString(),
-        cant: det?.NumUnit,
-        pUnit: det?.NumUnitPriceSale,   // en tu JSON viene este
-        total: det?.NumTotalPrice
+        item: det?.ItemNumber || index + 1,
+        desc: this.buildProductCodeName(productCod, productName),
+        cant: ProductUnitHelper.toVisibleQuantity(Number(det?.NumUnit || 0), productUnitFactor),
+        unit: det?.ProductUnitName || 'NIU',
+        pUnit: ProductUnitHelper.toVisibleUnitPrice(Number(det?.NumUnitPriceSale || 0), productUnitFactor),
+        total: det?.NumTotalPrice,
+        lot: this.printLotNumber(det?.LotNumber),
+        expirationDate: this.formatDateOnlyDDMMYYYY(det?.ExpirationDate)
       };
     });
 
@@ -248,7 +256,7 @@ export class TicketSunatService {
     const saleRef = (docRef?.DocumentCod || '').toString();
 
     // === HTML base reutilizando tu render ===
-    const htmlBase = this.renderHTML({
+    const html = this.renderCreditNoteHTML({
       issuer,
       document: {
         typeText: 'NOTA DE CRÉDITO ELECTRÓNICA',
@@ -277,21 +285,13 @@ export class TicketSunatService {
       })),
       qrDataUrl,
       qrText,
-      tipDoc: "creditnote"
+      tipDoc: "creditnote",
+      creditNoteInfo: {
+        typeNC,
+        comment,
+        saleRef
+      }
     });
-
-    // === Inyección de bloque informativo de NC (usando SOLO campos del JSON) ===
-    const html = htmlBase.replace(
-      '</div>\n\n      <div class="small">',
-      `</div>
-        <div class="small">
-          <div class="bold">Tipo NC: ${this.escape(typeNC)}</div>
-          ${comment ? `<div>Motivo: ${this.escape(comment)}</div>` : ''}
-          ${saleRef ? `<div>Ref. Venta: ${this.escape(saleRef)}</div>` : ''}
-        </div>
-
-        <div class="small">`
-    );
 
     this.openAndPrint(html);
   }
@@ -382,7 +382,7 @@ export class TicketSunatService {
           description: this.buildProductCodeName(productCod, productName),
           quantity: ProductUnitHelper.toVisibleQuantity(internalQuantity, it?.ProductUnitFactor),
           unit: it?.ProductUnitName || 'NIU',
-          lot: it?.LotNumber || '',
+          lot: this.printLotNumber(it?.LotNumber),
           expirationDate: this.formatDateOnlyDDMMYYYY(it?.ExpirationDate)
         };
       }),
@@ -419,6 +419,10 @@ export class TicketSunatService {
     const dateOnly = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
     if (dateOnly) return `${dateOnly[3]}/${dateOnly[2]}/${dateOnly[1]}`;
     return this.formatDateDDMMYYYY(text);
+  }
+  private printLotNumber(value: any): string {
+    const text = String(value ?? '').trim();
+    return text && text.toUpperCase() !== 'SN' ? text : '';
   }
   private buildProductCodeName(productCod: string, productName: string): string {
     const code = (productCod || '').trim();
@@ -578,7 +582,7 @@ export class TicketSunatService {
           <div class="desc">${this.escape(it.item)}. ${this.escape(it.description)}</div>
           <div class="amt">${this.escape(it.quantity)} ${this.escape(it.unit)}</div>
         </div>
-        ${meta ? `<div class="small">${meta}</div>` : ''}
+        ${meta ? `<div class="item-meta">${meta}</div>` : ''}
       </div>`;
     }));
 
@@ -608,6 +612,7 @@ export class TicketSunatService {
       .center { text-align: center; }
       .bold { font-weight: bold; }
       .small { font-size: ${Math.max(this.BASE_FONT_PX - 1, 8)}px; }
+      .item-meta { font-size: ${this.BASE_FONT_PX}px; line-height: 1.25; }
       .sep { border-top: 1px dashed #000; margin: 6px 0; }
       .row { display: flex; flex-direction: row; justify-content: space-between; gap: 6px; }
       .desc { width: 70%; word-wrap: break-word; }
@@ -705,9 +710,35 @@ export class TicketSunatService {
 
 
   /** ========= HTML 80mm (más ancho útil) ========= */
-  private renderHTML(data: {
+  private renderSalesHTML(data: {
     issuer: any, document: any, customer: any, items: any[],
     totals: any, payments: any[], qrDataUrl: string, qrText: string, tipDoc: string
+  }): string {
+    return this.renderTransactionHTML({
+      ...data,
+      tipDoc: 'sale',
+      detailTitle: 'DETALLE DE VENTA',
+      footerText: 'Gracias por su compra!'
+    });
+  }
+
+  private renderCreditNoteHTML(data: {
+    issuer: any, document: any, customer: any, items: any[],
+    totals: any, payments: any[], qrDataUrl: string, qrText: string, tipDoc: string,
+    creditNoteInfo: any
+  }): string {
+    return this.renderTransactionHTML({
+      ...data,
+      tipDoc: 'creditnote',
+      detailTitle: 'DETALLE DE NOTA DE CREDITO',
+      footerText: 'Consulte la validez del comprobante en SUNAT.'
+    });
+  }
+
+  private renderTransactionHTML(data: {
+    issuer: any, document: any, customer: any, items: any[],
+    totals: any, payments: any[], qrDataUrl: string, qrText: string, tipDoc: string,
+    detailTitle: string, footerText: string, creditNoteInfo?: any
   }): string {
 
     const lines = (arr: any[]) => arr.join('');
@@ -726,7 +757,7 @@ export class TicketSunatService {
          <div class="desc">${desc}</div>
          <div class="amt">${quantity}</div>
        </div>
-       ${meta ? `<div class="small">${meta}</div>` : ''}
+       ${meta ? `<div class="item-meta">${meta}</div>` : ''}
        <div class="amount-line">
          <span></span>
          <span>${this.fmtNum(i.pUnit)}</span>
@@ -768,7 +799,8 @@ export class TicketSunatService {
       }
       .center { text-align: center; }
       .bold { font-weight: bold; }
-      .small { font-size: ${Math.max(this.BASE_FONT_PX - 1, 11)}px; }
+      .small { font-size: ${Math.max(this.BASE_FONT_PX - 1, 8)}px; }
+      .item-meta { font-size: ${this.BASE_FONT_PX}px; line-height: 1.25; }
       .sep { border-top: 1px dashed #000; margin: 6px 0; }
       .row { display: flex; flex-direction: row; justify-content: space-between; }
 
@@ -838,9 +870,14 @@ export class TicketSunatService {
         ${data.customer.name ? `<div>Cliente: ${this.escape(data.customer.name)}</div>` : ''}
         ${data.customer.docType ? `<div>Doc: ${this.escape(data.customer.docType)} - ${this.escape(data.customer.docNumber)}</div>` : ''}
       </div>
+      ${data.creditNoteInfo ? `<div class="small">
+        <div class="bold">Tipo NC: ${this.escape(data.creditNoteInfo.typeNC)}</div>
+        ${data.creditNoteInfo.comment ? `<div>Motivo: ${this.escape(data.creditNoteInfo.comment)}</div>` : ''}
+        ${data.creditNoteInfo.saleRef ? `<div>Ref. Venta: ${this.escape(data.creditNoteInfo.saleRef)}</div>` : ''}
+      </div>` : ''}
 
       <div class="sep"></div>
-      <div class="row"><span><b>DETALLE DE VENTA</b></span></div>
+      <div class="row"><span><b>${this.escape(data.detailTitle)}</b></span></div>
       <div class="sep"></div>
       <div class="table-head">
         <div class="row"><span>PRODUCTO</span><span>CANT.</span></div>
@@ -865,10 +902,10 @@ export class TicketSunatService {
 
       ${data.tipDoc === "sale" ? `<div class="sep"></div><div class="small bold">PAGOS</div>${pagoRows}` : ''}
 
-      <div class="subttl small">
+      ${data.tipDoc === "sale" ? `<div class="subttl small">
         <span>Importe Total</span>
         <span>${this.escape(data.document.currencySymbol)} ${this.fmtNum(totalPagado)}</span>
-      </div>
+      </div>` : ''}
 
       ${data.tipDoc === "sale" ? `<div class="subttl small">
         <span>Vuelto</span>
@@ -881,7 +918,7 @@ export class TicketSunatService {
       </div>
       <div class="small center">* ${this.escape(data.document.typeText)} *</div>
       <div class="small center">Representación impresa del comprobante electrónico</div>
-      <div class="footer small">¡Gracias por su compra!</div>
+      <div class="footer small">${this.escape(data.footerText)}</div>
     </div>
   </div>
 </body>
