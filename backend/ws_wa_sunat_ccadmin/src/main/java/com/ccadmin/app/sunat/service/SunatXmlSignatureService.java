@@ -13,8 +13,10 @@ import javax.xml.crypto.dsig.SignatureMethod;
 import javax.xml.crypto.dsig.SignedInfo;
 import javax.xml.crypto.dsig.Transform;
 import javax.xml.crypto.dsig.XMLSignature;
+import javax.xml.crypto.dsig.XMLValidateContext;
 import javax.xml.crypto.dsig.XMLSignatureFactory;
 import javax.xml.crypto.dsig.dom.DOMSignContext;
+import javax.xml.crypto.dsig.dom.DOMValidateContext;
 import javax.xml.crypto.dsig.keyinfo.KeyInfo;
 import javax.xml.crypto.dsig.keyinfo.KeyInfoFactory;
 import javax.xml.crypto.dsig.keyinfo.X509Data;
@@ -72,7 +74,9 @@ public class SunatXmlSignatureService {
             signature.sign(signContext);
             Element signatureElement = (Element) document.getElementsByTagNameNS(XMLSignature.XMLNS, "Signature").item(0);
             signatureElement.setAttribute("Id", "SignatureSP");
-            return toXml(document);
+            String signedXml = toXml(document);
+            validateSignature(certificate.certificate, signedXml);
+            return signedXml;
         } catch (Exception ex) {
             throw new IllegalArgumentException("No se pudo firmar XML SUNAT: " + ex.getMessage(), ex);
         }
@@ -129,11 +133,26 @@ public class SunatXmlSignatureService {
         TransformerFactory transformerFactory = TransformerFactory.newInstance();
         Transformer transformer = transformerFactory.newTransformer();
         transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
-        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+        transformer.setOutputProperty(OutputKeys.INDENT, "no");
         transformer.setOutputProperty(OutputKeys.STANDALONE, "no");
         StringWriter writer = new StringWriter();
         transformer.transform(new DOMSource(document), new StreamResult(writer));
         return writer.toString();
+    }
+
+    private void validateSignature(X509Certificate certificate, String signedXml) throws Exception {
+        Document document = parseXml(signedXml);
+        NodeList signatures = document.getElementsByTagNameNS(XMLSignature.XMLNS, "Signature");
+        if (signatures.getLength() == 0) {
+            throw new IllegalArgumentException("XML firmado no contiene ds:Signature");
+        }
+        XMLValidateContext context = new DOMValidateContext(certificate.getPublicKey(), signatures.item(0));
+        context.setProperty("org.jcp.xml.dsig.secureValidation", Boolean.FALSE);
+        XMLSignatureFactory factory = XMLSignatureFactory.getInstance("DOM");
+        XMLSignature signature = factory.unmarshalXMLSignature(context);
+        if (!signature.validate(context)) {
+            throw new IllegalArgumentException("La firma XML generada no valida localmente");
+        }
     }
 
     private record CertificateData(PrivateKey privateKey, X509Certificate certificate) {

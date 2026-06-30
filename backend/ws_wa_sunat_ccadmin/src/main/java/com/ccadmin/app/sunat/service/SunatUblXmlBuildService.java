@@ -197,6 +197,11 @@ public class SunatUblXmlBuildService {
         if (partyDto.UbigeoCod != null && !partyDto.UbigeoCod.isBlank()) {
             text(document, address, CBC_NS, "cbc:ID", partyDto.UbigeoCod);
         }
+        if (supplier) {
+            Element addressTypeCode = text(document, address, CBC_NS, "cbc:AddressTypeCode", normalizeAddressTypeCode(partyDto.AddressTypeCode));
+            addressTypeCode.setAttribute("listAgencyName", "PE:SUNAT");
+            addressTypeCode.setAttribute("listName", "Establecimientos anexos");
+        }
         text(document, address, CBC_NS, "cbc:StreetName", partyDto.Address);
         if (partyDto.District != null && !partyDto.District.isBlank()) {
             text(document, address, CBC_NS, "cbc:CitySubdivisionName", partyDto.District);
@@ -384,5 +389,16 @@ public class SunatUblXmlBuildService {
 
     private boolean isPositive(BigDecimal value) {
         return value != null && value.compareTo(BigDecimal.ZERO) > 0;
+    }
+
+    private String normalizeAddressTypeCode(String value) {
+        if (value == null || value.isBlank()) {
+            return "0000";
+        }
+        String code = value.trim();
+        if (!code.matches("^\\d{4}$")) {
+            throw new IllegalArgumentException("AddressTypeCode del emisor debe tener 4 digitos");
+        }
+        return code;
     }
 }

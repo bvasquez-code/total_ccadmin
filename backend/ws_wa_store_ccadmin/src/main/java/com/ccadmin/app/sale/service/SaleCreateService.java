@@ -18,6 +18,8 @@ import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -54,6 +56,8 @@ public class SaleCreateService extends SessionService {
     private KardexShared kardexShared;
     @Autowired
     private CounterfoilShared counterfoilShared;
+    @Autowired
+    private SaleSunatEmissionService saleSunatEmissionService;
 
     @Transactional
     public SaleDetailDto save(PresaleDetailDto presaleDetail) throws SaleException, SaleBuildException {
@@ -178,6 +182,7 @@ public class SaleCreateService extends SessionService {
         SaleDetailDto saleDetail = this.saleSearchService.findById(saleHead.SaleCod);
 
         this.rankingProduct(saleDetail);
+        this.emitSunatAfterCommit(saleHead.SaleCod);
 
         log.info("FIN - CONFIRMACION DE VENTA : {}",SaleCod);
 
@@ -189,6 +194,23 @@ public class SaleCreateService extends SessionService {
                 productRankingService,saleDetail
         );
         this.genericQueuedService.addQueued(saleRankingService);
+    }
+
+    private void emitSunatAfterCommit(String saleCod) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    queueSunatEmission(saleCod);
+                }
+            });
+            return;
+        }
+        queueSunatEmission(saleCod);
+    }
+
+    private void queueSunatEmission(String saleCod) {
+        this.genericQueuedService.addQueued(new SaleSunatEmissionTaskService(this.saleSunatEmissionService, saleCod));
     }
 
     private List<KardexEntity> createkardexList(List<SaleDetWarehouseEntity> saleDetWarehouseList,SaleHeadEntity saleHead){

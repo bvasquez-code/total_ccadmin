@@ -24,6 +24,7 @@ CREATE TABLE `store` (
   `Description` varchar(128) DEFAULT NULL COMMENT 'descripcion de tienda',
   `Address` varchar(128) DEFAULT NULL COMMENT 'direccion',
   `UbigeoCod` varchar(12) DEFAULT NULL COMMENT 'codigo de ubigeo',
+  `SunatAddressTypeCode` varchar(4) NOT NULL DEFAULT '0000' COMMENT 'Codigo SUNAT de local anexo del emisor. 0000 corresponde al domicilio fiscal/principal.',
   `CreationUser` varchar(16) NOT NULL,
   `CreationDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `ModifyUser` varchar(16) DEFAULT NULL,
@@ -47,9 +48,17 @@ CREATE TABLE `store` (
         -- CASO: LA TABLA YA EXISTE -> APLICAR ALTERS
         -- =============================================
         
-        -- Aqui puedes agregar bloques IF NOT EXISTS para futuros ALTERs
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'store'
+              AND column_name = 'SunatAddressTypeCode'
+        ) THEN
+            ALTER TABLE `store`
+                ADD COLUMN `SunatAddressTypeCode` varchar(4) NOT NULL DEFAULT '0000' COMMENT 'Codigo SUNAT de local anexo del emisor. 0000 corresponde al domicilio fiscal/principal.' AFTER `UbigeoCod`;
+            SELECT 'Columna SunatAddressTypeCode agregada exitosamente.' AS Mensaje;
+        END IF;
         
-        SELECT 'Tabla store ya existe. No se realizaron cambios estructurales.' AS Mensaje;
+        SELECT 'Tabla store ya existe. Validacion de estructura completada.' AS Mensaje;
 
     END IF;
 

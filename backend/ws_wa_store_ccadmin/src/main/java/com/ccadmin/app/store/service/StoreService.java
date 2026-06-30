@@ -64,6 +64,7 @@ public class StoreService extends SessionService {
 
         boolean exists = this.storeRepository.existsById(store.StoreCod);
 
+        store.SunatAddressTypeCode = normalizeSunatAddressTypeCode(store.SunatAddressTypeCode);
         store.addSession(getUserCod());        
         StoreEntity savedStore = this.storeRepository.save(store);
 
@@ -79,5 +80,16 @@ public class StoreService extends SessionService {
         SearchDto search = new SearchDto(Query,Page);
         this.searchService = new SearchTService<StoreEntity>(this.storeRepository);
         return this.searchService.findAll(search,10);
+    }
+
+    private String normalizeSunatAddressTypeCode(String value) {
+        if (value == null || value.isBlank()) {
+            return "0000";
+        }
+        String code = value.trim();
+        if (!code.matches("^\\d{4}$")) {
+            throw new IllegalArgumentException("SunatAddressTypeCode debe tener 4 digitos");
+        }
+        return code;
     }
 }

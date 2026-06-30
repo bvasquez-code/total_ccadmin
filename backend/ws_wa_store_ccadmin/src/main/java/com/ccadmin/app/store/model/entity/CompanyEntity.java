@@ -20,6 +20,9 @@ public class CompanyEntity extends AuditTableEntity implements Serializable {
     public String FiscalAddress;
     public String Address;
     public String UbigeoCod;
+    public String Department;
+    public String Province;
+    public String District;
     public String CountryCode = "PE";
     public String Phone;
     public String Email;
@@ -46,6 +49,15 @@ public class CompanyEntity extends AuditTableEntity implements Serializable {
 
         if (CountryCode != null && !CountryCode.matches("^[A-Z]{2}$"))
             throw new IllegalArgumentException("CountryCode debe ser ISO-3166-1 alfa-2");
+
+        if (Department != null && Department.length() > 100)
+            throw new IllegalArgumentException("Department supera 100 caracteres");
+
+        if (Province != null && Province.length() > 100)
+            throw new IllegalArgumentException("Province supera 100 caracteres");
+
+        if (District != null && District.length() > 100)
+            throw new IllegalArgumentException("District supera 100 caracteres");
 
         if (Email != null && !Email.isBlank()
                 && !Email.matches("^[\\w.!#$%&’*+/=?`{|}~-]+@[\\w-]+(\\.[\\w-]+)+$"))

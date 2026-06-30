@@ -60,5 +60,8 @@ public class CompanyShared {
         if (e.CountryCode != null) e.CountryCode = e.CountryCode.trim().toUpperCase();
         //if (e.TaxId != null) e.TaxId = e.TaxId.trim();
         if (e.UbigeoCod != null) e.UbigeoCod = e.UbigeoCod.trim();
+        if (e.Department != null) e.Department = e.Department.trim();
+        if (e.Province != null) e.Province = e.Province.trim();
+        if (e.District != null) e.District = e.District.trim();
     }
 }

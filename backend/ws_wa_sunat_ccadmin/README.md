@@ -96,6 +96,7 @@ Configuracion:
 Documento electronico:
 
 - `POST api/v1/sunat/document/register`
+- `POST api/v1/sunat/document/process`
 - `POST api/v1/sunat/document/generateXml`
 - `POST api/v1/sunat/document/generateXmlById`
 - `GET api/v1/sunat/document/findById`
@@ -141,6 +142,7 @@ Ejemplo minimo para `POST api/v1/sunat/document/generateXml`:
     "TradeName": "EMPRESA DEMO",
     "Address": "AV. DEMO 123",
     "UbigeoCod": "150101",
+    "AddressTypeCode": "0000",
     "Department": "LIMA",
     "Province": "LIMA",
     "District": "LIMA",
@@ -192,6 +194,7 @@ Fase 3 implementada:
 
 Fase 4 implementada:
 
+- `process` ejecuta en una sola llamada `generateXml`, `signXml`, `generateZip` y `send`; es el endpoint recomendado para integraciones comerciales.
 - Cliente SUNAT BETA/PRODUCCION.
 - Envio de comprobantes individuales, resumen diario y comunicacion de baja.
 - Consulta de tickets.
@@ -200,6 +203,7 @@ Fase 4 implementada:
 - `consultTicket` llama `getStatus` usando el ticket guardado en `sunat_document`.
 - Las respuestas SOAP se guardan como archivo `RESPONSE`.
 - El CDR se guarda como `CDR_ZIP`, se extrae el XML y se guarda como `CDR_XML`.
+- `sunat_document` guarda el JSON recibido, XML generado, respuesta SUNAT, errores tecnicos/funcionales y `LastErrorType` (`INTERNAL`, `FUNCTIONAL`, `SUNAT`) para distinguir el origen del error.
 - El estado final depende del CDR: `ACE`, `OBS` o `REJ`; el HTTP 200 no marca el comprobante como aceptado por si solo.
 - Si SUNAT devuelve ticket, el documento queda en `TCK` hasta consultar el resultado final.
 

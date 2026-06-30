@@ -2,6 +2,7 @@ package com.ccadmin.app.sunat.service;
 
 import com.ccadmin.app.shared.service.SessionService;
 import com.ccadmin.app.sunat.model.constants.SunatElectronicStatusConst;
+import com.ccadmin.app.sunat.model.constants.SunatErrorTypeConst;
 import com.ccadmin.app.sunat.model.constants.SunatFileTypeConst;
 import com.ccadmin.app.sunat.model.constants.SunatOperationTypeConst;
 import com.ccadmin.app.sunat.model.dto.SunatElectronicDocumentDto;
@@ -23,11 +24,13 @@ import com.ccadmin.app.sunat.repository.SunatConfigRepository;
 import com.ccadmin.app.sunat.repository.SunatDocumentFileRepository;
 import com.ccadmin.app.sunat.utility.SunatDocumentNameUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
 
+@Slf4j
 @Service
 public class SunatDocumentOperationService extends SessionService {
 
@@ -86,6 +89,31 @@ public class SunatDocumentOperationService extends SessionService {
         return this.generateXml(document, request);
     }
 
+    public SunatSendResultDto process(SunatElectronicDocumentDto request) {
+        String sunatDocumentCod = null;
+        try {
+            SunatXmlGenerateResultDto xml = this.generateXml(request);
+            sunatDocumentCod = xml.SunatDocumentCod;
+            this.signXml(sunatDocumentCod);
+            this.generateZip(sunatDocumentCod);
+            return this.send(sunatDocumentCod);
+        } catch (Exception ex) {
+            log.error("Error procesando documento SUNAT completo. SunatDocumentCod={}", sunatDocumentCod, ex);
+            if (sunatDocumentCod != null) {
+                SunatDocumentEntity document = this.sunatDocumentRepository.findById(sunatDocumentCod).orElse(null);
+                if (document != null) {
+                    document.ElectronicStatus = SunatElectronicStatusConst.ERROR;
+                    document.LastErrorType = document.LastErrorType == null ? SunatErrorTypeConst.INTERNAL : document.LastErrorType;
+                    document.LastFunctionalError = document.LastFunctionalError == null ? "Error procesando documento SUNAT" : document.LastFunctionalError;
+                    document.LastTechnicalError = document.LastTechnicalError == null ? ex.getMessage() : document.LastTechnicalError;
+                    this.sunatDocumentRepository.save(document.session(this.getUserCod()));
+                    return toSendResult(document, ex.getMessage());
+                }
+            }
+            throw new IllegalArgumentException("No se pudo procesar documento SUNAT: " + ex.getMessage(), ex);
+        }
+    }
+
     public SunatXmlGenerateResultDto generateXml(String sunatDocumentCod) {
         SunatDocumentEntity document = this.sunatDocumentRepository.findById(sunatDocumentCod)
                 .orElseThrow(() -> new IllegalArgumentException("Documento SUNAT no encontrado"));
@@ -133,14 +161,17 @@ public class SunatDocumentOperationService extends SessionService {
             document.ElectronicStatus = SunatElectronicStatusConst.FIRMADO;
             document.LastTechnicalError = null;
             document.LastFunctionalError = null;
+            document.LastErrorType = null;
             document.addSession(this.getUserCod());
             this.sunatDocumentRepository.save(document);
             this.saveAttempt(document, SunatOperationTypeConst.SIGN_XML, true, "XML firmado", null);
             return toFileResult(document, signedFile);
         } catch (Exception ex) {
+            log.error("Error firmando XML SUNAT. SunatDocumentCod={}", sunatDocumentCod, ex);
             document.ElectronicStatus = SunatElectronicStatusConst.ERROR;
             document.LastFunctionalError = "Error firmando XML";
             document.LastTechnicalError = ex.getMessage();
+            document.LastErrorType = SunatErrorTypeConst.INTERNAL;
             document.addSession(this.getUserCod());
             this.sunatDocumentRepository.save(document);
             this.saveAttempt(document, SunatOperationTypeConst.SIGN_XML, false, ex.getMessage(), "Error firmando XML");
@@ -174,14 +205,17 @@ public class SunatDocumentOperationService extends SessionService {
             document.ElectronicStatus = SunatElectronicStatusConst.COMPRIMIDO;
             document.LastTechnicalError = null;
             document.LastFunctionalError = null;
+            document.LastErrorType = null;
             document.addSession(this.getUserCod());
             this.sunatDocumentRepository.save(document);
             this.saveAttempt(document, SunatOperationTypeConst.GENERATE_ZIP, true, "ZIP generado", null);
             return toFileResult(document, zipFile);
         } catch (Exception ex) {
+            log.error("Error generando ZIP SUNAT. SunatDocumentCod={}", sunatDocumentCod, ex);
             document.ElectronicStatus = SunatElectronicStatusConst.ERROR;
             document.LastFunctionalError = "Error generando ZIP";
             document.LastTechnicalError = ex.getMessage();
+            document.LastErrorType = SunatErrorTypeConst.INTERNAL;
             document.addSession(this.getUserCod());
             this.sunatDocumentRepository.save(document);
             this.saveAttempt(document, SunatOperationTypeConst.GENERATE_ZIP, false, ex.getMessage(), "Error generando ZIP");
@@ -213,6 +247,7 @@ public class SunatDocumentOperationService extends SessionService {
                 document.ElectronicStatus = SunatElectronicStatusConst.ERROR;
                 document.LastFunctionalError = response.FaultString;
                 document.LastTechnicalError = response.RawResponse;
+                document.LastErrorType = SunatErrorTypeConst.SUNAT;
                 this.saveAttempt(document, SunatOperationTypeConst.SEND, false, response.RawResponse, response.FaultString, response);
                 this.sunatDocumentRepository.save(document.session(this.getUserCod()));
                 return toSendResult(document, response.FaultString);
@@ -226,6 +261,7 @@ public class SunatDocumentOperationService extends SessionService {
                 document.ElectronicStatus = SunatElectronicStatusConst.PENDIENTE_TICKET;
                 document.LastTechnicalError = null;
                 document.LastFunctionalError = null;
+                document.LastErrorType = null;
                 this.saveAttempt(document, SunatOperationTypeConst.SEND, true, response.RawResponse, null, response);
                 this.sunatDocumentRepository.save(document.session(this.getUserCod()));
                 return toSendResult(document, "Documento enviado, pendiente de consulta de ticket");
@@ -240,9 +276,11 @@ public class SunatDocumentOperationService extends SessionService {
             this.sunatDocumentRepository.save(document.session(this.getUserCod()));
             return toSendResult(document, cdr.Description);
         } catch (Exception ex) {
+            log.error("Error enviando documento SUNAT. SunatDocumentCod={}", sunatDocumentCod, ex);
             document.ElectronicStatus = SunatElectronicStatusConst.ERROR;
             document.LastFunctionalError = "Error enviando documento SUNAT";
             document.LastTechnicalError = ex.getMessage();
+            document.LastErrorType = SunatErrorTypeConst.INTERNAL;
             this.saveAttempt(document, SunatOperationTypeConst.SEND, false, ex.getMessage(), "Error enviando documento SUNAT", null);
             this.sunatDocumentRepository.save(document.session(this.getUserCod()));
             throw new IllegalArgumentException("No se pudo enviar documento SUNAT: " + ex.getMessage(), ex);
@@ -264,6 +302,7 @@ public class SunatDocumentOperationService extends SessionService {
                 document.ElectronicStatus = SunatElectronicStatusConst.ERROR;
                 document.LastFunctionalError = response.FaultString;
                 document.LastTechnicalError = response.RawResponse;
+                document.LastErrorType = SunatErrorTypeConst.SUNAT;
                 this.saveAttempt(document, SunatOperationTypeConst.CONSULT_TICKET, false, response.RawResponse, response.FaultString, response);
                 this.sunatDocumentRepository.save(document.session(this.getUserCod()));
                 return toSendResult(document, response.FaultString);
@@ -280,9 +319,11 @@ public class SunatDocumentOperationService extends SessionService {
             this.sunatDocumentRepository.save(document.session(this.getUserCod()));
             return toSendResult(document, cdr.Description);
         } catch (Exception ex) {
+            log.error("Error consultando ticket SUNAT. SunatDocumentCod={}", sunatDocumentCod, ex);
             document.ElectronicStatus = SunatElectronicStatusConst.ERROR;
             document.LastFunctionalError = "Error consultando ticket SUNAT";
             document.LastTechnicalError = ex.getMessage();
+            document.LastErrorType = SunatErrorTypeConst.INTERNAL;
             this.saveAttempt(document, SunatOperationTypeConst.CONSULT_TICKET, false, ex.getMessage(), "Error consultando ticket SUNAT", null);
             this.sunatDocumentRepository.save(document.session(this.getUserCod()));
             throw new IllegalArgumentException("No se pudo consultar ticket SUNAT: " + ex.getMessage(), ex);
@@ -326,6 +367,7 @@ public class SunatDocumentOperationService extends SessionService {
             document.ElectronicStatus = SunatElectronicStatusConst.GENERADO;
             document.LastTechnicalError = null;
             document.LastFunctionalError = null;
+            document.LastErrorType = null;
             document.addSession(this.getUserCod());
             this.sunatDocumentRepository.save(document);
 
@@ -338,9 +380,11 @@ public class SunatDocumentOperationService extends SessionService {
                     xml
             );
         } catch (Exception ex) {
+            log.error("Error generando XML SUNAT. SunatDocumentCod={}", document.SunatDocumentCod, ex);
             document.ElectronicStatus = SunatElectronicStatusConst.ERROR;
             document.LastFunctionalError = "Error generando XML";
             document.LastTechnicalError = ex.getMessage();
+            document.LastErrorType = SunatErrorTypeConst.INTERNAL;
             document.addSession(this.getUserCod());
             this.sunatDocumentRepository.save(document);
             this.saveAttempt(document, SunatOperationTypeConst.GENERATE_XML, false, ex.getMessage(), "Error generando XML");
@@ -384,6 +428,11 @@ public class SunatDocumentOperationService extends SessionService {
         result.SunatResponseCode = document.SunatResponseCode;
         result.SunatResponseDescription = document.SunatResponseDescription;
         result.SunatObservations = document.SunatObservations;
+        result.LastErrorType = document.LastErrorType;
+        result.LastTechnicalError = document.LastTechnicalError;
+        result.LastFunctionalError = document.LastFunctionalError;
+        result.Processed = SunatElectronicStatusConst.isAccepted(document.ElectronicStatus)
+                || SunatElectronicStatusConst.PENDIENTE_TICKET.equals(document.ElectronicStatus);
         result.Message = message;
         return result;
     }
@@ -395,11 +444,14 @@ public class SunatDocumentOperationService extends SessionService {
         document.ElectronicStatus = cdr.ElectronicStatus;
         document.LastTechnicalError = null;
         document.LastFunctionalError = null;
+        document.LastErrorType = null;
         if (cdr.Accepted || cdr.AcceptedWithObservations) {
             document.AcceptedDate = new Date();
         }
         if (cdr.Rejected) {
             document.RejectedDate = new Date();
+            document.LastErrorType = SunatErrorTypeConst.SUNAT;
+            document.LastFunctionalError = cdr.Description;
         }
     }
 
@@ -443,7 +495,14 @@ public class SunatDocumentOperationService extends SessionService {
         attempt.TechnicalMessage = technicalMessage;
         attempt.FunctionalMessage = functionalMessage;
         attempt.SunatTicket = response == null ? null : response.Ticket;
-        attempt.SunatResponseCode = response == null ? null : response.FaultCode;
+        attempt.SunatResponseCode = response == null ? null : limit(response.FaultCode, 128);
         this.sunatDocumentAttemptCreateService.save(attempt);
+    }
+
+    private String limit(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength);
     }
 }

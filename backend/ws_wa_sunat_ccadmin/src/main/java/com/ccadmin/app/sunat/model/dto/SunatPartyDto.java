@@ -7,6 +7,7 @@ public class SunatPartyDto {
     public String TradeName;
     public String Address;
     public String UbigeoCod;
+    public String AddressTypeCode;
     public String Department;
     public String Province;
     public String District;

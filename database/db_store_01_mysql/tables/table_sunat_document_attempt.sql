@@ -23,7 +23,7 @@ BEGIN
           `TechnicalMessage` longtext DEFAULT NULL,
           `FunctionalMessage` varchar(500) DEFAULT NULL,
           `SunatTicket` varchar(128) DEFAULT NULL,
-          `SunatResponseCode` varchar(16) DEFAULT NULL,
+          `SunatResponseCode` varchar(128) DEFAULT NULL,
           `CreationUser` varchar(16) NOT NULL,
           `CreationDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
           `ModifyUser` varchar(16) DEFAULT NULL,
@@ -37,7 +37,18 @@ BEGIN
 
         SELECT 'Tabla sunat_document_attempt creada desde cero.' AS Mensaje;
     ELSE
-        SELECT 'Tabla sunat_document_attempt ya existe. No se realizaron cambios estructurales.' AS Mensaje;
+        IF EXISTS (
+            SELECT * FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'sunat_document_attempt'
+              AND column_name = 'SunatResponseCode'
+              AND CHARACTER_MAXIMUM_LENGTH < 128
+        ) THEN
+            ALTER TABLE `sunat_document_attempt`
+                MODIFY COLUMN `SunatResponseCode` varchar(128) DEFAULT NULL;
+            SELECT 'Columna SunatResponseCode ampliada a varchar(128).' AS Mensaje;
+        END IF;
+
+        SELECT 'Tabla sunat_document_attempt ya existe. Validacion de estructura completada.' AS Mensaje;
     END IF;
 END $$
 

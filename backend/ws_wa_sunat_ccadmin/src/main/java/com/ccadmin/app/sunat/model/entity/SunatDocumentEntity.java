@@ -40,6 +40,7 @@ public class SunatDocumentEntity extends AuditTableEntity implements Serializabl
     public String TechnicalResponse;
     public String LastTechnicalError;
     public String LastFunctionalError;
+    public String LastErrorType;
     public int SendAttemptCount;
     public int TicketAttemptCount;
     public Date AcceptedDate;

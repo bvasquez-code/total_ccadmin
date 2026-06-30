@@ -36,6 +36,7 @@ BEGIN
           `TechnicalResponse` longtext DEFAULT NULL,
           `LastTechnicalError` longtext DEFAULT NULL,
           `LastFunctionalError` varchar(500) DEFAULT NULL,
+          `LastErrorType` varchar(16) DEFAULT NULL COMMENT 'INTERNAL, FUNCTIONAL o SUNAT',
           `SendAttemptCount` int NOT NULL DEFAULT 0,
           `TicketAttemptCount` int NOT NULL DEFAULT 0,
           `AcceptedDate` datetime DEFAULT NULL,
@@ -69,6 +70,16 @@ BEGIN
             ALTER TABLE `sunat_document`
                 ADD COLUMN `LastFunctionalError` varchar(500) DEFAULT NULL AFTER `LastTechnicalError`;
             SELECT 'Columna LastFunctionalError agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'sunat_document'
+              AND column_name = 'LastErrorType'
+        ) THEN
+            ALTER TABLE `sunat_document`
+                ADD COLUMN `LastErrorType` varchar(16) DEFAULT NULL COMMENT 'INTERNAL, FUNCTIONAL o SUNAT' AFTER `LastFunctionalError`;
+            SELECT 'Columna LastErrorType agregada exitosamente.' AS Mensaje;
         END IF;
 
         SELECT 'Tabla sunat_document ya existe. Validacion de estructura completada.' AS Mensaje;

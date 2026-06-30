@@ -77,6 +77,12 @@ public class SunatDocumentController {
         catch (Exception ex) { return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST); }
     }
 
+    @PostMapping("process")
+    public ResponseEntity<ResponseWsDto> process(@RequestBody SunatElectronicDocumentDto request) {
+        try { return new ResponseEntity<>(new ResponseWsDto(sunatDocumentOperationService.process(request)), HttpStatus.OK); }
+        catch (Exception ex) { return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST); }
+    }
+
     @PostMapping("generateXmlById")
     public ResponseEntity<ResponseWsDto> generateXmlById(@RequestParam String SunatDocumentCod) {
         try { return new ResponseEntity<>(new ResponseWsDto(sunatDocumentOperationService.generateXml(SunatDocumentCod)), HttpStatus.OK); }
