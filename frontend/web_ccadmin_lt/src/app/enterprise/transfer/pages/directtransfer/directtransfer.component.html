@@ -188,12 +188,16 @@
         <h5 class="modal-title text-primary-d3">
           Transferir por lotes
         </h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close" #btnCloseLotDispatchModal>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close" #btnCloseLotDispatchModal (click)="clearConversionValidationMessage()">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
 
       <div class="modal-body py-3">
+        <div class="alert alert-danger py-2" *ngIf="conversionValidationMessage">
+          {{ conversionValidationMessage }}
+        </div>
+
         <div class="mb-2">
           <div class="text-600">{{ selectedDetail.Product.ProductName }}</div>
           <div class="text-muted text-90">
@@ -208,7 +212,7 @@
         <div class="row">
           <div class="col-md-3">
             <label class="mb-1">Cantidad</label>
-            <input type="number" min="1" class="form-control" #txtLotNumUnit>
+            <input type="number" min="1" class="form-control" #txtLotNumUnit (input)="clearConversionValidationMessage()">
           </div>
           <div class="col-md-4">
             <label class="mb-1">Lote</label>
@@ -261,7 +265,7 @@
       </div>
 
       <div class="modal-footer py-2">
-        <button type="button" class="btn btn-secondary px-4" data-dismiss="modal">
+        <button type="button" class="btn btn-secondary px-4" data-dismiss="modal" (click)="clearConversionValidationMessage()">
           Cerrar
         </button>
         <button type="button" class="btn btn-primary" (click)="confirmLotDispatch()">
@@ -280,24 +284,28 @@
         <h5 class="modal-title text-primary-d3">
           Agregar Producto
         </h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close" #btnCloseModal>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close" #btnCloseModal (click)="clearConversionValidationMessage()">
           <span aria-hidden="true">&times;</span>
         </button>
       </div>
 
       <div class="modal-body">
+        <div class="alert alert-danger py-2" *ngIf="conversionValidationMessage">
+          {{ conversionValidationMessage }}
+        </div>
+
         <div class="form-group">
           <label>Producto:</label>
           <input type="text" class="form-control" [value]="productSelect.ProductName" disabled>
         </div>
         <div class="form-group">
           <label>Cantidad:</label>
-          <input type="number" class="form-control" #txtNumUnit (keyup.enter)="AddProduct()">
+          <input type="number" class="form-control" #txtNumUnit (input)="clearConversionValidationMessage()" (keyup.enter)="AddProduct()">
         </div>
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal" (click)="clearConversionValidationMessage()">Cancelar</button>
         <button type="button" class="btn btn-primary" (click)="AddProduct()">
           Agregar
         </button>

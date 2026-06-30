@@ -62,6 +62,7 @@ export class DirecttransferComponent implements OnInit {
   selectedDetail: TransferDetEntity = new TransferDetEntity();
   isTransferWithLots: boolean = false;
   lotDispatchList: TransferLotDispatchDto[] = [];
+  conversionValidationMessage: string = '';
   private readonly maxLotNumberLength: number = 32;
 
   transportModeList = [
@@ -149,6 +150,7 @@ export class DirecttransferComponent implements OnInit {
   }
 
   async selectProduct(product: ProductSearchEntity) {
+    this.clearConversionValidationMessage();
     this.productSelect = product;
 
     if (this.isTransferWithLots) {
@@ -172,6 +174,7 @@ export class DirecttransferComponent implements OnInit {
   }
 
   async AddProduct() {
+    this.clearConversionValidationMessage();
     const product = this.productSelect;
     if (!product || !product.ProductCod) {
       this.toastrService.error('Seleccione un producto');
@@ -192,11 +195,13 @@ export class DirecttransferComponent implements OnInit {
     } else {
       transferDet = await this.buildTransferDetail(product, numUnit);
     }
+    const previousNumUnit = transferDet.NumUnit;
 
     const ProductUnitFactor = transferDet.ProductUnitFactor > 0 ? transferDet.ProductUnitFactor : 1;
     transferDet.NumUnit = numUnit * ProductUnitFactor;
 
     if(!await this.validateConvertProductBetweenStores(transferDet)){
+      transferDet.NumUnit = previousNumUnit;
       return;
     }
 
@@ -233,6 +238,7 @@ export class DirecttransferComponent implements OnInit {
   }
 
   closeModal() {
+    this.clearConversionValidationMessage();
     this.btnCloseModal.nativeElement.click();
   }
 
@@ -251,6 +257,7 @@ export class DirecttransferComponent implements OnInit {
   }
 
   openLotDispatchModal(det: TransferDetEntity) {
+    this.clearConversionValidationMessage();
     this.selectedDetail = det;
     this.lotDispatchList = [];
     this.clearLotDispatchForm();
@@ -258,6 +265,7 @@ export class DirecttransferComponent implements OnInit {
 
   addLotDispatchLine(): void {
     try {
+      this.clearConversionValidationMessage();
       const numUnit = Number(this.txtLotNumUnit.nativeElement.value);
       const lotNumber = this.txtLotNumber.nativeElement.value.trim();
       const expirationDate = this.txtExpirationDate.nativeElement.value;
@@ -330,6 +338,7 @@ export class DirecttransferComponent implements OnInit {
 
       this.replaceTransferLine(this.selectedDetail,detailList );
       this.lotDispatchList = [];
+      this.clearConversionValidationMessage();
       this.btnCloseLotDispatchModal.nativeElement.click();
     } catch (e: any) {
       this.toastrService.error(e.message);
@@ -579,13 +588,33 @@ export class DirecttransferComponent implements OnInit {
       const ProductConversionResult : ProductConversionResultDto = rpt.Data;
 
       if(!ProductConversionResult.valid){
-        this.toastrService.error(ProductConversionResult.message);
+        this.conversionValidationMessage = this.buildProductConversionErrorMessage(transferDet, ProductConversionResult);
+        this.toastrService.error(this.conversionValidationMessage);
+      } else {
+        this.clearConversionValidationMessage();
       }
       return ProductConversionResult.valid;
     }else{
+      this.conversionValidationMessage = "No se pudo evaluar la conversiÃ³n de productos entre locales, intentelo nuevamente.";
       this.toastrService.error("No se pudo evaluar la conversión de productos entre locales, intentelo nuevamente.");
     }
     return false;
+  }
+
+  clearConversionValidationMessage(): void {
+    this.conversionValidationMessage = '';
+  }
+
+  private buildProductConversionErrorMessage(transferDet: TransferDetEntity, result: ProductConversionResultDto): string {
+    const productName = transferDet.Product?.ProductCod;
+    const visibleQuantity = ProductUnitHelper.toVisibleQuantity(transferDet.NumUnit, transferDet.ProductUnitFactor);
+    const originStore = this.getStoredCodOrigin();
+    const destinationStore = this.getStoredCodDestination();
+    const detail = result?.message ? ` Detalle: ${result.message}` : '';
+
+    return `No se puede transferir ${visibleQuantity} ${transferDet.ProductUnitName || 'NIU'} del producto "${productName}" `
+      + `desde el local ${originStore} hacia el local ${destinationStore}. `
+      + `La cantidad no coincide con la unidad de venta configurada en el local destino.${detail}`;
   }
 
   getStoredCodOrigin(){

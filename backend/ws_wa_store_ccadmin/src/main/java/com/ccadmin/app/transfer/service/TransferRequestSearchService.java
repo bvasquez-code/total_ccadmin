@@ -1,8 +1,6 @@
 package com.ccadmin.app.transfer.service;
 
-import com.ccadmin.app.product.model.entity.ProductConfigEntity;
 import com.ccadmin.app.product.model.entity.ProductEntity;
-import com.ccadmin.app.product.shared.ProductSearchShared;
 import com.ccadmin.app.product.shared.ProductShared;
 import com.ccadmin.app.shared.model.dto.ResponsePageSearch;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
@@ -18,6 +16,7 @@ import com.ccadmin.app.transfer.model.dto.TransferSearchDto;
 import com.ccadmin.app.transfer.model.entity.TransferHeadEntity;
 import com.ccadmin.app.transfer.model.entity.TransferRequestHeadEntity;
 import com.ccadmin.app.transfer.repository.*;
+import com.ccadmin.app.transfer.service.helper.ProductTransferConversionHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -44,7 +43,7 @@ public class TransferRequestSearchService extends SessionService {
     @Autowired
     private WarehouseShared warehouseShared;
     @Autowired
-    private ProductSearchShared productSearchShared;
+    private ProductTransferConversionHelper productTransferConversionHelper;
 
     public TransferRequestDetailDto findByTransferCod(String transferCod) {
         TransferRequestDetailDto detail = new TransferRequestDetailDto();
@@ -166,73 +165,7 @@ public class TransferRequestSearchService extends SessionService {
         return new ResponsePageSearch(result, page, limit, total);
     }
 
-    public ProductConversionResultDto validateConvertProductBetweenStores(ProductConversionRequestDto request){
-
-        ProductConfigEntity productConfigOrigen = this.productSearchShared
-                .findConfigByIdAndStore(request.ProductCod,request.StoredCodOrigin);
-        ProductConfigEntity productConfigDestination = this.productSearchShared
-                .findConfigByIdAndStore(request.ProductCod,request.StoredCodDestination);
-
-        return validateQuantityConversion(
-                request.quantityToConvert,
-                productConfigOrigen.ProductUnitFactor,
-                productConfigDestination.ProductUnitFactor
-        );
+    public ProductConversionResultDto validateConvertProductBetweenStores(ProductConversionRequestDto request) {
+        return this.productTransferConversionHelper.validateConvertProductBetweenStores(request);
     }
-
-    public static ProductConversionResultDto validateQuantityConversion(
-            long quantityToConvert,
-            long originFactor,
-            long destinationFactor
-    ) {
-        if (quantityToConvert <= 0) {
-            return ProductConversionResultDto.error(
-                    "La cantidad a convertir debe ser mayor a cero."
-            );
-        }
-
-        if (originFactor <= 0) {
-            return ProductConversionResultDto.error(
-                    "El factor del local origen debe ser mayor a cero."
-            );
-        }
-
-        if (destinationFactor <= 0) {
-            return ProductConversionResultDto.error(
-                    "El factor del local destino debe ser mayor a cero."
-            );
-        }
-
-        final long atomicQuantity;
-
-        try {
-            atomicQuantity = Math.multiplyExact(quantityToConvert, originFactor);
-        } catch (ArithmeticException ex) {
-            return ProductConversionResultDto.error(
-                    "La cantidad convertida supera el límite permitido."
-            );
-        }
-
-        long remainder = atomicQuantity % destinationFactor;
-
-        if (remainder != 0) {
-            long integerPart = atomicQuantity / destinationFactor;
-
-            return ProductConversionResultDto.error(
-                    "No es posible realizar la conversión. " +
-                            "La cantidad en unidad mínima es " + atomicQuantity +
-                            ", pero no puede dividirse exactamente entre el factor destino " + destinationFactor +
-                            ". Resultado parcial: " + integerPart + " con residuo " + remainder + "."
-            );
-        }
-
-        long convertedQuantity = atomicQuantity / destinationFactor;
-
-        return ProductConversionResultDto.ok(
-                atomicQuantity,
-                convertedQuantity,
-                "Conversión válida."
-        );
-    }
-
 }

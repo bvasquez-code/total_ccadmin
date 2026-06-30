@@ -21,6 +21,7 @@ import com.ccadmin.app.transfer.model.dto.TransferReceiveDto;
 import com.ccadmin.app.transfer.model.dto.TransferRequestRegisterBundleDto;
 import com.ccadmin.app.transfer.model.entity.*;
 import com.ccadmin.app.transfer.repository.*;
+import com.ccadmin.app.transfer.service.helper.ProductTransferConversionHelper;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -48,6 +49,8 @@ public class TransferRequestCreateService extends SessionService {
     private KardexShared kardexShared;
     @Autowired
     private CounterfoilShared counterfoilShared;
+    @Autowired
+    private ProductTransferConversionHelper productTransferConversionHelper;
 
     public String createCode(String storeCod){
         return this.transferRequestHeadRepository.getTransferCod(storeCod);
@@ -395,8 +398,14 @@ public class TransferRequestCreateService extends SessionService {
             if (det.ProductUnitFactor <= 0) {
                 det.ProductUnitFactor = config.ProductUnitFactor;
             }
-            this.productOperationConfigShared.validateInternalQuantity(det.ProductCod, det.NumUnit, configOrigin.ProductUnitFactor);
-            this.productOperationConfigShared.validateInternalQuantity(det.ProductCod, det.NumUnit, det.ProductUnitFactor);
+            this.productTransferConversionHelper.validateInternalQuantityBetweenStoresOrThrow(
+                    det.ProductCod,
+                    det.NumUnit,
+                    head.StoreCodOrigin,
+                    head.StoreCodDest,
+                    configOrigin,
+                    config
+            );
 
             if (StringUtil.isNotEmpty(det.WarehouseCodOrigin)) {
                 WarehouseEntity whOrigin = this.warehouseRepository.findById(det.WarehouseCodOrigin)

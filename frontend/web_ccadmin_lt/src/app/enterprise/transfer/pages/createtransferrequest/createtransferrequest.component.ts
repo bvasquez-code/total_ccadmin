@@ -7,11 +7,14 @@ import { ProductService } from 'src/app/enterprise/product/service/product.servi
 import { ProductSearchService } from 'src/app/enterprise/product/service/productsearch.service';
 import { ProductSearchDto } from 'src/app/enterprise/product/model/dto/ProductSearchDto';
 import { ProductSearchEntity } from 'src/app/enterprise/product/model/entity/ProductSearchEntity';
+import { ProductConversionRequestDto } from 'src/app/enterprise/product/model/dto/ProductConversionRequestDto';
+import { ProductConversionResultDto } from 'src/app/enterprise/product/model/dto/ProductConversionResultDto';
 import { DataSesionService } from 'src/app/enterprise/compartido/service/datasesion.service';
 import { IRegisterForm } from 'src/app/enterprise/shared/interface/IRegisterForm';
 import { ResponsePageSearch } from 'src/app/enterprise/shared/model/dto/ResponsePageSearch';
 import { ResponseWsDto } from 'src/app/enterprise/shared/model/dto/ResponseWsDto';
 import { ValidationHelper } from 'src/app/enterprise/shared/helper/ValidationHelper';
+import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
 import { StoreEntity } from 'src/app/enterprise/shared/model/entity/StoreEntity';
 import { TransferRegisterBundleDto } from '../../model/dto/TransferRegisterBundleDto';
 import { TransferDetEntity } from '../../model/entity/TransferDetEntity';
@@ -42,6 +45,7 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
   productSelect: ProductSearchEntity = new ProductSearchEntity();
   productSearch: ProductSearchDto = new ProductSearchDto();
   storeList: StoreEntity[] = [];
+  conversionValidationMessage: string = '';
 
   constructor(
     private transferService: TransferService,
@@ -183,6 +187,7 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
   }
 
   selectProduct(product: ProductSearchEntity) {
+    this.clearConversionValidationMessage();
     this.txtNumUnit.nativeElement.value = '';
     this.productSelect = product;
 
@@ -193,6 +198,7 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
   }
 
   async AddProduct() {
+    this.clearConversionValidationMessage();
     const product = this.productSelect;
     if (!product || !product.ProductCod) {
       this.toastrService.error('Seleccione un producto');
@@ -205,6 +211,9 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
     if (transferDetExist) {
       transferDet = transferDetExist;
     }
+    const previousNumUnit = transferDet.NumUnit;
+    const previousProductUnitName = transferDet.ProductUnitName;
+    const previousProductUnitFactor = transferDet.ProductUnitFactor;
 
     const numUnit = Number(this.txtNumUnit.nativeElement.value);
     if (!numUnit || numUnit <= 0) {
@@ -212,7 +221,7 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
       return;
     }
 
-    let productInfoDto: ProductInfoDto = await this.findDetailById(product.ProductCod);
+    let productInfoDto: ProductInfoDto = await this.findDetailById(product.ProductCod, this.getStoredCodOrigin());
     const productEntity: ProductEntity = new ProductEntity();
     productEntity.ProductCod = product.ProductCod;
     productEntity.ProductName = product.ProductName;
@@ -224,6 +233,13 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
     transferDet.ProductUnitName = productInfoDto.Config.ProductUnitName || 'NIU';
     transferDet.ProductUnitFactor = ProductUnitFactor;
     transferDet.Product = productEntity;
+
+    if (!await this.validateConvertProductBetweenStores(transferDet)) {
+      transferDet.NumUnit = previousNumUnit;
+      transferDet.ProductUnitName = previousProductUnitName;
+      transferDet.ProductUnitFactor = previousProductUnitFactor;
+      return;
+    }
 
     if (!transferDetExist) {
       this.transferRequestRegister.transferDetList.push(transferDet);
@@ -247,12 +263,12 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
     this.transferRequestRegister.transferDetList = this.transferRequestRegister.transferDetList.filter(e => !this.sameDetailLine(e, product));
   }
 
-  async findDetailById(ProductCod: string): Promise<ProductInfoDto> {
+  async findDetailById(ProductCod: string, StoreCod: string = this.session.getSessionStorageDto().StoreCod): Promise<ProductInfoDto> {
     let productInfoDto: ProductInfoDto = new ProductInfoDto();
 
     const rpt: ResponseWsDto = await this.productService.findDetailById(
       ProductCod,
-      this.session.getSessionStorageDto().StoreCod
+      StoreCod
     );
 
     if (!rpt.ErrorStatus) {
@@ -291,6 +307,58 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
   @ViewChild('btnCloseModal') btnCloseModal!: ElementRef<HTMLButtonElement>;
 
   closeModal() {
+    this.clearConversionValidationMessage();
     this.btnCloseModal.nativeElement.click();
+  }
+
+  async validateConvertProductBetweenStores(transferDet: TransferRequestDetEntity): Promise<boolean> {
+    const request: ProductConversionRequestDto = new ProductConversionRequestDto();
+
+    request.ProductCod = transferDet.ProductCod;
+    request.quantityToConvert = ProductUnitHelper.toVisibleQuantity(transferDet.NumUnit, transferDet.ProductUnitFactor);
+    request.StoredCodDestination = this.getStoredCodDestination();
+    request.StoredCodOrigin = this.getStoredCodOrigin();
+
+    const rpt: ResponseWsDto = await this.transferRequestService.validateConvertProductBetweenStores(request);
+
+    if (!rpt.ErrorStatus) {
+      const productConversionResult: ProductConversionResultDto = rpt.Data;
+
+      if (!productConversionResult.valid) {
+        this.conversionValidationMessage = this.buildProductConversionErrorMessage(transferDet, productConversionResult);
+        this.toastrService.error(this.conversionValidationMessage);
+      } else {
+        this.clearConversionValidationMessage();
+      }
+      return productConversionResult.valid;
+    } else {
+      this.conversionValidationMessage = 'No se pudo validar si el producto puede transferirse entre locales. Intentelo nuevamente.';
+      this.toastrService.error(this.conversionValidationMessage);
+    }
+    return false;
+  }
+
+  clearConversionValidationMessage(): void {
+    this.conversionValidationMessage = '';
+  }
+
+  private buildProductConversionErrorMessage(transferDet: TransferRequestDetEntity, result: ProductConversionResultDto): string {
+    const productName = transferDet.Product?.ProductName || transferDet.ProductCod;
+    const visibleQuantity = ProductUnitHelper.toVisibleQuantity(transferDet.NumUnit, transferDet.ProductUnitFactor);
+    const originStore = this.getStoredCodOrigin();
+    const destinationStore = this.getStoredCodDestination();
+    const detail = result?.message ? ` Detalle: ${result.message}` : '';
+
+    return `No se puede solicitar ${visibleQuantity} ${transferDet.ProductUnitName || 'NIU'} del producto "${productName}" `
+      + `desde el local ${originStore} hacia el local ${destinationStore}. `
+      + `La cantidad no coincide con la unidad de venta configurada en el local destino.${detail}`;
+  }
+
+  getStoredCodOrigin(): string {
+    return this.cboStoreOrigin.nativeElement.value;
+  }
+
+  getStoredCodDestination(): string {
+    return this.session.getSessionStorageDto().StoreCod;
   }
 }
