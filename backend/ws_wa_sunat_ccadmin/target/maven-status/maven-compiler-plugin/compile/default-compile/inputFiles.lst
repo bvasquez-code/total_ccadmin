@@ -25,6 +25,7 @@ C:\proyectos\multiple\total_ccadmin\backend\ws_wa_sunat_ccadmin\src\main\java\co
 C:\proyectos\multiple\total_ccadmin\backend\ws_wa_sunat_ccadmin\src\main\java\com\ccadmin\app\sunat\service\SunatConfigCreateService.java
 C:\proyectos\multiple\total_ccadmin\backend\ws_wa_sunat_ccadmin\src\main\java\com\ccadmin\app\sunat\model\dto\SunatRelatedDocumentDto.java
 C:\proyectos\multiple\total_ccadmin\backend\ws_wa_sunat_ccadmin\src\main\java\com\ccadmin\app\sunat\controller\SunatConfigController.java
+C:\proyectos\multiple\total_ccadmin\backend\ws_wa_sunat_ccadmin\src\main\java\com\ccadmin\app\sunat\model\dto\SunatPaymentTermDto.java
 C:\proyectos\multiple\total_ccadmin\backend\ws_wa_sunat_ccadmin\src\main\java\com\ccadmin\app\sunat\service\SunatDocumentAttemptCreateService.java
 C:\proyectos\multiple\total_ccadmin\backend\ws_wa_sunat_ccadmin\src\main\java\com\ccadmin\app\sunat\service\SunatDocumentCreateService.java
 C:\proyectos\multiple\total_ccadmin\backend\ws_wa_sunat_ccadmin\src\main\java\com\ccadmin\app\sunat\utility\SunatCodeUtil.java

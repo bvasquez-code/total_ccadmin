@@ -42,6 +42,7 @@ com\ccadmin\app\shared\service\SearchTService.class
 com\ccadmin\app\sunat\model\constants\SunatErrorTypeConst.class
 com\ccadmin\app\sunat\utility\SunatCodeUtil.class
 com\ccadmin\app\security\config\WebSecurityConfig.class
+com\ccadmin\app\sunat\model\dto\SunatPaymentTermDto.class
 com\ccadmin\app\sunat\service\SunatDocumentSearchService.class
 com\ccadmin\app\sunat\model\entity\SunatDocumentAttemptEntity.class
 com\ccadmin\app\shared\interfaceccadmin\CcAdminRepository.class

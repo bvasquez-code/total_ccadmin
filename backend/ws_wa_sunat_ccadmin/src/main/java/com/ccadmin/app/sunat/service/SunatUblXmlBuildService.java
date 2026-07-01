@@ -5,6 +5,7 @@ import com.ccadmin.app.sunat.model.dto.SunatDocumentLineDto;
 import com.ccadmin.app.sunat.model.dto.SunatDocumentTotalsDto;
 import com.ccadmin.app.sunat.model.dto.SunatElectronicDocumentDto;
 import com.ccadmin.app.sunat.model.dto.SunatPartyDto;
+import com.ccadmin.app.sunat.model.dto.SunatPaymentTermDto;
 import com.ccadmin.app.sunat.model.dto.SunatRelatedDocumentDto;
 import com.ccadmin.app.sunat.utility.SunatDocumentNameUtil;
 import org.springframework.stereotype.Service;
@@ -54,6 +55,7 @@ public class SunatUblXmlBuildService {
             appendNoteReferences(document, root, dto);
             appendSupplier(document, root, dto.Supplier);
             appendCustomer(document, root, dto.Customer);
+            appendPaymentTerms(document, root, dto);
             appendTaxTotal(document, root, dto.Totals, dto.CurrencyCod);
             appendMonetaryTotal(document, root, dto);
             appendLines(document, root, dto);
@@ -152,6 +154,38 @@ public class SunatUblXmlBuildService {
         root.appendChild(accountingCustomerParty);
     }
 
+    private void appendPaymentTerms(Document document, Element root, SunatElectronicDocumentDto dto) {
+        if (!SunatDocumentTypeConst.FACTURA.equals(dto.SunatDocumentType) && !SunatDocumentTypeConst.BOLETA.equals(dto.SunatDocumentType)) {
+            return;
+        }
+
+        String condition = dto.PaymentCondition == null || dto.PaymentCondition.isBlank() ? "Contado" : dto.PaymentCondition.trim();
+        Element paymentTerm = element(document, CAC_NS, "cac:PaymentTerms");
+        text(document, paymentTerm, CBC_NS, "cbc:ID", "FormaPago");
+        text(document, paymentTerm, CBC_NS, "cbc:PaymentMeansID", condition);
+        if ("Credito".equalsIgnoreCase(condition)) {
+            money(document, paymentTerm, "cbc:Amount", dto.Totals == null ? BigDecimal.ZERO : dto.Totals.PayableAmount, dto.CurrencyCod);
+        }
+        root.appendChild(paymentTerm);
+
+        if (!"Credito".equalsIgnoreCase(condition) || dto.PaymentTerms == null) {
+            return;
+        }
+
+        int number = 1;
+        for (SunatPaymentTermDto term : dto.PaymentTerms) {
+            Element installment = element(document, CAC_NS, "cac:PaymentTerms");
+            text(document, installment, CBC_NS, "cbc:ID", "FormaPago");
+            text(document, installment, CBC_NS, "cbc:PaymentMeansID", term.PaymentMeansId == null || term.PaymentMeansId.isBlank()
+                    ? String.format("Cuota%03d", number)
+                    : term.PaymentMeansId.trim());
+            money(document, installment, "cbc:Amount", term.Amount, dto.CurrencyCod);
+            text(document, installment, CBC_NS, "cbc:PaymentDueDate", formatDate(term.PaymentDueDate));
+            root.appendChild(installment);
+            number++;
+        }
+    }
+
     private void appendParty(Document document, Element parent, SunatPartyDto partyDto, boolean supplier) {
         Element party = element(document, CAC_NS, "cac:Party");
 
@@ -167,7 +201,9 @@ public class SunatUblXmlBuildService {
         text(document, partyName, CBC_NS, "cbc:Name", tradeName);
         party.appendChild(partyName);
 
-        appendAddress(document, party, partyDto, supplier);
+        if (!supplier) {
+            appendAddress(document, party, partyDto, "cac:PostalAddress", false);
+        }
 
         Element partyTaxScheme = element(document, CAC_NS, "cac:PartyTaxScheme");
         text(document, partyTaxScheme, CBC_NS, "cbc:RegistrationName", partyDto.LegalName);
@@ -184,18 +220,23 @@ public class SunatUblXmlBuildService {
 
         Element partyLegalEntity = element(document, CAC_NS, "cac:PartyLegalEntity");
         text(document, partyLegalEntity, CBC_NS, "cbc:RegistrationName", partyDto.LegalName);
+        if (supplier) {
+            appendAddress(document, partyLegalEntity, partyDto, "cac:RegistrationAddress", true);
+        }
         party.appendChild(partyLegalEntity);
 
         parent.appendChild(party);
     }
 
-    private void appendAddress(Document document, Element party, SunatPartyDto partyDto, boolean supplier) {
+    private void appendAddress(Document document, Element parent, SunatPartyDto partyDto, String elementName, boolean supplier) {
         if (partyDto.Address == null || partyDto.Address.isBlank()) {
             return;
         }
-        Element address = element(document, CAC_NS, supplier ? "cac:PostalAddress" : "cac:PostalAddress");
+        Element address = element(document, CAC_NS, elementName);
         if (partyDto.UbigeoCod != null && !partyDto.UbigeoCod.isBlank()) {
-            text(document, address, CBC_NS, "cbc:ID", partyDto.UbigeoCod);
+            Element ubigeo = text(document, address, CBC_NS, "cbc:ID", partyDto.UbigeoCod);
+            ubigeo.setAttribute("schemeAgencyName", "PE:INEI");
+            ubigeo.setAttribute("schemeName", "Ubigeos");
         }
         if (supplier) {
             Element addressTypeCode = text(document, address, CBC_NS, "cbc:AddressTypeCode", normalizeAddressTypeCode(partyDto.AddressTypeCode));
@@ -215,7 +256,7 @@ public class SunatUblXmlBuildService {
         Element country = element(document, CAC_NS, "cac:Country");
         text(document, country, CBC_NS, "cbc:IdentificationCode", partyDto.CountryCode == null ? "PE" : partyDto.CountryCode);
         address.appendChild(country);
-        party.appendChild(address);
+        parent.appendChild(address);
     }
 
     private void appendTaxTotal(Document document, Element root, SunatDocumentTotalsDto totals, String currency) {

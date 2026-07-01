@@ -27,8 +27,6 @@ public class SunatDocumentPayloadEntity extends AuditTableEntity implements Seri
             throw new IllegalArgumentException("SunatDocumentCod requerido");
         if (PayloadJson == null || PayloadJson.isBlank())
             throw new IllegalArgumentException("PayloadJson requerido");
-        if (UnsignedXml == null || UnsignedXml.isBlank())
-            throw new IllegalArgumentException("UnsignedXml requerido");
         return this;
     }
 

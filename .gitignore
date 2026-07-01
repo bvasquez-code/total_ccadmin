@@ -3,3 +3,6 @@ frontend/web_ccadmin_lt/.angular/
 
 # Test product images
 frontend/web_ccadmin_lt/src/assets/public/image/
+
+# SUNAT generated XML/ZIP/CDR files
+backend/ws_wa_sunat_ccadmin/storage/sunat/

@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.Normalizer;
 
 @Service
 public class SunatXmlValidationService {
@@ -32,6 +33,8 @@ public class SunatXmlValidationService {
             throw new IllegalArgumentException("Fecha de emision requerida");
         if (document.CurrencyCod == null || document.CurrencyCod.isBlank())
             throw new IllegalArgumentException("Moneda requerida");
+        normalizePaymentCondition(document);
+        normalizeDocumentTypes(document);
         validateSupplier(document.Supplier);
         validateCustomer(document.Customer, document.SunatDocumentType);
         if (document.Totals == null)
@@ -39,8 +42,59 @@ public class SunatXmlValidationService {
         if (document.Lines == null || document.Lines.isEmpty())
             throw new IllegalArgumentException("Detalle de documento requerido");
         document.Lines.forEach(this::validateLine);
+        reconcileRounding(document);
         validateTotals(document);
         validateNoteDocuments(document);
+    }
+
+    private void normalizePaymentCondition(SunatElectronicDocumentDto document) {
+        if (document.PaymentCondition == null || document.PaymentCondition.isBlank()) {
+            document.PaymentCondition = "Contado";
+            return;
+        }
+        document.PaymentCondition = document.PaymentCondition.trim();
+        if ("CONTADO".equalsIgnoreCase(document.PaymentCondition)) {
+            document.PaymentCondition = "Contado";
+            return;
+        }
+        if ("CREDITO".equalsIgnoreCase(document.PaymentCondition) || "CREDITO".equalsIgnoreCase(removeAccent(document.PaymentCondition))) {
+            document.PaymentCondition = "Credito";
+            if (document.PaymentTerms == null || document.PaymentTerms.isEmpty()) {
+                throw new IllegalArgumentException("Forma de pago Credito requiere cuotas de pago");
+            }
+            document.PaymentTerms.forEach(term -> {
+                if (term.Amount == null || term.Amount.compareTo(BigDecimal.ZERO) <= 0)
+                    throw new IllegalArgumentException("Importe de cuota SUNAT debe ser mayor a cero");
+                if (term.PaymentDueDate == null)
+                    throw new IllegalArgumentException("Fecha de vencimiento de cuota SUNAT requerida");
+            });
+            return;
+        }
+        throw new IllegalArgumentException("Forma de pago SUNAT invalida: " + document.PaymentCondition);
+    }
+
+    private String removeAccent(String value) {
+        return value == null ? null : Normalizer.normalize(value, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+    }
+
+    private void normalizeDocumentTypes(SunatElectronicDocumentDto document) {
+        if (document.Supplier != null) {
+            document.Supplier.DocumentType = normalizeDocumentType(document.Supplier.DocumentType);
+        }
+        if (document.Customer != null) {
+            document.Customer.DocumentType = normalizeDocumentType(document.Customer.DocumentType);
+        }
+    }
+
+    private String normalizeDocumentType(String documentType) {
+        if (documentType == null) return null;
+        return switch (documentType.trim().toUpperCase()) {
+            case "DNI", "01", "1" -> "1";
+            case "RUC", "06", "6" -> "6";
+            case "CE", "04", "4" -> "4";
+            case "PAS", "PASAPORTE", "07", "7" -> "7";
+            default -> documentType.trim();
+        };
     }
 
     private void validateSupplier(SunatPartyDto supplier) {
@@ -115,6 +169,37 @@ public class SunatXmlValidationService {
             document.Totals.TaxInclusiveAmount = document.Totals.LineExtensionAmount.add(document.Totals.TaxAmount);
     }
 
+    private void reconcileRounding(SunatElectronicDocumentDto document) {
+        if (document.Totals == null || document.Lines == null || document.Lines.isEmpty()) {
+            return;
+        }
+        BigDecimal detailTotal = document.Lines.stream()
+                .map(line -> amount(line.LineExtensionAmount))
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal detailTax = document.Lines.stream()
+                .map(line -> amount(line.TaxAmount))
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal lineDifference = amount(document.Totals.LineExtensionAmount).subtract(detailTotal).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal taxDifference = amount(document.Totals.TaxAmount).subtract(detailTax).setScale(2, RoundingMode.HALF_UP);
+        if (lineDifference.compareTo(BigDecimal.ZERO) == 0 && taxDifference.compareTo(BigDecimal.ZERO) == 0) {
+            return;
+        }
+        BigDecimal tolerance = BigDecimal.valueOf(document.Lines.size()).multiply(new BigDecimal("0.01")).setScale(2, RoundingMode.HALF_UP);
+        if (lineDifference.abs().compareTo(tolerance) > 0 || taxDifference.abs().compareTo(tolerance) > 0) {
+            throw new IllegalArgumentException("Total de lineas no coincide con LineExtensionAmount");
+        }
+
+        SunatDocumentLineDto lastLine = document.Lines.get(document.Lines.size() - 1);
+        lastLine.LineExtensionAmount = amount(lastLine.LineExtensionAmount).add(lineDifference).setScale(2, RoundingMode.HALF_UP);
+        lastLine.TaxableAmount = lastLine.LineExtensionAmount;
+        lastLine.TaxAmount = amount(lastLine.TaxAmount).add(taxDifference).setScale(2, RoundingMode.HALF_UP);
+        if (lastLine.Quantity != null && lastLine.Quantity.compareTo(BigDecimal.ZERO) > 0) {
+            lastLine.UnitPrice = lastLine.LineExtensionAmount.divide(lastLine.Quantity, 2, RoundingMode.HALF_UP);
+        }
+    }
+
     private void validateNoteDocuments(SunatElectronicDocumentDto document) {
         boolean isNote = SunatDocumentTypeConst.NOTA_CREDITO.equals(document.SunatDocumentType)
                 || SunatDocumentTypeConst.NOTA_DEBITO.equals(document.SunatDocumentType);
@@ -138,6 +223,10 @@ public class SunatXmlValidationService {
 
     private boolean isNullOrLessEqualZero(BigDecimal value) {
         return value == null || value.compareTo(BigDecimal.ZERO) <= 0;
+    }
+
+    private BigDecimal amount(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value.setScale(2, RoundingMode.HALF_UP);
     }
 
     private String taxExemptionReasonCode(String taxCategoryCode) {

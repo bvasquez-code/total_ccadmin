@@ -15,9 +15,9 @@ BEGIN
         CREATE TABLE `sunat_document_payload` (
           `SunatDocumentCod` varchar(24) NOT NULL,
           `PayloadJson` longtext NOT NULL COMMENT 'Payload recibido por API para generar XML',
-          `UnsignedXml` longtext NOT NULL COMMENT 'XML UBL 2.1 generado sin firma',
-          `UnsignedXmlFileName` varchar(180) NOT NULL,
-          `XmlGeneratedDate` datetime NOT NULL,
+          `UnsignedXml` longtext DEFAULT NULL COMMENT 'XML UBL 2.1 generado sin firma',
+          `UnsignedXmlFileName` varchar(180) DEFAULT NULL,
+          `XmlGeneratedDate` datetime DEFAULT NULL,
           `CreationUser` varchar(16) NOT NULL,
           `CreationDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
           `ModifyUser` varchar(16) DEFAULT NULL,
@@ -35,8 +35,41 @@ BEGIN
               AND column_name = 'UnsignedXmlFileName'
         ) THEN
             ALTER TABLE `sunat_document_payload`
-                ADD COLUMN `UnsignedXmlFileName` varchar(180) NOT NULL AFTER `UnsignedXml`;
+                ADD COLUMN `UnsignedXmlFileName` varchar(180) DEFAULT NULL AFTER `UnsignedXml`;
             SELECT 'Columna UnsignedXmlFileName agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF EXISTS (
+            SELECT * FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'sunat_document_payload'
+              AND column_name = 'UnsignedXml'
+              AND is_nullable = 'NO'
+        ) THEN
+            ALTER TABLE `sunat_document_payload`
+                MODIFY COLUMN `UnsignedXml` longtext DEFAULT NULL COMMENT 'XML UBL 2.1 generado sin firma';
+            SELECT 'Columna UnsignedXml modificada a nullable.' AS Mensaje;
+        END IF;
+
+        IF EXISTS (
+            SELECT * FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'sunat_document_payload'
+              AND column_name = 'UnsignedXmlFileName'
+              AND is_nullable = 'NO'
+        ) THEN
+            ALTER TABLE `sunat_document_payload`
+                MODIFY COLUMN `UnsignedXmlFileName` varchar(180) DEFAULT NULL;
+            SELECT 'Columna UnsignedXmlFileName modificada a nullable.' AS Mensaje;
+        END IF;
+
+        IF EXISTS (
+            SELECT * FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'sunat_document_payload'
+              AND column_name = 'XmlGeneratedDate'
+              AND is_nullable = 'NO'
+        ) THEN
+            ALTER TABLE `sunat_document_payload`
+                MODIFY COLUMN `XmlGeneratedDate` datetime DEFAULT NULL;
+            SELECT 'Columna XmlGeneratedDate modificada a nullable.' AS Mensaje;
         END IF;
 
         SELECT 'Tabla sunat_document_payload ya existe. Validacion de estructura completada.' AS Mensaje;

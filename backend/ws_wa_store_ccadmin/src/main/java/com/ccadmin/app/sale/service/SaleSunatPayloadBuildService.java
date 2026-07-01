@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.Date;
 
 @Service
@@ -43,12 +44,14 @@ public class SaleSunatPayloadBuildService {
         dto.Correlative = documentNumber.correlative;
         dto.IssueDate = head.ModifyDate == null ? new Date() : head.ModifyDate;
         dto.CurrencyCod = head.CurrencyCod;
+        dto.PaymentCondition = "Contado";
         dto.Supplier = buildSupplier(head.StoreCod);
         dto.Customer = buildCustomer(head.Client);
         dto.Totals = buildTotals(head);
-        dto.Lines = saleDetail.DetailList.stream()
+        dto.Lines = new ArrayList<>(saleDetail.DetailList.stream()
                 .map(line -> buildLine(line, head))
-                .toList();
+                .toList());
+        reconcileLineTotals(dto);
         return dto;
     }
 
@@ -123,6 +126,37 @@ public class SaleSunatPayloadBuildService {
         return dto;
     }
 
+    private void reconcileLineTotals(SunatElectronicDocumentDto dto) {
+        if (dto.Lines == null || dto.Lines.isEmpty() || dto.Totals == null) {
+            return;
+        }
+        BigDecimal lineTotal = dto.Lines.stream()
+                .map(line -> amount(line.LineExtensionAmount))
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal taxTotal = dto.Lines.stream()
+                .map(line -> amount(line.TaxAmount))
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal lineDifference = amount(dto.Totals.LineExtensionAmount).subtract(lineTotal).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal taxDifference = amount(dto.Totals.TaxAmount).subtract(taxTotal).setScale(2, RoundingMode.HALF_UP);
+        if (lineDifference.compareTo(BigDecimal.ZERO) == 0 && taxDifference.compareTo(BigDecimal.ZERO) == 0) {
+            return;
+        }
+        BigDecimal tolerance = BigDecimal.valueOf(dto.Lines.size()).multiply(new BigDecimal("0.01")).setScale(2, RoundingMode.HALF_UP);
+        if (lineDifference.abs().compareTo(tolerance) > 0 || taxDifference.abs().compareTo(tolerance) > 0) {
+            throw new IllegalArgumentException("Diferencia de totales SUNAT supera tolerancia de redondeo");
+        }
+
+        SunatDocumentLineDto lastLine = dto.Lines.get(dto.Lines.size() - 1);
+        lastLine.LineExtensionAmount = amount(lastLine.LineExtensionAmount).add(lineDifference).setScale(2, RoundingMode.HALF_UP);
+        lastLine.TaxableAmount = lastLine.LineExtensionAmount;
+        lastLine.TaxAmount = amount(lastLine.TaxAmount).add(taxDifference).setScale(2, RoundingMode.HALF_UP);
+        if (lastLine.Quantity != null && lastLine.Quantity.compareTo(BigDecimal.ZERO) > 0) {
+            lastLine.UnitPrice = lastLine.LineExtensionAmount.divide(lastLine.Quantity, 2, RoundingMode.HALF_UP);
+        }
+    }
+
     private String resolveSunatDocumentType(String series) {
         if (series.startsWith("F")) return "01";
         if (series.startsWith("B")) return "03";
@@ -140,9 +174,10 @@ public class SaleSunatPayloadBuildService {
     private String normalizeDocumentType(String documentType) {
         if (documentType == null) return null;
         return switch (documentType.trim().toUpperCase()) {
-            case "DNI" -> "1";
-            case "RUC" -> "6";
-            case "CE" -> "4";
+            case "DNI", "01", "1" -> "1";
+            case "RUC", "06", "6" -> "6";
+            case "CE", "04", "4" -> "4";
+            case "PAS", "PASAPORTE", "07", "7" -> "7";
             default -> documentType.trim();
         };
     }

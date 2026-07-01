@@ -14,6 +14,8 @@ public class SunatElectronicDocumentDto {
     public String IssueTime;
     public String CurrencyCod;
     public String OperationTypeCode = "0101";
+    public String PaymentCondition = "Contado";
+    public List<SunatPaymentTermDto> PaymentTerms;
     public String Note;
     public SunatPartyDto Supplier;
     public SunatPartyDto Customer;

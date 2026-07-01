@@ -80,19 +80,25 @@ public class SunatDocumentOperationService extends SessionService {
     private ObjectMapper objectMapper;
 
     public SunatXmlGenerateResultDto generateXml(SunatElectronicDocumentDto request) {
-        this.sunatXmlValidationService.validateForXml(request);
-        SunatDocumentEntity document = this.sunatDocumentRepository.findBySource(
-                request.SourceModule,
-                request.SourceDocumentCod,
-                request.SunatDocumentType
-        ).orElseGet(() -> this.sunatDocumentCreateService.register(request.toRegisterDto()));
+        SunatDocumentEntity document = this.findOrRegisterDocument(request);
+        this.saveRequestPayload(document, request);
+        try {
+            this.sunatXmlValidationService.validateForXml(request);
+        } catch (Exception ex) {
+            this.markFunctionalGenerateError(document, ex.getMessage());
+            throw ex;
+        }
         return this.generateXml(document, request);
     }
 
     public SunatSendResultDto process(SunatElectronicDocumentDto request) {
         String sunatDocumentCod = null;
         try {
-            SunatXmlGenerateResultDto xml = this.generateXml(request);
+            SunatDocumentEntity document = this.findOrRegisterDocument(request);
+            sunatDocumentCod = document.SunatDocumentCod;
+            this.saveRequestPayload(document, request);
+            this.sunatXmlValidationService.validateForXml(request);
+            SunatXmlGenerateResultDto xml = this.generateXml(document, request);
             sunatDocumentCod = xml.SunatDocumentCod;
             this.signXml(sunatDocumentCod);
             this.generateZip(sunatDocumentCod);
@@ -103,10 +109,14 @@ public class SunatDocumentOperationService extends SessionService {
                 SunatDocumentEntity document = this.sunatDocumentRepository.findById(sunatDocumentCod).orElse(null);
                 if (document != null) {
                     document.ElectronicStatus = SunatElectronicStatusConst.ERROR;
-                    document.LastErrorType = document.LastErrorType == null ? SunatErrorTypeConst.INTERNAL : document.LastErrorType;
-                    document.LastFunctionalError = document.LastFunctionalError == null ? "Error procesando documento SUNAT" : document.LastFunctionalError;
-                    document.LastTechnicalError = document.LastTechnicalError == null ? ex.getMessage() : document.LastTechnicalError;
+                    boolean newFunctionalError = document.LastErrorType == null;
+                    document.LastErrorType = document.LastErrorType == null ? SunatErrorTypeConst.FUNCTIONAL : document.LastErrorType;
+                    document.LastFunctionalError = document.LastFunctionalError == null ? ex.getMessage() : document.LastFunctionalError;
+                    document.LastTechnicalError = document.LastTechnicalError == null && !SunatErrorTypeConst.FUNCTIONAL.equals(document.LastErrorType) ? ex.getMessage() : document.LastTechnicalError;
                     this.sunatDocumentRepository.save(document.session(this.getUserCod()));
+                    if (newFunctionalError) {
+                        this.saveAttempt(document, SunatOperationTypeConst.GENERATE_XML, false, null, ex.getMessage());
+                    }
                     return toSendResult(document, ex.getMessage());
                 }
             }
@@ -390,6 +400,41 @@ public class SunatDocumentOperationService extends SessionService {
             this.saveAttempt(document, SunatOperationTypeConst.GENERATE_XML, false, ex.getMessage(), "Error generando XML");
             throw new IllegalArgumentException("No se pudo generar XML: " + ex.getMessage(), ex);
         }
+    }
+
+    private SunatDocumentEntity findOrRegisterDocument(SunatElectronicDocumentDto request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Documento electronico requerido");
+        }
+        return this.sunatDocumentRepository.findBySource(
+                request.SourceModule,
+                request.SourceDocumentCod,
+                request.SunatDocumentType
+        ).orElseGet(() -> this.sunatDocumentCreateService.register(request.toRegisterDto()));
+    }
+
+    private void saveRequestPayload(SunatDocumentEntity document, SunatElectronicDocumentDto request) {
+        try {
+            SunatDocumentPayloadEntity payload = this.sunatDocumentPayloadRepository.findById(document.SunatDocumentCod)
+                    .orElseGet(SunatDocumentPayloadEntity::new);
+            boolean isNewPayload = payload.SunatDocumentCod == null || payload.SunatDocumentCod.isBlank();
+            payload.SunatDocumentCod = document.SunatDocumentCod;
+            payload.PayloadJson = this.objectMapper.writeValueAsString(request);
+            payload.addSession(this.getUserCod(), isNewPayload);
+            payload.validate();
+            this.sunatDocumentPayloadRepository.save(payload);
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("No se pudo guardar payload SUNAT recibido: " + ex.getMessage(), ex);
+        }
+    }
+
+    private void markFunctionalGenerateError(SunatDocumentEntity document, String message) {
+        document.ElectronicStatus = SunatElectronicStatusConst.ERROR;
+        document.LastErrorType = SunatErrorTypeConst.FUNCTIONAL;
+        document.LastFunctionalError = message;
+        document.LastTechnicalError = null;
+        this.sunatDocumentRepository.save(document.session(this.getUserCod()));
+        this.saveAttempt(document, SunatOperationTypeConst.GENERATE_XML, false, null, message);
     }
 
     private SunatDocumentEntity findDocumentForProcess(String sunatDocumentCod) {
