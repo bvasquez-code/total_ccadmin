@@ -44,6 +44,17 @@ public class SunatSoapClientService {
         return post(endpoint, body);
     }
 
+    public SunatSoapResponseDto sendGuide(SunatConfigEntity config, String fileName, byte[] zipContent) {
+        String endpoint = config.GuideEndpoint;
+        String body = envelope(config, """
+                <ser:sendBill>
+                    <fileName>%s</fileName>
+                    <contentFile>%s</contentFile>
+                </ser:sendBill>
+                """.formatted(escape(fileName), Base64.getEncoder().encodeToString(zipContent)));
+        return post(endpoint, body);
+    }
+
     public SunatSoapResponseDto getStatus(SunatConfigEntity config, String ticket) {
         String endpoint = config.TicketEndpoint;
         String body = envelope(config, """

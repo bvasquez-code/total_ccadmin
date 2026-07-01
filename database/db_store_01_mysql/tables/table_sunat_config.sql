@@ -25,6 +25,10 @@ BEGIN
           `InvoiceEndpoint` varchar(500) NOT NULL COMMENT 'Endpoint de comprobantes individuales',
           `SummaryEndpoint` varchar(500) NOT NULL COMMENT 'Endpoint de resumen diario/comunicacion de baja',
           `TicketEndpoint` varchar(500) NOT NULL COMMENT 'Endpoint de consulta ticket',
+          `GuideEndpoint` varchar(500) NOT NULL COMMENT 'Endpoint REST base de guia de remision remitente',
+          `GuideTokenEndpoint` varchar(500) NOT NULL COMMENT 'Endpoint de token REST para guia de remision remitente',
+          `GuideClientId` varchar(128) DEFAULT NULL COMMENT 'Client ID API SUNAT para GRE REST',
+          `GuideClientSecret` varchar(256) DEFAULT NULL COMMENT 'Client Secret API SUNAT para GRE REST en texto plano para fase inicial',
           `MaxSendAttempts` int NOT NULL DEFAULT 3,
           `MaxTicketAttempts` int NOT NULL DEFAULT 3,
           `SchedulerEnabled` char(1) NOT NULL DEFAULT 'N',
@@ -50,6 +54,46 @@ BEGIN
             ALTER TABLE `sunat_config`
                 ADD COLUMN `AutomaticRetryEnabled` char(1) NOT NULL DEFAULT 'N' AFTER `SchedulerEnabled`;
             SELECT 'Columna AutomaticRetryEnabled agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'sunat_config'
+              AND column_name = 'GuideEndpoint'
+        ) THEN
+            ALTER TABLE `sunat_config`
+                ADD COLUMN `GuideEndpoint` varchar(500) NOT NULL DEFAULT 'https://api-cpe.sunat.gob.pe/v1/contribuyente/gem' COMMENT 'Endpoint REST base de guia de remision remitente' AFTER `TicketEndpoint`;
+            SELECT 'Columna GuideEndpoint agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'sunat_config'
+              AND column_name = 'GuideTokenEndpoint'
+        ) THEN
+            ALTER TABLE `sunat_config`
+                ADD COLUMN `GuideTokenEndpoint` varchar(500) NOT NULL DEFAULT 'https://api-seguridad.sunat.gob.pe/v1/clientessol/{client_id}/oauth2/token/' COMMENT 'Endpoint de token REST para guia de remision remitente' AFTER `GuideEndpoint`;
+            SELECT 'Columna GuideTokenEndpoint agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'sunat_config'
+              AND column_name = 'GuideClientId'
+        ) THEN
+            ALTER TABLE `sunat_config`
+                ADD COLUMN `GuideClientId` varchar(128) DEFAULT NULL COMMENT 'Client ID API SUNAT para GRE REST' AFTER `GuideTokenEndpoint`;
+            SELECT 'Columna GuideClientId agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'sunat_config'
+              AND column_name = 'GuideClientSecret'
+        ) THEN
+            ALTER TABLE `sunat_config`
+                ADD COLUMN `GuideClientSecret` varchar(256) DEFAULT NULL COMMENT 'Client Secret API SUNAT para GRE REST en texto plano para fase inicial' AFTER `GuideClientId`;
+            SELECT 'Columna GuideClientSecret agregada exitosamente.' AS Mensaje;
         END IF;
 
         SELECT 'Tabla sunat_config ya existe. Validacion de estructura completada.' AS Mensaje;

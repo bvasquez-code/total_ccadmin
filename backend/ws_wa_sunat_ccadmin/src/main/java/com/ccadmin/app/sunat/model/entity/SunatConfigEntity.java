@@ -25,6 +25,10 @@ public class SunatConfigEntity extends AuditTableEntity implements Serializable 
     public String InvoiceEndpoint;
     public String SummaryEndpoint;
     public String TicketEndpoint;
+    public String GuideEndpoint;
+    public String GuideTokenEndpoint;
+    public String GuideClientId;
+    public String GuideClientSecret;
     public int MaxSendAttempts;
     public int MaxTicketAttempts;
     public String SchedulerEnabled;
@@ -54,6 +58,10 @@ public class SunatConfigEntity extends AuditTableEntity implements Serializable 
             throw new IllegalArgumentException("Endpoint de resumen/baja requerido");
         if (TicketEndpoint == null || TicketEndpoint.isBlank())
             throw new IllegalArgumentException("Endpoint de consulta ticket requerido");
+        if (GuideEndpoint == null || GuideEndpoint.isBlank())
+            throw new IllegalArgumentException("Endpoint de guias de remision requerido");
+        if (GuideTokenEndpoint == null || GuideTokenEndpoint.isBlank())
+            throw new IllegalArgumentException("Endpoint de token para guias de remision requerido");
         if (MaxSendAttempts <= 0)
             throw new IllegalArgumentException("MaxSendAttempts debe ser mayor a cero");
         if (MaxTicketAttempts <= 0)

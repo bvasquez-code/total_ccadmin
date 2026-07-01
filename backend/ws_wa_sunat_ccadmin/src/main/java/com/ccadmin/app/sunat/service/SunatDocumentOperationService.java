@@ -1,6 +1,7 @@
 package com.ccadmin.app.sunat.service;
 
 import com.ccadmin.app.shared.service.SessionService;
+import com.ccadmin.app.sunat.model.constants.SunatDocumentTypeConst;
 import com.ccadmin.app.sunat.model.constants.SunatElectronicStatusConst;
 import com.ccadmin.app.sunat.model.constants.SunatErrorTypeConst;
 import com.ccadmin.app.sunat.model.constants.SunatFileTypeConst;
@@ -72,6 +73,9 @@ public class SunatDocumentOperationService extends SessionService {
 
     @Autowired
     private SunatSoapClientService sunatSoapClientService;
+
+    @Autowired
+    private SunatGreRestClientService sunatGreRestClientService;
 
     @Autowired
     private SunatCdrProcessService sunatCdrProcessService;
@@ -246,13 +250,28 @@ public class SunatDocumentOperationService extends SessionService {
         try {
             byte[] zipContent = this.sunatFileStorageService.read(zipFile);
             boolean summaryDocument = this.isSummaryDocument(document);
-            SunatSoapResponseDto response = summaryDocument
-                    ? this.sunatSoapClientService.sendSummary(config, zipFile.FileName, zipContent)
-                    : this.sunatSoapClientService.sendBill(config, zipFile.FileName, zipContent);
-            this.saveSoapResponse(config, document, SunatOperationTypeConst.SEND, response);
+            boolean guideDocument = SunatDocumentTypeConst.GUIA_REMISION_REMITENTE.equals(document.SunatDocumentType);
+            SunatSoapResponseDto response;
+            if (summaryDocument) {
+                response = this.sunatSoapClientService.sendSummary(config, zipFile.FileName, zipContent);
+            } else if (guideDocument) {
+                response = this.sunatGreRestClientService.sendGuide(config, document, zipFile.FileName, zipContent);
+            } else {
+                response = this.sunatSoapClientService.sendBill(config, zipFile.FileName, zipContent);
+            }
+            this.saveTechnicalResponse(config, document, SunatOperationTypeConst.SEND, response);
 
             document.SendAttemptCount = document.SendAttemptCount + 1;
             document.TechnicalResponse = response.RawResponse;
+            if (response.HttpStatusCode == 0) {
+                document.ElectronicStatus = SunatElectronicStatusConst.ERROR;
+                document.LastFunctionalError = response.FaultString;
+                document.LastTechnicalError = response.RawResponse;
+                document.LastErrorType = SunatErrorTypeConst.INTERNAL;
+                this.saveAttempt(document, SunatOperationTypeConst.SEND, false, response.RawResponse, response.FaultString, response);
+                this.sunatDocumentRepository.save(document.session(this.getUserCod()));
+                return toSendResult(document, response.FaultString);
+            }
             if (response.hasFault() || response.HttpStatusCode != 200) {
                 document.ElectronicStatus = SunatElectronicStatusConst.ERROR;
                 document.LastFunctionalError = response.FaultString;
@@ -263,9 +282,9 @@ public class SunatDocumentOperationService extends SessionService {
                 return toSendResult(document, response.FaultString);
             }
 
-            if (summaryDocument) {
+            if (summaryDocument || guideDocument) {
                 if (!response.hasTicket()) {
-                    throw new IllegalArgumentException("SUNAT no devolvio ticket para resumen o baja");
+                    throw new IllegalArgumentException("SUNAT no devolvio ticket para resumen, baja o guia");
                 }
                 document.TicketSunat = response.Ticket;
                 document.ElectronicStatus = SunatElectronicStatusConst.PENDIENTE_TICKET;
@@ -304,10 +323,22 @@ public class SunatDocumentOperationService extends SessionService {
         }
         SunatConfigEntity config = this.findDocumentConfig(document);
         try {
-            SunatSoapResponseDto response = this.sunatSoapClientService.getStatus(config, document.TicketSunat);
-            this.saveSoapResponse(config, document, SunatOperationTypeConst.CONSULT_TICKET, response);
+            boolean guideDocument = SunatDocumentTypeConst.GUIA_REMISION_REMITENTE.equals(document.SunatDocumentType);
+            SunatSoapResponseDto response = guideDocument
+                    ? this.sunatGreRestClientService.getStatus(config, document.TicketSunat)
+                    : this.sunatSoapClientService.getStatus(config, document.TicketSunat);
+            this.saveTechnicalResponse(config, document, SunatOperationTypeConst.CONSULT_TICKET, response);
             document.TicketAttemptCount = document.TicketAttemptCount + 1;
             document.TechnicalResponse = response.RawResponse;
+            if (response.HttpStatusCode == 0) {
+                document.ElectronicStatus = SunatElectronicStatusConst.ERROR;
+                document.LastFunctionalError = response.FaultString;
+                document.LastTechnicalError = response.RawResponse;
+                document.LastErrorType = SunatErrorTypeConst.INTERNAL;
+                this.saveAttempt(document, SunatOperationTypeConst.CONSULT_TICKET, false, response.RawResponse, response.FaultString, response);
+                this.sunatDocumentRepository.save(document.session(this.getUserCod()));
+                return toSendResult(document, response.FaultString);
+            }
             if (response.hasFault() || response.HttpStatusCode != 200) {
                 document.ElectronicStatus = SunatElectronicStatusConst.ERROR;
                 document.LastFunctionalError = response.FaultString;
@@ -500,17 +531,18 @@ public class SunatDocumentOperationService extends SessionService {
         }
     }
 
-    private void saveSoapResponse(SunatConfigEntity config, SunatDocumentEntity document, String operationType, SunatSoapResponseDto response) {
+    private void saveTechnicalResponse(SunatConfigEntity config, SunatDocumentEntity document, String operationType, SunatSoapResponseDto response) {
         if (response == null || response.RawResponse == null || response.RawResponse.isBlank()) {
             return;
         }
-        String fileName = operationType + "-" + System.currentTimeMillis() + ".xml";
+        boolean json = response.RawResponse.trim().startsWith("{") || response.RawResponse.trim().startsWith("[");
+        String fileName = operationType + "-" + System.currentTimeMillis() + (json ? ".json" : ".xml");
         this.sunatFileStorageService.saveText(
                 config,
                 document,
                 SunatFileTypeConst.RESPONSE,
                 fileName,
-                "text/xml",
+                json ? "application/json" : "text/xml",
                 response.RawResponse
         );
     }

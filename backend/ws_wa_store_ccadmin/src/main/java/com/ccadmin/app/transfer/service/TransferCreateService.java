@@ -7,6 +7,7 @@ import com.ccadmin.app.product.shared.KardexShared;
 import com.ccadmin.app.product.shared.ProductOperationConfigShared;
 import com.ccadmin.app.product.shared.ProductShared;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
+import com.ccadmin.app.shared.service.GenericQueuedService;
 import com.ccadmin.app.shared.service.SessionService;
 import com.ccadmin.app.store.model.entity.StoreEntity;
 import com.ccadmin.app.store.model.entity.WarehouseEntity;
@@ -32,6 +33,8 @@ import com.ccadmin.app.transfer.service.helper.ProductTransferConversionHelper;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.*;
 
@@ -60,6 +63,10 @@ public class TransferCreateService extends SessionService {
     private CounterfoilShared counterfoilShared;
     @Autowired
     private ProductTransferConversionHelper productTransferConversionHelper;
+    @Autowired
+    private GenericQueuedService genericQueuedService;
+    @Autowired
+    private TransferSunatEmissionService transferSunatEmissionService;
 
 
     public String createCode(String storeCod){
@@ -332,6 +339,7 @@ public class TransferCreateService extends SessionService {
         this.kardexShared.saveAll(kardexList);
         this.transferDocumentRepository.save(transferDocument);
         this.carrierRepository.save(carrier);
+        this.emitSunatGuideAfterCommit(head.TransferCod);
 
         return new ResponseWsDto("Transferencia despachada correctamente");
     }
@@ -625,6 +633,23 @@ public class TransferCreateService extends SessionService {
 
     private String stockKey(String productCod, String variant, String storeCod, String warehouseCod) {
         return productCod + "|" + variant + "|" + storeCod + "|" + warehouseCod;
+    }
+
+    private void emitSunatGuideAfterCommit(String transferCod) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    queueSunatGuideEmission(transferCod);
+                }
+            });
+            return;
+        }
+        queueSunatGuideEmission(transferCod);
+    }
+
+    private void queueSunatGuideEmission(String transferCod) {
+        this.genericQueuedService.addQueued(new TransferSunatEmissionTaskService(this.transferSunatEmissionService, transferCod));
     }
 
     public TransferDetRegisterMassiveDto saveDet(TransferDetRegisterMassiveDto transferDetRegisterMassiveDto) throws TransferException {

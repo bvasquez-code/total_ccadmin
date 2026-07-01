@@ -33,6 +33,7 @@ C:\proyectos\multiple\total_ccadmin\backend\ws_wa_sunat_ccadmin\src\main\java\co
 C:\proyectos\multiple\total_ccadmin\backend\ws_wa_sunat_ccadmin\src\main\java\com\ccadmin\app\sunat\repository\SunatDocumentFileRepository.java
 C:\proyectos\multiple\total_ccadmin\backend\ws_wa_sunat_ccadmin\src\main\java\com\ccadmin\app\sunat\repository\SunatDocumentRepository.java
 C:\proyectos\multiple\total_ccadmin\backend\ws_wa_sunat_ccadmin\src\main\java\com\ccadmin\app\sunat\repository\SunatDocumentPayloadRepository.java
+C:\proyectos\multiple\total_ccadmin\backend\ws_wa_sunat_ccadmin\src\main\java\com\ccadmin\app\sunat\service\SunatGreRestClientService.java
 C:\proyectos\multiple\total_ccadmin\backend\ws_wa_sunat_ccadmin\src\main\java\com\ccadmin\app\sunat\model\entity\SunatDocumentFileEntity.java
 C:\proyectos\multiple\total_ccadmin\backend\ws_wa_sunat_ccadmin\src\main\java\com\ccadmin\app\sunat\service\SunatDocumentSearchService.java
 C:\proyectos\multiple\total_ccadmin\backend\ws_wa_sunat_ccadmin\src\main\java\com\ccadmin\app\sunat\model\dto\SunatElectronicDocumentDto.java

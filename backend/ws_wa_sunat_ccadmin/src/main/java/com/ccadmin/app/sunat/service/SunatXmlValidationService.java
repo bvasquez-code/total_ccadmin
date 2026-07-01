@@ -33,6 +33,10 @@ public class SunatXmlValidationService {
             throw new IllegalArgumentException("Correlativo requerido");
         if (document.IssueDate == null)
             throw new IllegalArgumentException("Fecha de emision requerida");
+        if (SunatDocumentTypeConst.GUIA_REMISION_REMITENTE.equals(document.SunatDocumentType)) {
+            validateDespatchAdvice(document);
+            return;
+        }
         if (document.CurrencyCod == null || document.CurrencyCod.isBlank())
             throw new IllegalArgumentException("Moneda requerida");
         if (document.Totals == null)
@@ -48,6 +52,64 @@ public class SunatXmlValidationService {
         reconcileRounding(document);
         validateTotals(document);
         validateNoteDocuments(document);
+    }
+
+    private void validateDespatchAdvice(SunatElectronicDocumentDto document) {
+        if (document.CurrencyCod == null || document.CurrencyCod.isBlank()) {
+            document.CurrencyCod = "PEN";
+        }
+        if (document.Totals == null) {
+            document.Totals = new com.ccadmin.app.sunat.model.dto.SunatDocumentTotalsDto();
+        }
+        normalizeDocumentTypes(document);
+        validateSupplier(document.Supplier);
+        validateCustomer(document.Customer, document.SunatDocumentType);
+        if (document.ReasonTransferCode == null || document.ReasonTransferCode.isBlank())
+            throw new IllegalArgumentException("Motivo de traslado SUNAT requerido");
+        if (document.TransportModeCode == null || document.TransportModeCode.isBlank())
+            throw new IllegalArgumentException("Modalidad de transporte SUNAT requerida");
+        if (document.DepartureUbigeo == null || document.DepartureUbigeo.isBlank())
+            throw new IllegalArgumentException("Ubigeo de partida requerido");
+        if (document.DepartureAddress == null || document.DepartureAddress.isBlank())
+            throw new IllegalArgumentException("Direccion de partida requerida");
+        if (document.ArrivalUbigeo == null || document.ArrivalUbigeo.isBlank())
+            throw new IllegalArgumentException("Ubigeo de llegada requerido");
+        if (document.ArrivalAddress == null || document.ArrivalAddress.isBlank())
+            throw new IllegalArgumentException("Direccion de llegada requerida");
+        if (document.TotalWeightKg == null || document.TotalWeightKg.compareTo(BigDecimal.ZERO) <= 0)
+            document.TotalWeightKg = BigDecimal.ONE.setScale(3, RoundingMode.HALF_UP);
+        if (document.NumPackages == null || document.NumPackages <= 0)
+            document.NumPackages = 1;
+        if ("01".equals(document.TransportModeCode)) {
+            if (document.CarrierRuc == null || !document.CarrierRuc.matches("^\\d{11}$"))
+                throw new IllegalArgumentException("RUC de transportista requerido para transporte publico");
+            if (document.CarrierName == null || document.CarrierName.isBlank())
+                throw new IllegalArgumentException("Razon social de transportista requerida");
+        }
+        if ("02".equals(document.TransportModeCode)) {
+            if (document.VehiclePlate == null || document.VehiclePlate.isBlank())
+                throw new IllegalArgumentException("Placa de vehiculo requerida para transporte privado");
+            if (document.DriverDocType == null || document.DriverDocType.isBlank())
+                throw new IllegalArgumentException("Tipo de documento de conductor requerido");
+            if (document.DriverDocNumber == null || document.DriverDocNumber.isBlank())
+                throw new IllegalArgumentException("Documento de conductor requerido");
+            if (document.DriverLicenseNumber == null || document.DriverLicenseNumber.isBlank())
+                throw new IllegalArgumentException("Licencia de conductor requerida");
+            document.DriverDocType = normalizeDocumentType(document.DriverDocType);
+        }
+        if (document.Lines == null || document.Lines.isEmpty())
+            throw new IllegalArgumentException("Detalle de guia requerido");
+        document.Lines.forEach(this::validateDespatchLine);
+    }
+
+    private void validateDespatchLine(SunatDocumentLineDto line) {
+        if (line.ItemNumber <= 0)
+            throw new IllegalArgumentException("ItemNumber debe ser mayor a cero");
+        if (line.Description == null || line.Description.isBlank())
+            throw new IllegalArgumentException("Descripcion de item requerida");
+        line.UnitCode = normalizeSunatUnitCode(line.UnitCode);
+        if (isNullOrLessEqualZero(line.Quantity))
+            throw new IllegalArgumentException("Cantidad debe ser mayor a cero");
     }
 
     private void normalizePaymentCondition(SunatElectronicDocumentDto document) {
@@ -158,6 +220,9 @@ public class SunatXmlValidationService {
             throw new IllegalArgumentException("Nombre o razon social del cliente requerido");
         if (SunatDocumentTypeConst.FACTURA.equals(documentType) && !"6".equals(customer.DocumentType))
             throw new IllegalArgumentException("Factura requiere cliente con RUC");
+        if (SunatDocumentTypeConst.GUIA_REMISION_REMITENTE.equals(documentType)
+                && (customer.DocumentNumber == null || customer.DocumentNumber.isBlank()))
+            throw new IllegalArgumentException("Guia de remision requiere destinatario");
     }
 
     private void validateLine(SunatDocumentLineDto line) {

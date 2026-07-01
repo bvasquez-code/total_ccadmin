@@ -52,6 +52,7 @@ com\ccadmin\app\sunat\repository\SunatDocumentAttemptRepository.class
 com\ccadmin\app\sunat\repository\SunatDocumentFileRepository.class
 com\ccadmin\app\sunat\model\dto\SunatDocumentLineDto.class
 com\ccadmin\app\sunat\model\constants\SunatFileTypeConst.class
+com\ccadmin\app\sunat\service\SunatGreRestClientService.class
 com\ccadmin\app\sunat\service\SunatSoapClientService.class
 com\ccadmin\app\sunat\controller\SunatDocumentController.class
 com\ccadmin\app\sunat\model\dto\SunatElectronicDocumentDto.class
