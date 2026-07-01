@@ -13,6 +13,8 @@ import java.text.Normalizer;
 @Service
 public class SunatXmlValidationService {
 
+    private static final BigDecimal ANONYMOUS_BOLETA_LIMIT = new BigDecimal("700.00");
+
     public void validateForXml(SunatElectronicDocumentDto document) {
         if (document == null)
             throw new IllegalArgumentException("Documento electronico requerido");
@@ -33,12 +35,13 @@ public class SunatXmlValidationService {
             throw new IllegalArgumentException("Fecha de emision requerida");
         if (document.CurrencyCod == null || document.CurrencyCod.isBlank())
             throw new IllegalArgumentException("Moneda requerida");
+        if (document.Totals == null)
+            throw new IllegalArgumentException("Totales requeridos");
+        prepareAnonymousCustomer(document);
         normalizePaymentCondition(document);
         normalizeDocumentTypes(document);
         validateSupplier(document.Supplier);
         validateCustomer(document.Customer, document.SunatDocumentType);
-        if (document.Totals == null)
-            throw new IllegalArgumentException("Totales requeridos");
         if (document.Lines == null || document.Lines.isEmpty())
             throw new IllegalArgumentException("Detalle de documento requerido");
         document.Lines.forEach(this::validateLine);
@@ -75,6 +78,35 @@ public class SunatXmlValidationService {
 
     private String removeAccent(String value) {
         return value == null ? null : Normalizer.normalize(value, Normalizer.Form.NFD).replaceAll("\\p{M}", "");
+    }
+
+    private void prepareAnonymousCustomer(SunatElectronicDocumentDto document) {
+        if (!requiresAnonymousCustomer(document)) {
+            return;
+        }
+        if (SunatDocumentTypeConst.FACTURA.equals(document.SunatDocumentType)) {
+            throw new IllegalArgumentException("Factura requiere cliente con RUC");
+        }
+        if (!SunatDocumentTypeConst.BOLETA.equals(document.SunatDocumentType)) {
+            throw new IllegalArgumentException("Datos de cliente requeridos");
+        }
+        if (amount(document.Totals.PayableAmount).compareTo(ANONYMOUS_BOLETA_LIMIT) > 0) {
+            throw new IllegalArgumentException("Boleta mayor a S/ 700 requiere datos del cliente");
+        }
+        SunatPartyDto customer = new SunatPartyDto();
+        customer.DocumentType = "1";
+        customer.DocumentNumber = "00000000";
+        customer.LegalName = "CLIENTES VARIOS";
+        customer.TradeName = "CLIENTES VARIOS";
+        customer.CountryCode = "PE";
+        document.Customer = customer;
+    }
+
+    private boolean requiresAnonymousCustomer(SunatElectronicDocumentDto document) {
+        return document.Customer == null
+                || document.Customer.DocumentType == null || document.Customer.DocumentType.isBlank()
+                || document.Customer.DocumentNumber == null || document.Customer.DocumentNumber.isBlank()
+                || document.Customer.LegalName == null || document.Customer.LegalName.isBlank();
     }
 
     private void normalizeDocumentTypes(SunatElectronicDocumentDto document) {

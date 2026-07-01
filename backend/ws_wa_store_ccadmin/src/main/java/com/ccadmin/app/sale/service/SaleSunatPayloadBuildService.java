@@ -24,6 +24,10 @@ import java.util.Date;
 @Service
 public class SaleSunatPayloadBuildService {
 
+    private static final String SUNAT_FACTURA = "01";
+    private static final String SUNAT_BOLETA = "03";
+    private static final BigDecimal ANONYMOUS_BOLETA_LIMIT = new BigDecimal("700.00");
+
     @Autowired
     private StoreShared storeShared;
 
@@ -46,8 +50,8 @@ public class SaleSunatPayloadBuildService {
         dto.CurrencyCod = head.CurrencyCod;
         dto.PaymentCondition = "Contado";
         dto.Supplier = buildSupplier(head.StoreCod);
-        dto.Customer = buildCustomer(head.Client);
         dto.Totals = buildTotals(head);
+        dto.Customer = buildCustomer(head.Client, dto.SunatDocumentType, dto.Totals.PayableAmount);
         dto.Lines = new ArrayList<>(saleDetail.DetailList.stream()
                 .map(line -> buildLine(line, head))
                 .toList());
@@ -81,11 +85,14 @@ public class SaleSunatPayloadBuildService {
         return supplier;
     }
 
-    private SunatPartyDto buildCustomer(ClientEntity client) {
+    private SunatPartyDto buildCustomer(ClientEntity client, String sunatDocumentType, BigDecimal payableAmount) {
         if (client == null || client.Person == null) {
-            throw new IllegalArgumentException("Cliente requerido para enviar venta a SUNAT");
+            return buildAnonymousCustomerOrThrow(sunatDocumentType, payableAmount);
         }
         PersonEntity person = client.Person;
+        if (!hasCustomerIdentity(person)) {
+            return buildAnonymousCustomerOrThrow(sunatDocumentType, payableAmount);
+        }
         SunatPartyDto customer = new SunatPartyDto();
         customer.DocumentType = normalizeDocumentType(person.DocumentType);
         customer.DocumentNumber = person.DocumentNum;
@@ -95,6 +102,31 @@ public class SaleSunatPayloadBuildService {
         customer.UbigeoCod = person.UbigeoCod;
         customer.CountryCode = "PE";
         return customer;
+    }
+
+    private SunatPartyDto buildAnonymousCustomerOrThrow(String sunatDocumentType, BigDecimal payableAmount) {
+        if (SUNAT_FACTURA.equals(sunatDocumentType)) {
+            throw new IllegalArgumentException("Factura requiere cliente con RUC para enviar a SUNAT");
+        }
+        if (!SUNAT_BOLETA.equals(sunatDocumentType)) {
+            throw new IllegalArgumentException("Cliente requerido para enviar documento a SUNAT");
+        }
+        if (amount(payableAmount).compareTo(ANONYMOUS_BOLETA_LIMIT) > 0) {
+            throw new IllegalArgumentException("Boleta mayor a S/ 700 requiere datos del cliente para SUNAT");
+        }
+        SunatPartyDto customer = new SunatPartyDto();
+        customer.DocumentType = "1";
+        customer.DocumentNumber = "00000000";
+        customer.LegalName = "CLIENTES VARIOS";
+        customer.TradeName = "CLIENTES VARIOS";
+        customer.CountryCode = "PE";
+        return customer;
+    }
+
+    private boolean hasCustomerIdentity(PersonEntity person) {
+        return person.DocumentType != null && !person.DocumentType.isBlank()
+                && person.DocumentNum != null && !person.DocumentNum.isBlank()
+                && firstNotBlank(person.BusinessName, fullName(person), person.CommercialName) != null;
     }
 
     private SunatDocumentTotalsDto buildTotals(SaleHeadEntity head) {
@@ -158,8 +190,8 @@ public class SaleSunatPayloadBuildService {
     }
 
     private String resolveSunatDocumentType(String series) {
-        if (series.startsWith("F")) return "01";
-        if (series.startsWith("B")) return "03";
+        if (series.startsWith("F")) return SUNAT_FACTURA;
+        if (series.startsWith("B")) return SUNAT_BOLETA;
         throw new IllegalArgumentException("Serie no corresponde a factura o boleta: " + series);
     }
 
