@@ -20,5 +20,7 @@ public class SunatElectronicDocumentDto {
     public SunatPartyDto Supplier;
     public SunatPartyDto Customer;
     public SunatDocumentTotalsDto Totals;
+    public SunatDiscrepancyResponseDto DiscrepancyResponse;
+    public List<SunatRelatedDocumentDto> RelatedDocuments;
     public List<SunatDocumentLineDto> Lines;
 }

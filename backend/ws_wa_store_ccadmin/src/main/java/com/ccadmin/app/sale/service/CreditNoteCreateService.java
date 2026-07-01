@@ -15,6 +15,7 @@ import com.ccadmin.app.sale.model.dto.CreditNoteReturnPaymentRegisterDto;
 import com.ccadmin.app.sale.model.dto.SalePaymentDto;
 import com.ccadmin.app.sale.model.entity.*;
 import com.ccadmin.app.sale.repository.*;
+import com.ccadmin.app.shared.service.GenericQueuedService;
 import com.ccadmin.app.shared.service.SessionService;
 import com.ccadmin.app.store.model.entity.WarehouseEntity;
 import com.ccadmin.app.store.shared.WarehouseShared;
@@ -23,6 +24,8 @@ import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -64,6 +67,10 @@ public class CreditNoteCreateService extends SessionService {
     private StockZoneMovementShared stockZoneMovementShared;
     @Autowired
     private TrxPaymentShared trxPaymentShared;
+    @Autowired
+    private GenericQueuedService genericQueuedService;
+    @Autowired
+    private CreditNoteSunatEmissionService creditNoteSunatEmissionService;
 
     public String createCode(){
         String PresaleCod = creditNoteHeadRepository.getCreditNoteCod(getStoreCod());
@@ -147,7 +154,27 @@ public class CreditNoteCreateService extends SessionService {
                 this.createCreditNoteKardexList(detailList, warehouseDefault, "S", false)
         );
 
-        return this.creditNoteSearchService.findById(creditNoteRegister.Headboard.CreditNoteCod);
+        CreditNoteDetailDto creditNoteDetail = this.creditNoteSearchService.findById(creditNoteRegister.Headboard.CreditNoteCod);
+        this.emitSunatAfterCommit(creditNoteHead.CreditNoteCod);
+
+        return creditNoteDetail;
+    }
+
+    private void emitSunatAfterCommit(String creditNoteCod) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    queueSunatEmission(creditNoteCod);
+                }
+            });
+            return;
+        }
+        queueSunatEmission(creditNoteCod);
+    }
+
+    private void queueSunatEmission(String creditNoteCod) {
+        this.genericQueuedService.addQueued(new CreditNoteSunatEmissionTaskService(this.creditNoteSunatEmissionService, creditNoteCod));
     }
 
     @Transactional
