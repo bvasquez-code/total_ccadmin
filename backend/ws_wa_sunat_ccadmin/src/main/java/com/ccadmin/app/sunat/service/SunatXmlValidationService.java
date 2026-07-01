@@ -129,6 +129,13 @@ public class SunatXmlValidationService {
         };
     }
 
+    private String normalizeSunatUnitCode(String unitCode) {
+        if (unitCode == null || unitCode.isBlank()) {
+            return "NIU";
+        }
+        return "NIU".equalsIgnoreCase(unitCode.trim()) ? "NIU" : "BX";
+    }
+
     private void validateSupplier(SunatPartyDto supplier) {
         if (supplier == null)
             throw new IllegalArgumentException("Datos de emisor requeridos");
@@ -158,8 +165,7 @@ public class SunatXmlValidationService {
             throw new IllegalArgumentException("ItemNumber debe ser mayor a cero");
         if (line.Description == null || line.Description.isBlank())
             throw new IllegalArgumentException("Descripcion de item requerida");
-        if (line.UnitCode == null || line.UnitCode.isBlank())
-            throw new IllegalArgumentException("Unidad de medida requerida");
+        line.UnitCode = normalizeSunatUnitCode(line.UnitCode);
         if (isNullOrLessEqualZero(line.Quantity))
             throw new IllegalArgumentException("Cantidad debe ser mayor a cero");
         if (isNullOrNegative(line.LineExtensionAmount))

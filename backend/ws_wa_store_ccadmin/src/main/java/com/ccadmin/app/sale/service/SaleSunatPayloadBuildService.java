@@ -145,7 +145,7 @@ public class SaleSunatPayloadBuildService {
         dto.ItemNumber = line.ItemNumber;
         dto.ProductCode = line.ProductCod;
         dto.Description = line.Product == null ? line.ProductCod : line.Product.ProductName;
-        dto.UnitCode = line.ProductUnitName == null || line.ProductUnitName.isBlank() ? "NIU" : line.ProductUnitName;
+        dto.UnitCode = normalizeSunatUnitCode(line.ProductUnitName);
         dto.Quantity = BigDecimal.valueOf(line.NumUnit);
         dto.LineExtensionAmount = amount(line.NumTotalPrice).divide(BigDecimal.valueOf(1.18), 2, RoundingMode.HALF_UP);
         dto.TaxableAmount = dto.LineExtensionAmount;
@@ -216,6 +216,13 @@ public class SaleSunatPayloadBuildService {
 
     private BigDecimal amount(BigDecimal value) {
         return value == null ? BigDecimal.ZERO : value.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private String normalizeSunatUnitCode(String unitCode) {
+        if (unitCode == null || unitCode.isBlank()) {
+            return "NIU";
+        }
+        return "NIU".equalsIgnoreCase(unitCode.trim()) ? "NIU" : "BX";
     }
 
     private String normalizeAddressTypeCode(String value) {
