@@ -24,6 +24,7 @@ import com.ccadmin.app.sunat.repository.SunatDocumentRepository;
 import com.ccadmin.app.sunat.repository.SunatConfigRepository;
 import com.ccadmin.app.sunat.repository.SunatDocumentFileRepository;
 import com.ccadmin.app.sunat.utility.SunatDocumentNameUtil;
+import com.ccadmin.app.system.utility.StringUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -98,6 +99,7 @@ public class SunatDocumentOperationService extends SessionService {
     public SunatSendResultDto process(SunatElectronicDocumentDto request) {
         String sunatDocumentCod = null;
         try {
+            log.info("INI - PROCESS SEND SUNAT : {} ==> {}",request.SourceDocumentCod,this.objectMapper.writeValueAsString(request));
             SunatDocumentEntity document = this.findOrRegisterDocument(request);
             sunatDocumentCod = document.SunatDocumentCod;
             this.saveRequestPayload(document, request);
@@ -106,7 +108,19 @@ public class SunatDocumentOperationService extends SessionService {
             sunatDocumentCod = xml.SunatDocumentCod;
             this.signXml(sunatDocumentCod);
             this.generateZip(sunatDocumentCod);
-            return this.send(sunatDocumentCod);
+
+            SunatSendResultDto sendResult = this.send(sunatDocumentCod);
+            if(StringUtil.isNotEmpty(sendResult.SunatResponseDescription)){
+                log.info("MENSAJE SUNAT : {}",sendResult.SunatResponseDescription);
+            }
+            if(StringUtil.isNotEmpty(sendResult.SunatObservations)){
+                log.info("OBSERVACION SUNAT : {}",sendResult.SunatObservations);
+            }
+            if(StringUtil.isNotEmpty(sendResult.LastTechnicalError)){
+                log.info("ERROR TECNICO SUNAT : {}",sendResult.LastTechnicalError);
+            }
+            log.info("RESPONSE - PROCESS SEND SUNAT :: {} ==> {}",request.SourceDocumentCod,this.objectMapper.writeValueAsString(sendResult));
+            return sendResult;
         } catch (Exception ex) {
             log.error("Error procesando documento SUNAT completo. SunatDocumentCod={}", sunatDocumentCod, ex);
             if (sunatDocumentCod != null) {
@@ -125,6 +139,8 @@ public class SunatDocumentOperationService extends SessionService {
                 }
             }
             throw new IllegalArgumentException("No se pudo procesar documento SUNAT: " + ex.getMessage(), ex);
+        }finally {
+            log.info("FIN - PROCESS SEND SUNAT ");
         }
     }
 
@@ -251,14 +267,7 @@ public class SunatDocumentOperationService extends SessionService {
             byte[] zipContent = this.sunatFileStorageService.read(zipFile);
             boolean summaryDocument = this.isSummaryDocument(document);
             boolean guideDocument = SunatDocumentTypeConst.GUIA_REMISION_REMITENTE.equals(document.SunatDocumentType);
-            SunatSoapResponseDto response;
-            if (summaryDocument) {
-                response = this.sunatSoapClientService.sendSummary(config, zipFile.FileName, zipContent);
-            } else if (guideDocument) {
-                response = this.sunatGreRestClientService.sendGuide(config, document, zipFile.FileName, zipContent);
-            } else {
-                response = this.sunatSoapClientService.sendBill(config, zipFile.FileName, zipContent);
-            }
+            SunatSoapResponseDto response = this.sendXmlToSunatByType(config, document, zipFile, zipContent);
             this.saveTechnicalResponse(config, document, SunatOperationTypeConst.SEND, response);
 
             document.SendAttemptCount = document.SendAttemptCount + 1;
@@ -477,6 +486,44 @@ public class SunatDocumentOperationService extends SessionService {
 
     private boolean isSummaryDocument(SunatDocumentEntity document) {
         return "RC".equals(document.SunatDocumentType) || "RA".equals(document.SunatDocumentType);
+    }
+
+    private SunatSoapResponseDto sendXmlToSunatByType(SunatConfigEntity config, SunatDocumentEntity document,
+                                                       SunatDocumentFileEntity zipFile, byte[] zipContent) {
+        return switch (document.SunatDocumentType) {
+            case SunatDocumentTypeConst.FACTURA -> sendFactura(config, zipFile, zipContent);
+            case SunatDocumentTypeConst.BOLETA -> sendBoleta(config, zipFile, zipContent);
+            case SunatDocumentTypeConst.NOTA_CREDITO -> sendNotaCredito(config, zipFile, zipContent);
+            case SunatDocumentTypeConst.NOTA_DEBITO -> sendNotaDebito(config, zipFile, zipContent);
+            case SunatDocumentTypeConst.GUIA_REMISION_REMITENTE -> sendGuiaRemision(config, document, zipFile, zipContent);
+            case SunatDocumentTypeConst.RESUMEN_DIARIO, SunatDocumentTypeConst.COMUNICACION_BAJA -> sendResumenOBaja(config, zipFile, zipContent);
+            default -> throw new IllegalArgumentException("Tipo de documento SUNAT no soportado para envio: " + document.SunatDocumentType);
+        };
+    }
+
+    private SunatSoapResponseDto sendFactura(SunatConfigEntity config, SunatDocumentFileEntity zipFile, byte[] zipContent) {
+        return this.sunatSoapClientService.sendBill(config, zipFile.FileName, zipContent);
+    }
+
+    private SunatSoapResponseDto sendBoleta(SunatConfigEntity config, SunatDocumentFileEntity zipFile, byte[] zipContent) {
+        return this.sunatSoapClientService.sendBill(config, zipFile.FileName, zipContent);
+    }
+
+    private SunatSoapResponseDto sendNotaCredito(SunatConfigEntity config, SunatDocumentFileEntity zipFile, byte[] zipContent) {
+        return this.sunatSoapClientService.sendBill(config, zipFile.FileName, zipContent);
+    }
+
+    private SunatSoapResponseDto sendNotaDebito(SunatConfigEntity config, SunatDocumentFileEntity zipFile, byte[] zipContent) {
+        return this.sunatSoapClientService.sendBill(config, zipFile.FileName, zipContent);
+    }
+
+    private SunatSoapResponseDto sendGuiaRemision(SunatConfigEntity config, SunatDocumentEntity document,
+                                                  SunatDocumentFileEntity zipFile, byte[] zipContent) {
+        return this.sunatGreRestClientService.sendGuide(config, document, zipFile.FileName, zipContent);
+    }
+
+    private SunatSoapResponseDto sendResumenOBaja(SunatConfigEntity config, SunatDocumentFileEntity zipFile, byte[] zipContent) {
+        return this.sunatSoapClientService.sendSummary(config, zipFile.FileName, zipContent);
     }
 
     private SunatConfigEntity findDocumentConfig(SunatDocumentEntity document) {
