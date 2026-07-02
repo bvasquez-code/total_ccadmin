@@ -1,4 +1,4 @@
-package com.ccadmin.app.sale.model.dto.sunat;
+package com.ccadmin.app.sunat.model.dto.sunat;
 
 public class SunatRelatedDocumentDto {
     public String DocumentNumber;

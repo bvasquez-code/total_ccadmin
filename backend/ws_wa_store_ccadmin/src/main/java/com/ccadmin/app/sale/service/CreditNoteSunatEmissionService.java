@@ -1,7 +1,8 @@
 package com.ccadmin.app.sale.service;
 
 import com.ccadmin.app.sale.model.dto.CreditNoteDetailDto;
-import com.ccadmin.app.sale.model.dto.sunat.SunatElectronicDocumentDto;
+import com.ccadmin.app.sunat.model.dto.sunat.SunatElectronicDocumentDto;
+import com.ccadmin.app.sunat.service.SaleSunatClientService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,7 +24,7 @@ public class CreditNoteSunatEmissionService {
         log.info("INI - EMISION SUNAT NOTA CREDITO : {}", creditNoteCod);
         CreditNoteDetailDto creditNoteDetail = this.creditNoteSearchService.findById(creditNoteCod);
         SunatElectronicDocumentDto request = this.creditNoteSunatPayloadBuildService.build(creditNoteDetail);
-        Object response = this.saleSunatClientService.process(request).Data;
+        Object response = this.saleSunatClientService.processCreditNote(request).Data;
         log.info("FIN - EMISION SUNAT NOTA CREDITO : {} -> {}", creditNoteCod, response);
     }
 }

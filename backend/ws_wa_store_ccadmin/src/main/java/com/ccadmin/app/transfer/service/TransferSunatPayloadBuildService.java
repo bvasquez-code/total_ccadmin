@@ -2,10 +2,10 @@ package com.ccadmin.app.transfer.service;
 
 import com.ccadmin.app.product.model.entity.ProductEntity;
 import com.ccadmin.app.product.shared.ProductShared;
-import com.ccadmin.app.sale.model.dto.sunat.SunatDocumentLineDto;
-import com.ccadmin.app.sale.model.dto.sunat.SunatDocumentTotalsDto;
-import com.ccadmin.app.sale.model.dto.sunat.SunatElectronicDocumentDto;
-import com.ccadmin.app.sale.model.dto.sunat.SunatPartyDto;
+import com.ccadmin.app.sunat.model.dto.sunat.SunatDocumentLineDto;
+import com.ccadmin.app.sunat.model.dto.sunat.SunatDocumentTotalsDto;
+import com.ccadmin.app.sunat.model.dto.sunat.SunatElectronicDocumentDto;
+import com.ccadmin.app.sunat.model.dto.sunat.SunatPartyDto;
 import com.ccadmin.app.store.model.dto.StoreInfoDto;
 import com.ccadmin.app.store.model.entity.CompanyEntity;
 import com.ccadmin.app.store.model.entity.StoreEntity;

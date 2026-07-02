@@ -1,4 +1,4 @@
-package com.ccadmin.app.sale.model.dto.sunat;
+package com.ccadmin.app.sunat.model.dto.sunat;
 
 import java.math.BigDecimal;
 import java.util.Date;

@@ -1,7 +1,8 @@
 package com.ccadmin.app.sale.service;
 
 import com.ccadmin.app.sale.model.dto.SaleDetailDto;
-import com.ccadmin.app.sale.model.dto.sunat.SunatElectronicDocumentDto;
+import com.ccadmin.app.sunat.model.dto.sunat.SunatElectronicDocumentDto;
+import com.ccadmin.app.sunat.service.SaleSunatClientService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -27,7 +28,7 @@ public class SaleSunatEmissionService {
             return;
         }
         SunatElectronicDocumentDto request = this.saleSunatPayloadBuildService.build(saleDetail);
-        Object response = this.saleSunatClientService.process(request).Data;
+        Object response = this.saleSunatClientService.processInvoice(request).Data;
         log.info("FIN - EMISION SUNAT VENTA : {} -> {}", saleCod, response);
     }
 }
