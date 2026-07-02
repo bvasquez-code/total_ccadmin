@@ -5,8 +5,9 @@ import com.ccadmin.app.person.model.entity.PersonEntity;
 import com.ccadmin.app.sale.model.dto.SaleDetailDto;
 import com.ccadmin.app.sunat.model.dto.sunat.SunatDocumentLineDto;
 import com.ccadmin.app.sunat.model.dto.sunat.SunatDocumentTotalsDto;
-import com.ccadmin.app.sunat.model.dto.sunat.SunatElectronicDocumentDto;
+import com.ccadmin.app.sunat.model.dto.sunat.SunatInvoiceProcessRequestDto;
 import com.ccadmin.app.sunat.model.dto.sunat.SunatPartyDto;
+import com.ccadmin.app.sunat.model.dto.sunat.SunatReceiptProcessRequestDto;
 import com.ccadmin.app.sale.model.entity.SaleDetEntity;
 import com.ccadmin.app.sale.model.entity.SaleDocumentEntity;
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
@@ -20,6 +21,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @Service
 public class SaleSunatPayloadBuildService {
@@ -31,32 +33,76 @@ public class SaleSunatPayloadBuildService {
     @Autowired
     private StoreShared storeShared;
 
-    public SunatElectronicDocumentDto build(SaleDetailDto saleDetail) {
+    public SunatInvoiceProcessRequestDto buildInvoice(SaleDetailDto saleDetail) {
+        SalePayload payload = buildPayload(saleDetail);
+        if (!SUNAT_FACTURA.equals(payload.sunatDocumentType())) {
+            throw new IllegalArgumentException("Serie no corresponde a factura: " + payload.series());
+        }
+        SunatInvoiceProcessRequestDto dto = new SunatInvoiceProcessRequestDto();
+        dto.SourceModule = payload.sourceModule();
+        dto.SourceDocumentCod = payload.sourceDocumentCod();
+        dto.SourceDocumentType = payload.sourceDocumentType();
+        dto.Series = payload.series();
+        dto.Correlative = payload.correlative();
+        dto.IssueDate = payload.issueDate();
+        dto.CurrencyCod = payload.currencyCod();
+        dto.PaymentCondition = payload.paymentCondition();
+        dto.Supplier = payload.supplier();
+        dto.Customer = payload.customer();
+        dto.Totals = payload.totals();
+        dto.Lines = payload.lines();
+        return dto;
+    }
+
+    public SunatReceiptProcessRequestDto buildReceipt(SaleDetailDto saleDetail) {
+        SalePayload payload = buildPayload(saleDetail);
+        if (!SUNAT_BOLETA.equals(payload.sunatDocumentType())) {
+            throw new IllegalArgumentException("Serie no corresponde a boleta: " + payload.series());
+        }
+        SunatReceiptProcessRequestDto dto = new SunatReceiptProcessRequestDto();
+        dto.SourceModule = payload.sourceModule();
+        dto.SourceDocumentCod = payload.sourceDocumentCod();
+        dto.SourceDocumentType = payload.sourceDocumentType();
+        dto.Series = payload.series();
+        dto.Correlative = payload.correlative();
+        dto.IssueDate = payload.issueDate();
+        dto.CurrencyCod = payload.currencyCod();
+        dto.PaymentCondition = payload.paymentCondition();
+        dto.Supplier = payload.supplier();
+        dto.Customer = payload.customer();
+        dto.Totals = payload.totals();
+        dto.Lines = payload.lines();
+        return dto;
+    }
+
+    private SalePayload buildPayload(SaleDetailDto saleDetail) {
         if (saleDetail == null || saleDetail.Headboard == null || saleDetail.SaleDocument == null) {
             throw new IllegalArgumentException("Venta confirmada requerida para SUNAT");
         }
         SaleHeadEntity head = saleDetail.Headboard;
         SaleDocumentEntity document = saleDetail.SaleDocument;
         DocumentNumber documentNumber = parseDocumentNumber(document.DocumentCod);
-
-        SunatElectronicDocumentDto dto = new SunatElectronicDocumentDto();
-        dto.SourceModule = "SALE";
-        dto.SourceDocumentCod = head.SaleCod;
-        dto.SourceDocumentType = "SALE";
-        dto.SunatDocumentType = resolveSunatDocumentType(documentNumber.series);
-        dto.Series = documentNumber.series;
-        dto.Correlative = documentNumber.correlative;
-        dto.IssueDate = head.ModifyDate == null ? new Date() : head.ModifyDate;
-        dto.CurrencyCod = head.CurrencyCod;
-        dto.PaymentCondition = "Contado";
-        dto.Supplier = buildSupplier(head.StoreCod);
-        dto.Totals = buildTotals(head);
-        dto.Customer = buildCustomer(head.Client, dto.SunatDocumentType, dto.Totals.PayableAmount);
-        dto.Lines = new ArrayList<>(saleDetail.DetailList.stream()
+        String sunatDocumentType = resolveSunatDocumentType(documentNumber.series);
+        SunatDocumentTotalsDto totals = buildTotals(head);
+        List<SunatDocumentLineDto> lines = new ArrayList<>(saleDetail.DetailList.stream()
                 .map(line -> buildLine(line, head))
                 .toList());
-        reconcileLineTotals(dto);
-        return dto;
+        reconcileLineTotals(lines, totals);
+        return new SalePayload(
+                "SALE",
+                head.SaleCod,
+                "SALE",
+                sunatDocumentType,
+                documentNumber.series,
+                documentNumber.correlative,
+                head.ModifyDate == null ? new Date() : head.ModifyDate,
+                head.CurrencyCod,
+                "Contado",
+                buildSupplier(head.StoreCod),
+                buildCustomer(head.Client, sunatDocumentType, totals.PayableAmount),
+                totals,
+                lines
+        );
     }
 
     public boolean isInvoiceOrReceipt(SaleDetailDto saleDetail) {
@@ -65,6 +111,20 @@ public class SaleSunatPayloadBuildService {
         }
         String series = saleDetail.SaleDocument.DocumentCod.split("-")[0];
         return series.startsWith("F") || series.startsWith("B");
+    }
+
+    public boolean isInvoice(SaleDetailDto saleDetail) {
+        return saleDetail != null
+                && saleDetail.SaleDocument != null
+                && saleDetail.SaleDocument.DocumentCod != null
+                && saleDetail.SaleDocument.DocumentCod.split("-")[0].startsWith("F");
+    }
+
+    public boolean isReceipt(SaleDetailDto saleDetail) {
+        return saleDetail != null
+                && saleDetail.SaleDocument != null
+                && saleDetail.SaleDocument.DocumentCod != null
+                && saleDetail.SaleDocument.DocumentCod.split("-")[0].startsWith("B");
     }
 
     private SunatPartyDto buildSupplier(String storeCod) {
@@ -158,29 +218,29 @@ public class SaleSunatPayloadBuildService {
         return dto;
     }
 
-    private void reconcileLineTotals(SunatElectronicDocumentDto dto) {
-        if (dto.Lines == null || dto.Lines.isEmpty() || dto.Totals == null) {
+    private void reconcileLineTotals(List<SunatDocumentLineDto> lines, SunatDocumentTotalsDto totals) {
+        if (lines == null || lines.isEmpty() || totals == null) {
             return;
         }
-        BigDecimal lineTotal = dto.Lines.stream()
+        BigDecimal lineTotal = lines.stream()
                 .map(line -> amount(line.LineExtensionAmount))
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(2, RoundingMode.HALF_UP);
-        BigDecimal taxTotal = dto.Lines.stream()
+        BigDecimal taxTotal = lines.stream()
                 .map(line -> amount(line.TaxAmount))
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(2, RoundingMode.HALF_UP);
-        BigDecimal lineDifference = amount(dto.Totals.LineExtensionAmount).subtract(lineTotal).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal taxDifference = amount(dto.Totals.TaxAmount).subtract(taxTotal).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal lineDifference = amount(totals.LineExtensionAmount).subtract(lineTotal).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal taxDifference = amount(totals.TaxAmount).subtract(taxTotal).setScale(2, RoundingMode.HALF_UP);
         if (lineDifference.compareTo(BigDecimal.ZERO) == 0 && taxDifference.compareTo(BigDecimal.ZERO) == 0) {
             return;
         }
-        BigDecimal tolerance = BigDecimal.valueOf(dto.Lines.size()).multiply(new BigDecimal("0.01")).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal tolerance = BigDecimal.valueOf(lines.size()).multiply(new BigDecimal("0.01")).setScale(2, RoundingMode.HALF_UP);
         if (lineDifference.abs().compareTo(tolerance) > 0 || taxDifference.abs().compareTo(tolerance) > 0) {
             throw new IllegalArgumentException("Diferencia de totales SUNAT supera tolerancia de redondeo");
         }
 
-        SunatDocumentLineDto lastLine = dto.Lines.get(dto.Lines.size() - 1);
+        SunatDocumentLineDto lastLine = lines.get(lines.size() - 1);
         lastLine.LineExtensionAmount = amount(lastLine.LineExtensionAmount).add(lineDifference).setScale(2, RoundingMode.HALF_UP);
         lastLine.TaxableAmount = lastLine.LineExtensionAmount;
         lastLine.TaxAmount = amount(lastLine.TaxAmount).add(taxDifference).setScale(2, RoundingMode.HALF_UP);
@@ -249,5 +309,22 @@ public class SaleSunatPayloadBuildService {
     }
 
     private record DocumentNumber(String series, int correlative) {
+    }
+
+    private record SalePayload(
+            String sourceModule,
+            String sourceDocumentCod,
+            String sourceDocumentType,
+            String sunatDocumentType,
+            String series,
+            int correlative,
+            Date issueDate,
+            String currencyCod,
+            String paymentCondition,
+            SunatPartyDto supplier,
+            SunatPartyDto customer,
+            SunatDocumentTotalsDto totals,
+            List<SunatDocumentLineDto> lines
+    ) {
     }
 }

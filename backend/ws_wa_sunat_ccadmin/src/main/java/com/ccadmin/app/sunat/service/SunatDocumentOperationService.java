@@ -119,7 +119,7 @@ public class SunatDocumentOperationService extends SessionService {
             if(StringUtil.isNotEmpty(sendResult.LastTechnicalError)){
                 log.info("ERROR TECNICO SUNAT : {}",sendResult.LastTechnicalError);
             }
-            log.info("RESPONSE - PROCESS SEND SUNAT :: {} ==> {}",request.SourceDocumentCod,this.objectMapper.writeValueAsString(sendResult));
+            log.info("RESPONSE - PROCESS SEND SUNAT : {} ==> {}",request.SourceDocumentCod,this.objectMapper.writeValueAsString(sendResult));
             return sendResult;
         } catch (Exception ex) {
             log.error("Error procesando documento SUNAT completo. SunatDocumentCod={}", sunatDocumentCod, ex);

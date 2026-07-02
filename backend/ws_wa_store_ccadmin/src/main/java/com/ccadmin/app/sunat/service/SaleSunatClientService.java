@@ -1,6 +1,11 @@
 package com.ccadmin.app.sunat.service;
 
-import com.ccadmin.app.sunat.model.dto.sunat.SunatElectronicDocumentDto;
+import com.ccadmin.app.sunat.model.constants.SunatClientConstants;
+import com.ccadmin.app.sunat.model.dto.sunat.SunatCreditNoteProcessRequestDto;
+import com.ccadmin.app.sunat.model.dto.sunat.SunatDebitNoteProcessRequestDto;
+import com.ccadmin.app.sunat.model.dto.sunat.SunatDespatchAdviceProcessRequestDto;
+import com.ccadmin.app.sunat.model.dto.sunat.SunatInvoiceProcessRequestDto;
+import com.ccadmin.app.sunat.model.dto.sunat.SunatReceiptProcessRequestDto;
 import com.ccadmin.app.sunat.model.dto.sunat.SunatWsResponseDto;
 import com.ccadmin.app.shared.model.dto.UrlDataDto;
 import com.ccadmin.app.shared.shared.UrlSearchShared;
@@ -24,74 +29,41 @@ public class SaleSunatClientService {
         if (response == null) {
             throw new IllegalArgumentException("SUNAT sin respuesta en " + operation);
         }
-        if (response.ErrorStatus || !"200".equals(response.Status)) {
+        if (response.ErrorStatus || !SunatClientConstants.RESPONSE_STATUS_OK.equals(response.Status)) {
             throw new IllegalArgumentException("SUNAT error en " + operation + ": " + response.Message);
         }
     }
 
 
-    public SunatWsResponseDto processInvoice(SunatElectronicDocumentDto request) {
-        UrlDataDto urlData = this.urlSearchShared.findUrlDtaSunat("01_invoice");
-
-        if(!urlData.status.equals("A")){
-            return SunatWsResponseDto.alert("Url processInvoice inactiva");
-        }
-
-        String url = urlData.urlAddress;
-        ResponseEntity<SunatWsResponseDto> response = this.restTemplate.postForEntity(url, request, SunatWsResponseDto.class);
-        this.validateResponse(response.getBody(), "process");
-        return response.getBody();
+    public SunatWsResponseDto processInvoice(SunatInvoiceProcessRequestDto request) {
+        return this.postProcess(SunatClientConstants.URL_KEY_INVOICE, SunatClientConstants.MESSAGE_INACTIVE_INVOICE_URL, request);
     }
 
-    public SunatWsResponseDto processReceipt(SunatElectronicDocumentDto request) {
-        UrlDataDto urlData = this.urlSearchShared.findUrlDtaSunat("03_receipt");
-
-        if(!urlData.status.equals("A")){
-            return SunatWsResponseDto.alert("Url processReceipt inactiva");
-        }
-
-        String url = urlData.urlAddress;
-        ResponseEntity<SunatWsResponseDto> response = this.restTemplate.postForEntity(url, request, SunatWsResponseDto.class);
-        this.validateResponse(response.getBody(), "process");
-        return response.getBody();
+    public SunatWsResponseDto processReceipt(SunatReceiptProcessRequestDto request) {
+        return this.postProcess(SunatClientConstants.URL_KEY_RECEIPT, SunatClientConstants.MESSAGE_INACTIVE_RECEIPT_URL, request);
     }
 
-    public SunatWsResponseDto processCreditNote(SunatElectronicDocumentDto request) {
-        UrlDataDto urlData = this.urlSearchShared.findUrlDtaSunat("07_creditNote");
-
-        if(!urlData.status.equals("A")){
-            return SunatWsResponseDto.alert("Url processCreditNote inactiva");
-        }
-
-        String url = urlData.urlAddress;
-        ResponseEntity<SunatWsResponseDto> response = this.restTemplate.postForEntity(url, request, SunatWsResponseDto.class);
-        this.validateResponse(response.getBody(), "process");
-        return response.getBody();
+    public SunatWsResponseDto processCreditNote(SunatCreditNoteProcessRequestDto request) {
+        return this.postProcess(SunatClientConstants.URL_KEY_CREDIT_NOTE, SunatClientConstants.MESSAGE_INACTIVE_CREDIT_NOTE_URL, request);
     }
 
-    public SunatWsResponseDto processDebitNote(SunatElectronicDocumentDto request) {
-        UrlDataDto urlData = this.urlSearchShared.findUrlDtaSunat("08_debitNote");
-
-        if(!urlData.status.equals("A")){
-            return SunatWsResponseDto.alert("Url processDebitNote inactiva");
-        }
-
-        String url = urlData.urlAddress;
-        ResponseEntity<SunatWsResponseDto> response = this.restTemplate.postForEntity(url, request, SunatWsResponseDto.class);
-        this.validateResponse(response.getBody(), "process");
-        return response.getBody();
+    public SunatWsResponseDto processDebitNote(SunatDebitNoteProcessRequestDto request) {
+        return this.postProcess(SunatClientConstants.URL_KEY_DEBIT_NOTE, SunatClientConstants.MESSAGE_INACTIVE_DEBIT_NOTE_URL, request);
     }
 
-    public SunatWsResponseDto processDespatchAdvice(SunatElectronicDocumentDto request) {
-        UrlDataDto urlData = this.urlSearchShared.findUrlDtaSunat("09_despatchAdvice");
+    public SunatWsResponseDto processDespatchAdvice(SunatDespatchAdviceProcessRequestDto request) {
+        return this.postProcess(SunatClientConstants.URL_KEY_DESPATCH_ADVICE, SunatClientConstants.MESSAGE_INACTIVE_DESPATCH_ADVICE_URL, request);
+    }
 
-        if(!urlData.status.equals("A")){
-            return SunatWsResponseDto.alert("Url processDespatchAdvice inactiva");
+    private SunatWsResponseDto postProcess(String urlKey, String inactiveMessage, Object request) {
+        UrlDataDto urlData = this.urlSearchShared.findUrlDtaSunat(urlKey);
+        if (!SunatClientConstants.URL_STATUS_ACTIVE.equals(urlData.status)) {
+            return SunatWsResponseDto.alert(inactiveMessage);
         }
 
         String url = urlData.urlAddress;
         ResponseEntity<SunatWsResponseDto> response = this.restTemplate.postForEntity(url, request, SunatWsResponseDto.class);
-        this.validateResponse(response.getBody(), "process");
+        this.validateResponse(response.getBody(), SunatClientConstants.OPERATION_PROCESS);
         return response.getBody();
     }
 

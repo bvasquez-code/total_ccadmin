@@ -2,9 +2,8 @@ package com.ccadmin.app.transfer.service;
 
 import com.ccadmin.app.product.model.entity.ProductEntity;
 import com.ccadmin.app.product.shared.ProductShared;
+import com.ccadmin.app.sunat.model.dto.sunat.SunatDespatchAdviceProcessRequestDto;
 import com.ccadmin.app.sunat.model.dto.sunat.SunatDocumentLineDto;
-import com.ccadmin.app.sunat.model.dto.sunat.SunatDocumentTotalsDto;
-import com.ccadmin.app.sunat.model.dto.sunat.SunatElectronicDocumentDto;
 import com.ccadmin.app.sunat.model.dto.sunat.SunatPartyDto;
 import com.ccadmin.app.store.model.dto.StoreInfoDto;
 import com.ccadmin.app.store.model.entity.CompanyEntity;
@@ -34,8 +33,6 @@ import java.util.stream.Collectors;
 @Service
 public class TransferSunatPayloadBuildService {
 
-    private static final String SUNAT_GUIA_REMISION_REMITENTE = "09";
-
     @Autowired
     private TransferHeadRepository transferHeadRepository;
 
@@ -51,7 +48,7 @@ public class TransferSunatPayloadBuildService {
     @Autowired
     private ProductShared productShared;
 
-    public SunatElectronicDocumentDto build(String transferCod) throws Exception {
+    public SunatDespatchAdviceProcessRequestDto build(String transferCod) throws Exception {
         if (StringUtil.isEmpty(transferCod)) {
             throw new TransferException("TransferCod requerido para guia SUNAT");
         }
@@ -84,18 +81,15 @@ public class TransferSunatPayloadBuildService {
         StoreInfoDto destinationInfo = this.storeShared.findStoreInfo(head.StoreCodDest);
         DocumentNumber documentNumber = parseDocumentNumber(document.DocumentCod);
 
-        SunatElectronicDocumentDto dto = new SunatElectronicDocumentDto();
+        SunatDespatchAdviceProcessRequestDto dto = new SunatDespatchAdviceProcessRequestDto();
         dto.SourceModule = "TRANSFER";
         dto.SourceDocumentCod = head.TransferCod;
         dto.SourceDocumentType = "TRANSFER";
-        dto.SunatDocumentType = SUNAT_GUIA_REMISION_REMITENTE;
         dto.Series = documentNumber.series;
         dto.Correlative = documentNumber.correlative;
         dto.IssueDate = head.DispatchDate == null ? new Date() : head.DispatchDate;
-        dto.CurrencyCod = "PEN";
         dto.Supplier = buildParty(originInfo, true);
         dto.Customer = buildParty(destinationInfo, false);
-        dto.Totals = new SunatDocumentTotalsDto();
         dto.ReasonTransferCode = document.ReasonTransferCod;
         dto.ReasonTransferDescription = firstNotBlank(document.ReasonTransferDesc, head.Observation, "TRASLADO ENTRE ESTABLECIMIENTOS");
         dto.TransportModeCode = document.TransportModeCod;

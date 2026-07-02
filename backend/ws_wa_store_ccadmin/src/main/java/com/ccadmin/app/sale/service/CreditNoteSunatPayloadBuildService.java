@@ -4,10 +4,10 @@ import com.ccadmin.app.client.model.entity.ClientEntity;
 import com.ccadmin.app.person.model.entity.PersonEntity;
 import com.ccadmin.app.sale.model.dto.CreditNoteDetailDto;
 import com.ccadmin.app.sale.model.dto.CreditNoteDetDto;
+import com.ccadmin.app.sunat.model.dto.sunat.SunatCreditNoteProcessRequestDto;
 import com.ccadmin.app.sunat.model.dto.sunat.SunatDiscrepancyResponseDto;
 import com.ccadmin.app.sunat.model.dto.sunat.SunatDocumentLineDto;
 import com.ccadmin.app.sunat.model.dto.sunat.SunatDocumentTotalsDto;
-import com.ccadmin.app.sunat.model.dto.sunat.SunatElectronicDocumentDto;
 import com.ccadmin.app.sunat.model.dto.sunat.SunatPartyDto;
 import com.ccadmin.app.sunat.model.dto.sunat.SunatRelatedDocumentDto;
 import com.ccadmin.app.sale.model.entity.CreditNoteDetEntity;
@@ -31,13 +31,12 @@ public class CreditNoteSunatPayloadBuildService {
 
     private static final String SUNAT_FACTURA = "01";
     private static final String SUNAT_BOLETA = "03";
-    private static final String SUNAT_NOTA_CREDITO = "07";
     private static final BigDecimal ANONYMOUS_BOLETA_LIMIT = new BigDecimal("700.00");
 
     @Autowired
     private StoreShared storeShared;
 
-    public SunatElectronicDocumentDto build(CreditNoteDetailDto creditNoteDetail) {
+    public SunatCreditNoteProcessRequestDto build(CreditNoteDetailDto creditNoteDetail) {
         if (creditNoteDetail == null || creditNoteDetail.Headboard == null || creditNoteDetail.Document == null) {
             throw new IllegalArgumentException("Nota de credito confirmada requerida para SUNAT");
         }
@@ -51,11 +50,10 @@ public class CreditNoteSunatPayloadBuildService {
         DocumentNumber documentNumber = parseDocumentNumber(document.DocumentCod);
         String relatedDocumentType = resolveRelatedDocumentType(referenceDocument.DocumentCod);
 
-        SunatElectronicDocumentDto dto = new SunatElectronicDocumentDto();
+        SunatCreditNoteProcessRequestDto dto = new SunatCreditNoteProcessRequestDto();
         dto.SourceModule = "CREDIT_NOTE";
         dto.SourceDocumentCod = head.CreditNoteCod;
         dto.SourceDocumentType = "CREDIT_NOTE";
-        dto.SunatDocumentType = SUNAT_NOTA_CREDITO;
         dto.Series = documentNumber.series;
         dto.Correlative = documentNumber.correlative;
         dto.IssueDate = head.ModifyDate == null ? new Date() : head.ModifyDate;
@@ -68,7 +66,7 @@ public class CreditNoteSunatPayloadBuildService {
         dto.Lines = new ArrayList<>(creditNoteDetail.DetailList.stream()
                 .map(this::buildLine)
                 .toList());
-        reconcileLineTotals(dto);
+        reconcileLineTotals(dto.Lines, dto.Totals);
         return dto;
     }
 
@@ -174,29 +172,29 @@ public class CreditNoteSunatPayloadBuildService {
         return dto;
     }
 
-    private void reconcileLineTotals(SunatElectronicDocumentDto dto) {
-        if (dto.Lines == null || dto.Lines.isEmpty() || dto.Totals == null) {
+    private void reconcileLineTotals(List<SunatDocumentLineDto> lines, SunatDocumentTotalsDto totals) {
+        if (lines == null || lines.isEmpty() || totals == null) {
             return;
         }
-        BigDecimal lineTotal = dto.Lines.stream()
+        BigDecimal lineTotal = lines.stream()
                 .map(line -> amount(line.LineExtensionAmount))
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(2, RoundingMode.HALF_UP);
-        BigDecimal taxTotal = dto.Lines.stream()
+        BigDecimal taxTotal = lines.stream()
                 .map(line -> amount(line.TaxAmount))
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(2, RoundingMode.HALF_UP);
-        BigDecimal lineDifference = amount(dto.Totals.LineExtensionAmount).subtract(lineTotal).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal taxDifference = amount(dto.Totals.TaxAmount).subtract(taxTotal).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal lineDifference = amount(totals.LineExtensionAmount).subtract(lineTotal).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal taxDifference = amount(totals.TaxAmount).subtract(taxTotal).setScale(2, RoundingMode.HALF_UP);
         if (lineDifference.compareTo(BigDecimal.ZERO) == 0 && taxDifference.compareTo(BigDecimal.ZERO) == 0) {
             return;
         }
-        BigDecimal tolerance = BigDecimal.valueOf(dto.Lines.size()).multiply(new BigDecimal("0.01")).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal tolerance = BigDecimal.valueOf(lines.size()).multiply(new BigDecimal("0.01")).setScale(2, RoundingMode.HALF_UP);
         if (lineDifference.abs().compareTo(tolerance) > 0 || taxDifference.abs().compareTo(tolerance) > 0) {
             throw new IllegalArgumentException("Diferencia de totales SUNAT supera tolerancia de redondeo");
         }
 
-        SunatDocumentLineDto lastLine = dto.Lines.get(dto.Lines.size() - 1);
+        SunatDocumentLineDto lastLine = lines.get(lines.size() - 1);
         lastLine.LineExtensionAmount = amount(lastLine.LineExtensionAmount).add(lineDifference).setScale(2, RoundingMode.HALF_UP);
         lastLine.TaxableAmount = lastLine.LineExtensionAmount;
         lastLine.TaxAmount = amount(lastLine.TaxAmount).add(taxDifference).setScale(2, RoundingMode.HALF_UP);
