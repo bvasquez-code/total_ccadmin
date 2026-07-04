@@ -399,6 +399,15 @@ export class TicketSunatService {
   /** ========= Helpers ========= */
   private fmtNum(n: number): string { return (Number(n || 0)).toFixed(2); }
 
+  private formatMoney(value: any): string {
+    const numericValue = Number(String(value ?? 0).replace(/,/g, ''));
+    const amount = Number.isFinite(numericValue) ? numericValue : 0;
+    return amount.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
   private formatQuantity(value: number): string {
     const number = Number(value || 0);
     if (Number.isInteger(number)) return number.toFixed(0);
@@ -429,6 +438,12 @@ export class TicketSunatService {
     const name = (productName || '').trim();
     if (code && name) return `${code} : ${name}`;
     return code || name;
+  }
+  private productDetailHTML(item: any, description: any): string {
+    const itemText = String(item ?? '').trim();
+    const descriptionText = this.escape(description);
+    if (!itemText) return `<span class="product-text">${descriptionText}</span>`;
+    return `<span class="product-number">${this.escape(itemText)}.</span><span class="product-text">${descriptionText}</span>`;
   }
   private formatTimeHHMM(iso: string): string {
     if (!iso) return '';
@@ -579,7 +594,7 @@ export class TicketSunatService {
       return `
       <div class="item">
         <div class="row">
-          <div class="desc">${this.escape(it.item)}. ${this.escape(it.description)}</div>
+          <div class="desc product-detail">${this.productDetailHTML(it.item, it.description)}</div>
           <div class="amt">${this.escape(it.quantity)} ${this.escape(it.unit)}</div>
         </div>
         ${meta ? `<div class="item-meta">${meta}</div>` : ''}
@@ -613,6 +628,9 @@ export class TicketSunatService {
       .bold { font-weight: bold; }
       .small { font-size: ${Math.max(this.BASE_FONT_PX - 1, 8)}px; }
       .item-meta { font-size: ${this.BASE_FONT_PX}px; line-height: 1.25; }
+      .product-detail { display: grid; grid-template-columns: max-content minmax(0, 1fr); column-gap: 4px; align-items: start; }
+      .product-number { white-space: nowrap; }
+      .product-text { min-width: 0; overflow-wrap: break-word; }
       .sep { border-top: 1px dashed #000; margin: 6px 0; }
       .row { display: flex; flex-direction: row; justify-content: space-between; gap: 6px; }
       .desc { width: 70%; word-wrap: break-word; }
@@ -747,26 +765,26 @@ export class TicketSunatService {
         i.lot ? `LOTE: ${this.escape(i.lot)}` : '',
         i.expirationDate ? `VENCIMIENTO: ${this.escape(i.expirationDate)}` : ''
       ].filter(Boolean).join(' | ');
-      const desc = i.item ? `${this.escape(i.item)}. ${this.escape(i.desc)}` : this.escape(i.desc);
+      const desc = this.productDetailHTML(i.item, i.desc);
       const quantity = i.unit
         ? `${this.formatQuantity(i.cant)} ${this.escape(i.unit)}`
         : this.escape(i.cant);
 
       return `<div class="item">
        <div class="row">
-         <div class="desc">${desc}</div>
+         <div class="desc product-detail">${desc}</div>
          <div class="amt">${quantity}</div>
        </div>
        ${meta ? `<div class="item-meta">${meta}</div>` : ''}
        <div class="amount-line">
          <span></span>
-         <span>${this.fmtNum(i.pUnit)}</span>
-         <span>${this.fmtNum(i.total)}</span>
+         <span>${this.formatMoney(i.pUnit)}</span>
+         <span>${this.formatMoney(i.total)}</span>
        </div>
       </div>`;
     }));
     const pagoRows = lines(data.payments.map(p =>
-      `<div class="row"><div class="desc">${this.escape(p.medio)} <br>${this.escape(p.ref)}</div><div class="imp">${p.monto}</div></div>`
+      `<div class="row"><div class="desc">${this.escape(p.medio)} <br>${this.escape(p.ref)}</div><div class="imp">${this.formatMoney(p.monto)}</div></div>`
     ));
 
     // --- Cálculo de anchos efectivos (80mm real) ---
@@ -801,6 +819,9 @@ export class TicketSunatService {
       .bold { font-weight: bold; }
       .small { font-size: ${Math.max(this.BASE_FONT_PX - 1, 8)}px; }
       .item-meta { font-size: ${this.BASE_FONT_PX}px; line-height: 1.25; }
+      .product-detail { display: grid; grid-template-columns: max-content minmax(0, 1fr); column-gap: 4px; align-items: start; }
+      .product-number { white-space: nowrap; }
+      .product-text { min-width: 0; overflow-wrap: break-word; }
       .sep { border-top: 1px dashed #000; margin: 6px 0; }
       .row { display: flex; flex-direction: row; justify-content: space-between; }
 
@@ -889,27 +910,27 @@ export class TicketSunatService {
       <div class="sep"></div>
       <div class="subttl small">
         <span>Op. Gravada</span>
-        <span>${this.escape(data.document.currencySymbol)} ${data.totals.opGravada}</span>
+        <span>${this.escape(data.document.currencySymbol)} ${this.formatMoney(data.totals.opGravada)}</span>
       </div>
       <div class="subttl small">
         <span>IGV (18%)</span>
-        <span>${this.escape(data.document.currencySymbol)} ${data.totals.igv}</span>
+        <span>${this.escape(data.document.currencySymbol)} ${this.formatMoney(data.totals.igv)}</span>
       </div>
       <div class="subttl bold">
         <span>TOTAL</span>
-        <span>${this.escape(data.document.currencySymbol)} ${data.totals.total}</span>
+        <span>${this.escape(data.document.currencySymbol)} ${this.formatMoney(data.totals.total)}</span>
       </div>
 
       ${data.tipDoc === "sale" ? `<div class="sep"></div><div class="small bold">PAGOS</div>${pagoRows}` : ''}
 
       ${data.tipDoc === "sale" ? `<div class="subttl small">
         <span>Importe Total</span>
-        <span>${this.escape(data.document.currencySymbol)} ${this.fmtNum(totalPagado)}</span>
+        <span>${this.escape(data.document.currencySymbol)} ${this.formatMoney(totalPagado)}</span>
       </div>` : ''}
 
       ${data.tipDoc === "sale" ? `<div class="subttl small">
         <span>Vuelto</span>
-        <span>${this.escape(data.document.currencySymbol)} ${this.fmtNum(vuelto)}</span>
+        <span>${this.escape(data.document.currencySymbol)} ${this.formatMoney(vuelto)}</span>
       </div>` : ''}
 
       <div class="sep"></div>

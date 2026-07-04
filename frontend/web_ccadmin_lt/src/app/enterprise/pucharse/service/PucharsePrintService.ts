@@ -98,12 +98,12 @@ export class PucharsePrintService {
             return `
             <tr>
                 <td>
-                    <div>${this.escape(this.productDetailText(item))}</div>
+                    <div class="product-detail">${this.productDetailHtml(item)}</div>
                     ${meta ? `<div class="item-meta">${meta}</div>` : ""}
                 </td>
                 <td class="right">${this.escape(this.quantityText(item))}</td>
-                <td class="right">${this.formatNumber(item.numUnitPrice, 2)}</td>
-                <td class="right">${this.formatNumber(item.numTotalPrice, 2)}</td>
+                <td class="right">${this.formatMoney(item.numUnitPrice)}</td>
+                <td class="right">${this.formatMoney(item.numTotalPrice)}</td>
             </tr>
         `;
         }).join("");
@@ -126,6 +126,9 @@ export class PucharsePrintService {
                     .right { text-align: right; }
                     .small { font-size: ${Math.max(this.BASE_FONT_PX - 1, 8)}px; color: #333; margin-top: 2px; }
                     .item-meta { font-size: ${this.BASE_FONT_PX}px; color: #333; margin-top: 2px; }
+                    .product-detail { display: grid; grid-template-columns: max-content minmax(0, 1fr); column-gap: 4px; align-items: start; }
+                    .product-number { white-space: nowrap; }
+                    .product-text { min-width: 0; overflow-wrap: break-word; }
                     .total { margin-top: 12px; text-align: right; font-weight: bold; font-size: ${this.BASE_FONT_PX}px; }
                     @media print { body { margin: 10mm; } }
                 </style>
@@ -157,7 +160,7 @@ export class PucharsePrintService {
                     <tbody>${rows}</tbody>
                 </table>
 
-                <div class="total">${this.escape(data.currencyCod || "")} ${this.formatNumber(data.total || 0, 2)}</div>
+                <div class="total">${this.escape(data.currencyCod || "")} ${this.formatMoney(data.total || 0)}</div>
             </body>
             </html>
         `;
@@ -170,14 +173,14 @@ export class PucharsePrintService {
             return `
             <div class="item">
                 <div class="row">
-                    <div class="desc">${this.escape(this.productDetailText(item))}</div>
+                    <div class="desc product-detail">${this.productDetailHtml(item)}</div>
                     <div class="amt">${this.escape(this.quantityText(item))}</div>
                 </div>
                 ${meta ? `<div class="item-meta">${meta}</div>` : ""}
                 <div class="amount-line">
                     <span></span>
-                    <span>${this.formatNumber(item.numUnitPrice, 2)}</span>
-                    <span>${this.formatNumber(item.numTotalPrice, 2)}</span>
+                    <span>${this.formatMoney(item.numUnitPrice)}</span>
+                    <span>${this.formatMoney(item.numTotalPrice)}</span>
                 </div>
             </div>
         `;
@@ -208,6 +211,9 @@ export class PucharsePrintService {
                     .bold { font-weight: bold; }
                     .small { font-size: ${Math.max(this.BASE_FONT_PX - 1, 8)}px; }
                     .item-meta { font-size: ${this.BASE_FONT_PX}px; }
+                    .product-detail { display: grid; grid-template-columns: max-content minmax(0, 1fr); column-gap: 4px; align-items: start; }
+                    .product-number { white-space: nowrap; }
+                    .product-text { min-width: 0; overflow-wrap: break-word; }
                     .sep { border-top: 1px dashed #000; margin: 6px 0; }
                     .row { display: flex; flex-direction: row; justify-content: space-between; gap: 6px; }
                     .label { font-weight: bold; }
@@ -268,7 +274,7 @@ export class PucharsePrintService {
                         ${rows}
 
                         <div class="sep"></div>
-                        <div class="row total"><span>TOTAL</span><span>${this.escape(data.currencyCod || "")} ${this.formatNumber(data.total || 0, 2)}</span></div>
+                        <div class="row total"><span>TOTAL</span><span>${this.escape(data.currencyCod || "")} ${this.formatMoney(data.total || 0)}</span></div>
                         <div class="sep"></div>
                         <div class="center small">Uso interno</div>
                     </div>
@@ -316,9 +322,12 @@ export class PucharsePrintService {
         return code || name;
     }
 
-    private productDetailText(item: any): string {
+    private productDetailHtml(item: any): string {
+        const itemNumber = String(item.item ?? "").trim();
         const description = item.productDescription || this.buildProductCodeName(item.productCod, item.productName);
-        return `${item.item || ""}. ${description}`.trim();
+        const descriptionText = this.escape(description);
+        if (!itemNumber) return `<span class="product-text">${descriptionText}</span>`;
+        return `<span class="product-number">${this.escape(itemNumber)}.</span><span class="product-text">${descriptionText}</span>`;
     }
 
     private resolvePrintMode(source: any): string {
@@ -351,8 +360,13 @@ export class PucharsePrintService {
         return `${value.toLocaleDateString("es-PE")} ${value.toLocaleTimeString("es-PE", { hour: "2-digit", minute: "2-digit" })}`;
     }
 
-    private formatNumber(value: number, decimals: number): string {
-        return Number(value || 0).toFixed(decimals);
+    private formatMoney(value: any): string {
+        const numericValue = Number(String(value ?? 0).replace(/,/g, ""));
+        const amount = Number.isFinite(numericValue) ? numericValue : 0;
+        return amount.toLocaleString("en-US", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
     }
 
     private formatQuantity(value: number): string {
