@@ -27,6 +27,8 @@ public class SaleDetEntity extends AuditTableEntity implements Serializable {
     public BigDecimal NumDiscount;
     public BigDecimal NumUnitPriceSale;
     public BigDecimal NumTotalPrice;
+    public BigDecimal NumPriceSubTotal = BigDecimal.ZERO;
+    public BigDecimal NumTotalTax = BigDecimal.ZERO;
     public String ProductUnitName = "NIU";
     public int ProductUnitFactor = 1;
     public String IsAppliedTax;
@@ -54,6 +56,8 @@ public class SaleDetEntity extends AuditTableEntity implements Serializable {
         this.NumDiscount = presaleDet.NumDiscount;
         this.NumUnitPriceSale = presaleDet.NumUnitPriceSale;
         this.NumTotalPrice = presaleDet.NumTotalPrice;
+        this.NumPriceSubTotal = BigDecimal.ZERO;
+        this.NumTotalTax = BigDecimal.ZERO;
         this.ProductUnitName = presaleDet.ProductUnitName;
         this.ProductUnitFactor = presaleDet.ProductUnitFactor;
         this.IsAppliedTax = "S";
@@ -70,12 +74,20 @@ public class SaleDetEntity extends AuditTableEntity implements Serializable {
         this.NumDiscount = presaleDet.NumDiscount;
         this.NumUnitPriceSale = presaleDet.NumUnitPriceSale;
         this.NumTotalPrice = presaleDet.NumTotalPrice;
+        this.NumPriceSubTotal = BigDecimal.ZERO;
+        this.NumTotalTax = BigDecimal.ZERO;
         this.ProductUnitName = presaleDet.ProductUnitName;
         this.ProductUnitFactor = presaleDet.ProductUnitFactor;
         this.IsAppliedTax = "S";
         this.SaleCod = SaleCod;
         this.LotNumber = presaleDet.LotNumber;
         this.ExpirationDate = presaleDet.ExpirationDate;
+        return this;
+    }
+
+    public SaleDetEntity tax(BigDecimal NumPriceSubTotal, BigDecimal NumTotalTax) {
+        this.NumPriceSubTotal = NumPriceSubTotal;
+        this.NumTotalTax = NumTotalTax;
         return this;
     }
 
@@ -94,6 +106,12 @@ public class SaleDetEntity extends AuditTableEntity implements Serializable {
         }
         if(this.NumTotalPrice.compareTo(BigDecimal.ZERO) < 0){
             throw new SaleBuildException("Precio total no puede ser negativo");
+        }
+        if(this.NumPriceSubTotal.compareTo(BigDecimal.ZERO) < 0){
+            throw new SaleBuildException("Sub total no puede ser negativo");
+        }
+        if(this.NumTotalTax.compareTo(BigDecimal.ZERO) < 0){
+            throw new SaleBuildException("Impuesto total no puede ser negativo");
         }
         if(this.NumUnitPriceSale.compareTo(BigDecimal.ZERO) < 0){
             throw new SaleBuildException("Precio unitario no puede ser negativo");

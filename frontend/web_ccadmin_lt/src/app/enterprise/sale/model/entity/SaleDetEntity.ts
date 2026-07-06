@@ -11,6 +11,8 @@ export class SaleDetEntity extends AuditTableEntity
 	public NumDiscount: number = 0;
 	public NumUnitPriceSale: number = 0;
 	public NumTotalPrice: number = 0;
+	public NumPriceSubTotal: number = 0;
+	public NumTotalTax: number = 0;
 	public IsAppliedTax: string = "";
 	public ProductUnitName: string = "NIU";
 	public ProductUnitFactor: number = 1;

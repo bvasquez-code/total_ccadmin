@@ -69,10 +69,11 @@ public class SaleCreateService extends SessionService {
             throw new SaleException("Detalle de venta esta vacío.");
         }
 
-        SaleHeadEntity saleHead = this.createSaleHead(presaleDetail);
-        List<SaleDetEntity> detailSale = this.createSaleDetEntities(presaleDetail,saleHead);
+        List<TaxEntity> taxList = this.taxRepository.findAllActive();
+        SaleHeadEntity saleHead = this.createSaleHead(presaleDetail, taxList);
+        List<SaleDetEntity> detailSale = this.createSaleDetEntities(presaleDetail,saleHead, taxList);
         List<SaleDetWarehouseEntity> detailSaleWarehouse = this.createSaleDetWarehouseEntities(presaleDetail,saleHead);
-        List<SaleAppliedTaxEntity> SaleAppliedTaxList = this.createSaleAppliedTaxEntities(saleHead);
+        List<SaleAppliedTaxEntity> SaleAppliedTaxList = this.createSaleAppliedTaxEntities(saleHead, taxList);
 
         this.saleHeadRepository.save(saleHead);
         this.saleDetRepository.saveAll(detailSale);
@@ -82,11 +83,15 @@ public class SaleCreateService extends SessionService {
         return this.saleSearchService.findById(saleHead.SaleCod);
     }
 
-    private BigDecimal calculateBaseTax(List<TaxEntity> taxList, BigDecimal total)
-    {
+    private BigDecimal calculateBaseTax(List<TaxEntity> taxList, BigDecimal total) {
+        total = amount(total);
         BigDecimal taxTotal = taxList.stream()
                 .map( e-> e.TaxRateValue )
                 .reduce(BigDecimal.ZERO,BigDecimal::add);
+
+        if (taxTotal.compareTo(BigDecimal.ZERO) <= 0) {
+            return total;
+        }
 
         BigDecimal numDivisor = ( taxTotal.add(BigDecimal.valueOf(100)) ).divide(BigDecimal.valueOf(100),2,RoundingMode.HALF_UP);
 
@@ -94,14 +99,16 @@ public class SaleCreateService extends SessionService {
     }
 
     public SaleHeadEntity createSaleHead(PresaleDetailDto presaleDetail) throws SaleBuildException {
-
         List<TaxEntity> taxList = this.taxRepository.findAllActive();
+        return createSaleHead(presaleDetail, taxList);
+    }
 
+    public SaleHeadEntity createSaleHead(PresaleDetailDto presaleDetail, List<TaxEntity> taxList) throws SaleBuildException {
         String SaleCod = this.saleHeadRepository.getSaleCod(getStoreCod());
         PeriodEntity period = this.periodRepository.findPeriodActuality();
 
         BigDecimal NumTotalPriceNoTax = calculateBaseTax(taxList,presaleDetail.Headboard.NumTotalPrice);
-        BigDecimal NumTotalTax = presaleDetail.Headboard.NumTotalPrice.subtract(NumTotalPriceNoTax);
+        BigDecimal NumTotalTax = amount(presaleDetail.Headboard.NumTotalPrice).subtract(NumTotalPriceNoTax);
 
         SaleHeadEntity saleHead = new SaleHeadEntity()
                 .build(presaleDetail.Headboard,period,SaleCod,StatusConst.PENDING)
@@ -113,17 +120,58 @@ public class SaleCreateService extends SessionService {
     }
 
     public List<SaleDetEntity> createSaleDetEntities(PresaleDetailDto presaleDetail,SaleHeadEntity saleHead) throws SaleBuildException {
+        List<TaxEntity> taxList = this.taxRepository.findAllActive();
+        return createSaleDetEntities(presaleDetail, saleHead, taxList);
+    }
+
+    public List<SaleDetEntity> createSaleDetEntities(PresaleDetailDto presaleDetail,SaleHeadEntity saleHead, List<TaxEntity> taxList) throws SaleBuildException {
         List<SaleDetEntity> detailSale = new ArrayList<>();
         for( var item : presaleDetail.DetailList )
         {
             SaleDetEntity saleDet = new SaleDetEntity()
                     .build(item,saleHead.SaleCod)
+                    .tax(calculateBaseTax(taxList, item.NumTotalPrice), calculateDetailTax(taxList, item.NumTotalPrice))
                     .session(getUserCod())
                     .validate();
 
             detailSale.add(saleDet);
         }
+        reconcileSaleDetTaxTotals(detailSale, saleHead);
         return detailSale;
+    }
+
+    private BigDecimal calculateDetailTax(List<TaxEntity> taxList, BigDecimal total) {
+        BigDecimal baseTax = calculateBaseTax(taxList, total);
+        return amount(total).subtract(baseTax).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private void reconcileSaleDetTaxTotals(List<SaleDetEntity> detailSale, SaleHeadEntity saleHead) {
+        if (detailSale == null || detailSale.isEmpty() || saleHead == null) {
+            return;
+        }
+        BigDecimal detailSubTotal = detailSale.stream()
+                .map(item -> amount(item.NumPriceSubTotal))
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal detailTax = detailSale.stream()
+                .map(item -> amount(item.NumTotalTax))
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal subTotalDifference = amount(saleHead.NumTotalPriceNoTax).subtract(detailSubTotal).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal taxDifference = amount(saleHead.NumTotalTax).subtract(detailTax).setScale(2, RoundingMode.HALF_UP);
+
+        if (subTotalDifference.compareTo(BigDecimal.ZERO) == 0 && taxDifference.compareTo(BigDecimal.ZERO) == 0) {
+            return;
+        }
+
+        BigDecimal tolerance = BigDecimal.valueOf(detailSale.size()).multiply(new BigDecimal("0.01")).setScale(2, RoundingMode.HALF_UP);
+        if (subTotalDifference.abs().compareTo(tolerance) > 0 || taxDifference.abs().compareTo(tolerance) > 0) {
+            throw new SaleBuildException("Diferencia de impuestos por detalle supera tolerancia de redondeo");
+        }
+
+        SaleDetEntity lastDetail = detailSale.get(detailSale.size() - 1);
+        lastDetail.NumPriceSubTotal = amount(lastDetail.NumPriceSubTotal).add(subTotalDifference).setScale(2, RoundingMode.HALF_UP);
+        lastDetail.NumTotalTax = amount(lastDetail.NumTotalTax).add(taxDifference).setScale(2, RoundingMode.HALF_UP);
     }
 
     public List<SaleDetWarehouseEntity> createSaleDetWarehouseEntities(PresaleDetailDto presaleDetail,SaleHeadEntity saleHead) {
@@ -148,6 +196,10 @@ public class SaleCreateService extends SessionService {
 
     public List<SaleAppliedTaxEntity> createSaleAppliedTaxEntities(SaleHeadEntity saleHead){
         List<TaxEntity> taxList = this.taxRepository.findAllActive();
+        return createSaleAppliedTaxEntities(saleHead, taxList);
+    }
+
+    public List<SaleAppliedTaxEntity> createSaleAppliedTaxEntities(SaleHeadEntity saleHead, List<TaxEntity> taxList){
         List<SaleAppliedTaxEntity> SaleAppliedTaxList = taxList.stream()
                 .map( e -> new SaleAppliedTaxEntity()
                         .build(e.TaxCod,saleHead.SaleCod,e.TaxRateValue)
@@ -155,6 +207,10 @@ public class SaleCreateService extends SessionService {
                         .validate() )
                 .toList();
         return SaleAppliedTaxList;
+    }
+
+    private BigDecimal amount(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value.setScale(2, RoundingMode.HALF_UP);
     }
 
     @Transactional

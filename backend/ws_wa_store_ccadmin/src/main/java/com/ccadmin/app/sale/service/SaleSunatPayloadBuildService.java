@@ -207,15 +207,29 @@ public class SaleSunatPayloadBuildService {
         dto.Description = line.Product == null ? line.ProductCod : line.Product.ProductName;
         dto.UnitCode = normalizeSunatUnitCode(line.ProductUnitName);
         dto.Quantity = BigDecimal.valueOf(line.NumUnit);
-        dto.LineExtensionAmount = amount(line.NumTotalPrice).divide(BigDecimal.valueOf(1.18), 2, RoundingMode.HALF_UP);
+        dto.LineExtensionAmount = detailSubTotal(line);
         dto.TaxableAmount = dto.LineExtensionAmount;
-        dto.TaxAmount = amount(line.NumTotalPrice).subtract(dto.LineExtensionAmount).setScale(2, RoundingMode.HALF_UP);
+        dto.TaxAmount = detailTax(line, dto.LineExtensionAmount);
         dto.UnitPrice = dto.Quantity.compareTo(BigDecimal.ZERO) == 0
                 ? BigDecimal.ZERO
                 : dto.LineExtensionAmount.divide(dto.Quantity, 2, RoundingMode.HALF_UP);
         dto.PriceAmount = amount(line.NumUnitPriceSale);
         dto.TaxPercent = BigDecimal.valueOf(18);
         return dto;
+    }
+
+    private BigDecimal detailSubTotal(SaleDetEntity line) {
+        if (amount(line.NumPriceSubTotal).compareTo(BigDecimal.ZERO) > 0 || amount(line.NumTotalPrice).compareTo(BigDecimal.ZERO) == 0) {
+            return amount(line.NumPriceSubTotal);
+        }
+        return amount(line.NumTotalPrice).divide(BigDecimal.valueOf(1.18), 2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal detailTax(SaleDetEntity line, BigDecimal lineExtensionAmount) {
+        if (amount(line.NumTotalTax).compareTo(BigDecimal.ZERO) > 0 || amount(line.NumTotalPrice).compareTo(BigDecimal.ZERO) == 0) {
+            return amount(line.NumTotalTax);
+        }
+        return amount(line.NumTotalPrice).subtract(amount(lineExtensionAmount)).setScale(2, RoundingMode.HALF_UP);
     }
 
     private void reconcileLineTotals(List<SunatDocumentLineDto> lines, SunatDocumentTotalsDto totals) {

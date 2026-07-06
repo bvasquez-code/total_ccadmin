@@ -28,6 +28,8 @@ CREATE TABLE `sale_det` (
   `NumDiscount` decimal(16,2) DEFAULT NULL COMMENT 'descuento',
   `NumUnitPriceSale` decimal(16,2) DEFAULT NULL COMMENT 'Precio unitario de venta final',
   `NumTotalPrice` decimal(16,2) DEFAULT NULL COMMENT 'Precio Total',
+  `NumPriceSubTotal` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Precio subtotal sin impuestos del detalle',
+  `NumTotalTax` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Total de impuestos del detalle',
   `ProductUnitName` varchar(32) NOT NULL DEFAULT 'NIU' COMMENT 'Unidad visible usada al registrar el detalle',
   `ProductUnitFactor` int NOT NULL DEFAULT '1' COMMENT 'Factor usado al registrar el detalle',
   `IsAppliedTax` char(1) DEFAULT 'S',
@@ -93,9 +95,25 @@ CREATE TABLE `sale_det` (
 
         IF NOT EXISTS (
             SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sale_det'
+            AND column_name = 'NumPriceSubTotal'
+        ) THEN
+            ALTER TABLE `sale_det` ADD COLUMN `NumPriceSubTotal` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Precio subtotal sin impuestos del detalle' AFTER `NumTotalPrice`;
+            SELECT 'Columna NumPriceSubTotal agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sale_det'
+            AND column_name = 'NumTotalTax'
+        ) THEN
+            ALTER TABLE `sale_det` ADD COLUMN `NumTotalTax` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Total de impuestos del detalle' AFTER `NumPriceSubTotal`;
+            SELECT 'Columna NumTotalTax agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sale_det'
             AND column_name = 'ProductUnitName'
         ) THEN
-            ALTER TABLE `sale_det` ADD COLUMN `ProductUnitName` varchar(32) NOT NULL DEFAULT 'NIU' COMMENT 'Unidad visible usada al registrar el detalle' AFTER `NumTotalPrice`;
+            ALTER TABLE `sale_det` ADD COLUMN `ProductUnitName` varchar(32) NOT NULL DEFAULT 'NIU' COMMENT 'Unidad visible usada al registrar el detalle' AFTER `NumTotalTax`;
             SELECT 'Columna ProductUnitName agregada exitosamente.' AS Mensaje;
         END IF;
 
