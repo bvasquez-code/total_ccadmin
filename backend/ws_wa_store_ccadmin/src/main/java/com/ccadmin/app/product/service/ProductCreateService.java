@@ -49,6 +49,8 @@ public class ProductCreateService extends SessionService {
     private ProductFindCreateService productFindCreateService;
     @Autowired
     private GenericQueuedService genericQueuedService;
+    @Autowired
+    private ProductTaxConfigCreateService productTaxConfigCreateService;
 
     @Transactional
     public ProductRegisterDto save(ProductRegisterDto productRegister) {
@@ -76,8 +78,11 @@ public class ProductCreateService extends SessionService {
         if (existProduct) {
             productRegister.config.StoreCod = getStoreCod();
             this.productConfigRepository.save(productRegister.config);
+            this.productTaxConfigCreateService.ensureDefaultMainTax(productRegister.config.ProductCod, productRegister.config.StoreCod);
         } else {
-            this.productConfigRepository.saveAll(this.buildConfigForAllStores(productRegister.config));
+            List<ProductConfigEntity> configList = this.buildConfigForAllStores(productRegister.config);
+            this.productConfigRepository.saveAll(configList);
+            configList.forEach(config -> this.productTaxConfigCreateService.ensureDefaultMainTax(config.ProductCod, config.StoreCod));
         }
 
         if (!existProduct) {
@@ -150,6 +155,7 @@ public class ProductCreateService extends SessionService {
 
         this.productRepository.saveAll(productList);
         this.productConfigRepository.saveAll(configList);
+        configList.forEach(config -> this.productTaxConfigCreateService.ensureDefaultMainTax(config.ProductCod, config.StoreCod));
         this.productVariantRepository.saveAll(variantList);
         this.productInfoRepository.saveAllInfo(productCodList);
         this.productInfoWarehouseRepository.saveAllInfo(productCodList);
@@ -210,6 +216,7 @@ public class ProductCreateService extends SessionService {
             config.session(getUserCod());
             this.productOperationConfigShared.normalize(config);
             this.productConfigRepository.save(config);
+            this.productTaxConfigCreateService.ensureDefaultMainTax(config.ProductCod, config.StoreCod);
             this.productFindCreateService.save(request.ProductCod, storeCod);
         }
 

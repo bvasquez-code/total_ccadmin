@@ -88,6 +88,63 @@ BEGIN
         AND pc2.StoreCod = p_StoreCod
     );
 
+    IF EXISTS (
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = DATABASE()
+          AND table_name = 'product_tax_config'
+    ) AND EXISTS (
+        SELECT 1
+        FROM information_schema.tables
+        WHERE table_schema = DATABASE()
+          AND table_name = 'tax_affectation'
+    ) THEN
+        IF EXISTS (
+            SELECT 1
+            FROM tax
+            WHERE TaxCod = '1000'
+              AND Status = 'A'
+        ) AND EXISTS (
+            SELECT 1
+            FROM tax_affectation
+            WHERE TaxAffectationCod = '10'
+              AND TaxCod = '1000'
+              AND Status = 'A'
+        ) THEN
+            INSERT INTO product_tax_config (
+                ProductCod, StoreCod, TaxCod, TaxAffectationCod, IsMainTax,
+                TaxRateValue, FixedUnitAmount, TaxCalculationType, IsInformative,
+                CalculationOrder, CreationUser, CreationDate, ModifyUser, ModifyDate, Status
+            )
+            SELECT
+                pc.ProductCod,
+                pc.StoreCod,
+                '1000',
+                '10',
+                'S',
+                18.0000,
+                0.0000,
+                'P',
+                'N',
+                20,
+                'SYSTEM',
+                NOW(),
+                NULL,
+                NOW(),
+                'A'
+            FROM product_config pc
+            WHERE pc.StoreCod = p_StoreCod
+              AND pc.Status = 'A'
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM product_tax_config ptc
+                  WHERE ptc.ProductCod = pc.ProductCod
+                    AND ptc.StoreCod = pc.StoreCod
+                    AND ptc.Status = 'A'
+              );
+        END IF;
+    END IF;
+
     INSERT INTO product_search (
         ProductCod, StoreCod, ProductName, ProductDesc,
         NumDigitalStock, NumPhysicalStock, NumPrice,

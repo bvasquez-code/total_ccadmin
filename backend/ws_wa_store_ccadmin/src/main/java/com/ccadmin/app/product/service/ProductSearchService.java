@@ -7,6 +7,8 @@ import com.ccadmin.app.product.model.entity.ProductConfigEntity;
 import com.ccadmin.app.product.model.entity.ProductEntity;
 import com.ccadmin.app.product.model.entity.id.ProductConfigID;
 import com.ccadmin.app.product.repository.*;
+import com.ccadmin.app.sale.repository.TaxAffectationRepository;
+import com.ccadmin.app.sale.repository.TaxRepository;
 import com.ccadmin.app.shared.model.dto.ResponsePageSearchT;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import com.ccadmin.app.shared.model.dto.SearchDto;
@@ -50,6 +52,12 @@ public class ProductSearchService extends SessionService {
     private SystemDocumentShared systemDocumentShared;
     @Autowired
     private StoreShared storeShared;
+    @Autowired
+    private ProductTaxConfigRepository productTaxConfigRepository;
+    @Autowired
+    private TaxRepository taxRepository;
+    @Autowired
+    private TaxAffectationRepository taxAffectationRepository;
     private SearchTService<ProductEntity> searchTService;
 
     public ProductEntity findById(String ProductCod)
@@ -163,6 +171,9 @@ public class ProductSearchService extends SessionService {
 
         rpt.AddResponseAdditional("product", this.findById(ProductCod));
         rpt.AddResponseAdditional("config", config);
+        rpt.AddResponseAdditional("productTaxConfigList", this.productTaxConfigRepository.findByProductAndStore(ProductCod, storeCod));
+        rpt.AddResponseAdditional("taxList", this.taxRepository.findAllActive());
+        rpt.AddResponseAdditional("taxAffectationList", this.taxAffectationRepository.findAllActive());
         rpt.AddResponseAdditional("store", this.storeShared.findById(storeCod));
         rpt.AddResponseAdditional("storeList", this.storeShared.findAll());
         return rpt;

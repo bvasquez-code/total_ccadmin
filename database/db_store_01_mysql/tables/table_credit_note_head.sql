@@ -24,6 +24,8 @@ CREATE TABLE `credit_note_head` (
   `StoreCod` varchar(4) NOT NULL COMMENT 'codigo de tienda',
   `ClientCod` varchar(16) DEFAULT NULL COMMENT 'codigo de cliente',
   `NumTotalPrice` decimal(16,2) NOT NULL COMMENT 'Precio total',
+  `NumTotalPriceNoTax` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Precio total sin impuestos',
+  `NumTotalTax` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Total de impuestos',
   `Commenter` varchar(128) DEFAULT NULL COMMENT 'comentario sobre la nota de credito',
   `PeriodId` int NOT NULL COMMENT 'Periodo Is',
   `CreditNoteStatus` char(1) NOT NULL DEFAULT 'P' COMMENT 'estado de la nota de credito',
@@ -66,9 +68,23 @@ CREATE TABLE `credit_note_head` (
         -- CASO: LA TABLA YA EXISTE -> APLICAR ALTERS
         -- =============================================
         
-        -- Aqui puedes agregar bloques IF NOT EXISTS para futuros ALTERs
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'credit_note_head'
+            AND column_name = 'NumTotalPriceNoTax'
+        ) THEN
+            ALTER TABLE `credit_note_head` ADD COLUMN `NumTotalPriceNoTax` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Precio total sin impuestos' AFTER `NumTotalPrice`;
+            SELECT 'Columna NumTotalPriceNoTax agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'credit_note_head'
+            AND column_name = 'NumTotalTax'
+        ) THEN
+            ALTER TABLE `credit_note_head` ADD COLUMN `NumTotalTax` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Total de impuestos' AFTER `NumTotalPriceNoTax`;
+            SELECT 'Columna NumTotalTax agregada exitosamente.' AS Mensaje;
+        END IF;
         
-        SELECT 'Tabla credit_note_head ya existe. No se realizaron cambios estructurales.' AS Mensaje;
+        SELECT 'Tabla credit_note_head ya existe. Validacion de estructura completada.' AS Mensaje;
 
     END IF;
 

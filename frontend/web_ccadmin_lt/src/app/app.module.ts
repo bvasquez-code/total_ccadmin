@@ -59,8 +59,12 @@ import { ListkardexComponent } from './enterprise/product/pages/listkardex/listk
 import { AppfileComponent } from './enterprise/system/pages/appfile/appfile.component';
 import { CreatecurrencyComponent } from './enterprise/system/pages/createcurrency/createcurrency.component';
 import { CreatepaymentmethodComponent } from './enterprise/system/pages/createpaymentmethod/createpaymentmethod.component';
+import { CreatetaxComponent } from './enterprise/system/pages/createtax/createtax.component';
+import { CreatetaxaffectationComponent } from './enterprise/system/pages/createtaxaffectation/createtaxaffectation.component';
 import { ListcurrencyComponent } from './enterprise/system/pages/listcurrency/listcurrency.component';
 import { ListpaymentmethodComponent } from './enterprise/system/pages/listpaymentmethod/listpaymentmethod.component';
+import { ListtaxComponent } from './enterprise/system/pages/listtax/listtax.component';
+import { ListtaxaffectationComponent } from './enterprise/system/pages/listtaxaffectation/listtaxaffectation.component';
 import { ListcreditnoteComponent } from './enterprise/sale/pages/listcreditnote/listcreditnote.component';
 import { CreatecreditnoteComponent } from './enterprise/sale/pages/createcreditnote/createcreditnote.component';
 import { ReturnstockcreditnoteComponent } from './enterprise/sale/pages/returnstockcreditnote/returnstockcreditnote.component';
@@ -147,6 +151,10 @@ import { PermissiondeniedComponent } from './enterprise/shared/component/permiss
     CreatecurrencyComponent,
     ListpaymentmethodComponent,
     CreatepaymentmethodComponent,
+    ListtaxComponent,
+    CreatetaxComponent,
+    ListtaxaffectationComponent,
+    CreatetaxaffectationComponent,
     ListcreditnoteComponent,
     CreatecreditnoteComponent,
     ReturnstockcreditnoteComponent,

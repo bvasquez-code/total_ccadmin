@@ -104,7 +104,11 @@ export class SidebarMenuConfigService {
                 { permission: "SI000008", label: "Crear metodo de pago", url: "enterprise/system/pages/createpaymentmethod", urlShade: "enterprise/system/pages/listpaymentmethod", isVisible: false },
                 { permission: "SI000009", label: "Grupos de configuracion", url: "enterprise/businessconfiggroup/pages/listbusinessconfiggroup" },
                 { permission: "SI000010", label: "Crear grupo de configuracion", url: "enterprise/businessconfiggroup/pages/createbusinessconfiggroup", urlShade: "enterprise/businessconfiggroup/pages/listbusinessconfiggroup", isVisible: false },
-                { permission: "SI000011", label: "Administrar valores de configuracion", url: "enterprise/businessconfiggroup/pages/createbusinessconfig", urlShade: "enterprise/businessconfiggroup/pages/listbusinessconfiggroup", isVisible: false }
+                { permission: "SI000011", label: "Administrar valores de configuracion", url: "enterprise/businessconfiggroup/pages/createbusinessconfig", urlShade: "enterprise/businessconfiggroup/pages/listbusinessconfiggroup", isVisible: false },
+                { permission: "SI000012", label: "Tributos", url: "enterprise/system/pages/listtax" },
+                { permission: "SI000013", label: "Crear tributo", url: "enterprise/system/pages/createtax", urlShade: "enterprise/system/pages/listtax", isVisible: false },
+                { permission: "SI000014", label: "Afectaciones tributarias", url: "enterprise/system/pages/listtaxaffectation" },
+                { permission: "SI000015", label: "Crear afectacion tributaria", url: "enterprise/system/pages/createtaxaffectation", urlShade: "enterprise/system/pages/listtaxaffectation", isVisible: false }
             ]
         }),
         new SidebarMenuConfigDto({

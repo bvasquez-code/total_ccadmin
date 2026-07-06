@@ -27,8 +27,11 @@ CREATE TABLE `credit_note_det` (
   `NumUnitPriceSale` decimal(16,2) DEFAULT NULL COMMENT 'Precio unitario de venta final',
   `NumTotalPrice` decimal(16,2) DEFAULT NULL COMMENT 'Precio Total',
   `NumUnitStockReturned` int DEFAULT '0' COMMENT 'Stock regresado a al tienda',
+  `NumPriceSubTotal` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Precio subtotal sin impuestos del detalle',
+  `NumTotalTax` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Total de impuestos del detalle',
   `ProductUnitName` varchar(32) NOT NULL DEFAULT 'NIU' COMMENT 'Unidad visible usada al registrar el detalle',
   `ProductUnitFactor` int NOT NULL DEFAULT '1' COMMENT 'Factor usado al registrar el detalle',
+  `IsAppliedTax` char(1) DEFAULT 'S',
   `CreationUser` varchar(16) NOT NULL,
   `CreationDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `ModifyUser` varchar(16) DEFAULT NULL,
@@ -103,6 +106,30 @@ CREATE TABLE `credit_note_det` (
         ) THEN
             ALTER TABLE `credit_note_det` ADD COLUMN `ProductUnitFactor` int NOT NULL DEFAULT '1' COMMENT 'Factor usado al registrar el detalle' AFTER `ProductUnitName`;
             SELECT 'Columna ProductUnitFactor agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'credit_note_det'
+            AND column_name = 'NumPriceSubTotal'
+        ) THEN
+            ALTER TABLE `credit_note_det` ADD COLUMN `NumPriceSubTotal` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Precio subtotal sin impuestos del detalle' AFTER `NumUnitStockReturned`;
+            SELECT 'Columna NumPriceSubTotal agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'credit_note_det'
+            AND column_name = 'NumTotalTax'
+        ) THEN
+            ALTER TABLE `credit_note_det` ADD COLUMN `NumTotalTax` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Total de impuestos del detalle' AFTER `NumPriceSubTotal`;
+            SELECT 'Columna NumTotalTax agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'credit_note_det'
+            AND column_name = 'IsAppliedTax'
+        ) THEN
+            ALTER TABLE `credit_note_det` ADD COLUMN `IsAppliedTax` char(1) DEFAULT 'S' AFTER `ProductUnitFactor`;
+            SELECT 'Columna IsAppliedTax agregada exitosamente.' AS Mensaje;
         END IF;
 
         -- AGREGANDO COLUMNA ExpirationDate

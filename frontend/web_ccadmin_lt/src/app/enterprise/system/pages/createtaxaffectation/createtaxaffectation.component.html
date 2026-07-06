@@ -1,0 +1,89 @@
+<div role="main" class="main-content">
+    <div class="page-content container container-plus">
+        <div class="card acard mt-2 mt-lg-3">
+            <div class="card-header">
+                <h3 class="card-title text-125 text-primary-d2">
+                    <i class="far fa-edit text-dark-l3 mr-1"></i>
+                    {{ TaxAffectationCod !== '' ? 'Editar afectacion tributaria' : 'Registrar afectacion tributaria' }}
+                </h3>
+            </div>
+
+            <div class="card-body px-3 pb-1">
+                <form class="mt-lg-3" autocomplete="off">
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0">Codigo</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <input type="text"
+                                [readonly]="txtTaxAffectationCodReadonly"
+                                [maxLength]="4"
+                                (keypress)="validateKeypress($event)"
+                                class="form-control col-sm-8 col-md-6"
+                                [(ngModel)]="taxAffectation.TaxAffectationCod"
+                                name="TaxAffectationCod">
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0">Nombre</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <input type="text" [maxLength]="64" class="form-control col-sm-8 col-md-6" [(ngModel)]="taxAffectation.Name" name="Name">
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0">Descripcion</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <input type="text" [maxLength]="128" class="form-control col-sm-8 col-md-6" [(ngModel)]="taxAffectation.Description" name="Description">
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0">Tributo asociado</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <select class="form-control col-sm-8 col-md-6" [(ngModel)]="taxAffectation.TaxCod" name="TaxCod">
+                                <option value="">Seleccione</option>
+                                <option *ngFor="let item of taxList" [value]="item.TaxCod">
+                                    {{ item.TaxCod }} - {{ item.Name }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0">Gravado</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <select class="form-control col-sm-8 col-md-6" [(ngModel)]="taxAffectation.IsTaxed" name="IsTaxed">
+                                <option value="N">No</option>
+                                <option value="S">Si</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
+                        <div class="offset-md-3 col-md-9 text-nowrap">
+                            <a class="btn btn-info btn-bold px-4" type="button" (click)="Save()">
+                                <i class="fa fa-check mr-1"></i>
+                                Guardar
+                            </a>
+
+                            <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4" type="reset" href="/enterprise/system/pages/listtaxaffectation">
+                                <i class="fa fa-undo mr-1"></i>
+                                Volver
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
