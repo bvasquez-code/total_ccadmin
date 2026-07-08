@@ -42,6 +42,7 @@ public class ProductTaxConfigCreateService extends SessionService {
                 .findByProductAndStore(request.ProductCod, request.StoreCod);
 
         normalizeAndValidateList(request.TaxConfigList, request.ProductCod, request.StoreCod);
+        reuseCurrentActiveRows(currentList, request.TaxConfigList);
         inactiveMissingCurrentRows(currentList, request.TaxConfigList);
 
         List<ProductTaxConfigEntity> savedList = new ArrayList<>();
@@ -164,6 +165,9 @@ public class ProductTaxConfigCreateService extends SessionService {
         if (config.Status == null || config.Status.isBlank()) {
             config.Status = "A";
         }
+        if (config.TaxAffectationCod != null && config.TaxAffectationCod.isBlank()) {
+            config.TaxAffectationCod = null;
+        }
 
         if ("S".equals(config.IsMainTax)) {
             TaxAffectationEntity affectation = this.taxAffectationRepository
@@ -214,6 +218,29 @@ public class ProductTaxConfigCreateService extends SessionService {
                 current.inactive(this.getUserCod());
                 this.productTaxConfigRepository.save(current);
             }
+        }
+    }
+
+    private void reuseCurrentActiveRows(List<ProductTaxConfigEntity> currentList, List<ProductTaxConfigEntity> requestList) {
+        for (ProductTaxConfigEntity item : requestList) {
+            if (!isActive(item) || item.ProductTaxConfigId != null) {
+                continue;
+            }
+            if ("S".equals(item.IsMainTax)) {
+                currentList.stream()
+                        .filter(this::isActive)
+                        .filter(current -> "S".equals(current.IsMainTax))
+                        .findFirst()
+                        .ifPresent(current -> item.ProductTaxConfigId = current.ProductTaxConfigId);
+            }
+            if (item.ProductTaxConfigId != null) {
+                continue;
+            }
+            currentList.stream()
+                    .filter(this::isActive)
+                    .filter(current -> current.TaxCod.equals(item.TaxCod))
+                    .findFirst()
+                    .ifPresent(current -> item.ProductTaxConfigId = current.ProductTaxConfigId);
         }
     }
 

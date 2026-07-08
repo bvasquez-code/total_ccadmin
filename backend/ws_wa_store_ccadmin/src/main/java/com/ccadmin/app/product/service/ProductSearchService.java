@@ -14,6 +14,7 @@ import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import com.ccadmin.app.shared.model.dto.SearchDto;
 import com.ccadmin.app.shared.service.SearchTService;
 import com.ccadmin.app.shared.service.SessionService;
+import com.ccadmin.app.shared.shared.CatalogSearchShared;
 import com.ccadmin.app.store.shared.StoreShared;
 import com.ccadmin.app.system.shared.AppFileShared;
 import com.ccadmin.app.system.shared.SystemDocumentShared;
@@ -58,6 +59,9 @@ public class ProductSearchService extends SessionService {
     private TaxRepository taxRepository;
     @Autowired
     private TaxAffectationRepository taxAffectationRepository;
+    @Autowired
+    private CatalogSearchShared catalogSearchShared;
+
     private SearchTService<ProductEntity> searchTService;
 
     public ProductEntity findById(String ProductCod)
@@ -176,6 +180,7 @@ public class ProductSearchService extends SessionService {
         rpt.AddResponseAdditional("taxAffectationList", this.taxAffectationRepository.findAllActive());
         rpt.AddResponseAdditional("store", this.storeShared.findById(storeCod));
         rpt.AddResponseAdditional("storeList", this.storeShared.findAll());
+        rpt.AddResponseAdditional("indDetailedTaxIndicator",catalogSearchShared.findIndicator("ActiTaxCalcFunctionalities","IndDetailedTaxIndicator"));
         return rpt;
     }
 

@@ -4,6 +4,7 @@ import com.ccadmin.app.product.exception.ProductBuildException;
 import com.ccadmin.app.product.model.dto.ProductConfigStoreUpdateDto;
 import com.ccadmin.app.product.model.dto.ProductRegisterDto;
 import com.ccadmin.app.product.model.dto.ProductRegisterMassiveDto;
+import com.ccadmin.app.product.model.dto.ProductTaxConfigRegisterDto;
 import com.ccadmin.app.product.model.entity.*;
 import com.ccadmin.app.product.model.entity.id.ProductConfigID;
 import com.ccadmin.app.product.model.entity.id.ProductPictureID;
@@ -216,11 +217,37 @@ public class ProductCreateService extends SessionService {
             config.session(getUserCod());
             this.productOperationConfigShared.normalize(config);
             this.productConfigRepository.save(config);
-            this.productTaxConfigCreateService.ensureDefaultMainTax(config.ProductCod, config.StoreCod);
+            if (request.TaxConfigList != null && !request.TaxConfigList.isEmpty()) {
+                ProductTaxConfigRegisterDto taxRequest = new ProductTaxConfigRegisterDto();
+                taxRequest.ProductCod = config.ProductCod;
+                taxRequest.StoreCod = config.StoreCod;
+                taxRequest.TaxConfigList = copyTaxConfigList(request.TaxConfigList);
+                this.productTaxConfigCreateService.saveAllByProductStore(taxRequest);
+            } else {
+                this.productTaxConfigCreateService.ensureDefaultMainTax(config.ProductCod, config.StoreCod);
+            }
             this.productFindCreateService.save(request.ProductCod, storeCod);
         }
 
         return request;
+    }
+
+    private List<ProductTaxConfigEntity> copyTaxConfigList(List<ProductTaxConfigEntity> sourceList) {
+        return sourceList.stream().map(source -> {
+            ProductTaxConfigEntity copy = new ProductTaxConfigEntity();
+            copy.ProductCod = source.ProductCod;
+            copy.StoreCod = source.StoreCod;
+            copy.TaxCod = source.TaxCod;
+            copy.TaxAffectationCod = source.TaxAffectationCod;
+            copy.IsMainTax = source.IsMainTax;
+            copy.TaxRateValue = source.TaxRateValue;
+            copy.FixedUnitAmount = source.FixedUnitAmount;
+            copy.TaxCalculationType = source.TaxCalculationType;
+            copy.IsInformative = source.IsInformative;
+            copy.CalculationOrder = source.CalculationOrder;
+            copy.Status = source.Status;
+            return copy;
+        }).toList();
     }
 
     private List<String> resolveTargetStores(ProductConfigStoreUpdateDto request) {

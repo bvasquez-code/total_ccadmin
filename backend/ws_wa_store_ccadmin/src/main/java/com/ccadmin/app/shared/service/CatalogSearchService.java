@@ -2,6 +2,8 @@ package com.ccadmin.app.shared.service;
 
 import java.util.List;
 
+import com.ccadmin.app.shared.model.entity.BusinessConfigEntity;
+import com.ccadmin.app.system.model.dto.IndicatorDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -34,5 +36,11 @@ public class CatalogSearchService {
                 .stream()
                 .map(e -> new GenericCatalogDto(e.ConfigCod, e.ConfigVal))
                 .toList();
+    }
+
+
+    public IndicatorDto findIndicator(String groupCod, String configCod){
+        BusinessConfigEntity businessConfig = this.businessConfigSearchService.findByConfigCod(groupCod,configCod);
+        return new IndicatorDto(businessConfig.ConfigCod,businessConfig.ConfigVal);
     }
 }

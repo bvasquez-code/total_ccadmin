@@ -2,6 +2,7 @@ package com.ccadmin.app.shared.shared;
 
 import java.util.List;
 
+import com.ccadmin.app.system.model.dto.IndicatorDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -25,5 +26,9 @@ public class CatalogSearchShared {
 
     public List<GenericCatalogDto> getPaymentMethodType() {
         return this.catalogSearchService.getPaymentMethodType();
+    }
+
+    public IndicatorDto findIndicator(String groupCod, String configCod){
+        return this.catalogSearchService.findIndicator(groupCod,configCod);
     }
 }

@@ -5,18 +5,16 @@ import Swal from 'sweetalert2';
 import { DataSesionService } from 'src/app/enterprise/compartido/service/datasesion.service';
 import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
 import { ValidationHelper } from 'src/app/enterprise/shared/helper/ValidationHelper';
-import { ResponseWsDto } from 'src/app/enterprise/shared/model/dto/ResponseWsDto';
 import { StoreEntity } from 'src/app/enterprise/shared/model/entity/StoreEntity';
 import { StoreService } from 'src/app/enterprise/store/service/store.service';
 import { ProductConfigStoreUpdateDto } from '../../model/dto/ProductConfigStoreUpdateDto';
-import { ProductTaxConfigRegisterDto } from '../../model/dto/ProductTaxConfigRegisterDto';
 import { ProductConfigEntity } from '../../model/entity/ProductConfigEntity';
 import { ProductEntity } from '../../model/entity/ProductEntity';
 import { ProductTaxConfigEntity } from '../../model/entity/ProductTaxConfigEntity';
 import { TaxAffectationEntity } from 'src/app/enterprise/system/model/entity/TaxAffectationEntity';
 import { TaxEntity } from 'src/app/enterprise/system/model/entity/TaxEntity';
 import { ProductService } from '../../service/product.service';
-import { ProductTaxConfigService } from '../../service/product-tax-config.service';
+import { IndicatorDto } from 'src/app/enterprise/shared/model/dto/IndicatorDto';
 
 @Component({
   selector: 'app-createproductconfig',
@@ -44,10 +42,46 @@ export class CreateproductconfigComponent implements OnInit {
   MainTaxConfig: ProductTaxConfigEntity = new ProductTaxConfigEntity();
   AdditionalTaxConfigList: ProductTaxConfigEntity[] = [];
   NewTaxConfig: ProductTaxConfigEntity = new ProductTaxConfigEntity();
+  IndDetailedTaxIndicator : IndicatorDto = new IndicatorDto();
+  SimpleTaxOptionCod: string = "IGV";
+  SimpleTaxOptionList: any[] = [
+    {
+      OptionCod: "IGV",
+      Label: "IGV 18%",
+      MainTaxCod: "1000",
+      TaxAffectationCod: "10",
+      AdditionalTaxList: []
+    },
+    {
+      OptionCod: "EXONERATED",
+      Label: "Exonerado",
+      MainTaxCod: "9997",
+      TaxAffectationCod: "20",
+      AdditionalTaxList: []
+    },
+    {
+      OptionCod: "UNAFFECTED",
+      Label: "Inafecto",
+      MainTaxCod: "9998",
+      TaxAffectationCod: "30",
+      AdditionalTaxList: []
+    },
+    {
+      OptionCod: "IGV_ICBPER",
+      Label: "IGV 18% + ICBPER 0.50",
+      MainTaxCod: "1000",
+      TaxAffectationCod: "10",
+      AdditionalTaxList: [
+        {
+          TaxCod: "7152",
+          FixedUnitAmount: 0.50
+        }
+      ]
+    }
+  ];
 
   constructor(
     private productService: ProductService,
-    private productTaxConfigService: ProductTaxConfigService,
     private storeService: StoreService,
     private dataSesionService: DataSesionService,
     private router: Router,
@@ -80,6 +114,7 @@ export class CreateproductconfigComponent implements OnInit {
       this.StoreList = rpt.DataAdditional.find(e => e.Name === "storeList")?.Data ?? [];
       this.TaxList = rpt.DataAdditional.find(e => e.Name === "taxList")?.Data ?? [];
       this.TaxAffectationList = rpt.DataAdditional.find(e => e.Name === "taxAffectationList")?.Data ?? [];
+      this.IndDetailedTaxIndicator = rpt.DataAdditional.find(e => e.Name === "indDetailedTaxIndicator")?.Data ?? new IndicatorDto();
       this.loadTaxConfig(rpt.DataAdditional.find(e => e.Name === "productTaxConfigList")?.Data ?? []);
       this.OneStoreSearchTerm = this.getStoreLabel(this.SelectedStore);
       this.Config.ProductCod = this.ProductCod;
@@ -214,6 +249,7 @@ export class CreateproductconfigComponent implements OnInit {
       .map(e => this.copyTaxConfig(e));
     this.onMainAffectationChange(false);
     this.resetNewTaxConfig();
+    this.syncSimpleTaxOptionFromConfig();
   }
 
   copyTaxConfig(config: ProductTaxConfigEntity): ProductTaxConfigEntity {
@@ -251,6 +287,80 @@ export class CreateproductconfigComponent implements OnInit {
 
   get mainAffectationList(): TaxAffectationEntity[] {
     return this.TaxAffectationList.filter(e => e.Status === "A" || !e.Status);
+  }
+
+  get isDetailedTaxMode(): boolean {
+    return (this.IndDetailedTaxIndicator?.Value || "N").toUpperCase() === "S";
+  }
+
+  get selectedSimpleTaxOption(): any {
+    return this.SimpleTaxOptionList.find(e => e.OptionCod === this.SimpleTaxOptionCod) || this.SimpleTaxOptionList[0];
+  }
+
+  syncSimpleTaxOptionFromConfig(): void {
+    if (this.MainTaxConfig.TaxCod === "9997" && this.MainTaxConfig.TaxAffectationCod === "20") {
+      this.SimpleTaxOptionCod = "EXONERATED";
+      return;
+    }
+    if (this.MainTaxConfig.TaxCod === "9998" && this.MainTaxConfig.TaxAffectationCod === "30") {
+      this.SimpleTaxOptionCod = "UNAFFECTED";
+      return;
+    }
+    if (this.MainTaxConfig.TaxCod === "1000" && this.MainTaxConfig.TaxAffectationCod === "10"
+      && this.AdditionalTaxConfigList.some(e => e.Status !== "I" && e.TaxCod === "7152")) {
+      this.SimpleTaxOptionCod = "IGV_ICBPER";
+      return;
+    }
+    this.SimpleTaxOptionCod = "IGV";
+  }
+
+  onSimpleTaxOptionChange(): void {
+    this.applySimpleTaxOption();
+  }
+
+  applySimpleTaxOption(): void {
+    const option = this.selectedSimpleTaxOption;
+    this.MainTaxConfig = this.createTaxConfigFromOption(option.MainTaxCod, option.TaxAffectationCod, "S");
+    this.AdditionalTaxConfigList = (option.AdditionalTaxList || [])
+      .map((item: any) => this.createTaxConfigFromOption(item.TaxCod, "", "N", item.FixedUnitAmount));
+    this.resetNewTaxConfig();
+  }
+
+  createTaxConfigFromOption(taxCod: string, taxAffectationCod: string, isMainTax: string, fixedUnitAmount?: number): ProductTaxConfigEntity {
+    const config = new ProductTaxConfigEntity();
+    config.ProductCod = this.ProductCod;
+    config.StoreCod = this.SelectedStoreCod;
+    config.TaxCod = taxCod;
+    config.TaxAffectationCod = taxAffectationCod;
+    config.IsMainTax = isMainTax;
+    config.Status = "A";
+    this.applyTaxDefaults(config, this.getTax(taxCod));
+    this.applySimpleTaxFallbackDefaults(config, fixedUnitAmount);
+    return config;
+  }
+
+  applySimpleTaxFallbackDefaults(config: ProductTaxConfigEntity, fixedUnitAmount?: number): void {
+    if (config.TaxCod === "1000") {
+      config.TaxCalculationType = "P";
+      config.IsInformative = "N";
+      config.TaxRateValue = 18;
+      config.FixedUnitAmount = 0;
+      config.CalculationOrder = 20;
+    }
+    if (config.TaxCod === "9997" || config.TaxCod === "9998" || config.TaxCod === "9995") {
+      config.TaxCalculationType = "N";
+      config.IsInformative = "S";
+      config.TaxRateValue = 0;
+      config.FixedUnitAmount = 0;
+      config.CalculationOrder = 20;
+    }
+    if (config.TaxCod === "7152") {
+      config.TaxCalculationType = "F";
+      config.IsInformative = "N";
+      config.TaxRateValue = 0;
+      config.FixedUnitAmount = Number(fixedUnitAmount ?? config.FixedUnitAmount ?? 0.50);
+      config.CalculationOrder = Number(config.CalculationOrder || 100);
+    }
   }
 
   get additionalTaxOptions(): TaxEntity[] {
@@ -470,6 +580,9 @@ export class CreateproductconfigComponent implements OnInit {
   }
 
   validateTaxConfig(): void {
+    if (!this.isDetailedTaxMode) {
+      this.applySimpleTaxOption();
+    }
     const activeConfigList = [this.MainTaxConfig, ...this.AdditionalTaxConfigList]
       .filter(e => e.Status !== "I" && Boolean(e.TaxCod));
     if (activeConfigList.length === 0) {
@@ -538,6 +651,7 @@ export class CreateproductconfigComponent implements OnInit {
     const request = new ProductConfigStoreUpdateDto();
     request.ProductCod = this.ProductCod;
     request.config = this.Config;
+    request.TaxConfigList = this.buildTaxConfigRequestList();
 
     if (this.ScopeMode === "ALL") {
       request.ApplyAllStores = true;
@@ -549,28 +663,11 @@ export class CreateproductconfigComponent implements OnInit {
 
     const rpt = await this.productService.SaveConfigByStores(request);
     if (!rpt.ErrorStatus) {
-      const taxRpt = await this.saveTaxConfigByTargetStores();
-      if (taxRpt?.ErrorStatus) {
-        this.toastrService.error(taxRpt.Message);
-        return;
-      }
       this.toastrService.success("Operacion realizada con exito.");
       this.cancel();
     } else {
       this.toastrService.error(rpt.Message);
     }
-  }
-
-  async saveTaxConfigByTargetStores(): Promise<ResponseWsDto | null> {
-    for (const storeCod of this.getTargetStoreCodList()) {
-      const request = new ProductTaxConfigRegisterDto();
-      request.ProductCod = this.ProductCod;
-      request.StoreCod = storeCod;
-      request.TaxConfigList = this.buildTaxConfigRequestList(storeCod);
-      const rpt = await this.productTaxConfigService.saveAllByProductStore(request);
-      if (rpt.ErrorStatus) return rpt;
-    }
-    return null;
   }
 
   getTargetStoreCodList(): string[] {
@@ -579,20 +676,21 @@ export class CreateproductconfigComponent implements OnInit {
     return this.getSelectedStoreCodList();
   }
 
-  buildTaxConfigRequestList(storeCod: string): ProductTaxConfigEntity[] {
+  buildTaxConfigRequestList(): ProductTaxConfigEntity[] {
+    if (!this.isDetailedTaxMode) {
+      this.applySimpleTaxOption();
+    }
     return [this.MainTaxConfig, ...this.AdditionalTaxConfigList]
       .filter(config => config.Status !== "I" && Boolean(config.TaxCod))
       .map(config => {
       const copy = this.copyTaxConfig(config);
       copy.ProductCod = this.ProductCod;
-      copy.StoreCod = storeCod;
+      copy.StoreCod = this.SelectedStoreCod;
       copy.Status = "A";
       if (copy.TaxCod === "1000") {
         copy.TaxRateValue = 18;
       }
-      if (storeCod !== this.SelectedStoreCod) {
-        copy.ProductTaxConfigId = undefined;
-      }
+      copy.ProductTaxConfigId = undefined;
       return copy;
     });
   }

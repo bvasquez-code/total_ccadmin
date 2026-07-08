@@ -1,4 +1,5 @@
 import { ProductConfigEntity } from "../entity/ProductConfigEntity";
+import { ProductTaxConfigEntity } from "../entity/ProductTaxConfigEntity";
 
 export class ProductConfigStoreUpdateDto {
     public ProductCod: string = "";
@@ -6,4 +7,5 @@ export class ProductConfigStoreUpdateDto {
     public StoreCodList: string[] = [];
     public ApplyAllStores: boolean = false;
     public config: ProductConfigEntity = new ProductConfigEntity();
+    public TaxConfigList: ProductTaxConfigEntity[] = [];
 }
