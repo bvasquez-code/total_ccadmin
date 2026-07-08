@@ -14,10 +14,10 @@ public class SunatDocumentLineDto {
     public BigDecimal LineExtensionAmount;
     public BigDecimal TaxableAmount;
     public BigDecimal TaxAmount;
-    public BigDecimal TaxPercent = BigDecimal.valueOf(18);
-    public String TaxCategoryCode = "S";
-    public String TaxExemptionReasonCode = "10";
-    public String TaxSchemeId = "1000";
-    public String TaxSchemeName = "IGV";
-    public String TaxTypeCode = "VAT";
+    public BigDecimal TaxPercent = BigDecimal.ZERO;
+    public String TaxCategoryCode = "";
+    public String TaxExemptionReasonCode = "";
+    public String TaxSchemeId = "";
+    public String TaxSchemeName = "";
+    public String TaxTypeCode = "";
 }

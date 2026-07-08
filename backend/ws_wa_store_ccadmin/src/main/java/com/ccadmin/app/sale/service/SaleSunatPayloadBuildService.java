@@ -9,6 +9,7 @@ import com.ccadmin.app.sunat.model.dto.sunat.SunatInvoiceProcessRequestDto;
 import com.ccadmin.app.sunat.model.dto.sunat.SunatPartyDto;
 import com.ccadmin.app.sunat.model.dto.sunat.SunatReceiptProcessRequestDto;
 import com.ccadmin.app.sale.model.entity.SaleDetEntity;
+import com.ccadmin.app.sale.model.entity.SaleDetTaxEntity;
 import com.ccadmin.app.sale.model.entity.SaleDocumentEntity;
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
 import com.ccadmin.app.store.model.dto.StoreInfoDto;
@@ -214,7 +215,7 @@ public class SaleSunatPayloadBuildService {
                 ? BigDecimal.ZERO
                 : dto.LineExtensionAmount.divide(dto.Quantity, 2, RoundingMode.HALF_UP);
         dto.PriceAmount = amount(line.NumUnitPriceSale);
-        dto.TaxPercent = BigDecimal.valueOf(18);
+        applyMainTaxSnapshot(dto, line);
         return dto;
     }
 
@@ -222,14 +223,48 @@ public class SaleSunatPayloadBuildService {
         if (amount(line.NumPriceSubTotal).compareTo(BigDecimal.ZERO) > 0 || amount(line.NumTotalPrice).compareTo(BigDecimal.ZERO) == 0) {
             return amount(line.NumPriceSubTotal);
         }
-        return amount(line.NumTotalPrice).divide(BigDecimal.valueOf(1.18), 2, RoundingMode.HALF_UP);
+        if (amount(line.NumTotalTax).compareTo(BigDecimal.ZERO) > 0) {
+            return amount(line.NumTotalPrice).subtract(amount(line.NumTotalTax)).setScale(2, RoundingMode.HALF_UP);
+        }
+        return amount(line.NumTotalPrice);
     }
 
     private BigDecimal detailTax(SaleDetEntity line, BigDecimal lineExtensionAmount) {
         if (amount(line.NumTotalTax).compareTo(BigDecimal.ZERO) > 0 || amount(line.NumTotalPrice).compareTo(BigDecimal.ZERO) == 0) {
             return amount(line.NumTotalTax);
         }
+        BigDecimal taxDetailTotal = line.TaxDetailList == null ? BigDecimal.ZERO : line.TaxDetailList.stream()
+                .filter(tax -> !"S".equals(tax.IsInformative))
+                .map(tax -> amount(tax.TaxAmount))
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+        if (taxDetailTotal.compareTo(BigDecimal.ZERO) > 0) {
+            return taxDetailTotal;
+        }
         return amount(line.NumTotalPrice).subtract(amount(lineExtensionAmount)).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private void applyMainTaxSnapshot(SunatDocumentLineDto dto, SaleDetEntity line) {
+        SaleDetTaxEntity mainTax = line.TaxDetailList == null ? null : line.TaxDetailList.stream()
+                .filter(tax -> tax.TaxAffectationCod != null && !tax.TaxAffectationCod.isBlank())
+                .findFirst()
+                .orElse(null);
+        if (mainTax == null) {
+            dto.TaxPercent = BigDecimal.ZERO;
+            return;
+        }
+        dto.TaxPercent = amount(mainTax.TaxRateValue);
+        dto.TaxExemptionReasonCode = mainTax.TaxAffectationCod;
+        dto.TaxSchemeId = mainTax.SunatTaxCod == null || mainTax.SunatTaxCod.isBlank() ? mainTax.TaxCod : mainTax.SunatTaxCod;
+        dto.TaxSchemeName = mainTax.TaxName;
+        dto.TaxTypeCode = "VAT";
+        dto.TaxCategoryCode = switch (mainTax.TaxAffectationCod) {
+            case "10" -> "S";
+            case "20" -> "E";
+            case "30" -> "O";
+            case "40" -> "G";
+            default -> dto.TaxCategoryCode;
+        };
     }
 
     private void reconcileLineTotals(List<SunatDocumentLineDto> lines, SunatDocumentTotalsDto totals) {

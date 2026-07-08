@@ -29,8 +29,6 @@ export class TicketSunatService {
   private readonly H_PADDING_MM = 5;    // padding horizontal interno (más chico = más ancho útil)
   private readonly BASE_FONT_PX = 9;   // sube a 13 si quieres “llenar” más
 
-  private readonly DEFAULT_IGV_RATE = 0.18;
-
   /** Render principal: imprime con layout SUNAT 80mm */
   async printSalesInvoice(saleDetailPrint: ResponseWsDto) {
     // === Bloques del saleDetailPrint ===
@@ -80,7 +78,7 @@ export class TicketSunatService {
     const customerDocTypeSunat = this.mapCustomerDocTypeToSunat(person?.DocumentType);
 
     // === Totales y fechas ===
-    const igvAmount = this.fmtNum(cab.NumTotalTax);
+    const taxAmount = this.fmtNum(cab.NumTotalTax);
     const totalAmount = this.fmtNum(cab.NumTotalPrice);
     const issueDate = this.formatDateDDMMYYYY(String(cab.CreationDate));
 
@@ -93,7 +91,7 @@ export class TicketSunatService {
       docTypeCode,
       series || '',
       (number || '').replace(/^0+/, ''),
-      igvAmount,
+      taxAmount,
       totalAmount,
       issueDate,
       customerDocTypeSunat,
@@ -138,7 +136,7 @@ export class TicketSunatService {
       }),
       totals: {
         opGravada: this.fmtNum(cab.NumTotalPriceNoTax),
-        igv: this.fmtNum(cab.NumTotalTax),
+        tax: this.fmtNum(cab.NumTotalTax),
         total: this.fmtNum(cab.NumTotalPrice)
       },
       payments: payments.filter(e => e.TrxPayment?.TypeMovement === 'I').map((p: any) => ({
@@ -206,7 +204,8 @@ export class TicketSunatService {
 
     // === Totales/fechas — SOLO con campos presentes ===
     const totalAmount = Number(head?.NumTotalPrice || 0);
-    const { base: opGravada, tax: igvAmount } = this.splitTaxValuesFromTotal(totalAmount, this.DEFAULT_IGV_RATE);
+    const subtotalAmount = Number(head?.NumTotalPriceNoTax || 0);
+    const taxAmount = Number(head?.NumTotalTax || 0);
     const issueDate = this.formatDateDDMMYYYY(String(head?.CreationDate));
     const issueTime = this.formatTimeHHMM(String(head?.CreationDate));
 
@@ -219,7 +218,7 @@ export class TicketSunatService {
       docTypeCode,                             // '07'
       series || '',
       (number || '').replace(/^0+/, ''),
-      this.fmtNum(igvAmount),
+      this.fmtNum(taxAmount),
       this.fmtNum(totalAmount),
       issueDate,
       customerDocTypeSunat,
@@ -274,8 +273,8 @@ export class TicketSunatService {
       },
       items,
       totals: {
-        opGravada: this.fmtNum(opGravada),
-        igv: this.fmtNum(igvAmount),
+        opGravada: this.fmtNum(subtotalAmount),
+        tax: this.fmtNum(taxAmount),
         total: this.fmtNum(totalAmount)
       },
       payments: payments.map((p: any) => ({
@@ -532,25 +531,6 @@ export class TicketSunatService {
       docNumber = (person?.DocumentNum ?? '').toString().trim() || '00000000';
     }
     return { docType, docNumber, name };
-  }
-
-  /** Divide total en Operación Gravada e IGV con fallback de tasa.
-   *  Si ya vienen NumTotalPriceNoTax / NumTotalTax, respétalos. */
-  private splitTaxValues(total: number, baseFromDto?: number, taxFromDto?: number, rate = 0.18) {
-    const totalN = Number(total || 0);
-    if (baseFromDto != null && taxFromDto != null) {
-      return { base: Number(baseFromDto), tax: Number(taxFromDto) };
-    }
-    const base = +(totalN / (1 + rate)).toFixed(2);
-    const tax = +(totalN - base).toFixed(2);
-    return { base, tax };
-  }
-
-  private splitTaxValuesFromTotal(total: number, rate = 0.18) {
-    const totalN = Number(total || 0);
-    const base = +(totalN / (1 + rate)).toFixed(2);
-    const tax = +(totalN - base).toFixed(2);
-    return { base, tax };
   }
 
   private getTransferReasonDescription(code: string, desc?: string): string {
@@ -909,12 +889,12 @@ export class TicketSunatService {
 
       <div class="sep"></div>
       <div class="subttl small">
-        <span>Op. Gravada</span>
+        <span>Subtotal sin impuestos</span>
         <span>${this.escape(data.document.currencySymbol)} ${this.formatMoney(data.totals.opGravada)}</span>
       </div>
       <div class="subttl small">
-        <span>IGV (18%)</span>
-        <span>${this.escape(data.document.currencySymbol)} ${this.formatMoney(data.totals.igv)}</span>
+        <span>Impuestos</span>
+        <span>${this.escape(data.document.currencySymbol)} ${this.formatMoney(data.totals.tax)}</span>
       </div>
       <div class="subttl bold">
         <span>TOTAL</span>

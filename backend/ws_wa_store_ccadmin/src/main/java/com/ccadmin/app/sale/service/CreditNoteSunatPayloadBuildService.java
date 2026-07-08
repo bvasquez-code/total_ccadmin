@@ -148,8 +148,9 @@ public class CreditNoteSunatPayloadBuildService {
         BigDecimal lineExtension = amount(head.NumTotalPriceNoTax);
         BigDecimal taxAmount = amount(head.NumTotalTax);
         if (lineExtension.compareTo(BigDecimal.ZERO) == 0 && total.compareTo(BigDecimal.ZERO) > 0) {
-            lineExtension = total.divide(BigDecimal.valueOf(1.18), 2, RoundingMode.HALF_UP);
-            taxAmount = total.subtract(lineExtension).setScale(2, RoundingMode.HALF_UP);
+            lineExtension = taxAmount.compareTo(BigDecimal.ZERO) > 0
+                    ? total.subtract(taxAmount).setScale(2, RoundingMode.HALF_UP)
+                    : total;
         }
         totals.TaxableAmount = lineExtension;
         totals.TaxAmount = taxAmount;
@@ -182,12 +183,23 @@ public class CreditNoteSunatPayloadBuildService {
         if (amount(line.NumPriceSubTotal).compareTo(BigDecimal.ZERO) > 0 || amount(line.NumTotalPrice).compareTo(BigDecimal.ZERO) == 0) {
             return amount(line.NumPriceSubTotal);
         }
-        return amount(line.NumTotalPrice).divide(BigDecimal.valueOf(1.18), 2, RoundingMode.HALF_UP);
+        if (amount(line.NumTotalTax).compareTo(BigDecimal.ZERO) > 0) {
+            return amount(line.NumTotalPrice).subtract(amount(line.NumTotalTax)).setScale(2, RoundingMode.HALF_UP);
+        }
+        return amount(line.NumTotalPrice);
     }
 
     private BigDecimal detailTax(CreditNoteDetEntity line, BigDecimal lineExtensionAmount) {
         if (amount(line.NumTotalTax).compareTo(BigDecimal.ZERO) > 0 || amount(line.NumTotalPrice).compareTo(BigDecimal.ZERO) == 0) {
             return amount(line.NumTotalTax);
+        }
+        BigDecimal taxDetailTotal = line.TaxDetailList == null ? BigDecimal.ZERO : line.TaxDetailList.stream()
+                .filter(tax -> !"S".equals(tax.IsInformative))
+                .map(tax -> amount(tax.TaxAmount))
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+        if (taxDetailTotal.compareTo(BigDecimal.ZERO) > 0) {
+            return taxDetailTotal;
         }
         return amount(line.NumTotalPrice).subtract(amount(lineExtensionAmount)).setScale(2, RoundingMode.HALF_UP);
     }
@@ -198,7 +210,7 @@ public class CreditNoteSunatPayloadBuildService {
                 .findFirst()
                 .orElse(null);
         if (mainTax == null) {
-            dto.TaxPercent = BigDecimal.valueOf(18);
+            dto.TaxPercent = BigDecimal.ZERO;
             return;
         }
         dto.TaxPercent = amount(mainTax.TaxRateValue);
