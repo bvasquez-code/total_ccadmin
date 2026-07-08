@@ -169,6 +169,19 @@
                       <div class="col-5 col-sm-2 text-secondary-d3 text-600">
                         {{ SaleDetail.Headboard.CurrencyCod }} {{ item.NumTotalPrice | FormatoMonedaPeruana : false}}
                       </div>
+                      <div class="col-12 mt-1 text-90 text-grey-d2" *ngIf="hasTaxDetail(item)">
+                        <span class="mr-3">
+                          Base: {{ SaleDetail.Headboard.CurrencyCod }} {{ item.NumPriceSubTotal | FormatoMonedaPeruana : false }}
+                        </span>
+                        <span class="mr-3">
+                          Impuesto: {{ SaleDetail.Headboard.CurrencyCod }} {{ item.NumTotalTax | FormatoMonedaPeruana : false }}
+                        </span>
+                        <span class="badge badge-sm bgc-secondary-l3 text-dark-m2 mr-1"
+                          *ngFor="let tax of getTaxDetailList(item)">
+                          {{ getTaxLineLabel(tax) }}:
+                          {{ SaleDetail.Headboard.CurrencyCod }} {{ tax.TaxAmount | FormatoMonedaPeruana : false }}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -220,7 +233,7 @@
 
                       <div class="row my-2">
                         <div class="col-7 text-right">
-                          IGV (18%)
+                          Impuestos
                         </div>
 
                         <div class="col-5">

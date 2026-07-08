@@ -23,6 +23,8 @@ import java.util.Set;
 @Service
 public class ProductTaxConfigCreateService extends SessionService {
 
+    private static final BigDecimal STANDARD_IGV_RATE = new BigDecimal("18.0000");
+
     @Autowired
     private ProductTaxConfigRepository productTaxConfigRepository;
     @Autowired
@@ -131,6 +133,8 @@ public class ProductTaxConfigCreateService extends SessionService {
             if ("S".equals(item.IsMainTax)) {
                 mainCount++;
                 mainAffectationCod = item.TaxAffectationCod;
+            } else if (this.taxAffectationRepository.countActiveByTaxCod(item.TaxCod) > 0) {
+                throw new IllegalArgumentException("Los tributos de afectacion IGV solo pueden configurarse como principal");
             }
         }
 
@@ -146,12 +150,8 @@ public class ProductTaxConfigCreateService extends SessionService {
         TaxEntity tax = this.taxRepository.findById(config.TaxCod)
                 .orElseThrow(() -> new IllegalArgumentException("Tributo no existe"));
 
-        if (config.TaxCalculationType == null || config.TaxCalculationType.isBlank()) {
-            config.TaxCalculationType = tax.TaxCalculationType;
-        }
-        if (config.IsInformative == null || config.IsInformative.isBlank()) {
-            config.IsInformative = tax.IsInformative;
-        }
+        config.TaxCalculationType = tax.TaxCalculationType;
+        config.IsInformative = tax.IsInformative;
         if (config.TaxRateValue == null) {
             config.TaxRateValue = tax.TaxRateValue;
         }
@@ -179,6 +179,9 @@ public class ProductTaxConfigCreateService extends SessionService {
             }
         }
 
+        if ("1000".equals(config.TaxCod)) {
+            config.TaxRateValue = STANDARD_IGV_RATE;
+        }
         if ("F".equals(config.TaxCalculationType)) {
             config.TaxRateValue = BigDecimal.ZERO;
         }

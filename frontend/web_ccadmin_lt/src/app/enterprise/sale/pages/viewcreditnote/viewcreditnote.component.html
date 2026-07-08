@@ -152,6 +152,20 @@
                       {{ Detail.Headboard.CurrencyCod }}
                       {{ item.CreditNoteDet.NumTotalPrice | FormatoMonedaPeruana:false }}
                     </div>
+
+                    <div class="col-12 mt-1 text-90 text-grey-d2" *ngIf="hasTaxDetail(item.CreditNoteDet)">
+                      <span class="mr-3">
+                        Base: {{ Detail.Headboard.CurrencyCod }} {{ item.CreditNoteDet.NumPriceSubTotal | FormatoMonedaPeruana:false }}
+                      </span>
+                      <span class="mr-3">
+                        Impuesto: {{ Detail.Headboard.CurrencyCod }} {{ item.CreditNoteDet.NumTotalTax | FormatoMonedaPeruana:false }}
+                      </span>
+                      <span class="badge badge-sm bgc-secondary-l3 text-dark-m2 mr-1"
+                        *ngFor="let tax of getTaxDetailList(item.CreditNoteDet)">
+                        {{ getTaxLineLabel(tax) }}:
+                        {{ Detail.Headboard.CurrencyCod }} {{ tax.TaxAmount | FormatoMonedaPeruana:false }}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -162,6 +176,24 @@
                   <div class="col-12 col-sm-7 mt-2 mt-lg-0"><!-- vacío, reservado por si agregas más info --></div>
 
                   <div class="col-12 col-sm-5 text-dark-l1 text-90 order-first order-sm-last">
+                    <div class="row my-2">
+                      <div class="col-7 text-right">SubTotal</div>
+                      <div class="col-5">
+                        <span class="text-115 text-secondary-d3">
+                          {{ Detail.Headboard.CurrencyCod }}
+                          {{ Detail.Headboard.NumTotalPriceNoTax | FormatoMonedaPeruana:false }}
+                        </span>
+                      </div>
+                    </div>
+                    <div class="row my-2">
+                      <div class="col-7 text-right">Impuestos</div>
+                      <div class="col-5">
+                        <span class="text-115 text-secondary-d3">
+                          {{ Detail.Headboard.CurrencyCod }}
+                          {{ Detail.Headboard.NumTotalTax | FormatoMonedaPeruana:false }}
+                        </span>
+                      </div>
+                    </div>
                     <div class="row my-2">
                       <div class="col-7 text-right">
                         <span class="text-150 text-secondary-d3"><b>Monto Total :</b></span>

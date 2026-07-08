@@ -25,6 +25,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -38,6 +39,8 @@ public class SaleCreateService extends SessionService {
     private SaleDetRepository saleDetRepository;
     @Autowired
     private SaleDetWarehouseRepository saleDetWarehouseRepository;
+    @Autowired
+    private SaleDetTaxRepository saleDetTaxRepository;
     @Autowired
     private SaleAppliedTaxRepository saleAppliedTaxRepository;
     @Autowired
@@ -58,6 +61,8 @@ public class SaleCreateService extends SessionService {
     private CounterfoilShared counterfoilShared;
     @Autowired
     private SaleSunatEmissionService saleSunatEmissionService;
+    @Autowired
+    private SaleTaxCalculationService saleTaxCalculationService;
 
     @Transactional
     public SaleDetailDto save(PresaleDetailDto presaleDetail) throws SaleException, SaleBuildException {
@@ -69,15 +74,26 @@ public class SaleCreateService extends SessionService {
             throw new SaleException("Detalle de venta esta vacío.");
         }
 
-        List<TaxEntity> taxList = this.taxRepository.findAllActive();
-        SaleHeadEntity saleHead = this.createSaleHead(presaleDetail, taxList);
-        List<SaleDetEntity> detailSale = this.createSaleDetEntities(presaleDetail,saleHead, taxList);
+        SaleHeadEntity saleHead = this.createSaleHead(presaleDetail);
+        SaleTaxCalculationService.SaleTaxCalculationResult taxCalculation = this.saleTaxCalculationService.buildSaleDetails(
+                presaleDetail.DetailList,
+                saleHead.SaleCod,
+                saleHead.StoreCod,
+                getUserCod()
+        );
+        saleHead.NumTotalPrice = taxCalculation.NumTotalPrice;
+        saleHead.tax(taxCalculation.NumTotalPriceNoTax, taxCalculation.NumTotalTax)
+                .session(getUserCod())
+                .validate();
+        List<SaleDetEntity> detailSale = taxCalculation.DetailList;
+        List<SaleDetTaxEntity> detailTaxSale = taxCalculation.TaxDetailList;
         List<SaleDetWarehouseEntity> detailSaleWarehouse = this.createSaleDetWarehouseEntities(presaleDetail,saleHead);
-        List<SaleAppliedTaxEntity> SaleAppliedTaxList = this.createSaleAppliedTaxEntities(saleHead, taxList);
+        List<SaleAppliedTaxEntity> SaleAppliedTaxList = this.createSaleAppliedTaxEntities(saleHead, detailTaxSale);
 
         this.saleHeadRepository.save(saleHead);
         this.saleDetRepository.saveAll(detailSale);
         this.saleDetWarehouseRepository.saveAll(detailSaleWarehouse);
+        this.saleDetTaxRepository.saveAll(detailTaxSale);
         this.saleAppliedTaxRepository.saveAll(SaleAppliedTaxList);
 
         return this.saleSearchService.findById(saleHead.SaleCod);
@@ -99,29 +115,28 @@ public class SaleCreateService extends SessionService {
     }
 
     public SaleHeadEntity createSaleHead(PresaleDetailDto presaleDetail) throws SaleBuildException {
-        List<TaxEntity> taxList = this.taxRepository.findAllActive();
-        return createSaleHead(presaleDetail, taxList);
-    }
-
-    public SaleHeadEntity createSaleHead(PresaleDetailDto presaleDetail, List<TaxEntity> taxList) throws SaleBuildException {
         String SaleCod = this.saleHeadRepository.getSaleCod(getStoreCod());
         PeriodEntity period = this.periodRepository.findPeriodActuality();
 
-        BigDecimal NumTotalPriceNoTax = calculateBaseTax(taxList,presaleDetail.Headboard.NumTotalPrice);
-        BigDecimal NumTotalTax = amount(presaleDetail.Headboard.NumTotalPrice).subtract(NumTotalPriceNoTax);
-
         SaleHeadEntity saleHead = new SaleHeadEntity()
                 .build(presaleDetail.Headboard,period,SaleCod,StatusConst.PENDING)
-                .tax(NumTotalPriceNoTax,NumTotalTax)
                 .session(getUserCod())
                 .validate();
 
         return saleHead;
     }
 
+    public SaleHeadEntity createSaleHead(PresaleDetailDto presaleDetail, List<TaxEntity> taxList) throws SaleBuildException {
+        return createSaleHead(presaleDetail);
+    }
+
     public List<SaleDetEntity> createSaleDetEntities(PresaleDetailDto presaleDetail,SaleHeadEntity saleHead) throws SaleBuildException {
-        List<TaxEntity> taxList = this.taxRepository.findAllActive();
-        return createSaleDetEntities(presaleDetail, saleHead, taxList);
+        return this.saleTaxCalculationService.buildSaleDetails(
+                presaleDetail.DetailList,
+                saleHead.SaleCod,
+                saleHead.StoreCod,
+                getUserCod()
+        ).DetailList;
     }
 
     public List<SaleDetEntity> createSaleDetEntities(PresaleDetailDto presaleDetail,SaleHeadEntity saleHead, List<TaxEntity> taxList) throws SaleBuildException {
@@ -195,11 +210,10 @@ public class SaleCreateService extends SessionService {
     }
 
     public List<SaleAppliedTaxEntity> createSaleAppliedTaxEntities(SaleHeadEntity saleHead){
-        List<TaxEntity> taxList = this.taxRepository.findAllActive();
-        return createSaleAppliedTaxEntities(saleHead, taxList);
+        return createSaleAppliedTaxEntities(saleHead, this.saleDetTaxRepository.findBySaleCod(saleHead.SaleCod));
     }
 
-    public List<SaleAppliedTaxEntity> createSaleAppliedTaxEntities(SaleHeadEntity saleHead, List<TaxEntity> taxList){
+    public List<SaleAppliedTaxEntity> createSaleAppliedTaxEntitiesFromCatalog(SaleHeadEntity saleHead, List<TaxEntity> taxList){
         List<SaleAppliedTaxEntity> SaleAppliedTaxList = taxList.stream()
                 .map( e -> new SaleAppliedTaxEntity()
                         .build(e.TaxCod,saleHead.SaleCod,e.TaxRateValue)
@@ -207,6 +221,22 @@ public class SaleCreateService extends SessionService {
                         .validate() )
                 .toList();
         return SaleAppliedTaxList;
+    }
+
+    public List<SaleAppliedTaxEntity> createSaleAppliedTaxEntities(SaleHeadEntity saleHead, List<SaleDetTaxEntity> taxLineList){
+        Map<String, BigDecimal> taxRateByTaxCod = new LinkedHashMap<>();
+        for (SaleDetTaxEntity taxLine : taxLineList) {
+            if ("S".equals(taxLine.IsInformative) || amount(taxLine.TaxAmount).compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+            taxRateByTaxCod.putIfAbsent(taxLine.TaxCod, taxLine.TaxRateValue == null ? BigDecimal.ZERO : taxLine.TaxRateValue);
+        }
+        return taxRateByTaxCod.entrySet().stream()
+                .map(entry -> new SaleAppliedTaxEntity()
+                        .build(entry.getKey(), saleHead.SaleCod, entry.getValue())
+                        .session(getUserCod())
+                        .validate())
+                .toList();
     }
 
     private BigDecimal amount(BigDecimal value) {

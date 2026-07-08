@@ -6,8 +6,10 @@ import com.ccadmin.app.payment.shared.TrxPaymentShared;
 import com.ccadmin.app.product.shared.ProductShared;
 import com.ccadmin.app.sale.model.dto.SaleDetailDto;
 import com.ccadmin.app.sale.model.entity.SaleDocumentEntity;
+import com.ccadmin.app.sale.model.entity.SaleDetTaxEntity;
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
 import com.ccadmin.app.sale.repository.SaleDetRepository;
+import com.ccadmin.app.sale.repository.SaleDetTaxRepository;
 import com.ccadmin.app.sale.repository.SaleDocumentRepository;
 import com.ccadmin.app.sale.repository.SaleHeadRepository;
 import com.ccadmin.app.sale.repository.SalePaymentRepository;
@@ -26,6 +28,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class SaleSearchService extends SessionService {
@@ -34,6 +38,8 @@ public class SaleSearchService extends SessionService {
     private SaleHeadRepository saleHeadRepository;
     @Autowired
     private SaleDetRepository saleDetRepository;
+    @Autowired
+    private SaleDetTaxRepository saleDetTaxRepository;
     @Autowired
     private SalePaymentRepository salePaymentRepository;
     @Autowired
@@ -76,6 +82,9 @@ public class SaleSearchService extends SessionService {
 
         saleDetail.Headboard = this.saleHeadRepository.findById(SaleCod).get();
         saleDetail.DetailList = this.saleDetRepository.findBySaleCod(SaleCod);
+        Map<Integer, List<SaleDetTaxEntity>> taxDetailByItem = this.saleDetTaxRepository.findBySaleCod(SaleCod)
+                .stream()
+                .collect(Collectors.groupingBy(item -> item.ItemNumber));
         saleDetail.DetailPayment = this.salePaymentRepository.findBySaleCod(SaleCod);
         saleDetail.SaleDocument = this.saleDocumentRepository.findBySaleCod(SaleCod);
         saleDetail.CreditNoteDetail = this.creditNoteSearchService.findBySaleCod(SaleCod);
@@ -88,6 +97,7 @@ public class SaleSearchService extends SessionService {
         for(var DetailSale : saleDetail.DetailList)
         {
             DetailSale.Product = this.productShared.findById(DetailSale.ProductCod);
+            DetailSale.TaxDetailList = taxDetailByItem.getOrDefault(DetailSale.ItemNumber, List.of());
         }
 
         for(var Payment : saleDetail.DetailPayment)

@@ -14,6 +14,8 @@ import java.math.BigDecimal;
 @Table(name = "product_tax_config")
 public class ProductTaxConfigEntity extends AuditTableEntity implements Serializable {
 
+    private static final BigDecimal STANDARD_IGV_RATE = new BigDecimal("18.0000");
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long ProductTaxConfigId;
@@ -64,6 +66,9 @@ public class ProductTaxConfigEntity extends AuditTableEntity implements Serializ
         }
         if (FixedUnitAmount != null && FixedUnitAmount.compareTo(BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Monto fijo por unidad no puede ser negativo");
+        }
+        if ("1000".equals(TaxCod)) {
+            TaxRateValue = STANDARD_IGV_RATE;
         }
         if (TaxCalculationType.equals("P") && IsInformative.equals("N")
                 && (TaxRateValue == null || TaxRateValue.compareTo(BigDecimal.ZERO) <= 0)) {

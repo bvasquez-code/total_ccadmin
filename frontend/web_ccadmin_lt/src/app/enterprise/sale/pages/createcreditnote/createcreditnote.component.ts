@@ -19,6 +19,7 @@ import { TrxPaymentComponenRequestDto } from 'src/app/enterprise/trxpayment/mode
 import { TrxPaymentEntity } from 'src/app/enterprise/trxpayment/model/entity/TrxPaymentEntity';
 import { CreditNoteReturnPaymentRegisterDto } from '../../model/dto/CreditNoteReturnPaymentRegisterDto';
 import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
+import { SaleDetTaxEntity } from '../../model/entity/SaleDetTaxEntity';
 
 @Component({
   selector: 'app-createcreditnote',
@@ -135,6 +136,28 @@ export class CreatecreditnoteComponent
 
   getProductUnitName(item: { ProductUnitName?: string }): string {
     return item?.ProductUnitName || 'NIU';
+  }
+
+  getTaxDetailList(item: SaleDetEntity): SaleDetTaxEntity[] {
+    return item?.TaxDetailList ?? [];
+  }
+
+  hasTaxDetail(item: SaleDetEntity): boolean {
+    return this.getTaxDetailList(item).length > 0;
+  }
+
+  getTaxLineLabel(tax: SaleDetTaxEntity): string {
+    const name = tax.TaxName || tax.TaxCod;
+    const affectation = tax.TaxAffectationCod ? `/${tax.TaxAffectationCod}` : "";
+    const rate = Number(tax.TaxRateValue || 0);
+    const fixed = Number(tax.FixedUnitAmount || 0);
+    if (tax.TaxCalculationType === "P" && rate > 0) {
+      return `${name}${affectation} ${rate}%`;
+    }
+    if (tax.TaxCalculationType === "F" && fixed > 0) {
+      return `${name} ${fixed}`;
+    }
+    return `${name}${affectation}`;
   }
 
   private recalcTotals(): void {

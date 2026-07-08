@@ -39,6 +39,8 @@ public class SaleDetEntity extends AuditTableEntity implements Serializable {
     public List<SaleDetWarehouseEntity> DetailWarehouse;
     @Transient
     public ProductEntity Product;
+    @Transient
+    public List<SaleDetTaxEntity> TaxDetailList;
 
     public SaleDetEntity()
     {

@@ -83,7 +83,7 @@
               <input
                 type="text"
                 class="form-control col-sm-8 col-md-6"
-                [value]="(SaleDetail.Headboard.CurrencyCod || '') + ' ' + (SaleDetail.Headboard.NumTotalTax | FormatoMonedaPeruana : false)"
+                [value]="(SaleDetail.Headboard.CurrencyCod || '') + ' ' + (SaleDetail.Headboard.NumTotalPrice | FormatoMonedaPeruana : false)"
                 [readonly]="true"
               />
             </div>
@@ -144,35 +144,51 @@
                     </thead>
 
                     <tbody class="mt-1">
-                      <tr class="bgc-h-yellow-l4 d-style"
-                          *ngFor="let item of SaleDetail.DetailList; trackBy: trackBySaleDet">
-                        <td class="text-600">{{ item.ProductCod }}</td>
-                        <td class="text-800">{{ item.Product.ProductName }}</td>
-                        <td class="text-800">{{ getVisibleQuantity(item.NumUnit, item.ProductUnitFactor) }} {{ getProductUnitName(item) }}</td>
-                        <td class="text-800">{{ getVisibleUnitPrice(item.NumUnitPriceSale || item.NumUnitPrice, item.ProductUnitFactor) | FormatoMonedaPeruana : false }}</td>
-                        <td class="text-800">{{ item.NumTotalPrice | FormatoMonedaPeruana : false }}</td>
-                        <td>
-                          <div class="btn-group" role="group" aria-label="Cambiar cantidad a devolver">
-                            <button type="button" 
-                                class="btn btn-danger" 
-                                (click)="SubtractUnit(item)" 
-                                [disabled]="isTotalMode">-</button>
+                      <ng-container *ngFor="let item of SaleDetail.DetailList; trackBy: trackBySaleDet">
+                        <tr class="bgc-h-yellow-l4 d-style">
+                          <td class="text-600">{{ item.ProductCod }}</td>
+                          <td class="text-800">{{ item.Product.ProductName }}</td>
+                          <td class="text-800">{{ getVisibleQuantity(item.NumUnit, item.ProductUnitFactor) }} {{ getProductUnitName(item) }}</td>
+                          <td class="text-800">{{ getVisibleUnitPrice(item.NumUnitPriceSale || item.NumUnitPrice, item.ProductUnitFactor) | FormatoMonedaPeruana : false }}</td>
+                          <td class="text-800">{{ item.NumTotalPrice | FormatoMonedaPeruana : false }}</td>
+                          <td>
+                            <div class="btn-group" role="group" aria-label="Cambiar cantidad a devolver">
+                              <button type="button"
+                                  class="btn btn-danger"
+                                  (click)="SubtractUnit(item)"
+                                  [disabled]="isTotalMode">-</button>
 
-                            <input type="text" class="form-control" 
-                                [value]="getUnit(item)" 
-                                readonly style="width: 80px; text-align: center;" />
-                            <span class="btn btn-light disabled">
-                              {{ getProductUnitName(item) }}
+                              <input type="text" class="form-control"
+                                  [value]="getUnit(item)"
+                                  readonly style="width: 80px; text-align: center;" />
+                              <span class="btn btn-light disabled">
+                                {{ getProductUnitName(item) }}
+                              </span>
+
+                              <button type="button"
+                                  class="btn btn-success"
+                                  (click)="AddUnit(item)"
+                                  [disabled]="isTotalMode">+</button>
+
+                            </div>
+                          </td>
+                        </tr>
+                        <tr *ngIf="hasTaxDetail(item)">
+                          <td colspan="6" class="text-90 text-grey-d2 bgc-grey-l5">
+                            <span class="mr-3">
+                              Base: {{ SaleDetail.Headboard.CurrencyCod }} {{ item.NumPriceSubTotal | FormatoMonedaPeruana : false }}
                             </span>
-
-                            <button type="button" 
-                                class="btn btn-success" 
-                                (click)="AddUnit(item)" 
-                                [disabled]="isTotalMode">+</button>
-
-                          </div>
-                        </td>
-                      </tr>
+                            <span class="mr-3">
+                              Impuesto: {{ SaleDetail.Headboard.CurrencyCod }} {{ item.NumTotalTax | FormatoMonedaPeruana : false }}
+                            </span>
+                            <span class="badge badge-sm bgc-secondary-l3 text-dark-m2 mr-1"
+                              *ngFor="let tax of getTaxDetailList(item)">
+                              {{ getTaxLineLabel(tax) }}:
+                              {{ SaleDetail.Headboard.CurrencyCod }} {{ tax.TaxAmount | FormatoMonedaPeruana : false }}
+                            </span>
+                          </td>
+                        </tr>
+                      </ng-container>
                     </tbody>
                   </table>
 

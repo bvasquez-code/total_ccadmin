@@ -6,6 +6,8 @@ import { ToastrService } from 'ngx-toastr';
 import { ResponseWsDto } from 'src/app/enterprise/shared/model/dto/ResponseWsDto';
 import { TicketSunatService } from '../../service/TicketSunatService';
 import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
+import { CreditNoteDetEntity } from '../../model/entity/CreditNoteDetEntity';
+import { CreditNoteDetTaxEntity } from '../../model/entity/CreditNoteDetTaxEntity';
 
 @Component({
   selector: 'app-viewcreditnote',
@@ -88,6 +90,28 @@ export class ViewcreditnoteComponent implements OnInit {
 
   getProductUnitName(item: { ProductUnitName?: string }): string {
     return item?.ProductUnitName || 'NIU';
+  }
+
+  getTaxDetailList(item: CreditNoteDetEntity): CreditNoteDetTaxEntity[] {
+    return item?.TaxDetailList ?? [];
+  }
+
+  hasTaxDetail(item: CreditNoteDetEntity): boolean {
+    return this.getTaxDetailList(item).length > 0;
+  }
+
+  getTaxLineLabel(tax: CreditNoteDetTaxEntity): string {
+    const name = tax.TaxName || tax.TaxCod;
+    const affectation = tax.TaxAffectationCod ? `/${tax.TaxAffectationCod}` : "";
+    const rate = Number(tax.TaxRateValue || 0);
+    const fixed = Number(tax.FixedUnitAmount || 0);
+    if (tax.TaxCalculationType === "P" && rate > 0) {
+      return `${name}${affectation} ${rate}%`;
+    }
+    if (tax.TaxCalculationType === "F" && fixed > 0) {
+      return `${name} ${fixed}`;
+    }
+    return `${name}${affectation}`;
   }
 
   trackByDet = (_: number, it: any) =>

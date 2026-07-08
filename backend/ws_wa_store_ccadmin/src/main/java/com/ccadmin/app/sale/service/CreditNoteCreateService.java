@@ -28,10 +28,13 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -42,9 +45,13 @@ public class CreditNoteCreateService extends SessionService {
     @Autowired
     private CreditNoteDetRepository creditNoteDetRepository;
     @Autowired
+    private CreditNoteDetTaxRepository creditNoteDetTaxRepository;
+    @Autowired
     private SaleHeadRepository saleHeadRepository;
     @Autowired
     private SaleDetRepository saleDetRepository;
+    @Autowired
+    private SaleDetTaxRepository saleDetTaxRepository;
     @Autowired
     private SaleDocumentRepository saleDocumentRepository;
     @Autowired
@@ -88,6 +95,10 @@ public class CreditNoteCreateService extends SessionService {
 
         int itemNumber = 1;
         List<SaleDetEntity> saleDetList = this.saleDetRepository.findBySaleCod(creditNoteRegister.Headboard.SaleCod);
+        List<SaleDetTaxEntity> saleDetTaxList = this.saleDetTaxRepository.findBySaleCod(creditNoteRegister.Headboard.SaleCod);
+        Map<Integer, List<SaleDetTaxEntity>> saleTaxByItem = saleDetTaxList.stream()
+                .collect(Collectors.groupingBy(item -> item.ItemNumber));
+        List<CreditNoteDetTaxEntity> creditNoteDetTaxList = new ArrayList<>();
         for (var product : creditNoteRegister.DetailList) {
             product.CreditNoteCod = creditNoteRegister.Headboard.CreditNoteCod;
             if (product.ItemNumber <= 0) {
@@ -102,6 +113,22 @@ public class CreditNoteCreateService extends SessionService {
             product.ProductUnitName = originDetail.ProductUnitName;
             product.ProductUnitFactor = originDetail.ProductUnitFactor;
             product.NumTotalPrice = product.NumUnitPriceSale.multiply(BigDecimal.valueOf(product.NumUnit));
+            List<CreditNoteDetTaxEntity> productTaxList = this.createCreditNoteDetTaxList(
+                    creditNoteRegister.Headboard.CreditNoteCod,
+                    product,
+                    originDetail,
+                    saleTaxByItem.getOrDefault(originDetail.ItemNumber, List.of())
+            );
+            product.NumTotalTax = productTaxList.stream()
+                    .map(tax -> amount(tax.TaxAmount))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .setScale(2, RoundingMode.HALF_UP);
+            if (productTaxList.isEmpty()) {
+                product.NumTotalTax = prorateAmount(originDetail.NumTotalTax, product.NumUnit, originDetail.NumUnit);
+            }
+            product.NumPriceSubTotal = amount(product.NumTotalPrice).subtract(product.NumTotalTax).setScale(2, RoundingMode.HALF_UP);
+            product.IsAppliedTax = product.NumTotalTax.compareTo(BigDecimal.ZERO) > 0 ? "S" : "N";
+            creditNoteDetTaxList.addAll(productTaxList);
             product.validate().session(getUserCod());
             itemNumber++;
         }
@@ -110,15 +137,28 @@ public class CreditNoteCreateService extends SessionService {
                 .stream()
                 .map( product -> product.NumTotalPrice )
                 .reduce(BigDecimal.ZERO,BigDecimal::add);
+        BigDecimal numTotalPriceNoTax = creditNoteRegister.DetailList
+                .stream()
+                .map(product -> amount(product.NumPriceSubTotal))
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal numTotalTax = creditNoteRegister.DetailList
+                .stream()
+                .map(product -> amount(product.NumTotalTax))
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
 
         creditNoteRegister.Headboard
                 .build(saleHead, SaleConstants.PENDING)
+                .tax(numTotalPriceNoTax, numTotalTax)
                 .validate()
                 .session(getUserCod());
 
+        this.creditNoteDetTaxRepository.updateStatusAll(creditNoteRegister.Headboard.CreditNoteCod,"I");
         this.creditNoteDetRepository.updateStatusAll(creditNoteRegister.Headboard.CreditNoteCod,"I");
         this.creditNoteHeadRepository.save(creditNoteRegister.Headboard);
         this.creditNoteDetRepository.saveAll(creditNoteRegister.DetailList);
+        this.creditNoteDetTaxRepository.saveAll(creditNoteDetTaxList);
 
         log.info("FIN_CREACION_NOTA_CREDITO -->> {}",creditNoteRegister.Headboard.CreditNoteCod);
 
@@ -269,6 +309,81 @@ public class CreditNoteCreateService extends SessionService {
         this.kardexShared.saveAllLedgerOnly(kardexRejectedList);
 
         return this.creditNoteSearchService.findById(creditNoteRegister.Headboard.CreditNoteCod);
+    }
+
+    private List<CreditNoteDetTaxEntity> createCreditNoteDetTaxList(
+            String creditNoteCod,
+            CreditNoteDetEntity creditNoteDet,
+            SaleDetEntity originDetail,
+            List<SaleDetTaxEntity> originTaxList
+    ) {
+        if (originTaxList == null || originTaxList.isEmpty()) {
+            return List.of();
+        }
+        List<CreditNoteDetTaxEntity> taxList = originTaxList.stream()
+                .map(originTax -> buildCreditNoteTaxLine(creditNoteCod, creditNoteDet, originDetail, originTax))
+                .sorted(Comparator
+                        .comparingInt((CreditNoteDetTaxEntity tax) -> tax.CalculationOrder)
+                        .thenComparing(tax -> tax.TaxCod))
+                .toList();
+        for (int i = 0; i < taxList.size(); i++) {
+            taxList.get(i).TaxLineNumber = i + 1;
+            taxList.get(i).session(getUserCod()).validate();
+        }
+        return taxList;
+    }
+
+    private CreditNoteDetTaxEntity buildCreditNoteTaxLine(
+            String creditNoteCod,
+            CreditNoteDetEntity creditNoteDet,
+            SaleDetEntity originDetail,
+            SaleDetTaxEntity originTax
+    ) {
+        CreditNoteDetTaxEntity tax = new CreditNoteDetTaxEntity();
+        tax.CreditNoteCod = creditNoteCod;
+        tax.ItemNumber = creditNoteDet.ItemNumber;
+        tax.TaxLineNumber = originTax.TaxLineNumber;
+        tax.TaxCod = originTax.TaxCod;
+        tax.SunatTaxCod = originTax.SunatTaxCod;
+        tax.TaxName = originTax.TaxName;
+        tax.TaxAffectationCod = originTax.TaxAffectationCod;
+        tax.TaxAffectationName = originTax.TaxAffectationName;
+        tax.TaxCalculationType = originTax.TaxCalculationType;
+        tax.IsInformative = originTax.IsInformative;
+        tax.TaxRateValue = originTax.TaxRateValue;
+        tax.FixedUnitAmount = originTax.FixedUnitAmount;
+        tax.TaxBaseAmount = prorateAmount(originTax.TaxBaseAmount, creditNoteDet.NumUnit, originDetail.NumUnit);
+        tax.TaxQuantity = prorateQuantity(originTax.TaxQuantity, creditNoteDet.NumUnit, originDetail.NumUnit);
+        tax.TaxAmount = prorateAmount(originTax.TaxAmount, creditNoteDet.NumUnit, originDetail.NumUnit);
+        tax.CalculationOrder = originTax.CalculationOrder;
+        return tax;
+    }
+
+    private BigDecimal prorateAmount(BigDecimal value, Integer units, Integer originUnits) {
+        return amount(value)
+                .multiply(ratio(units, originUnits))
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal prorateQuantity(BigDecimal value, Integer units, Integer originUnits) {
+        return valueOrZero(value)
+                .multiply(ratio(units, originUnits))
+                .setScale(4, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal ratio(Integer units, Integer originUnits) {
+        if (units == null || originUnits == null || originUnits <= 0) {
+            return BigDecimal.ZERO;
+        }
+        return BigDecimal.valueOf(units).divide(BigDecimal.valueOf(originUnits), 8, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal amount(BigDecimal value) {
+        return valueOrZero(value).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal valueOrZero(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 
     private void validateCreditNoteRegisterDto(CreditNoteRegisterDto creditNoteRegister) throws SaleException {

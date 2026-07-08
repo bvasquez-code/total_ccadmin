@@ -7,6 +7,7 @@ import com.ccadmin.app.sale.model.dto.CreditNoteDetDto;
 import com.ccadmin.app.sale.model.dto.CreditNoteDetailDto;
 import com.ccadmin.app.sale.model.dto.CreditNoteHeadDto;
 import com.ccadmin.app.sale.model.entity.CreditNoteDocumentEntity;
+import com.ccadmin.app.sale.model.entity.CreditNoteDetTaxEntity;
 import com.ccadmin.app.sale.model.entity.CreditNoteHeadEntity;
 import com.ccadmin.app.sale.repository.*;
 import com.ccadmin.app.shared.model.dto.ResponsePageSearchT;
@@ -21,6 +22,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -30,6 +33,8 @@ public class CreditNoteSearchService {
     private CreditNoteHeadRepository creditNoteHeadRepository;
     @Autowired
     private CreditNoteDetRepository creditNoteDetRepository;
+    @Autowired
+    private CreditNoteDetTaxRepository creditNoteDetTaxRepository;
     @Autowired
     private CreditNoteDocumentRepository creditNoteDocumentRepository;
     @Autowired
@@ -83,10 +88,14 @@ public class CreditNoteSearchService {
         CreditNoteDetailDto creditNoteDetail = new CreditNoteDetailDto();
 
         creditNoteDetail.Headboard = this.creditNoteHeadRepository.findById(CreditNoteCod).orElse(null);
+        Map<Integer, List<CreditNoteDetTaxEntity>> taxDetailByItem = this.creditNoteDetTaxRepository.findByCreditNoteCod(CreditNoteCod)
+                .stream()
+                .collect(Collectors.groupingBy(item -> item.ItemNumber));
         creditNoteDetail.DetailList = this.creditNoteDetRepository.findByCreditNoteCod(CreditNoteCod)
                 .stream()
                 .map( creditNoteDet -> {
                     CreditNoteDetDto creditNoteDetDto = new CreditNoteDetDto();
+                    creditNoteDet.TaxDetailList = taxDetailByItem.getOrDefault(creditNoteDet.ItemNumber, List.of());
                     creditNoteDetDto.CreditNoteDet = creditNoteDet;
                     creditNoteDetDto.Product = this.productShared.findById(creditNoteDet.ProductCod);
                     return creditNoteDetDto;

@@ -7,6 +7,8 @@ export class CreditNoteHeadEntity extends AuditTableEntity {
     public StoreCod: string = '';
     public ClientCod: string = '';
     public NumTotalPrice: number = 0; // Inicializado con 0
+    public NumTotalPriceNoTax: number = 0;
+    public NumTotalTax: number = 0;
     public Commenter: string = '';
     public PeriodId: number = 0; // Inicializado con 0
     public CreditNoteStatus: string = '';

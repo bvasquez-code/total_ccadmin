@@ -43,6 +43,7 @@ export class CreateproductconfigComponent implements OnInit {
   TaxAffectationList: TaxAffectationEntity[] = [];
   MainTaxConfig: ProductTaxConfigEntity = new ProductTaxConfigEntity();
   AdditionalTaxConfigList: ProductTaxConfigEntity[] = [];
+  NewTaxConfig: ProductTaxConfigEntity = new ProductTaxConfigEntity();
 
   constructor(
     private productService: ProductService,
@@ -212,6 +213,7 @@ export class CreateproductconfigComponent implements OnInit {
       .filter(e => e.IsMainTax !== "S")
       .map(e => this.copyTaxConfig(e));
     this.onMainAffectationChange(false);
+    this.resetNewTaxConfig();
   }
 
   copyTaxConfig(config: ProductTaxConfigEntity): ProductTaxConfigEntity {
@@ -252,9 +254,17 @@ export class CreateproductconfigComponent implements OnInit {
   }
 
   get additionalTaxOptions(): TaxEntity[] {
+    const activeTaxCodSet = new Set(this.taxConfigTableList.map(config => config.TaxCod));
+    const mainAffectationTaxCodSet = this.getMainAffectationTaxCodSet();
     return this.TaxList
-      .filter(e => (e.Status === "A" || !e.Status) && e.TaxCod !== this.MainTaxConfig.TaxCod)
-      .filter(e => !this.AdditionalTaxConfigList.some(config => config.TaxCod === e.TaxCod));
+      .filter(e => e.Status === "A" || !e.Status)
+      .filter(e => !mainAffectationTaxCodSet.has(e.TaxCod))
+      .filter(e => !activeTaxCodSet.has(e.TaxCod));
+  }
+
+  get taxConfigTableList(): ProductTaxConfigEntity[] {
+    return [this.MainTaxConfig, ...this.AdditionalTaxConfigList]
+      .filter(e => e.Status !== "I" && Boolean(e.TaxCod));
   }
 
   getTax(taxCod: string): TaxEntity | undefined {
@@ -263,6 +273,14 @@ export class CreateproductconfigComponent implements OnInit {
 
   getAffectation(taxAffectationCod: string): TaxAffectationEntity | undefined {
     return this.TaxAffectationList.find(e => e.TaxAffectationCod === taxAffectationCod);
+  }
+
+  getMainAffectationTaxCodSet(): Set<string> {
+    return new Set(
+      this.TaxAffectationList
+        .filter(e => e.Status === "A" || !e.Status)
+        .map(e => e.TaxCod)
+    );
   }
 
   getTaxLabel(taxCod: string): string {
@@ -280,30 +298,67 @@ export class CreateproductconfigComponent implements OnInit {
     if (!affectation) return;
     this.MainTaxConfig.IsMainTax = "S";
     this.MainTaxConfig.TaxCod = affectation.TaxCod;
+    this.MainTaxConfig.Status = "A";
     this.applyTaxDefaults(this.MainTaxConfig, this.getTax(affectation.TaxCod));
     if (removeInvalidAdditional && affectation.TaxAffectationCod !== "10") {
       this.AdditionalTaxConfigList = this.AdditionalTaxConfigList.filter(e => e.TaxCod !== "1000");
     }
+    this.resetNewTaxConfig();
   }
 
-  addAdditionalTax(): void {
-    const tax = this.additionalTaxOptions[0];
-    if (!tax) {
-      this.toastrService.error("No hay tributos adicionales disponibles.");
-      return;
-    }
+  resetNewTaxConfig(): void {
     const config = new ProductTaxConfigEntity();
     config.ProductCod = this.ProductCod;
     config.StoreCod = this.SelectedStoreCod;
-    config.TaxCod = tax.TaxCod;
     config.IsMainTax = "N";
     config.Status = "A";
-    this.applyTaxDefaults(config, tax);
+    config.CalculationOrder = 100;
+    this.NewTaxConfig = config;
+  }
+
+  onNewTaxChange(): void {
+    this.applyTaxDefaults(this.NewTaxConfig, this.getTax(this.NewTaxConfig.TaxCod));
+  }
+
+  addAdditionalTax(): void {
+    const tax = this.getTax(this.NewTaxConfig.TaxCod);
+    if (!tax) {
+      this.toastrService.error("Debe seleccionar un tributo adicional.");
+      return;
+    }
+    if (!this.additionalTaxOptions.some(e => e.TaxCod === tax.TaxCod)) {
+      this.toastrService.error("El tributo seleccionado no esta disponible para este producto/local.");
+      return;
+    }
+    const config = this.copyTaxConfig(this.NewTaxConfig);
+    config.ProductCod = this.ProductCod;
+    config.StoreCod = this.SelectedStoreCod;
+    config.TaxCod = tax.TaxCod;
+    config.TaxAffectationCod = "";
+    config.IsMainTax = "N";
+    config.Status = "A";
+    config.ProductTaxConfigId = undefined;
     this.AdditionalTaxConfigList.push(config);
+    this.resetNewTaxConfig();
   }
 
   removeAdditionalTax(index: number): void {
     this.AdditionalTaxConfigList.splice(index, 1);
+  }
+
+  removeTaxConfig(config: ProductTaxConfigEntity): void {
+    if (config.IsMainTax === "S") {
+      config.Status = "I";
+      config.TaxCod = "";
+      config.TaxAffectationCod = "";
+      this.resetNewTaxConfig();
+      return;
+    }
+    const index = this.AdditionalTaxConfigList.indexOf(config);
+    if (index >= 0) {
+      this.removeAdditionalTax(index);
+      this.resetNewTaxConfig();
+    }
   }
 
   onAdditionalTaxChange(config: ProductTaxConfigEntity): void {
@@ -315,7 +370,7 @@ export class CreateproductconfigComponent implements OnInit {
     config.TaxCalculationType = tax.TaxCalculationType || "P";
     config.IsInformative = tax.IsInformative || "N";
     config.CalculationOrder = Number(tax.CalculationOrder || 100);
-    config.TaxRateValue = Number(tax.TaxRateValue || 0);
+    config.TaxRateValue = tax.TaxCod === "1000" ? 18 : Number(tax.TaxRateValue || 0);
     config.FixedUnitAmount = Number(tax.FixedUnitAmount || 0);
     if (config.TaxCalculationType === "F") {
       config.TaxRateValue = 0;
@@ -332,6 +387,28 @@ export class CreateproductconfigComponent implements OnInit {
 
   isFixedTax(config: ProductTaxConfigEntity): boolean {
     return config.TaxCalculationType === "F";
+  }
+
+  canEditTaxRate(config: ProductTaxConfigEntity): boolean {
+    return config.IsMainTax !== "S" && config.TaxCod !== "1000" && this.isPercentTax(config);
+  }
+
+  canEditFixedAmount(config: ProductTaxConfigEntity): boolean {
+    return config.IsMainTax !== "S" && this.isFixedTax(config);
+  }
+
+  canEditCalculationOrder(config: ProductTaxConfigEntity): boolean {
+    return config.IsMainTax !== "S";
+  }
+
+  canRemoveTaxConfig(config: ProductTaxConfigEntity): boolean {
+    return true;
+  }
+
+  getCalculationTypeLabel(config: ProductTaxConfigEntity): string {
+    if (config.TaxCalculationType === "P") return "Porcentaje";
+    if (config.TaxCalculationType === "F") return "Monto fijo";
+    return "No aplica";
   }
 
   isAdditionalTaxOptionDisabled(taxCod: string, index: number): boolean {
@@ -393,20 +470,36 @@ export class CreateproductconfigComponent implements OnInit {
   }
 
   validateTaxConfig(): void {
-    ValidationHelper.validateIsNotEmpty(this.MainTaxConfig.TaxAffectationCod, "Debe seleccionar afectacion tributaria principal");
-    const affectation = this.getAffectation(this.MainTaxConfig.TaxAffectationCod);
+    const activeConfigList = [this.MainTaxConfig, ...this.AdditionalTaxConfigList]
+      .filter(e => e.Status !== "I" && Boolean(e.TaxCod));
+    if (activeConfigList.length === 0) {
+      throw new Error("Debe registrar al menos un tributo para el producto/local");
+    }
+    const activeMainList = activeConfigList.filter(e => e.IsMainTax === "S");
+    if (activeMainList.length !== 1) {
+      throw new Error("Debe registrar una sola afectacion principal activa");
+    }
+
+    const mainConfig = activeMainList[0];
+    ValidationHelper.validateIsNotEmpty(mainConfig.TaxAffectationCod, "Debe seleccionar afectacion tributaria principal");
+    const affectation = this.getAffectation(mainConfig.TaxAffectationCod);
     if (!affectation) {
       throw new Error("Afectacion tributaria principal no existe");
     }
-    if (this.MainTaxConfig.TaxCod !== affectation.TaxCod) {
+    if (mainConfig.TaxCod !== affectation.TaxCod) {
       throw new Error("La afectacion principal no corresponde al tributo seleccionado");
     }
 
-    const activeConfigList = [this.MainTaxConfig, ...this.AdditionalTaxConfigList]
-      .filter(e => e.Status !== "I");
     const taxSet = new Set<string>();
+    const mainAffectationTaxCodSet = this.getMainAffectationTaxCodSet();
     for (const config of activeConfigList) {
       ValidationHelper.validateIsNotEmpty(config.TaxCod, "Debe seleccionar tributo");
+      if (config.TaxCod === "1000") {
+        config.TaxRateValue = 18;
+      }
+      if (config.IsMainTax !== "S" && mainAffectationTaxCodSet.has(config.TaxCod)) {
+        throw new Error("Los tributos de afectacion IGV solo pueden configurarse como principal");
+      }
       if (taxSet.has(config.TaxCod)) {
         throw new Error("No se puede duplicar el mismo tributo activo para el producto/local");
       }
@@ -487,11 +580,16 @@ export class CreateproductconfigComponent implements OnInit {
   }
 
   buildTaxConfigRequestList(storeCod: string): ProductTaxConfigEntity[] {
-    return [this.MainTaxConfig, ...this.AdditionalTaxConfigList].map(config => {
+    return [this.MainTaxConfig, ...this.AdditionalTaxConfigList]
+      .filter(config => config.Status !== "I" && Boolean(config.TaxCod))
+      .map(config => {
       const copy = this.copyTaxConfig(config);
       copy.ProductCod = this.ProductCod;
       copy.StoreCod = storeCod;
       copy.Status = "A";
+      if (copy.TaxCod === "1000") {
+        copy.TaxRateValue = 18;
+      }
       if (storeCod !== this.SelectedStoreCod) {
         copy.ProductTaxConfigId = undefined;
       }

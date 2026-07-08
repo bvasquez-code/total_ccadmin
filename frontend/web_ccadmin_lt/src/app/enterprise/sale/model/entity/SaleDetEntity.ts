@@ -1,5 +1,6 @@
 import { AuditTableEntity } from '../../../shared/model/entity/AuditTableEntity';
 import { ProductEntity } from '../../../product/model/entity/ProductEntity';
+import { SaleDetTaxEntity } from './SaleDetTaxEntity';
 export class SaleDetEntity extends AuditTableEntity
 {
     public SaleCod: string = "";
@@ -20,6 +21,7 @@ export class SaleDetEntity extends AuditTableEntity
 	public ExpirationDate: Date | any = null;
 
 	public Product : ProductEntity = new ProductEntity();
+	public TaxDetailList: SaleDetTaxEntity[] = [];
 
     public constructor()
     {

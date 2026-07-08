@@ -13,6 +13,8 @@ import { ClientService } from '../../../client/service/client.service';
 import { ClientEntity } from '../../../client/model/entity/ClientEntity';
 import { SaleConfirmDto } from '../../model/dto/SaleConfirmDto';
 import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
+import { SaleDetTaxEntity } from '../../model/entity/SaleDetTaxEntity';
+import { SaleDetEntity } from '../../model/entity/SaleDetEntity';
 
 @Component({
   selector: 'app-createsale',
@@ -189,6 +191,28 @@ export class CreatesaleComponent implements OnInit {
 
   getVisibleUnitPrice(internalUnitPrice: number, productUnitFactor: number): number {
     return ProductUnitHelper.toVisibleUnitPrice(internalUnitPrice, productUnitFactor);
+  }
+
+  getTaxDetailList(item: SaleDetEntity): SaleDetTaxEntity[] {
+    return item?.TaxDetailList ?? [];
+  }
+
+  hasTaxDetail(item: SaleDetEntity): boolean {
+    return this.getTaxDetailList(item).length > 0;
+  }
+
+  getTaxLineLabel(tax: SaleDetTaxEntity): string {
+    const name = tax.TaxName || tax.TaxCod;
+    const affectation = tax.TaxAffectationCod ? `/${tax.TaxAffectationCod}` : "";
+    const rate = Number(tax.TaxRateValue || 0);
+    const fixed = Number(tax.FixedUnitAmount || 0);
+    if (tax.TaxCalculationType === "P" && rate > 0) {
+      return `${name}${affectation} ${rate}%`;
+    }
+    if (tax.TaxCalculationType === "F" && fixed > 0) {
+      return `${name} ${fixed}`;
+    }
+    return `${name}${affectation}`;
   }
 
   hasClient(): boolean {

@@ -20,6 +20,8 @@ public class CreditNoteHeadEntity extends AuditTableEntity implements Serializab
     public String StoreCod;
     public String ClientCod;
     public BigDecimal NumTotalPrice;
+    public BigDecimal NumTotalPriceNoTax = BigDecimal.ZERO;
+    public BigDecimal NumTotalTax = BigDecimal.ZERO;
     public String Commenter;
     public Integer PeriodId;
     public String CreditNoteStatus;
@@ -52,6 +54,24 @@ public class CreditNoteHeadEntity extends AuditTableEntity implements Serializab
         if(this.NumTotalPrice.compareTo(BigDecimal.ZERO) < 0){
             throw new SaleBuildException("El total debe ser mayor a cero");
         }
+        if(this.NumTotalPriceNoTax == null){
+            this.NumTotalPriceNoTax = BigDecimal.ZERO;
+        }
+        if(this.NumTotalTax == null){
+            this.NumTotalTax = BigDecimal.ZERO;
+        }
+        if(this.NumTotalPriceNoTax.compareTo(BigDecimal.ZERO) < 0){
+            throw new SaleBuildException("El total sin impuestos debe ser mayor a cero");
+        }
+        if(this.NumTotalTax.compareTo(BigDecimal.ZERO) < 0){
+            throw new SaleBuildException("El impuesto total debe ser mayor a cero");
+        }
+        return this;
+    }
+
+    public CreditNoteHeadEntity tax(BigDecimal numTotalPriceNoTax, BigDecimal numTotalTax) {
+        this.NumTotalPriceNoTax = numTotalPriceNoTax;
+        this.NumTotalTax = numTotalTax;
         return this;
     }
 

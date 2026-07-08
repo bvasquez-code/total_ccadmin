@@ -31,6 +31,14 @@ public interface TaxAffectationRepository extends JpaRepository<TaxAffectationEn
             @Param("TaxCod") String TaxCod
     );
 
+    @Query(value = """
+            select count(1)
+            from tax_affectation ta
+            where ta.TaxCod = :TaxCod
+              and ta.Status = 'A'
+            """, nativeQuery = true)
+    int countActiveByTaxCod(@Param("TaxCod") String TaxCod);
+
     @Override
     @Query(value = """
             select count(1)
