@@ -1,0 +1,51 @@
+<div role="main" class="main-content">
+
+    <div class="page-content container container-plus">
+
+        <div class="card-header">
+            <h3 class="card-title text-125 text-primary-d2">
+                <i class="far fa-edit text-dark-l3 mr-1"></i>
+                Secuencias globales
+            </h3>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card dcard">
+                    <div class="card-body px-1 px-md-3">
+                        <div autocomplete="off">
+                            <div class="d-flex flex-column flex-sm-row align-items-sm-start mb-3 px-2 px-sm-0">
+
+                                <div class="mb-2 mb-sm-0">
+                                    <a class="btn px-4 btn-primary mb-1" href="enterprise/system/pages/createtablesequence">
+                                        Nuevo
+                                    </a>
+                                </div>
+
+                                <div class="d-flex flex-column flex-sm-row ml-sm-auto">
+                                    <div class="pos-rel mb-2 mb-sm-0 mr-sm-2">
+                                        <i class="fa fa-search position-lc ml-25 text-primary-m1"></i>
+                                        <input type="text"
+                                            class="form-control pl-45 radius-1 brc-primary-m4"
+                                            placeholder="Buscar ..."
+                                            style="width: 260px; max-width: 100%;"
+                                            #txtSearch>
+                                    </div>
+
+                                    <button class="btn px-4 btn-primary" (click)="filter(1)">
+                                        Buscar
+                                    </button>
+                                </div>
+                            </div>
+
+                            <app-table [data]="dataTablaGenetic" [action]="this"></app-table>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>

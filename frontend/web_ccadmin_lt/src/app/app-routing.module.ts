@@ -38,8 +38,12 @@ import { CreatecurrencyComponent } from './enterprise/system/pages/createcurrenc
 import { CreatepaymentmethodComponent } from './enterprise/system/pages/createpaymentmethod/createpaymentmethod.component';
 import { CreatetaxComponent } from './enterprise/system/pages/createtax/createtax.component';
 import { CreatetaxaffectationComponent } from './enterprise/system/pages/createtaxaffectation/createtaxaffectation.component';
+import { CreatestoresequenceComponent } from './enterprise/system/pages/createstoresequence/createstoresequence.component';
+import { CreatetablesequenceComponent } from './enterprise/system/pages/createtablesequence/createtablesequence.component';
 import { ListcurrencyComponent } from './enterprise/system/pages/listcurrency/listcurrency.component';
 import { ListpaymentmethodComponent } from './enterprise/system/pages/listpaymentmethod/listpaymentmethod.component';
+import { ListstoresequenceComponent } from './enterprise/system/pages/liststoresequence/liststoresequence.component';
+import { ListtablesequenceComponent } from './enterprise/system/pages/listtablesequence/listtablesequence.component';
 import { ListtaxComponent } from './enterprise/system/pages/listtax/listtax.component';
 import { ListtaxaffectationComponent } from './enterprise/system/pages/listtaxaffectation/listtaxaffectation.component';
 import { ListcreditnoteComponent } from './enterprise/sale/pages/listcreditnote/listcreditnote.component';
@@ -368,6 +372,22 @@ const routes: Routes = [
       {
         path: 'enterprise/system/pages/createtaxaffectation',
         component: CreatetaxaffectationComponent
+      },
+      {
+        path: 'enterprise/system/pages/liststoresequence',
+        component: ListstoresequenceComponent
+      },
+      {
+        path: 'enterprise/system/pages/createstoresequence',
+        component: CreatestoresequenceComponent
+      },
+      {
+        path: 'enterprise/system/pages/listtablesequence',
+        component: ListtablesequenceComponent
+      },
+      {
+        path: 'enterprise/system/pages/createtablesequence',
+        component: CreatetablesequenceComponent
       }
     ]
   },

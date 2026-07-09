@@ -108,7 +108,11 @@ export class SidebarMenuConfigService {
                 { permission: "SI000012", label: "Tributos", url: "enterprise/system/pages/listtax" },
                 { permission: "SI000013", label: "Crear tributo", url: "enterprise/system/pages/createtax", urlShade: "enterprise/system/pages/listtax", isVisible: false },
                 { permission: "SI000014", label: "Afectaciones tributarias", url: "enterprise/system/pages/listtaxaffectation" },
-                { permission: "SI000015", label: "Crear afectacion tributaria", url: "enterprise/system/pages/createtaxaffectation", urlShade: "enterprise/system/pages/listtaxaffectation", isVisible: false }
+                { permission: "SI000015", label: "Crear afectacion tributaria", url: "enterprise/system/pages/createtaxaffectation", urlShade: "enterprise/system/pages/listtaxaffectation", isVisible: false },
+                { permission: "SI000016", label: "Secuencias por tienda", url: "enterprise/system/pages/liststoresequence" },
+                { permission: "SI000017", label: "Crear secuencia por tienda", url: "enterprise/system/pages/createstoresequence", urlShade: "enterprise/system/pages/liststoresequence", isVisible: false },
+                { permission: "SI000018", label: "Secuencias globales", url: "enterprise/system/pages/listtablesequence" },
+                { permission: "SI000019", label: "Crear secuencia global", url: "enterprise/system/pages/createtablesequence", urlShade: "enterprise/system/pages/listtablesequence", isVisible: false }
             ]
         }),
         new SidebarMenuConfigDto({

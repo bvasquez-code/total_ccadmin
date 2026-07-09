@@ -13,6 +13,11 @@ import org.springframework.data.repository.query.Param;
 public interface StoreRepository extends JpaRepository<StoreEntity,String>, CcAdminRepository<StoreEntity,String> {
 
     @Query(value = """
+            select s.* from store s where s.Status = 'A' order by s.StoreCod
+            """, nativeQuery = true)
+    public List<StoreEntity> findAllActive();
+
+    @Query(value = """
             select count(1)  from warehouse w where w.StoreCod = :StoreCod and Status = 'A'
             """,nativeQuery = true)
     public int countNumberWarehouse(@Param("StoreCod") String StoreCod);
