@@ -8,6 +8,7 @@ import com.ccadmin.app.sale.exception.SaleException;
 import com.ccadmin.app.sale.model.constants.SaleConstants;
 import com.ccadmin.app.sale.model.dto.PresaleDetailDto;
 import com.ccadmin.app.sale.model.dto.SaleDetailDto;
+import com.ccadmin.app.sale.model.dto.SaleTaxCalculationResultDto;
 import com.ccadmin.app.sale.model.entity.*;
 import com.ccadmin.app.sale.repository.*;
 import com.ccadmin.app.shared.model.myconst.StatusConst;
@@ -75,7 +76,7 @@ public class SaleCreateService extends SessionService {
         }
 
         SaleHeadEntity saleHead = this.createSaleHead(presaleDetail);
-        SaleTaxCalculationService.SaleTaxCalculationResult taxCalculation = this.saleTaxCalculationService.buildSaleDetails(
+        SaleTaxCalculationResultDto taxCalculation = this.saleTaxCalculationService.buildSaleDetails(
                 presaleDetail.DetailList,
                 saleHead.SaleCod,
                 saleHead.StoreCod,
