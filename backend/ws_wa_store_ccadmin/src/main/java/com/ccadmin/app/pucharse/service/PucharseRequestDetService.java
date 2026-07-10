@@ -1,0 +1,116 @@
+package com.ccadmin.app.pucharse.service;
+
+import com.ccadmin.app.product.model.entity.ProductConfigEntity;
+import com.ccadmin.app.product.shared.ProductOperationConfigShared;
+import com.ccadmin.app.pucharse.model.dto.PucharseRequestDetSaveDto;
+import com.ccadmin.app.pucharse.model.entity.PucharseRequestDetEntity;
+import com.ccadmin.app.pucharse.model.entity.PucharseRequestHeadEntity;
+import com.ccadmin.app.pucharse.model.entity.id.PucharseRequestDetId;
+import com.ccadmin.app.pucharse.repository.PucharseRequestDetRepository;
+import com.ccadmin.app.pucharse.repository.PucharseRequestHeadRepository;
+import com.ccadmin.app.shared.model.myconst.StatusConst;
+import com.ccadmin.app.shared.service.SessionService;
+import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+
+@Service
+public class PucharseRequestDetService extends SessionService {
+
+    @Autowired
+    private PucharseRequestHeadRepository pucharseRequestHeadRepository;
+    @Autowired
+    private PucharseRequestDetRepository pucharseRequestDetRepository;
+    @Autowired
+    private ProductOperationConfigShared productOperationConfigShared;
+
+    @Transactional
+    public PucharseRequestDetSaveDto save(PucharseRequestDetSaveDto request)
+    {
+        PucharseRequestHeadEntity headboard = findPendingHead(request);
+        request.Detail = this.pucharseRequestDetRepository.save(
+                buildDetailToSave(request.Detail, headboard.PucharseReqCod)
+        );
+        request.Headboard = refreshTotal(headboard);
+        return request;
+    }
+
+    public PucharseRequestDetEntity buildDetailToSave(PucharseRequestDetEntity source, String PucharseReqCod)
+    {
+        source.PucharseReqCod = PucharseReqCod;
+        if (source.Variant == null || source.Variant.trim().isEmpty()) {
+            source.Variant = "0000";
+        }
+
+        ProductConfigEntity config = this.productOperationConfigShared.findByProduct(source.ProductCod, getStoreCod());
+        if (source.ProductUnitName == null || source.ProductUnitName.trim().isEmpty()) {
+            source.ProductUnitName = config.ProductUnitName;
+        }
+        if (source.ProductUnitFactor <= 0) {
+            source.ProductUnitFactor = config.ProductUnitFactor;
+        }
+
+        this.productOperationConfigShared.validateInternalQuantity(source.ProductCod, source.NumUnit, source.ProductUnitFactor);
+        source.NumUnitPrice = source.NumUnitPrice == null ? BigDecimal.ZERO : source.NumUnitPrice;
+        source.NumTotalPrice = source.NumUnitPrice.multiply(new BigDecimal(source.NumUnit));
+
+        PucharseRequestDetEntity detail = this.pucharseRequestDetRepository.findById(buildId(source)).orElse(source);
+        boolean isNew = detail.CreationUser == null || detail.CreationUser.trim().isEmpty();
+        detail.PucharseReqCod = source.PucharseReqCod;
+        detail.ProductCod = source.ProductCod;
+        detail.Variant = source.Variant;
+        detail.NumUnit = source.NumUnit;
+        detail.NumUnitPrice = source.NumUnitPrice;
+        detail.NumTotalPrice = source.NumTotalPrice;
+        detail.ProductUnitName = source.ProductUnitName;
+        detail.ProductUnitFactor = source.ProductUnitFactor;
+        detail.Status = "A";
+        detail.addSession(getUserCod(), isNew);
+
+        return detail;
+    }
+
+    @Transactional
+    public PucharseRequestDetSaveDto delete(PucharseRequestDetSaveDto request)
+    {
+        PucharseRequestHeadEntity headboard = findPendingHead(request);
+        request.Detail.PucharseReqCod = headboard.PucharseReqCod;
+
+        PucharseRequestDetEntity detailDb = this.pucharseRequestDetRepository.findById(buildId(request.Detail)).get();
+        detailDb.inactive(getUserCod());
+        request.Detail = this.pucharseRequestDetRepository.save(detailDb);
+        request.Headboard = refreshTotal(headboard);
+        return request;
+    }
+
+    private PucharseRequestHeadEntity findPendingHead(PucharseRequestDetSaveDto request)
+    {
+        if (request == null || request.Headboard == null || request.Detail == null) {
+            throw new IllegalArgumentException("La cabecera y el detalle son obligatorios");
+        }
+
+        PucharseRequestHeadEntity headboard = this.pucharseRequestHeadRepository.findById(request.Headboard.PucharseReqCod).get();
+        if (!StatusConst.PENDING.equals(headboard.PurchaseStatus)) {
+            throw new RuntimeException("La solicitud de compra ya no esta pendiente");
+        }
+        return headboard;
+    }
+
+    private PucharseRequestDetId buildId(PucharseRequestDetEntity detail)
+    {
+        PucharseRequestDetId id = new PucharseRequestDetId();
+        id.PucharseReqCod = detail.PucharseReqCod;
+        id.ProductCod = detail.ProductCod;
+        id.Variant = detail.Variant == null || detail.Variant.trim().isEmpty() ? "0000" : detail.Variant;
+        return id;
+    }
+
+    private PucharseRequestHeadEntity refreshTotal(PucharseRequestHeadEntity headboard)
+    {
+        headboard.NumTotalPrice = this.pucharseRequestDetRepository.sumActiveTotal(headboard.PucharseReqCod);
+        headboard.addSession(getUserCod(), false);
+        return this.pucharseRequestHeadRepository.save(headboard);
+    }
+}

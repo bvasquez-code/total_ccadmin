@@ -17,6 +17,8 @@ import { SupplierService } from 'src/app/enterprise/supplier/service/supplier.se
 import { SupplierEntity } from 'src/app/enterprise/supplier/model/entity/SupplierEntity';
 import { PucharsePrintService } from '../../service/PucharsePrintService';
 import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
+import { PucharseRequestDetSaveDto } from '../../model/dto/PucharseRequestDetSaveDto';
+import { PucharseRequestDetService } from '../../service/PucharseRequestDetService';
 
 @Component({
   selector: 'app-createpucharse',
@@ -47,6 +49,7 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
   currentSearchQuery: string = '';
   supplierInfo: string = '';
   supplierNotFound: boolean = false;
+  isSavingDetail: boolean = false;
 
   constructor(
     private pucharseRequestHeadService: PucharseRequestHeadService,
@@ -55,7 +58,8 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
     private productService: ProductService,
     private supplierService: SupplierService,
     private session: DataSesionService,
-    private pucharsePrintService: PucharsePrintService
+    private pucharsePrintService: PucharsePrintService,
+    private pucharseRequestDetService: PucharseRequestDetService
   ) {
     this.GetParamUrl(this.router);
   }
@@ -107,10 +111,103 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
       && (a.ExpirationDate ?? '') === (b.ExpirationDate ?? '');
   }
 
-  async Save(): Promise<void> {
+  private updateHeadboardFromInputs(): void {
     this.pucharseRequestRegister.Headboard.DealerCod = this.txtDealerCod.nativeElement.value;
     this.pucharseRequestRegister.Headboard.ExternalCod = this.txtExternalCod.nativeElement.value;
     this.pucharseRequestRegister.Headboard.Commenter = this.txtCommenter.nativeElement.value;
+  }
+
+  private buildDetailSaveDto(detail: PucharseRequestDetEntity): PucharseRequestDetSaveDto {
+    const dto = new PucharseRequestDetSaveDto();
+    dto.Headboard = this.pucharseRequestRegister.Headboard;
+    dto.Detail = detail;
+    return dto;
+  }
+
+  private syncSavedDetail(savedDetail: PucharseRequestDetEntity, product: ProductEntity): void {
+    savedDetail.Product = product || savedDetail.Product;
+    const index = this.pucharseRequestRegister.DetailList.findIndex(e =>
+      e.ProductCod === savedDetail.ProductCod && e.Variant === savedDetail.Variant
+    );
+
+    if (index >= 0) {
+      this.pucharseRequestRegister.DetailList[index] = savedDetail;
+    } else {
+      this.pucharseRequestRegister.DetailList.push(savedDetail);
+    }
+  }
+
+  private async saveInitialRequest(): Promise<boolean> {
+    if (this.isSavingDetail) return false;
+
+    this.updateHeadboardFromInputs();
+    const productByKey = new Map(
+      this.pucharseRequestRegister.DetailList.map(detail => [`${detail.ProductCod}|${detail.Variant}`, detail.Product])
+    );
+
+    this.isSavingDetail = true;
+    const rpt = await this.pucharseRequestHeadService.Save(this.pucharseRequestRegister);
+    this.isSavingDetail = false;
+
+    if (rpt.ErrorStatus) {
+      this.toastrService.error(rpt.Message || 'No se pudo guardar la compra');
+      return false;
+    }
+
+    this.pucharseRequestRegister = rpt.Data || this.pucharseRequestRegister;
+    this.pucharseRequestRegister.DetailList.forEach(detail => {
+      detail.Product = productByKey.get(`${detail.ProductCod}|${detail.Variant}`) || detail.Product;
+    });
+    this.PucharseReqCod = this.pucharseRequestRegister.Headboard.PucharseReqCod;
+
+    await this.router.navigate(
+      ['/enterprise/pucharse/pages/createpucharse'],
+      { queryParams: { PucharseReqCod: this.PucharseReqCod }, replaceUrl: true }
+    );
+
+    this.toastrService.success('Compra guardada como pendiente');
+    return true;
+  }
+
+  private async saveDetail(detail: PucharseRequestDetEntity): Promise<boolean> {
+    if (this.isSavingDetail) return false;
+
+    detail.PucharseReqCod = this.pucharseRequestRegister.Headboard.PucharseReqCod;
+    this.isSavingDetail = true;
+    const rpt = await this.pucharseRequestDetService.Save(this.buildDetailSaveDto(detail));
+    this.isSavingDetail = false;
+
+    if (rpt.ErrorStatus) {
+      this.toastrService.error(rpt.Message || 'No se pudo guardar el producto');
+      return false;
+    }
+
+    const data: PucharseRequestDetSaveDto = rpt.Data;
+    this.pucharseRequestRegister.Headboard = data.Headboard;
+    this.syncSavedDetail(data.Detail, detail.Product);
+    return true;
+  }
+
+  private async deleteDetail(detail: PucharseRequestDetEntity): Promise<boolean> {
+    if (this.isSavingDetail) return false;
+
+    this.isSavingDetail = true;
+    const rpt = await this.pucharseRequestDetService.Delete(this.buildDetailSaveDto(detail));
+    this.isSavingDetail = false;
+
+    if (rpt.ErrorStatus) {
+      this.toastrService.error(rpt.Message || 'No se pudo eliminar el producto');
+      return false;
+    }
+
+    const data: PucharseRequestDetSaveDto = rpt.Data;
+    this.pucharseRequestRegister.Headboard = data.Headboard;
+    this.pucharseRequestRegister.DetailList = this.pucharseRequestRegister.DetailList.filter(e => !this.sameDetailLine(e, detail));
+    return true;
+  }
+
+  async Save(): Promise<void> {
+    this.updateHeadboardFromInputs();
 
     const rpt = await this.pucharseRequestHeadService.Save(this.pucharseRequestRegister);
 
@@ -225,8 +322,13 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
   }
 
   async removeProduct(detail: PucharseRequestDetEntity) {
-    this.pucharseRequestRegister.DetailList = this.pucharseRequestRegister.DetailList.filter(e => !this.sameDetailLine(e, detail));
-    this.calculateTotal();
+    if (!this.pucharseRequestRegister.Headboard.PucharseReqCod) {
+      this.pucharseRequestRegister.DetailList = this.pucharseRequestRegister.DetailList.filter(e => !this.sameDetailLine(e, detail));
+      this.calculateTotal();
+      return;
+    }
+
+    await this.deleteDetail(detail);
   }
 
   async AddProduct() {
@@ -271,11 +373,25 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
     purchaseDet.ProductUnitFactor = ProductUnitFactor;
     purchaseDet.Product = product;
 
+    const isNewRequest = !this.pucharseRequestRegister.Headboard.PucharseReqCod;
+    const previousDetailList = this.pucharseRequestRegister.DetailList.map(e => ({ ...e, Product: e.Product } as PucharseRequestDetEntity));
+
     if (!existing) {
       this.pucharseRequestRegister.DetailList.push(purchaseDet);
     }
 
     this.calculateTotal();
+
+    const saved = isNewRequest
+      ? await this.saveInitialRequest()
+      : await this.saveDetail(purchaseDet);
+
+    if (!saved) {
+      this.pucharseRequestRegister.DetailList = previousDetailList;
+      this.calculateTotal();
+      return;
+    }
+
     this.closeModal();
 
     // Clear inputs

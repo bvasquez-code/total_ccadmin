@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface PucharseRequestDetRepository extends JpaRepository<PucharseRequestDetEntity, PucharseRequestDetId> {
@@ -24,4 +25,10 @@ public interface PucharseRequestDetRepository extends JpaRepository<PucharseRequ
             select * from pucharse_request_det where PucharseReqCod = :PucharseReqCod and Status = 'A'
             """,nativeQuery = true)
     public List<PucharseRequestDetEntity> findAllActive(@Param("PucharseReqCod") String PucharseReqCod);
+
+    @Query( value = """
+            select coalesce(sum(NumTotalPrice),0) from pucharse_request_det
+            where PucharseReqCod = :PucharseReqCod and Status = 'A'
+            """,nativeQuery = true)
+    public BigDecimal sumActiveTotal(@Param("PucharseReqCod") String PucharseReqCod);
 }
