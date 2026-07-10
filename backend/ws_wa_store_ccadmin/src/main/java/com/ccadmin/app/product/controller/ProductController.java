@@ -81,6 +81,17 @@ public class ProductController {
         }
     }
 
+    @GetMapping("generateProductCode")
+    public ResponseEntity<ResponseWsDto> generateProductCode() {
+        try {
+            ResponseWsDto rpt = new ResponseWsDto();
+            return new ResponseEntity<ResponseWsDto>(
+                    rpt.okResponse(this.productCreateService.generateProductCode()), HttpStatus.OK);
+        } catch (Exception ex) {
+            return new ResponseEntity<ResponseWsDto>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+
     @PostMapping("saveAll")
     public ResponseEntity<ResponseWsDto> saveAll(@RequestBody ProductRegisterMassiveDto productRegisterMassive) {
         try {

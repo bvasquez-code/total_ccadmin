@@ -201,15 +201,24 @@
                         <div>
                           <form autocomplete="off" class="p-2 p-sm-3 bgc-secondary-l4 radius-1 btn-group btn-group-toggle mx-n3 mx-sm-0" data-toggle="buttons">
                             <div role="button" (click)="selectDocumentType('03')" 
-                              class="mr-1 p-3 border-2 btn btn-brc-tp shadow-sm btn-light btn-text-blue btn-h-lighter-blue btn-a-light-blue bgc-white">
+                              class="mr-1 p-3 border-2 btn btn-brc-tp shadow-sm btn-light btn-text-blue btn-h-lighter-blue btn-a-light-blue bgc-white"
+                              [ngClass]="{'active': SelectedPaymentOption === '03'}">
                               <input type="radio" name="place" id="place1" value="1">
                               BOLETA
                             </div>
 
                             <div role="button" (click)="selectDocumentType('01')" 
-                              class="mr-1 p-3 border-2 btn btn-brc-tp shadow-sm btn-text-purple btn-light btn-h-lighter-purple btn-a-light-purple bgc-white">
+                              class="mr-1 p-3 border-2 btn btn-brc-tp shadow-sm btn-text-purple btn-light btn-h-lighter-purple btn-a-light-purple bgc-white"
+                              [ngClass]="{'active': SelectedPaymentOption === '01'}">
                               <input type="radio" name="place" id="place2" value="1">
                               FACTURA
+                            </div>
+
+                            <div role="button" (click)="OpenAdvanceClientModal()"
+                              class="mr-1 p-3 border-2 btn btn-brc-tp shadow-sm btn-text-orange btn-light btn-h-lighter-orange btn-a-light-orange bgc-white"
+                              [ngClass]="{'active': SelectedPaymentOption === 'advance'}">
+                              <input type="radio" name="place" id="place3" value="1">
+                              ANTICIPO
                             </div>
                           </form>
                         </div>
@@ -246,8 +255,8 @@
                       <a *ngIf="(SaleDetail.Headboard.SaleStatus !== 'C' && enableButtonPay)"
                         class="row my-3 align-items-center bgc-green-d3 p-2 radius-1" 
                         style="cursor: pointer;"
-                        data-toggle="modal" 
-                        data-target="#TrxPaymentModal" 
+                        [attr.data-toggle]="shouldOpenPaymentModal() ? 'modal' : null"
+                        [attr.data-target]="shouldOpenPaymentModal() ? '#TrxPaymentModal' : null"
                         (click)="OpenTrxPaymentModal()"
                       >
                         <div class="col-7 text-right text-white text-110">
@@ -388,7 +397,7 @@
     <div class="modal-content" style="width: 100%;">
       <div class="modal-header">
         <h5 class="modal-title text-primary-d3" id="ClientModalLabel">
-          Buscar cliente
+          {{ ClientSearchMode === 'advance' ? 'Registrar anticipo' : 'Buscar cliente' }}
         </h5>
 
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -398,14 +407,18 @@
 
       <div class="modal-body">
 
+        <div class="alert bgc-info-l4 brc-info-m3 border-1 text-dark-m2" *ngIf="ClientSearchMode === 'advance'">
+          Este DNI solo identifica a la persona que realizara el pago parcial. No emite un documento oficial ni impide que la venta final se emita luego como boleta o factura.
+        </div>
+
         <div class="mb-3 row">
           <label class="col-sm-4 col-form-label">Tipo documento</label>
           <div class="col-sm-8">
-            <select class="form-control" #cboDocumentType [disabled]="DocumentType === '01'">
-              <option value="06" *ngIf="DocumentType === '01'">RUC</option>
-              <option value="01" *ngIf="DocumentType === '03'">DNI</option>
-              <option value="04" *ngIf="DocumentType === '03'">CARNET DE EXTRANJERIA</option>
-              <option value="06" *ngIf="DocumentType === '03'">RUC</option>
+            <select class="form-control" #cboDocumentType [disabled]="DocumentType === '01' || ClientSearchMode === 'advance'">
+              <option value="06" *ngIf="DocumentType === '01' && ClientSearchMode !== 'advance'">RUC</option>
+              <option value="01" *ngIf="DocumentType === '03' || ClientSearchMode === 'advance'">DNI</option>
+              <option value="04" *ngIf="DocumentType === '03' && ClientSearchMode !== 'advance'">CARNET DE EXTRANJERIA</option>
+              <option value="06" *ngIf="DocumentType === '03' && ClientSearchMode !== 'advance'">RUC</option>
             </select>
           </div>
         </div>

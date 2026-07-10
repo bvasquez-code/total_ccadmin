@@ -33,13 +33,15 @@ export class CreatesaleComponent implements OnInit {
   SaleDetailPrintData: ResponseWsDto = new ResponseWsDto();
 
   TrxPaymentComponenRequest: TrxPaymentComponenRequestDto = new TrxPaymentComponenRequestDto();
-  DocumentType: string = "03";
+  DocumentType: string = "";
+  SelectedPaymentOption: string = "";
   enableButtonPay: boolean = false;
   ShowClientRegister: boolean = false;
   ShowClient: boolean = false;
   ShowClientSearch: boolean = false;
   ClientDocumentType: string = "";
   ClientDocumentNum: string = "";
+  ClientSearchMode: string = "sale";
 
   constructor(
     private saleservice: SaleService
@@ -92,6 +94,10 @@ export class CreatesaleComponent implements OnInit {
   }
 
   async AddPayment(TrxPayment: TrxPaymentEntity) {
+    if (!this.hasSelectedPaymentOption()) {
+      this.toastrService.info("Seleccione boleta, factura o anticipo antes de pagar.", "Info");
+      return;
+    }
 
     const salePayment: SalePaymentRegisterDto = new SalePaymentRegisterDto();
 
@@ -106,23 +112,13 @@ export class CreatesaleComponent implements OnInit {
 
       if (this.SaleDetail.Headboard.IsPaid == "S") {
 
-        const SaleConfirm : SaleConfirmDto = new SaleConfirmDto();
-        SaleConfirm.SaleCod = this.SaleDetail.Headboard.SaleCod;
-        SaleConfirm.CounterfoilCod = "";
-        SaleConfirm.DocumentType = this.DocumentType;
-
-        const rptConfirm = await this.saleservice.confirm(SaleConfirm);
-
-        if (!rptConfirm.ErrorStatus) {
-
-          this.SaleDetail = rptConfirm.Data;
-
-          if(this.SaleDetail.Headboard.SaleStatus === "C"){
-            this.print();
-          }
-
+        if (this.SelectedPaymentOption === "advance") {
+          this.toastrService.info("Pago total registrado. Seleccione boleta o factura para emitir el documento final.", "Info");
+          this.refreshPaymentAvailability();
+          return;
         }
-        
+
+        await this.confirmSaleDocument();
       }
 
     }
@@ -130,6 +126,8 @@ export class CreatesaleComponent implements OnInit {
   }
 
   selectDocumentType(DocumentType: string) {
+    this.ClientSearchMode = "sale";
+    this.SelectedPaymentOption = DocumentType;
     this.DocumentType = DocumentType;
     this.refreshPaymentAvailability();
 
@@ -141,11 +139,38 @@ export class CreatesaleComponent implements OnInit {
     }
   }
 
+  OpenAdvanceClientModal() {
+    this.SelectedPaymentOption = "advance";
+    this.DocumentType = "03";
+    this.refreshPaymentAvailability();
+    if (this.hasRegisteredPayment()) {
+      this.toastrService.info("La venta ya tiene un anticipo registrado. Para continuar seleccione boleta o factura.", "Info");
+      return;
+    }
+    this.toastrService.info("El DNI solo registra a quien realizara el pago parcial. La venta podra emitirse luego como boleta o factura.", "Anticipo");
+    this.OpenClientModal("advance");
+  }
 
 
-  OpenTrxPaymentModal() {
+
+  async OpenTrxPaymentModal() {
+    if (!this.hasSelectedPaymentOption()) {
+      this.toastrService.info("Seleccione boleta, factura o anticipo antes de pagar.", "Info");
+      return;
+    }
+
+    if (this.SelectedPaymentOption === "advance" && this.hasRegisteredPayment()) {
+      this.toastrService.info("La venta ya tiene un anticipo registrado. Para continuar seleccione boleta o factura.", "Info");
+      return;
+    }
+
     if (this.requiresClientForSelectedDocument()) {
       this.OpenClientModal();
+      return;
+    }
+
+    if (this.isPaidWithoutDocument() && this.isFinalDocumentSelected()) {
+      await this.confirmSaleDocument();
       return;
     }
 
@@ -164,10 +189,35 @@ export class CreatesaleComponent implements OnInit {
 
     await this.findDataPrint(this.SaleCod);
 
+    if (this.shouldPrintAdvance(this.SaleDetailPrintData)) {
+      await this.ticketSvc.printSaleAdvance(this.SaleDetailPrintData);
+      return;
+    }
+
     await this.ticketSvc.printSalesInvoice(this.SaleDetailPrintData);
   }
 
+  shouldPrintAdvance(saleDetailPrint: ResponseWsDto): boolean {
+    const saleDetail: SaleDetailDto = saleDetailPrint?.DataAdditional?.find((e: any) => e.Name === "SaleDetail")?.Data;
+    const documentCod = (saleDetail?.SaleDocument?.DocumentCod ?? "").toString().trim();
+    const totalPaid = (saleDetail?.DetailPayment ?? [])
+      .filter(e => e?.TrxPayment?.TypeMovement === "I" || !e?.TrxPayment)
+      .reduce((sum, e) => sum + Number(e?.NumAmountPaid || 0), 0);
+
+    return saleDetail?.Headboard?.SaleStatus !== "C" && documentCod === "" && totalPaid > 0;
+  }
+
   viewAlertSelectDocumentType() {
+    if (!this.hasSelectedPaymentOption()) {
+      this.toastrService.info("Seleccione boleta, factura o anticipo antes de pagar.", "Info");
+      return;
+    }
+
+    if (this.SelectedPaymentOption === "advance" && this.hasRegisteredPayment()) {
+      this.toastrService.info("La venta ya tiene un anticipo registrado. Para continuar seleccione boleta o factura.", "Info");
+      return;
+    }
+
     if (this.requiresClientForSelectedDocument()) {
       if (this.hasClient() && !this.isCurrentClientCompatible()) {
         this.toastrService.info("Debe seleccionar un cliente compatible con el documento de venta.", "Info");
@@ -220,7 +270,9 @@ export class CreatesaleComponent implements OnInit {
   }
 
   requiresClientForSelectedDocument(): boolean {
+    if (!this.hasSelectedPaymentOption()) return false;
     if (this.hasClient() && !this.isCurrentClientCompatible()) return true;
+    if (this.SelectedPaymentOption === "advance") return !this.hasClient();
     if (this.DocumentType === "01") return !this.hasClient();
     if (this.DocumentType === "03" && this.SaleDetail.Headboard.NumTotalPrice > 700) return !this.hasClient();
     return false;
@@ -230,6 +282,10 @@ export class CreatesaleComponent implements OnInit {
     const person = this.SaleDetail.Headboard.Client?.Person;
 
     if (!person) return false;
+
+    if (this.SelectedPaymentOption === "advance") {
+      return person.DocumentType === "01";
+    }
 
     if (this.DocumentType === "01") {
       return person.PersonType === "04";
@@ -243,23 +299,84 @@ export class CreatesaleComponent implements OnInit {
   }
 
   refreshPaymentAvailability(): void {
-    this.enableButtonPay = (this.DocumentType === "01" || this.DocumentType === "03") && !this.requiresClientForSelectedDocument();
+    const hasAllowedDocumentType = this.DocumentType === "01" || this.DocumentType === "03";
+    const canUseAdvance = this.SelectedPaymentOption !== "advance" || !this.hasRegisteredPayment();
+    this.enableButtonPay = this.hasSelectedPaymentOption() && hasAllowedDocumentType && canUseAdvance && !this.requiresClientForSelectedDocument();
   }
 
-  OpenClientModal() {
+  hasSelectedPaymentOption(): boolean {
+    return this.SelectedPaymentOption === "01" || this.SelectedPaymentOption === "03" || this.SelectedPaymentOption === "advance";
+  }
+
+  isFinalDocumentSelected(): boolean {
+    return this.SelectedPaymentOption === "01" || this.SelectedPaymentOption === "03";
+  }
+
+  hasRegisteredPayment(): boolean {
+    return this.getTotalPaid() > 0;
+  }
+
+  getTotalPaid(): number {
+    return this.SaleDetail.DetailPayment
+      .filter(e => e?.TrxPayment?.TypeMovement === "I" || !e?.TrxPayment)
+      .reduce((sum, e) => sum + Number(e?.NumAmountPaid || 0), 0);
+  }
+
+  hasOfficialDocument(): boolean {
+    return (this.SaleDetail?.SaleDocument?.DocumentCod ?? "").toString().trim() !== "";
+  }
+
+  isPaidWithoutDocument(): boolean {
+    return this.SaleDetail.Headboard.SaleStatus !== "C" && !this.hasOfficialDocument() && (this.SaleDetail.Headboard.IsPaid === "S" || this.getOutstandingbalance() <= 0);
+  }
+
+  shouldOpenPaymentModal(): boolean {
+    return !this.isPaidWithoutDocument() || !this.isFinalDocumentSelected();
+  }
+
+  async confirmSaleDocument(): Promise<void> {
+    if (!this.isFinalDocumentSelected()) {
+      this.toastrService.info("Seleccione boleta o factura para emitir el documento final.", "Info");
+      return;
+    }
+
+    const SaleConfirm : SaleConfirmDto = new SaleConfirmDto();
+    SaleConfirm.SaleCod = this.SaleDetail.Headboard.SaleCod;
+    SaleConfirm.CounterfoilCod = "";
+    SaleConfirm.DocumentType = this.DocumentType;
+
+    const rptConfirm = await this.saleservice.confirm(SaleConfirm);
+
+    if (!rptConfirm.ErrorStatus) {
+      this.SaleDetail = rptConfirm.Data;
+      this.refreshPaymentAvailability();
+
+      if(this.SaleDetail.Headboard.SaleStatus === "C"){
+        this.print();
+      }
+    }
+  }
+
+  OpenClientModal(mode: string = "sale") {
+    this.ClientSearchMode = mode;
     this.ShowClient = false;
     this.ShowClientRegister = false;
     this.ShowClientSearch = true;
     this.ClientDocumentNum = "";
-    this.ClientDocumentType = this.DocumentType === "01" ? "06" : "01";
+    this.ClientDocumentType = this.ClientSearchMode === "advance" ? "01" : (this.DocumentType === "01" ? "06" : "01");
     setTimeout(() => { this.btnOpenClientModal?.nativeElement.click(); }, 0);
   }
 
   async findByDocumentNum() {
-    this.ClientDocumentType = this.cboDocumentType.nativeElement.value;
+    this.ClientDocumentType = this.ClientSearchMode === "advance" ? "01" : this.cboDocumentType.nativeElement.value;
     this.ClientDocumentNum = this.txtDocumentNum.nativeElement.value;
 
-    if (this.DocumentType === "01" && this.ClientDocumentType !== "06") {
+    if (this.ClientSearchMode === "advance" && !/^\d{8}$/.test((this.ClientDocumentNum || "").trim())) {
+      this.toastrService.error("Para anticipo debe ingresar un DNI valido de 8 digitos.");
+      return;
+    }
+
+    if (this.ClientSearchMode !== "advance" && this.DocumentType === "01" && this.ClientDocumentType !== "06") {
       this.toastrService.error("Para factura debe seleccionar un cliente con RUC.");
       return;
     }
@@ -292,7 +409,11 @@ export class CreatesaleComponent implements OnInit {
       this.ShowClientSearch = false;
       this.ShowClient = true;
       this.refreshPaymentAvailability();
-      this.toastrService.success("Cliente asociado a la venta.");
+      if (this.ClientSearchMode === "advance") {
+        this.toastrService.success("DNI asociado para registrar el anticipo. Ahora puede ingresar el monto parcial en Pagar.");
+      } else {
+        this.toastrService.success("Cliente asociado a la venta.");
+      }
     }
   }
 

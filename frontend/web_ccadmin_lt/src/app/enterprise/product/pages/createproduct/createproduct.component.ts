@@ -38,6 +38,7 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
   inputBuffer: string = '';
 
   txtProductCodreadonly: boolean = false;
+  isGeneratingProductCod: boolean = false;
 
   @ViewChild('txtBarCode') txtBarCode!: ElementRef<HTMLInputElement>;
   @ViewChild('txtProductCod') txtProductCod!: ElementRef<HTMLInputElement>;
@@ -116,7 +117,7 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
       this.syncVisiblePriceFromInternal();
     }
 
-    this.txtProductCodreadonly = true;
+    this.txtProductCodreadonly = this.IsEditMode;
 
     if (this.ProductRegister.productBarcode) {
       this.txtBarCode.nativeElement.value = this.ProductRegister.productBarcode.BarCode;
@@ -126,6 +127,9 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
   async save() {
     if (!this.ProductRegister) {
       this.ProductRegister = new ProductRegisterDto();
+    }
+    if (!this.IsEditMode && !this.txtProductCod.nativeElement.value) {
+      await this.generateProductCod();
     }
     this.ProductRegister.product.ProductCod = this.txtProductCod.nativeElement.value;
     this.ProductRegister.product.ProductName = this.txtProductName.nativeElement.value;
@@ -154,6 +158,7 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
 
     this.ProductRegister.productBarcode.ProductCod = this.txtProductCod.nativeElement.value;
     this.ProductRegister.productBarcode.BarCode = this.txtBarCode.nativeElement.value;
+    this.ProductRegister.IsEditMode = this.IsEditMode;
 
     if (!this.validate(this.ProductRegister)) return;
 
@@ -169,6 +174,23 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
       }
     } else {
       this.toastrService.error(rpt.Message);
+    }
+  }
+
+  async generateProductCod() {
+    if (this.IsEditMode || this.isGeneratingProductCod) return;
+
+    this.isGeneratingProductCod = true;
+    try {
+      const rpt: ResponseWsDto = await this.productService.GenerateProductCode();
+
+      if (!rpt.ErrorStatus) {
+        this.txtProductCod.nativeElement.value = rpt.Data;
+      } else {
+        this.toastrService.error(rpt.Message);
+      }
+    } finally {
+      this.isGeneratingProductCod = false;
     }
   }
 

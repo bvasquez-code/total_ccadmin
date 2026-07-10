@@ -73,6 +73,15 @@ export class ProductService {
         return RespuestaWS;
     }
 
+    async GenerateProductCode() {
+        let url: string = `${AppSetting.API}/api/v1/product/generateProductCode`;
+        let RespuestaWS: ResponseWsDto;
+
+        RespuestaWS = await this.apiService.ExecuteGetService(url, {});
+
+        return RespuestaWS;
+    }
+
     async DeletePicture(Request: ProductPictureEntity) {
         let url: string = `${AppSetting.API}/api/v1/product/deletePicture`;
         let RespuestaWS: ResponseWsDto;

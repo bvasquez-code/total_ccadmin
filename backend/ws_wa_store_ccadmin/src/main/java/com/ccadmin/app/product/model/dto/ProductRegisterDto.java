@@ -15,6 +15,7 @@ public class ProductRegisterDto {
     public List<ProductPictureEntity> pictureList;
 
     public ProductBarcodeEntity productBarcode;
+    public boolean IsEditMode;
     public ProductRegisterDto(){
         this.pictureList = new ArrayList<>();
     }

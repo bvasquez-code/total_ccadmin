@@ -14,6 +14,8 @@ import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import com.ccadmin.app.shared.service.GenericQueuedService;
 import com.ccadmin.app.shared.service.SessionService;
 import com.ccadmin.app.store.shared.StoreShared;
+import com.ccadmin.app.system.shared.TableSequenceShared;
+import com.ccadmin.app.system.utility.StringUtil;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +27,8 @@ import java.util.Optional;
 @Service
 @Slf4j
 public class ProductCreateService extends SessionService {
+
+    private static final String PRODUCT_SEQUENCE_TYPE = "product";
 
     @Autowired
     private ProductRepository productRepository;
@@ -52,9 +56,12 @@ public class ProductCreateService extends SessionService {
     private GenericQueuedService genericQueuedService;
     @Autowired
     private ProductTaxConfigCreateService productTaxConfigCreateService;
+    @Autowired
+    private TableSequenceShared tableSequenceShared;
 
     @Transactional
     public ProductRegisterDto save(ProductRegisterDto productRegister) {
+        ensureProductCode(productRegister);
         productRegister.product.session(getUserCod());
         productRegister.config.session(getUserCod()).ProductCod = productRegister.product.ProductCod;
         this.productOperationConfigShared.normalize(productRegister.config);
@@ -74,6 +81,9 @@ public class ProductCreateService extends SessionService {
                 .buildNew(productRegister.product.ProductCod)
                 .session(getUserCod());
         boolean existProduct = this.productRepository.existsById(productRegister.product.ProductCod);
+        if (existProduct && !productRegister.IsEditMode) {
+            throw new ProductBuildException("Codigo de producto ya existe.");
+        }
 
         this.productRepository.save(productRegister.product);
         if (existProduct) {
@@ -103,6 +113,29 @@ public class ProductCreateService extends SessionService {
         }
         this.productFindCreateService.generateSearch(productRegister.product.ProductCod);
         return productRegister;
+    }
+
+    public String generateProductCode() {
+        String productCod = this.tableSequenceShared.getNextCode(PRODUCT_SEQUENCE_TYPE);
+        while (StringUtil.isBlank(productCod) || this.productRepository.existsById(productCod)) {
+            productCod = this.tableSequenceShared.getNextCode(PRODUCT_SEQUENCE_TYPE);
+        }
+        return productCod;
+    }
+
+    private void ensureProductCode(ProductRegisterDto productRegister) {
+        if (productRegister == null || productRegister.product == null) {
+            throw new ProductBuildException("Debe ingresar un producto.");
+        }
+        if (StringUtil.isBlank(productRegister.product.ProductCod)) {
+            productRegister.product.ProductCod = this.generateProductCode();
+            if (productRegister.config != null) {
+                productRegister.config.ProductCod = productRegister.product.ProductCod;
+            }
+            if (productRegister.productBarcode != null) {
+                productRegister.productBarcode.ProductCod = productRegister.product.ProductCod;
+            }
+        }
     }
 
     @Transactional

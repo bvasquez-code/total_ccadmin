@@ -152,8 +152,93 @@ export class TicketSunatService {
     this.openAndPrint(html);
   }
 
-  /** Render principal: imprime NOTA DE CRÉDITO 80mm (SUNAT 07) */
-  /** Imprime NOTA DE CRÉDITO electrónica (SUNAT tipo 07) usando SOLO los campos del JSON dado */
+  async printSaleAdvance(saleDetailPrint: ResponseWsDto) {
+    const saleBlock: SaleDetailDto = saleDetailPrint?.DataAdditional?.find((x: any) => x.Name === 'SaleDetail')?.Data;
+    const currencies: CurrencyEntity[] = saleDetailPrint?.DataAdditional?.find((x: any) => x.Name === 'CurrencyList')?.Data || [];
+    const storeBlock: StoreInfoDto = saleDetailPrint?.DataAdditional?.find((x: any) => x.Name === 'Store')?.Data;
+    const paymentList: PaymentMethodEntity[] = saleDetailPrint?.DataAdditional?.find((x: any) => x.Name === 'PaymentMethodList')?.Data || [];
+
+    const cab: SaleHeadEntity = saleBlock?.Headboard || {};
+    const items: SaleDetEntity[] = saleBlock?.DetailList || [];
+    const payments: SalePaymentEntity[] = saleBlock?.DetailPayment || [];
+    const person: PersonEntity = saleBlock?.Headboard?.Client?.Person || {};
+    const currency = currencies.find((c: any) => c.CurrencyCod === cab?.CurrencyCod) || { CurrencySymbol: 'S/.' };
+
+    const company = storeBlock?.Company || {};
+    const companyUbigeoTxt = storeBlock?.CompanyUbigeo || '';
+    const store = storeBlock?.Store || {};
+    const storeUbigeoTxt = storeBlock?.StoreUbigeo || '';
+
+    const issuer = {
+      ruc: company?.TaxId || '00000000000',
+      razonSocial: company?.LegalName || (company?.TradeName || 'MI TIENDA S.A.C.'),
+      domicilioFiscal: {
+        direccion: company?.FiscalAddress || company?.Address || '',
+        ubigeoTxt: companyUbigeoTxt || '',
+        telefono: company?.Phone || ''
+      },
+      puntoEmision: {
+        nombre: store?.Name || (store?.StoreCod ? `Tienda ${store.StoreCod}` : 'Punto de emision'),
+        direccion: store?.Address || '',
+        ubigeoTxt: storeUbigeoTxt || ''
+      },
+      logoPath: company?.LogoPath || ''
+    };
+
+    const customerFullName = this.safeFullName(person);
+    const customerDocNumber = (person?.DocumentNum ?? '').toString().trim() || '00000000';
+    const customerDocTypeSunat = this.mapCustomerDocTypeToSunat(person?.DocumentType);
+
+    const html = this.renderAdvanceHTML({
+      issuer: issuer,
+      document: {
+        typeText: 'ANTICIPO',
+        code: cab?.SaleCod || '',
+        date: this.formatDateDDMMYYYY(String(cab.CreationDate)),
+        time: this.formatTimeHHMM(String(cab.CreationDate)),
+        currencySymbol: currency.CurrencySymbol || 'S/.'
+      },
+      customer: {
+        docType: customerDocTypeSunat,
+        docNumber: customerDocNumber,
+        name: customerFullName
+      },
+      items: items.map((it: any, index: number) => {
+        const productCod = it?.ProductCod || '';
+        const productName = it?.Product?.ProductName || it?.Product?.ProductDesc || '';
+        const productUnitFactor = ProductUnitHelper.normalizeFactor(Number(it?.ProductUnitFactor || 1));
+
+        return {
+          item: it?.ItemNumber || index + 1,
+          desc: this.buildProductCodeName(productCod, productName),
+          cant: ProductUnitHelper.toVisibleQuantity(Number(it?.NumUnit || 0), productUnitFactor),
+          unit: it?.ProductUnitName || 'NIU',
+          pUnit: ProductUnitHelper.toVisibleUnitPrice(Number((it?.NumUnitPriceSale ?? it?.NumUnitPrice) || 0), productUnitFactor),
+          total: it.NumTotalPrice,
+          lot: this.printLotNumber(it?.LotNumber),
+          expirationDate: this.formatDateOnlyDDMMYYYY(it?.ExpirationDate)
+        };
+      }),
+      totals: {
+        opGravada: this.fmtNum(cab.NumTotalPriceNoTax),
+        tax: this.fmtNum(cab.NumTotalTax),
+        total: this.fmtNum(cab.NumTotalPrice)
+      },
+      payments: payments.filter(e => e.TrxPayment?.TypeMovement === 'I').map((p: any) => ({
+        medio: this.getPaymentDescription(p?.TrxPayment?.PaymentMethodCod, paymentList) || 'OTRO',
+        monto: this.fmtNum(p.NumAmountPaid),
+        ref: p?.TrxPayment?.TransactionId || ''
+      })),
+      qrDataUrl: '',
+      qrText: '',
+      tipDoc: 'advance'
+    });
+
+    this.openAndPrint(html);
+  }
+
+  /** Render principal: imprime NOTA DE CREDITO 80mm (SUNAT 07) */
+  /** Imprime NOTA DE CREDITO electronica (SUNAT tipo 07) usando SOLO los campos del JSON dado */
   async printCreditNote(creditNotePrint: ResponseWsDto) {
     // === Bloques del payload EXACTOS al JSON ===
     const cnBlock: CreditNoteDetailDto = creditNotePrint?.DataAdditional?.find((x: any) => x.Name === 'CreditNoteDetail')?.Data;
@@ -720,6 +805,18 @@ export class TicketSunatService {
     });
   }
 
+  private renderAdvanceHTML(data: {
+    issuer: any, document: any, customer: any, items: any[],
+    totals: any, payments: any[], qrDataUrl: string, qrText: string, tipDoc: string
+  }): string {
+    return this.renderTransactionHTML({
+      ...data,
+      tipDoc: 'advance',
+      detailTitle: 'DETALLE DE VENTA',
+      footerText: 'Comprobante interno de anticipo. No es documento oficial de venta.'
+    });
+  }
+
   private renderCreditNoteHTML(data: {
     issuer: any, document: any, customer: any, items: any[],
     totals: any, payments: any[], qrDataUrl: string, qrText: string, tipDoc: string,
@@ -833,6 +930,17 @@ export class TicketSunatService {
     // total pagado / vuelto
     const totalPagado = (data as any).payments?.reduce((a: number, p: any) => a + Number(p?.monto || 0), 0) || 0;
     const vuelto = (totalPagado - Number((data as any).totals?.total || 0));
+    const saldoPendiente = Math.max(Number((data as any).totals?.total || 0) - totalPagado, 0);
+    const documentCode = data.document.code
+      ? this.escape(data.document.code)
+      : `${this.escape(data.document.series)}-${this.escape(data.document.number)}`;
+    const showPayments = data.tipDoc === "sale" || data.tipDoc === "advance";
+    const qrBlock = data.qrDataUrl
+      ? `<div class="sep"></div>
+      <div class="qr">
+        <img src="${data.qrDataUrl}" alt="QR" />
+      </div>`
+      : '';
 
     return `
 <!doctype html>
@@ -863,7 +971,7 @@ export class TicketSunatService {
 
         <div class="sep"></div>
         <h4 class="bold">${this.escape(data.document.typeText)}</h4>
-        <div>${this.escape(data.document.series)}-${this.escape(data.document.number)}</div>
+        <div>${documentCode}</div>
         <div class="small">Fec: ${this.escape(data.document.date)} ${this.escape(data.document.time)}</div>
       </div>
 
@@ -901,11 +1009,21 @@ export class TicketSunatService {
         <span>${this.escape(data.document.currencySymbol)} ${this.formatMoney(data.totals.total)}</span>
       </div>
 
-      ${data.tipDoc === "sale" ? `<div class="sep"></div><div class="small bold">PAGOS</div>${pagoRows}` : ''}
+      ${showPayments ? `<div class="sep"></div><div class="small bold">PAGOS</div>${pagoRows}` : ''}
 
       ${data.tipDoc === "sale" ? `<div class="subttl small">
         <span>Importe Total</span>
         <span>${this.escape(data.document.currencySymbol)} ${this.formatMoney(totalPagado)}</span>
+      </div>` : ''}
+
+      ${data.tipDoc === "advance" ? `<div class="subttl small">
+        <span>Anticipo pagado</span>
+        <span>${this.escape(data.document.currencySymbol)} ${this.formatMoney(totalPagado)}</span>
+      </div>` : ''}
+
+      ${data.tipDoc === "advance" ? `<div class="subttl small">
+        <span>Saldo pendiente</span>
+        <span>${this.escape(data.document.currencySymbol)} ${this.formatMoney(saldoPendiente)}</span>
       </div>` : ''}
 
       ${data.tipDoc === "sale" ? `<div class="subttl small">
@@ -913,12 +1031,9 @@ export class TicketSunatService {
         <span>${this.escape(data.document.currencySymbol)} ${this.formatMoney(vuelto)}</span>
       </div>` : ''}
 
-      <div class="sep"></div>
-      <div class="qr">
-        <img src="${data.qrDataUrl}" alt="QR" />
-      </div>
+      ${qrBlock}
       <div class="small center">* ${this.escape(data.document.typeText)} *</div>
-      <div class="small center">Representación impresa del comprobante electrónico</div>
+      <div class="small center">${data.tipDoc === "advance" ? 'Comprobante interno, no valido como documento oficial de venta' : 'Representación impresa del comprobante electrónico'}</div>
       <div class="footer small">${this.escape(data.footerText)}</div>
     </div>
   </div>

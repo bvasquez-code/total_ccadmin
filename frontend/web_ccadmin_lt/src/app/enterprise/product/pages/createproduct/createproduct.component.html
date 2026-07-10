@@ -20,13 +20,24 @@
                         </div>
 
                         <div class="col-sm-9">
-                            <input type="text" 
-                                [maxLength]="20"
-                                [readonly]="txtProductCodreadonly"
-                                (keypress)="validateKeypress($event,'txtProductCod')"
-                                id="txtProductCod"
-                                class="form-control col-sm-8 col-md-6" 
-                                #txtProductCod>
+                            <div class="input-group col-sm-8 col-md-6 px-0">
+                                <input type="text"
+                                    [maxLength]="20"
+                                    [readonly]="txtProductCodreadonly"
+                                    (keypress)="validateKeypress($event,'txtProductCod')"
+                                    id="txtProductCod"
+                                    class="form-control"
+                                    #txtProductCod>
+                                <div class="input-group-append" *ngIf="!IsEditMode">
+                                    <button class="btn btn-info" type="button"
+                                        [disabled]="isGeneratingProductCod"
+                                        title="Generar codigo"
+                                        (click)="generateProductCod()">
+                                        <i class="fa fa-sync-alt mr-1"></i>
+                                        Generar
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 

@@ -9,6 +9,7 @@ export class ProductRegisterDto
     public config : ProductConfigEntity = new ProductConfigEntity();
     public pictureList : ProductPictureEntity[] = [];
     public productBarcode : ProductBarcodeEntity = new ProductBarcodeEntity();
+    public IsEditMode: boolean = false;
 
     constructor()
     {
