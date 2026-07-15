@@ -67,6 +67,11 @@ export class TransferRequestService {
         return await this.apiService.ExecutePostService(url, Request);
     }
 
+    async InReviewTransfer(Request: TransferReceiveDto): Promise<ResponseWsDto> {
+        const url: string = `${AppSetting.API}/api/v1/transfers-request/inReview`;
+        return await this.apiService.ExecutePostService(url, Request);
+    }
+
     async CreateCode(StoreCod: string): Promise<ResponseWsDto> {
         const url: string = `${AppSetting.API}/api/v1/transfers-request/createCode`;
         return await this.apiService.ExecuteGetService(url, { storeCod: StoreCod });

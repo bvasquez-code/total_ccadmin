@@ -13,6 +13,12 @@ import java.util.List;
 public interface TransferRequestDetRepository extends JpaRepository<TransferRequestDetEntity, TransferRequestDetId> {
 
     @Query(value = """
+            select coalesce(max(td.ItemNumber), 0) from transfer_request_det td
+            where td.TransferReqCod = :TransferReqCod
+            """, nativeQuery = true)
+    int findMaxItemNumber(@Param("TransferReqCod") String TransferReqCod);
+
+    @Query(value = """
             select td.* from transfer_request_det td
             where td.TransferReqCod = :TransferReqCod
             and td.TypeOperation = :typeOperation

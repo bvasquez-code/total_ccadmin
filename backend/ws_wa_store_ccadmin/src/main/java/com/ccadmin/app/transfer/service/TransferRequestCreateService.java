@@ -1,11 +1,7 @@
 package com.ccadmin.app.transfer.service;
 
 import com.ccadmin.app.product.model.entity.KardexEntity;
-import com.ccadmin.app.product.model.entity.ProductConfigEntity;
-import com.ccadmin.app.product.model.entity.ProductEntity;
 import com.ccadmin.app.product.shared.KardexShared;
-import com.ccadmin.app.product.shared.ProductOperationConfigShared;
-import com.ccadmin.app.product.shared.ProductShared;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import com.ccadmin.app.shared.service.SessionService;
 import com.ccadmin.app.store.model.entity.StoreEntity;
@@ -21,7 +17,6 @@ import com.ccadmin.app.transfer.model.dto.TransferReceiveDto;
 import com.ccadmin.app.transfer.model.dto.TransferRequestRegisterBundleDto;
 import com.ccadmin.app.transfer.model.entity.*;
 import com.ccadmin.app.transfer.repository.*;
-import com.ccadmin.app.transfer.service.helper.ProductTransferConversionHelper;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -38,10 +33,6 @@ public class TransferRequestCreateService extends SessionService {
     @Autowired
     private TransferDocumentRepository transferDocumentRepository;
     @Autowired
-    private ProductShared productShared;
-    @Autowired
-    private ProductOperationConfigShared productOperationConfigShared;
-    @Autowired
     private WarehouseRepository warehouseRepository;
     @Autowired
     private StoreShared storeShared;
@@ -50,12 +41,13 @@ public class TransferRequestCreateService extends SessionService {
     @Autowired
     private CounterfoilShared counterfoilShared;
     @Autowired
-    private ProductTransferConversionHelper productTransferConversionHelper;
+    private TransferRequestDetService transferRequestDetService;
 
     public String createCode(String storeCod){
         return this.transferRequestHeadRepository.getTransferCod(storeCod);
     }
 
+    @Transactional(rollbackOn = Exception.class)
     public TransferRequestRegisterBundleDto save(TransferRequestRegisterBundleDto request) throws Exception {
         if (request == null || request.transferHead == null) {
             throw new TransferException("Información de transferencia es obligatoria");
@@ -68,12 +60,24 @@ public class TransferRequestCreateService extends SessionService {
             throw new TransferException("Tipo de operación es obligatorio");
         }
 
-        boolean isNew = (head.TransferReqCod == null || head.TransferReqCod.trim().isEmpty());
-        if (isNew) {
+        if (StringUtil.isEmpty(head.TransferReqCod)) {
             throw new TransferException("TransferCod es obligatorio");
         }
+        boolean isNew = !this.transferRequestHeadRepository.existsById(head.TransferReqCod);
 
         if (TransferConstants.TYPE_OPERATION_REQUEST.equals(typeOperation)) {
+            if (!isNew) {
+                TransferRequestHeadEntity existingHead = this.transferRequestHeadRepository.findById(head.TransferReqCod)
+                        .orElseThrow(() -> new TransferException("Solicitud de transferencia no encontrada"));
+                if (!TransferConstants.STATUS_PENDING.equals(existingHead.TransferStatus)
+                        || !"A".equals(existingHead.Status)) {
+                    throw new TransferException("La solicitud de transferencia ya no esta pendiente");
+                }
+                head.TransferStatus = existingHead.TransferStatus;
+                head.CreationUser = existingHead.CreationUser;
+                head.CreationDate = existingHead.CreationDate;
+                head.Status = existingHead.Status;
+            }
             if (StringUtil.isEmpty(head.TransferStatus)) {
                 head.TransferStatus = TransferConstants.STATUS_PENDING;
             }
@@ -115,14 +119,14 @@ public class TransferRequestCreateService extends SessionService {
             throw new TransferException("Detalle de transferencia es obligatorio");
         }
 
+        if (!isNew) {
+            this.transferRequestDetRepository.updateStatusAll(head.TransferReqCod, head.TypeOperation, "I");
+        }
+
         List<TransferRequestDetEntity> detList = this.prepareDetails(request.transferDetList, head);
 
         if (TransferConstants.TYPE_OPERATION_SEND.equals(typeOperation)) {
             this.validateTsAgainstTe(detList, head.TransferReqCod, request.allowPartial);
-        }
-
-        if (!isNew) {
-            this.transferRequestDetRepository.updateStatusAll(head.TransferReqCod, head.TypeOperation, "I");
         }
 
         head.addSession(getUserCod(), isNew);
@@ -336,6 +340,10 @@ public class TransferRequestCreateService extends SessionService {
         return this.changeStatus(request, TransferConstants.STATUS_APPROVED, "Transferencia aprobada correctamente");
     }
 
+    public ResponseWsDto inReviewTransfer(TransferReceiveDto request) throws Exception {
+        return this.changeStatus(request, TransferConstants.STATUS_IN_REVIEW, "Transferencia pasada a la espera de revisión");
+    }
+
     private ResponseWsDto changeStatus(TransferReceiveDto request, String status, String message) throws Exception {
         if (request == null || StringUtil.isEmpty(request.transferCod)) {
             throw new TransferException("TransferCod es obligatorio");
@@ -371,70 +379,22 @@ public class TransferRequestCreateService extends SessionService {
     private List<TransferRequestDetEntity> prepareDetails(List<TransferRequestDetEntity> detList, TransferRequestHeadEntity head)
             throws Exception {
         List<TransferRequestDetEntity> detailList = new ArrayList<>();
-        int itemNumber = 1;
+        Set<Integer> usedItemNumbers = new HashSet<>();
+        detList.stream()
+                .filter(det -> det.ItemNumber > 0)
+                .forEach(det -> usedItemNumbers.add(det.ItemNumber));
+
+        int nextItemNumber = 1;
 
         for (var det : detList) {
-            det.TransferReqCod = head.TransferReqCod;
-            det.TypeOperation = head.TypeOperation;
-            if (StringUtil.isEmpty(det.Variant)) {
-                det.Variant = "0000";
-            }
             if (det.ItemNumber <= 0) {
-                det.ItemNumber = itemNumber++;
-            }
-
-            det.validate();
-
-            ProductEntity product = this.productShared.findById(det.ProductCod);
-            if (product == null || !"A".equals(product.Status)) {
-                throw new TransferException("Producto inválido o inactivo: "+det.ProductCod);
-            }
-
-            ProductConfigEntity configOrigin = this.productOperationConfigShared.findByProduct(det.ProductCod, head.StoreCodOrigin);
-            ProductConfigEntity config = this.productOperationConfigShared.findByProduct(det.ProductCod, head.StoreCodDest);
-            if (StringUtil.isEmpty(det.ProductUnitName)) {
-                det.ProductUnitName = config.ProductUnitName;
-            }
-            if (det.ProductUnitFactor <= 0) {
-                det.ProductUnitFactor = config.ProductUnitFactor;
-            }
-            this.productTransferConversionHelper.validateInternalQuantityBetweenStoresOrThrow(
-                    det.ProductCod,
-                    det.NumUnit,
-                    head.StoreCodOrigin,
-                    head.StoreCodDest,
-                    configOrigin,
-                    config
-            );
-
-            if (StringUtil.isNotEmpty(det.WarehouseCodOrigin)) {
-                WarehouseEntity whOrigin = this.warehouseRepository.findById(det.WarehouseCodOrigin)
-                        .orElseThrow(() -> new TransferException("Almacén origen no existe"));
-                if (!"A".equals(whOrigin.Status)) {
-                    throw new TransferException("Almacén origen inactivo");
+                while (usedItemNumbers.contains(nextItemNumber)) {
+                    nextItemNumber++;
                 }
+                det.ItemNumber = nextItemNumber;
+                usedItemNumbers.add(nextItemNumber);
             }
-            if (StringUtil.isEmpty(det.WarehouseCodOrigin)) {
-                det.WarehouseCodOrigin = this.warehouseRepository.findByStore(head.StoreCodOrigin)
-                        .stream().findFirst()
-                        .get().WarehouseCod;
-            }
-
-            if (StringUtil.isNotEmpty(det.WarehouseCodDest)) {
-                WarehouseEntity whDest = this.warehouseRepository.findById(det.WarehouseCodDest)
-                        .orElseThrow(() -> new TransferException("Almacén destino no existe"));
-                if (!"A".equals(whDest.Status)) {
-                    throw new TransferException("Almacén destino inactivo");
-                }
-            }
-            if (StringUtil.isEmpty(det.WarehouseCodDest)) {
-                det.WarehouseCodDest = this.warehouseRepository.findByStore(head.StoreCodDest)
-                        .stream().findFirst()
-                        .get().WarehouseCod;
-            }
-
-            det.addSession(getUserCod(), det.CreationUser == null || det.CreationUser.isEmpty());
-            detailList.add(det);
+            detailList.add(this.transferRequestDetService.buildDetailToSave(det, head, det.ItemNumber));
         }
 
         return detailList;

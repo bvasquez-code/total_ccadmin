@@ -115,6 +115,18 @@ public class TransferRequestController {
         }
     }
 
+    @PostMapping("inReview")
+    public ResponseEntity<ResponseWsDto> inReview(@RequestBody TransferReceiveDto request) {
+        try {
+            return new ResponseEntity<>(
+                    this.transferCreateService.inReviewTransfer(request),
+                    HttpStatus.OK
+            );
+        } catch (Exception ex) {
+            return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+
     @PostMapping("confirmed")
     public ResponseEntity<ResponseWsDto> confirmed(@RequestBody TransferReceiveDto request) {
         try {

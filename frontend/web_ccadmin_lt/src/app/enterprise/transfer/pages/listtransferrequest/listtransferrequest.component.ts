@@ -36,7 +36,8 @@ export class ListtransferrequestComponent implements OnInit, ActionTableService<
     { Code: 'C', Name: 'Confirmada' },
     { Code: 'R', Name: 'Rechazada' },
     { Code: 'X', Name: 'Anulada' },
-    { Code: 'A', Name: 'Aprobada' }
+    { Code: 'A', Name: 'Aprobada' },
+    { Code: 'V', Name: 'En revisión' }
   ];
 
   constructor(
@@ -71,6 +72,10 @@ export class ListtransferrequestComponent implements OnInit, ActionTableService<
       return transferHead.TransferStatus === 'A';
     };
 
+    const showEdit = (transferHead: TransferRequestHeadEntity) => {
+      return transferHead.TransferStatus === TransferConstants.STATUS_PENDING;
+    };
+
     const hasDocument = (transferHead: any) => {
       if (transferHead.DocumentCod) return 'Sí';
       if (transferHead.HasDocument !== undefined) return transferHead.HasDocument ? 'Sí' : 'No';
@@ -95,7 +100,8 @@ export class ListtransferrequestComponent implements OnInit, ActionTableService<
             F: 'badge badge-sm bgc-success-d1 text-white pb-1 px-25',
             R: 'badge badge-sm bgc-dark text-white pb-1 px-25',
             X: 'badge badge-sm bgc-secondary text-white pb-1 px-25',
-            A: 'badge badge-sm bgc-secondary text-white pb-1 px-25'
+            A: 'badge badge-sm bgc-secondary text-white pb-1 px-25',
+            V: 'badge badge-sm bgc-secondary text-white pb-1 px-25'
           },
           Mask: {
             P: 'Pendiente',
@@ -104,7 +110,8 @@ export class ListtransferrequestComponent implements OnInit, ActionTableService<
             F: 'Finalizada',
             R: 'Rechazada',
             X: 'Anulada',
-            A: 'Aprobada'
+            A: 'Aprobada',
+            V: 'En revisión'
           }
         },
         { Name: 'Creación', key: 'CreationDate', IsDate: true },
@@ -114,6 +121,7 @@ export class ListtransferrequestComponent implements OnInit, ActionTableService<
           Id: ['TransferReqCod'],
           Options: [
             { Type: 'Url', Name: 'fa fa-eye', Url: '/enterprise/transfer/pages/transferdetail?TransferCod={TransferReqCod}' },
+            { Type: 'Url', Name: 'fa fa-edit', Url: '/enterprise/transfer/pages/createtransferrequest?TransferReqCod={TransferReqCod}', Function: showEdit },
             { Type: 'Url', Name: 'fa fa-check', Url: '/enterprise/transfer/pages/receivetransfer?TransferReqCod={TransferReqCod}', Function: showReceive }
           ]
         }

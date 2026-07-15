@@ -16,13 +16,16 @@ import { ResponseWsDto } from 'src/app/enterprise/shared/model/dto/ResponseWsDto
 import { ValidationHelper } from 'src/app/enterprise/shared/helper/ValidationHelper';
 import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
 import { StoreEntity } from 'src/app/enterprise/shared/model/entity/StoreEntity';
-import { TransferRegisterBundleDto } from '../../model/dto/TransferRegisterBundleDto';
-import { TransferDetEntity } from '../../model/entity/TransferDetEntity';
 import { TransferService } from '../../service/TransferService';
 import { TransferConstants } from '../../model/constants/TransferConstants';
 import { TransferRequestService } from '../../service/TransferRequestService';
 import { TransferRequestRegisterBundleDto } from '../../model/dto/TransferRequestRegisterBundleDto';
 import { TransferRequestDetEntity } from '../../model/entity/TransferRequestDetEntity';
+import { TransferRequestHeadEntity } from '../../model/entity/TransferRequestHeadEntity';
+import { TransferRequestDetSaveDto } from '../../model/dto/TransferRequestDetSaveDto';
+import { TransferRequestDetService } from '../../service/TransferRequestDetService';
+import { TransferReceiveDto } from '../../model/dto/TransferReceiveDto';
+import { AlertService } from 'src/app/enterprise/shared/service/AlertService';
 
 @Component({
   selector: 'app-createtransferrequest',
@@ -37,8 +40,7 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
   @ViewChild('chkAllowPartial') chkAllowPartial!: ElementRef<HTMLInputElement>;
 
   Page: number = 1;
-  TransferCod: string = '';
-  transferRegister: TransferRegisterBundleDto = new TransferRegisterBundleDto();
+  TransferReqCod: string = '';
   transferRequestRegister: TransferRequestRegisterBundleDto = new TransferRequestRegisterBundleDto();
   responsePageSearch: ResponsePageSearch<ProductSearchEntity> = new ResponsePageSearch();
   productList: ProductSearchEntity[] = [];
@@ -46,6 +48,7 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
   productSearch: ProductSearchDto = new ProductSearchDto();
   storeList: StoreEntity[] = [];
   conversionValidationMessage: string = '';
+  isSavingDetail: boolean = false;
 
   constructor(
     private transferService: TransferService,
@@ -54,7 +57,9 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
     private productSearchService: ProductSearchService,
     private session: DataSesionService,
     private router: Router,
-    private toastrService: ToastrService
+    private toastrService: ToastrService,
+    private transferRequestDetService: TransferRequestDetService,
+    private alertService: AlertService
   ) {
 
   }
@@ -65,23 +70,20 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
 
   GetParamUrl(router: Router): void {
     let urlTree: any = this.router.parseUrl(this.router.url);
-    this.TransferCod = (urlTree.queryParams['TransferCod']) ? urlTree.queryParams['TransferCod'] : '';
-    this.FindDataForm(this.TransferCod);
+    this.TransferReqCod = urlTree.queryParams['TransferReqCod'] ?? urlTree.queryParams['TransferCod'] ?? '';
+    this.FindDataForm(this.TransferReqCod);
   }
 
-  async FindDataForm(TransferCod: string): Promise<void> {
-    const rpt: ResponseWsDto = await this.transferService.FindDataForm(TransferCod);
+  async FindDataForm(TransferReqCod: string): Promise<void> {
+    const rpt: ResponseWsDto = await this.transferRequestService.FindDataForm(TransferReqCod);
 
     if (!rpt.ErrorStatus) {
       const storeList: StoreEntity[] = rpt.DataAdditional?.find(e => e.Name === 'storeList')?.Data ?? [];
       this.storeList = storeList.filter(e => e.StoreCod !== this.session.getSessionStorageDto().StoreCod);
 
-      const registerBundle = rpt.DataAdditional?.find(e => e.Name === 'TransferRegisterBundle')?.Data
-        ?? rpt.DataAdditional?.find(e => e.Name === 'TransferRegister')?.Data
-        ?? rpt.Data;
-
-      if (registerBundle) {
-        this.transferRequestRegister = registerBundle;
+      const transferDetail = rpt.DataAdditional?.find(e => e.Name === 'transferDetail')?.Data;
+      if (transferDetail?.transferHeadRequest) {
+        this.loadRequestData(transferDetail.transferHeadRequest, transferDetail.transferDetRequestList ?? []);
         setTimeout(() => this.LoadingForm(this.transferRequestRegister), 100);
       }
     }
@@ -91,7 +93,7 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
 
   LoadingForm(Entity: TransferRequestRegisterBundleDto): void {
     if (this.cboStoreOrigin) {
-      this.cboStoreOrigin.nativeElement.value = Entity.transferHead.StoreCodDest ?? '';
+      this.cboStoreOrigin.nativeElement.value = Entity.transferHead.StoreCodOrigin ?? '';
     }
     if (this.txtObservation) {
       this.txtObservation.nativeElement.value = Entity.transferHead.Observation ?? '';
@@ -99,12 +101,156 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
     if (this.chkAllowPartial) {
       this.chkAllowPartial.nativeElement.checked = !!Entity.allowPartial;
     }
+    if (Entity.transferHead.StoreCodOrigin) {
+      void this.FindAllProduct(1);
+    }
+  }
+
+  private loadRequestData(head: TransferRequestHeadEntity, detailList: TransferRequestDetEntity[]): void {
+    this.transferRequestRegister.transferHead = Object.assign(new TransferRequestHeadEntity(), head);
+    this.transferRequestRegister.transferDetList = (detailList ?? []).map(detail =>
+      Object.assign(new TransferRequestDetEntity(), detail)
+    );
+  }
+
+  private updateRequestFromInputs(): void {
+    const storeOrigin = this.cboStoreOrigin.nativeElement.value;
+    ValidationHelper.validateIsNotEmpty(storeOrigin, 'Seleccione el local a solicitar stock');
+
+    this.transferRequestRegister.transferHead.StoreCodOrigin = storeOrigin;
+    this.transferRequestRegister.transferHead.StoreCodDest = this.session.getSessionStorageDto().StoreCod;
+    this.transferRequestRegister.transferHead.StoreCodRequestedBy = this.session.getSessionStorageDto().StoreCod;
+    this.transferRequestRegister.transferHead.TypeOperation = TransferConstants.TYPE_OPERATION_REQUEST;
+    this.transferRequestRegister.transferHead.TransferStatus = TransferConstants.STATUS_PENDING;
+    this.transferRequestRegister.transferHead.Observation = this.txtObservation.nativeElement.value;
+    this.transferRequestRegister.allowPartial = this.chkAllowPartial.nativeElement.checked;
+  }
+
+  private buildDetailSaveDto(detail: TransferRequestDetEntity): TransferRequestDetSaveDto {
+    const dto = new TransferRequestDetSaveDto();
+    dto.transferHead = this.transferRequestRegister.transferHead;
+    dto.transferDet = detail;
+    return dto;
+  }
+
+  private cloneDetailList(): TransferRequestDetEntity[] {
+    return this.transferRequestRegister.transferDetList.map(detail =>
+      Object.assign(new TransferRequestDetEntity(), detail, { Product: detail.Product })
+    );
+  }
+
+  private syncSavedDetail(savedDetail: TransferRequestDetEntity, product: ProductEntity): void {
+    savedDetail.Product = product || savedDetail.Product;
+    const index = this.transferRequestRegister.transferDetList.findIndex(detail =>
+      this.sameDetailLine(detail, savedDetail)
+    );
+
+    if (index >= 0) {
+      this.transferRequestRegister.transferDetList[index] = savedDetail;
+    } else {
+      this.transferRequestRegister.transferDetList.push(savedDetail);
+    }
+  }
+
+  private async saveInitialRequest(): Promise<boolean> {
+    if (this.isSavingDetail) return false;
+    this.isSavingDetail = true;
+
+    try {
+      this.updateRequestFromInputs();
+      const storeOrigin = this.getStoredCodOrigin();
+      this.transferRequestRegister.transferHead.TransferReqCod = await this.createCode(storeOrigin);
+      this.transferRequestRegister.transferDetList.forEach((detail, index) => {
+        detail.TransferReqCod = this.transferRequestRegister.transferHead.TransferReqCod;
+        detail.TypeOperation = TransferConstants.TYPE_OPERATION_REQUEST;
+        detail.ItemNumber = detail.ItemNumber > 0 ? detail.ItemNumber : index + 1;
+      });
+
+      const productByItem = new Map(
+        this.transferRequestRegister.transferDetList.map(detail => [detail.ItemNumber, detail.Product])
+      );
+      const rpt: ResponseWsDto = await this.transferRequestService.Save(this.transferRequestRegister);
+
+      if (rpt.ErrorStatus) {
+        this.transferRequestRegister.transferHead.TransferReqCod = '';
+        this.toastrService.error(rpt.Message || 'No se pudo guardar la solicitud de transferencia');
+        return false;
+      }
+
+      const saved: TransferRequestRegisterBundleDto = rpt.Data;
+      this.loadRequestData(saved.transferHead, saved.transferDetList);
+      this.transferRequestRegister.transferDetList.forEach(detail => {
+        detail.Product = productByItem.get(detail.ItemNumber) || detail.Product;
+      });
+      this.TransferReqCod = this.transferRequestRegister.transferHead.TransferReqCod;
+
+      await this.router.navigate(
+        ['/enterprise/transfer/pages/createtransferrequest'],
+        { queryParams: { TransferReqCod: this.TransferReqCod }, replaceUrl: true }
+      );
+      this.toastrService.success('Solicitud de transferencia guardada como pendiente');
+      return true;
+    } catch (e: any) {
+      this.transferRequestRegister.transferHead.TransferReqCod = '';
+      this.toastrService.error(e.message);
+      return false;
+    } finally {
+      this.isSavingDetail = false;
+    }
+  }
+
+  private async saveDetail(detail: TransferRequestDetEntity): Promise<boolean> {
+    if (this.isSavingDetail) return false;
+
+    try {
+      detail.TransferReqCod = this.transferRequestRegister.transferHead.TransferReqCod;
+      this.isSavingDetail = true;
+      const rpt: ResponseWsDto = await this.transferRequestDetService.Save(this.buildDetailSaveDto(detail));
+
+      if (rpt.ErrorStatus) {
+        this.toastrService.error(rpt.Message || 'No se pudo guardar el producto');
+        return false;
+      }
+
+      const data: TransferRequestDetSaveDto = rpt.Data;
+      this.transferRequestRegister.transferHead = Object.assign(new TransferRequestHeadEntity(), data.transferHead);
+      this.syncSavedDetail(Object.assign(new TransferRequestDetEntity(), data.transferDet), detail.Product);
+      return true;
+    } catch (e: any) {
+      this.toastrService.error(e.message);
+      return false;
+    } finally {
+      this.isSavingDetail = false;
+    }
+  }
+
+  private async deleteDetail(detail: TransferRequestDetEntity): Promise<boolean> {
+    if (this.isSavingDetail) return false;
+
+    try {
+      this.isSavingDetail = true;
+      const rpt: ResponseWsDto = await this.transferRequestDetService.Delete(this.buildDetailSaveDto(detail));
+
+      if (rpt.ErrorStatus) {
+        this.toastrService.error(rpt.Message || 'No se pudo eliminar el producto');
+        return false;
+      }
+
+      this.transferRequestRegister.transferDetList = this.transferRequestRegister.transferDetList
+        .filter(item => !this.sameDetailLine(item, detail));
+      return true;
+    } catch (e: any) {
+      this.toastrService.error(e.message);
+      return false;
+    } finally {
+      this.isSavingDetail = false;
+    }
   }
 
   async Save(): Promise<void> {
     try {
-      const storeOrigin = this.cboStoreOrigin.nativeElement.value;
-      ValidationHelper.validateIsNotEmpty(storeOrigin, 'Seleccione el local a solicitar stock');
+      if (this.isSavingDetail) return;
+      this.updateRequestFromInputs();
 
       if (this.transferRequestRegister.transferDetList.length === 0) {
         throw new Error('Debe agregar al menos un producto');
@@ -115,30 +261,48 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
         throw new Error('La cantidad debe ser mayor a cero');
       }
 
-      this.transferRequestRegister.transferHead.TransferReqCod = await this.createCode(storeOrigin);
-      this.transferRequestRegister.transferHead.StoreCodOrigin = storeOrigin;
-      this.transferRequestRegister.transferHead.StoreCodDest = this.session.getSessionStorageDto().StoreCod;
-      this.transferRequestRegister.transferHead.StoreCodRequestedBy = this.session.getSessionStorageDto().StoreCod;
-      this.transferRequestRegister.transferHead.TypeOperation = TransferConstants.TYPE_OPERATION_REQUEST;
-      this.transferRequestRegister.transferHead.Observation = this.txtObservation.nativeElement.value;
-      this.transferRequestRegister.allowPartial = this.chkAllowPartial.nativeElement.checked;
+      const confirmation = await this.alertService.waring(
+        'Estás a punto de enviar tu solicitud. Ya no podrás editarla.',
+        'Enviar solicitud'
+      );
+      if (!confirmation.isConfirmed) return;
 
-      this.transferRequestRegister.transferDetList = this.transferRequestRegister.transferDetList.map((det, index) => {
-        det.ItemNumber = index + 1;
-        det.TypeOperation = TransferConstants.TYPE_OPERATION_REQUEST;
-        det.TransferReqCod = this.transferRequestRegister.transferHead.TransferReqCod;
-        return det;
-      });
+      if (!this.transferRequestRegister.transferHead.TransferReqCod) {
+        const saved = await this.saveInitialRequest();
+        if (!saved) return;
+      }
 
+      const productByItem = new Map(
+        this.transferRequestRegister.transferDetList.map(detail => [detail.ItemNumber, detail.Product])
+      );
+      this.isSavingDetail = true;
       const rpt: ResponseWsDto = await this.transferRequestService.Save(this.transferRequestRegister);
 
       if (!rpt.ErrorStatus) {
+        const saved: TransferRequestRegisterBundleDto = rpt.Data;
+        this.loadRequestData(saved.transferHead, saved.transferDetList);
+        this.transferRequestRegister.transferDetList.forEach(detail => {
+          detail.Product = productByItem.get(detail.ItemNumber) || detail.Product;
+        });
 
-        this.transferRequestRegister.transferHead.TypeOperation = TransferConstants.TYPE_OPERATION_SEND;
-        this.transferRequestRegister.transferHead.TransferStatus = TransferConstants.STATUS_PENDING;
-        const rptTs: ResponseWsDto = await this.transferService.Save(this.transferRequestRegister.buildTransferRegister());
+        const transferRegister = this.transferRequestRegister.buildTransferRegister();
+        transferRegister.transferHead.TypeOperation = TransferConstants.TYPE_OPERATION_SEND;
+        transferRegister.transferHead.TransferStatus = TransferConstants.STATUS_PENDING;
+        const rptTs: ResponseWsDto = await this.transferService.Save(transferRegister);
 
         if (!rptTs.ErrorStatus) {
+          const requestApproved = new TransferReceiveDto();
+          requestApproved.transferCod = this.transferRequestRegister.transferHead.TransferReqCod;
+          requestApproved.user = this.session.getSessionStorageDto().UserCod;
+          requestApproved.observation = this.transferRequestRegister.transferHead.Observation;
+          requestApproved.typeOperation = TransferConstants.TYPE_OPERATION_REQUEST;
+
+          const rptApproved: ResponseWsDto = await this.transferRequestService.InReviewTransfer(requestApproved);
+          if (rptApproved.ErrorStatus) {
+            this.toastrService.error(rptApproved.Message || 'La transferencia se registró, pero no se pudo aprobar la solicitud');
+            return;
+          }
+
           this.toastrService.success(rptTs.Message || 'Transferencia registrada correctamente');
           setTimeout(() => {
             this.router.navigate(['/enterprise/transfer/pages/listtransferrequest']);
@@ -151,13 +315,15 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
       }
     } catch (e: any) {
       this.toastrService.error(e.message);
+    } finally {
+      this.isSavingDetail = false;
     }
   }
 
   async FindAllProduct(Page: number) {
     const storeOrigin = this.cboStoreOrigin?.nativeElement.value ?? '';
     if (!storeOrigin) {
-      this.toastrService.error('Seleccione un local destino para buscar productos');
+      this.toastrService.error('Seleccione un local a solicitar stock para buscar productos');
       return;
     }
 
@@ -198,6 +364,7 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
   }
 
   async AddProduct() {
+    if (this.isSavingDetail) return;
     this.clearConversionValidationMessage();
     const product = this.productSelect;
     if (!product || !product.ProductCod) {
@@ -205,6 +372,8 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
       return;
     }
 
+    const isNewRequest = !this.transferRequestRegister.transferHead.TransferReqCod;
+    const previousDetailList = this.cloneDetailList();
     let transferDet: TransferRequestDetEntity = new TransferRequestDetEntity();
     let transferDetExist: TransferRequestDetEntity | undefined = this.transferRequestRegister.transferDetList.find(e => e.ProductCod === product.ProductCod);
 
@@ -245,6 +414,15 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
       this.transferRequestRegister.transferDetList.push(transferDet);
     }
 
+    const saved = isNewRequest
+      ? await this.saveInitialRequest()
+      : await this.saveDetail(transferDet);
+
+    if (!saved) {
+      this.transferRequestRegister.transferDetList = previousDetailList;
+      return;
+    }
+
     this.txtNumUnit.nativeElement.value = '';
     this.closeModal();
   }
@@ -260,7 +438,13 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
   }
 
   async removeProduct(product: TransferRequestDetEntity) {
-    this.transferRequestRegister.transferDetList = this.transferRequestRegister.transferDetList.filter(e => !this.sameDetailLine(e, product));
+    if (!this.transferRequestRegister.transferHead.TransferReqCod) {
+      this.transferRequestRegister.transferDetList = this.transferRequestRegister.transferDetList
+        .filter(e => !this.sameDetailLine(e, product));
+      return;
+    }
+
+    await this.deleteDetail(product);
   }
 
   async findDetailById(ProductCod: string, StoreCod: string = this.session.getSessionStorageDto().StoreCod): Promise<ProductInfoDto> {

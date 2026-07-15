@@ -10,6 +10,7 @@ public final class TransferConstants {
     public static final String STATUS_CONFIRMED = "C";
     public static final String STATUS_REJECTED = "R";
     public static final String STATUS_CANCELLED = "X";
+    public static final String STATUS_IN_REVIEW = "V";
 
     public static final String TRANSPORT_PUBLIC = "01";
     public static final String TRANSPORT_PRIVATE = "02";
