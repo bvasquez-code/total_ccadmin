@@ -11,12 +11,15 @@ import { TransferConstants } from '../../model/constants/TransferConstants';
 import { TransferRequestHeadEntity } from '../../model/entity/TransferRequestHeadEntity';
 import { TransferRequestService } from '../../service/TransferRequestService';
 import { DataSesionService } from 'src/app/enterprise/compartido/service/datasesion.service';
+import { ActionModalConfirmService } from 'src/app/enterprise/shared/interface/ActionModalConfirmService';
+import { TransferReceiveDto } from '../../model/dto/TransferReceiveDto';
+import { ToastrService } from 'ngx-toastr';
 
 @Component({
   selector: 'app-listtransferrequest',
   templateUrl: './listtransferrequest.component.html'
 })
-export class ListtransferrequestComponent implements OnInit, ActionTableService<TransferRequestHeadEntity> {
+export class ListtransferrequestComponent implements OnInit, ActionTableService<TransferRequestHeadEntity>, ActionModalConfirmService {
 
   @ViewChild('txtTransferCod') txtTransferCod!: ElementRef<HTMLInputElement>;
   @ViewChild('txtDateStart') txtDateStart!: ElementRef<HTMLInputElement>;
@@ -42,7 +45,8 @@ export class ListtransferrequestComponent implements OnInit, ActionTableService<
 
   constructor(
     private transferRequestService: TransferRequestService,
-    private sessionService: DataSesionService
+    private sessionService: DataSesionService,
+    private toastrService: ToastrService
   ) { }
 
   ngOnInit(): void {
@@ -122,6 +126,7 @@ export class ListtransferrequestComponent implements OnInit, ActionTableService<
           Options: [
             { Type: 'Url', Name: 'fa fa-eye', Url: '/enterprise/transfer/pages/transferdetail?TransferCod={TransferReqCod}' },
             { Type: 'Url', Name: 'fa fa-edit', Url: '/enterprise/transfer/pages/createtransferrequest?TransferReqCod={TransferReqCod}', Function: showEdit },
+            { Type: 'Modal', Name: 'fa fa-ban', ID: 'modal_cancel_transfer_request', Function: showEdit },
             { Type: 'Url', Name: 'fa fa-check', Url: '/enterprise/transfer/pages/receivetransfer?TransferReqCod={TransferReqCod}', Function: showReceive }
           ]
         }
@@ -155,6 +160,28 @@ export class ListtransferrequestComponent implements OnInit, ActionTableService<
 
   getDataRow(item: any): void {
     this.transferHeadSelect = item;
+  }
+
+  actionModal(ModalId: string): void {
+    if (ModalId === 'modal_cancel_transfer_request') {
+      this.cancelTransferRequest();
+    }
+  }
+
+  private async cancelTransferRequest(): Promise<void> {
+    if (this.transferHeadSelect.TransferStatus !== TransferConstants.STATUS_PENDING) {
+      return;
+    }
+
+    const request = new TransferReceiveDto();
+    request.transferCod = this.transferHeadSelect.TransferReqCod;
+    request.user = this.sessionService.getSessionStorageDto().UserCod;
+
+    const rpt: ResponseWsDto = await this.transferRequestService.CancelTransfer(request);
+    if (!rpt.ErrorStatus) {
+      this.toastrService.success('Solicitud de transferencia anulada');
+      this.filter(1);
+    }
   }
 
   getStoreList() {
