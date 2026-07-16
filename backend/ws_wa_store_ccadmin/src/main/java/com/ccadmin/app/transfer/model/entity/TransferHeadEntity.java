@@ -16,6 +16,7 @@ public class TransferHeadEntity extends AuditTableEntity implements Serializable
     @Id
     public String TransferCod;
     public String TypeOperation;
+    public String TransferMode;
     public String StoreCodOrigin;
     public String StoreCodDest;
     public String StoreCodRequestedBy;

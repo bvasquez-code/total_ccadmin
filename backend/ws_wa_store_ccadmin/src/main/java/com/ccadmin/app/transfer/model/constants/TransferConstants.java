@@ -5,6 +5,9 @@ public final class TransferConstants {
     public static final String TYPE_OPERATION_REQUEST = "TR";
     public static final String TYPE_OPERATION_SEND = "TS";
 
+    public static final String TRANSFER_MODE_REGULAR = "R";
+    public static final String TRANSFER_MODE_DIRECT = "D";
+
     public static final String STATUS_APPROVED = "A";
     public static final String STATUS_PENDING = "P";
     public static final String STATUS_CONFIRMED = "C";

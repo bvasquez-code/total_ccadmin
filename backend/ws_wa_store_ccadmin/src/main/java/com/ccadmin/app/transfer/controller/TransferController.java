@@ -2,6 +2,7 @@ package com.ccadmin.app.transfer.controller;
 
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import com.ccadmin.app.transfer.model.dto.*;
+import com.ccadmin.app.transfer.model.entity.TransferDetEntity;
 import com.ccadmin.app.transfer.service.TransferCreateService;
 import com.ccadmin.app.transfer.service.TransferSearchService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -167,6 +168,18 @@ public class TransferController {
         try {
             return new ResponseEntity<>(
                     new ResponseWsDto(this.transferCreateService.saveDet(request)),
+                    HttpStatus.OK
+            );
+        } catch (Exception ex) {
+            return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("deleteDet")
+    public ResponseEntity<ResponseWsDto> deleteDet(@RequestBody TransferDetEntity request) {
+        try {
+            return new ResponseEntity<>(
+                    new ResponseWsDto(this.transferCreateService.deleteDet(request)),
                     HttpStatus.OK
             );
         } catch (Exception ex) {

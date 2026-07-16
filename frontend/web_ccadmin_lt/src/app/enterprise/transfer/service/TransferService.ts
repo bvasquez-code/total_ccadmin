@@ -76,4 +76,9 @@ export class TransferService {
         const url: string = `${AppSetting.API}/api/v1/transfers/saveDet`;
         return await this.apiService.ExecutePostService(url, request);
     }
+
+    async DeleteDet(entity: TransferDetEntity): Promise<ResponseWsDto> {
+        const url: string = `${AppSetting.API}/api/v1/transfers/deleteDet`;
+        return await this.apiService.ExecutePostService(url, entity);
+    }
 }

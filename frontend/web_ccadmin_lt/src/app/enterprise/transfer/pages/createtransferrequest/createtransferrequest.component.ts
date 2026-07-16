@@ -287,6 +287,7 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
 
         const transferRegister = this.transferRequestRegister.buildTransferRegister();
         transferRegister.transferHead.TypeOperation = TransferConstants.TYPE_OPERATION_SEND;
+        transferRegister.transferHead.TransferMode = TransferConstants.TRANSFER_MODE_REGULAR;
         transferRegister.transferHead.TransferStatus = TransferConstants.STATUS_PENDING;
         const rptTs: ResponseWsDto = await this.transferService.Save(transferRegister);
 

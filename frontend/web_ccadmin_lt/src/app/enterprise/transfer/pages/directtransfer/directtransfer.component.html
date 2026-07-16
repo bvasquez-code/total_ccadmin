@@ -12,7 +12,8 @@
         <div class="row">
           <div class="col-md-4 mb-3">
             <label>Local destino</label>
-            <select class="form-control" #cboStoreDest (change)="FindAllProduct(1)">
+            <select class="form-control" #cboStoreDest (change)="FindAllProduct(1)"
+              [disabled]="!!TransferReqCod || isSavingDetail">
               <option value="">Seleccione</option>
               <option *ngFor="let store of storeList" [value]="store.StoreCod">
                 {{ store.Name }}
@@ -32,7 +33,7 @@
             <h5 class="text-primary">Productos</h5>
             <div class="d-flex align-items-center mb-2">
               <input type="text" class="form-control mr-2" placeholder="Buscar producto" #txtSearch />
-              <button class="btn btn-primary" (click)="FindAllProduct(1)">Buscar</button>
+              <button class="btn btn-primary" (click)="FindAllProduct(1)" [disabled]="isSavingDetail">Buscar</button>
             </div>
 
             <div class="table-responsive">
@@ -51,7 +52,8 @@
                     <td>{{ product.ProductName }}</td>
                     <td class="text-center">{{ toVisibleQuantity(product.NumPhysicalStock, product.ProductUnitFactor) }} {{ product.ProductUnitName }}</td>
                     <td class="text-center">
-                      <button class="btn btn-sm btn-outline-primary" (click)="selectProduct(product)">
+                      <button class="btn btn-sm btn-outline-primary" (click)="selectProduct(product)"
+                        [disabled]="isSavingDetail">
                         Elegir
                       </button>
                     </td>
@@ -71,7 +73,8 @@
                 class="custom-control-input"
                 id="switchDirectTransferWithLots"
                 name="switchDirectTransferWithLots"
-                [(ngModel)]="isTransferWithLots">
+                [(ngModel)]="isTransferWithLots"
+                [disabled]="isSavingDetail || transferRequestRegister.transferDetList.length > 0">
               <label class="custom-control-label" for="switchDirectTransferWithLots">
                 Transferir con lotes y fecha de vencimiento
               </label>
@@ -89,22 +92,23 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let detail of transferRegister.transferDetList">
+                  <tr *ngFor="let detail of transferRequestRegister.transferDetList">
                     <td>{{ detail.ProductCod +' - '+ detail.Product.ProductName || detail.ProductCod }}</td>
                     <td class="text-center">{{ toVisibleQuantity(detail.NumUnit, detail.ProductUnitFactor) }} {{ detail.ProductUnitName }}</td>
                     <td *ngIf="isTransferWithLots">{{ detail.LotNumber || 'SN' }}</td>
                     <td *ngIf="isTransferWithLots">{{ detail.ExpirationDate ? (detail.ExpirationDate | date:'dd/MM/yyyy') : '' }}</td>
                     <td class="text-center">
                       <button *ngIf="isTransferWithLots && !detail.LotNumber" class="btn btn-sm btn-info mr-1"
-                        (click)="openLotDispatchModal(detail)" data-toggle="modal" data-target="#modalLotDispatch">
+                        (click)="openLotDispatchModal(detail)" data-toggle="modal" data-target="#modalLotDispatch"
+                        [disabled]="isSavingDetail">
                         <i class="fa fa-boxes"></i>
                       </button>
-                      <button class="btn btn-sm btn-danger" (click)="removeProduct(detail)">
+                      <button class="btn btn-sm btn-danger" (click)="removeProduct(detail)" [disabled]="isSavingDetail">
                         <i class="fa fa-trash"></i>
                       </button>
                     </td>
                   </tr>
-                  <tr *ngIf="transferRegister.transferDetList.length === 0">
+                  <tr *ngIf="transferRequestRegister.transferDetList.length === 0">
                     <td [attr.colspan]="isTransferWithLots ? 5 : 3" class="text-center text-muted">Sin productos seleccionados</td>
                   </tr>
                 </tbody>
@@ -172,7 +176,9 @@
         </div>
 
         <div class="mt-3">
-          <button class="btn btn-success" (click)="Save()">Registrar envio</button>
+          <button class="btn btn-success" (click)="Save()" [disabled]="isSavingDetail">
+            {{ isSavingDetail ? 'Guardando...' : 'Registrar envio' }}
+          </button>
           <a class="btn btn-secondary ml-2" href="enterprise/transfer/pages/listtransferdispatch">Cancelar</a>
         </div>
       </div>
@@ -268,8 +274,8 @@
         <button type="button" class="btn btn-secondary px-4" data-dismiss="modal" (click)="clearConversionValidationMessage()">
           Cerrar
         </button>
-        <button type="button" class="btn btn-primary" (click)="confirmLotDispatch()">
-          Confirmar lotes
+        <button type="button" class="btn btn-primary" (click)="confirmLotDispatch()" [disabled]="isSavingDetail">
+          {{ isSavingDetail ? 'Guardando...' : 'Confirmar lotes' }}
         </button>
       </div>
     </div>
@@ -306,8 +312,8 @@
 
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-dismiss="modal" (click)="clearConversionValidationMessage()">Cancelar</button>
-        <button type="button" class="btn btn-primary" (click)="AddProduct()">
-          Agregar
+        <button type="button" class="btn btn-primary" (click)="AddProduct()" [disabled]="isSavingDetail">
+          {{ isSavingDetail ? 'Guardando...' : 'Agregar' }}
         </button>
       </div>
     </div>

@@ -19,6 +19,7 @@ BEGIN
         CREATE TABLE `transfer_head` (
           `TransferCod` varchar(16) NOT NULL COMMENT 'PK. Código interno de la transferencia',
           `TypeOperation` char(2) NOT NULL COMMENT 'Tipo de operacion : TE=solicitud transferencia, TS=envio de transferencia',
+          `TransferMode` char(1) NOT NULL DEFAULT 'R' COMMENT 'Modo de transferencia: R=Regular, D=Directa',
           `StoreCodOrigin` varchar(4) NOT NULL COMMENT 'Código del local origen (FK store.StoreCod)',
           `StoreCodDest` varchar(4) NOT NULL COMMENT 'Código del local destino (FK store.StoreCod)',
           `StoreCodRequestedBy` varchar(4) DEFAULT NULL COMMENT 'Código del local que solicita/ordena la transferencia (ej. super local central). Puede ser distinto a origen/destino',
@@ -75,6 +76,19 @@ BEGIN
         ) THEN
             ALTER TABLE `transfer_head` ADD COLUMN `ReceiveStatus` char(1) NOT NULL DEFAULT 'P' COMMENT 'Estado del proceso de recepcion: P=Pending, C=Confirmed, R=Rejected, X=Cancelled, A=Approved';
             SELECT 'Columna ReceiveStatus agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns
+            WHERE table_schema = DATABASE()
+            AND table_name = 'transfer_head'
+            AND column_name = 'TransferMode'
+        ) THEN
+            ALTER TABLE `transfer_head`
+                ADD COLUMN `TransferMode` char(1) NOT NULL DEFAULT 'R'
+                COMMENT 'Modo de transferencia: R=Regular, D=Directa'
+                AFTER `TypeOperation`;
+            SELECT 'Columna TransferMode agregada exitosamente.' AS Mensaje;
         END IF;
         
         SELECT 'Tabla transfer_head ya existe. No se realizaron cambios estructurales.' AS Mensaje;

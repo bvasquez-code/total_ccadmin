@@ -12,7 +12,6 @@ import { ResponsePageSearch } from 'src/app/enterprise/shared/model/dto/Response
 import { ResponseWsDto } from 'src/app/enterprise/shared/model/dto/ResponseWsDto';
 import { ValidationHelper } from 'src/app/enterprise/shared/helper/ValidationHelper';
 import { StoreEntity } from 'src/app/enterprise/shared/model/entity/StoreEntity';
-import { TransferDetEntity } from '../../model/entity/TransferDetEntity';
 import { TransferRegisterBundleDto } from '../../model/dto/TransferRegisterBundleDto';
 import { TransferService } from '../../service/TransferService';
 import { TransferRequestService } from '../../service/TransferRequestService';
@@ -27,6 +26,10 @@ import { TransferLotDispatchDto } from '../../model/dto/TransferLotDispatchDto';
 import { ProductConversionRequestDto } from 'src/app/enterprise/product/model/dto/ProductConversionRequestDto';
 import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
 import { ProductConversionResultDto } from 'src/app/enterprise/product/model/dto/ProductConversionResultDto';
+import { TransferRequestHeadEntity } from '../../model/entity/TransferRequestHeadEntity';
+import { TransferRequestDetSaveDto } from '../../model/dto/TransferRequestDetSaveDto';
+import { TransferRequestDetService } from '../../service/TransferRequestDetService';
+import { TransferDetRegisterMassiveDto } from '../../model/dto/TransferDetRegisterMassiveDto';
 
 @Component({
   selector: 'app-directtransfer',
@@ -53,16 +56,19 @@ export class DirecttransferComponent implements OnInit {
   @ViewChild('btnCloseLotDispatchModal') btnCloseLotDispatchModal!: ElementRef<HTMLButtonElement>;
 
   Page: number = 1;
-  transferRegister: TransferRegisterBundleDto = new TransferRegisterBundleDto();
+  TransferReqCod: string = '';
+  transferRequestRegister: TransferRequestRegisterBundleDto = new TransferRequestRegisterBundleDto();
   responsePageSearch: ResponsePageSearch<ProductSearchEntity> = new ResponsePageSearch();
   productList: ProductSearchEntity[] = [];
   productSelect: ProductSearchEntity = new ProductSearchEntity();
   productSearch: ProductSearchDto = new ProductSearchDto();
   storeList: StoreEntity[] = [];
-  selectedDetail: TransferDetEntity = new TransferDetEntity();
+  selectedDetail: TransferRequestDetEntity = new TransferRequestDetEntity();
   isTransferWithLots: boolean = false;
   lotDispatchList: TransferLotDispatchDto[] = [];
   conversionValidationMessage: string = '';
+  isSavingDetail: boolean = false;
+  hasTransferDraft: boolean = false;
   private readonly maxLotNumberLength: number = 32;
 
   transportModeList = [
@@ -85,15 +91,18 @@ export class DirecttransferComponent implements OnInit {
     private session: DataSesionService,
     private router: Router,
     private toastrService: ToastrService,
-    private carrierService: CarrierService
+    private carrierService: CarrierService,
+    private transferRequestDetService: TransferRequestDetService
   ) { }
 
   ngOnInit(): void {
-    this.loadFormData();
+    const urlTree = this.router.parseUrl(this.router.url);
+    this.TransferReqCod = urlTree.queryParams['TransferReqCod'] ?? urlTree.queryParams['TransferCod'] ?? '';
+    void this.loadFormData();
   }
 
   async loadFormData() {
-    const rpt: ResponseWsDto = await this.transferService.FindDataForm('');
+    const rpt: ResponseWsDto = await this.transferService.FindDataForm(this.TransferReqCod);
     if (!rpt.ErrorStatus) {
       const storeList = rpt.DataAdditional?.find((e: any) => e.Name === 'StoreList')?.Data
         ?? rpt.DataAdditional?.find((e: any) => e.Name === 'storeList')?.Data
@@ -114,9 +123,259 @@ export class DirecttransferComponent implements OnInit {
       if (reasonList.length > 0) {
         this.reasonTransferList = reasonList;
       }
+
+      const transferDetail = rpt.DataAdditional?.find((e: any) => e.Name === 'transferDetail')?.Data;
+      this.hasTransferDraft = !!transferDetail?.transferHeadTs;
+    }
+
+    if (this.TransferReqCod) {
+      await this.loadRequestData();
     }
 
     this.productList = [];
+  }
+
+  private async loadRequestData(): Promise<void> {
+    const rpt: ResponseWsDto = await this.transferRequestService.FindDataForm(this.TransferReqCod);
+    if (rpt.ErrorStatus) {
+      this.toastrService.error(rpt.Message || 'No se pudo cargar la solicitud de transferencia');
+      return;
+    }
+
+    const transferDetail = rpt.DataAdditional?.find((e: any) => e.Name === 'transferDetail')?.Data;
+    if (!transferDetail?.transferHeadRequest) return;
+
+    this.transferRequestRegister.transferHead = Object.assign(
+      new TransferRequestHeadEntity(),
+      transferDetail.transferHeadRequest
+    );
+    this.transferRequestRegister.transferDetList = (transferDetail.transferDetRequestList ?? []).map((detail: TransferRequestDetEntity) =>
+      Object.assign(new TransferRequestDetEntity(), detail)
+    );
+    this.isTransferWithLots = this.transferRequestRegister.transferDetList.some(detail => !!detail.LotNumber);
+
+    setTimeout(() => {
+      this.cboStoreDest.nativeElement.value = this.transferRequestRegister.transferHead.StoreCodDest ?? '';
+      this.txtObservation.nativeElement.value = this.transferRequestRegister.transferHead.Observation ?? '';
+      void this.FindAllProduct(1);
+    });
+  }
+
+  private updateRequestFromInputs(): void {
+    const destStore = this.cboStoreDest.nativeElement.value;
+    ValidationHelper.validateIsNotEmpty(destStore, 'Seleccione un local destino');
+    if (destStore === this.getCurrentStoreCod()) {
+      throw new Error('No puede seleccionar el mismo local como destino');
+    }
+
+    this.transferRequestRegister.transferHead.StoreCodOrigin = this.getCurrentStoreCod();
+    this.transferRequestRegister.transferHead.StoreCodDest = destStore;
+    this.transferRequestRegister.transferHead.StoreCodRequestedBy = destStore;
+    this.transferRequestRegister.transferHead.TypeOperation = TransferConstants.TYPE_OPERATION_REQUEST;
+    this.transferRequestRegister.transferHead.TransferStatus = TransferConstants.STATUS_PENDING;
+    this.transferRequestRegister.transferHead.Observation = this.txtObservation.nativeElement.value;
+    this.transferRequestRegister.allowPartial = false;
+  }
+
+  private buildDetailSaveDto(detail: TransferRequestDetEntity): TransferRequestDetSaveDto {
+    const dto = new TransferRequestDetSaveDto();
+    dto.transferHead = this.transferRequestRegister.transferHead;
+    dto.transferDet = detail;
+    return dto;
+  }
+
+  private cloneDetailList(): TransferRequestDetEntity[] {
+    return this.transferRequestRegister.transferDetList.map(detail =>
+      Object.assign(new TransferRequestDetEntity(), detail, { Product: detail.Product })
+    );
+  }
+
+  private applySavedRequest(
+    saved: TransferRequestRegisterBundleDto,
+    productByItem: Map<number, ProductEntity>
+  ): void {
+    this.transferRequestRegister.transferHead = Object.assign(new TransferRequestHeadEntity(), saved.transferHead);
+    this.transferRequestRegister.transferDetList = (saved.transferDetList ?? []).map(detail => {
+      const savedDetail = Object.assign(new TransferRequestDetEntity(), detail);
+      savedDetail.Product = productByItem.get(savedDetail.ItemNumber) || savedDetail.Product;
+      return savedDetail;
+    });
+  }
+
+  private syncSavedDetail(savedDetail: TransferRequestDetEntity, product: ProductEntity): void {
+    savedDetail.Product = product || savedDetail.Product;
+    const index = this.transferRequestRegister.transferDetList.findIndex(detail =>
+      this.sameDetailLine(detail, savedDetail)
+    );
+
+    if (index >= 0) {
+      this.transferRequestRegister.transferDetList[index] = savedDetail;
+    } else {
+      this.transferRequestRegister.transferDetList.push(savedDetail);
+    }
+  }
+
+  private buildPendingTransferRegister(): TransferRegisterBundleDto {
+    const transferRegister = this.transferRequestRegister.buildTransferRegister();
+    transferRegister.transferHead.TypeOperation = TransferConstants.TYPE_OPERATION_SEND;
+    transferRegister.transferHead.TransferMode = TransferConstants.TRANSFER_MODE_DIRECT;
+    transferRegister.transferHead.TransferStatus = TransferConstants.STATUS_PENDING;
+    transferRegister.transferDetList.forEach(detail => {
+      detail.TransferCod = transferRegister.transferHead.TransferCod;
+      detail.TypeOperation = TransferConstants.TYPE_OPERATION_SEND;
+      detail.NumUnitDispatch = detail.NumUnit;
+    });
+    return transferRegister;
+  }
+
+  private async savePendingTransferDraft(): Promise<boolean> {
+    const rpt: ResponseWsDto = await this.transferService.Save(this.buildPendingTransferRegister());
+    if (rpt.ErrorStatus) {
+      this.toastrService.error(rpt.Message || 'La solicitud se guardó, pero no se pudo guardar el envío pendiente');
+      return false;
+    }
+
+    this.hasTransferDraft = true;
+    return true;
+  }
+
+  private async savePendingTransferDetail(detail: TransferRequestDetEntity): Promise<boolean> {
+    if (!this.hasTransferDraft) {
+      return await this.savePendingTransferDraft();
+    }
+
+    const transferDetail = detail.buildTransferDet();
+    transferDetail.TransferCod = this.transferRequestRegister.transferHead.TransferReqCod;
+    transferDetail.TypeOperation = TransferConstants.TYPE_OPERATION_SEND;
+    transferDetail.NumUnitDispatch = transferDetail.NumUnit;
+
+    const rpt: ResponseWsDto = await this.transferService.SaveDet(
+      TransferDetRegisterMassiveDto.buildSimple(transferDetail)
+    );
+    if (rpt.ErrorStatus) {
+      this.toastrService.error(rpt.Message || 'La solicitud se guardó, pero no se pudo actualizar el envío pendiente');
+      return false;
+    }
+    return true;
+  }
+
+  private async deletePendingTransferDetail(detail: TransferRequestDetEntity): Promise<boolean> {
+    if (!this.hasTransferDraft) return true;
+
+    const transferDetail = detail.buildTransferDet();
+    transferDetail.TransferCod = this.transferRequestRegister.transferHead.TransferReqCod;
+    transferDetail.TypeOperation = TransferConstants.TYPE_OPERATION_SEND;
+
+    const rpt: ResponseWsDto = await this.transferService.DeleteDet(transferDetail);
+    if (rpt.ErrorStatus) {
+      this.toastrService.error(rpt.Message || 'La solicitud se actualizó, pero no se pudo eliminar el producto del envío pendiente');
+      return false;
+    }
+    return true;
+  }
+
+  private async saveInitialRequest(): Promise<boolean> {
+    if (this.isSavingDetail) return false;
+    this.isSavingDetail = true;
+    let requestPersisted = false;
+
+    try {
+      this.updateRequestFromInputs();
+      this.transferRequestRegister.transferHead.TransferReqCod = await this.createRequestCode(this.getCurrentStoreCod());
+      this.transferRequestRegister.transferDetList.forEach((detail, index) => {
+        detail.TransferReqCod = this.transferRequestRegister.transferHead.TransferReqCod;
+        detail.TypeOperation = TransferConstants.TYPE_OPERATION_REQUEST;
+        detail.ItemNumber = detail.ItemNumber > 0 ? detail.ItemNumber : index + 1;
+      });
+
+      const productByItem = new Map(
+        this.transferRequestRegister.transferDetList.map(detail => [detail.ItemNumber, detail.Product])
+      );
+      const rpt: ResponseWsDto = await this.transferRequestService.Save(this.transferRequestRegister);
+      if (rpt.ErrorStatus) {
+        this.transferRequestRegister.transferHead.TransferReqCod = '';
+        this.toastrService.error(rpt.Message || 'No se pudo guardar el envío directo');
+        return false;
+      }
+
+      this.applySavedRequest(rpt.Data, productByItem);
+      requestPersisted = true;
+      if (!await this.savePendingTransferDraft()) {
+        return false;
+      }
+      this.TransferReqCod = this.transferRequestRegister.transferHead.TransferReqCod;
+      await this.router.navigate(
+        ['/enterprise/transfer/pages/directtransfer'],
+        { queryParams: { TransferReqCod: this.TransferReqCod }, replaceUrl: true }
+      );
+      this.toastrService.success('Envío directo guardado como pendiente');
+      return true;
+    } catch (e: any) {
+      if (!requestPersisted) {
+        this.transferRequestRegister.transferHead.TransferReqCod = '';
+      }
+      this.toastrService.error(e.message);
+      return false;
+    } finally {
+      this.isSavingDetail = false;
+    }
+  }
+
+  private async saveDetail(detail: TransferRequestDetEntity): Promise<boolean> {
+    if (this.isSavingDetail) return false;
+
+    try {
+      this.updateRequestFromInputs();
+      detail.TransferReqCod = this.transferRequestRegister.transferHead.TransferReqCod;
+      detail.TypeOperation = TransferConstants.TYPE_OPERATION_REQUEST;
+      this.isSavingDetail = true;
+      const rpt: ResponseWsDto = await this.transferRequestDetService.Save(this.buildDetailSaveDto(detail));
+      if (rpt.ErrorStatus) {
+        this.toastrService.error(rpt.Message || 'No se pudo guardar el producto');
+        return false;
+      }
+
+      const data: TransferRequestDetSaveDto = rpt.Data;
+      this.transferRequestRegister.transferHead = Object.assign(new TransferRequestHeadEntity(), data.transferHead);
+      const savedDetail = Object.assign(new TransferRequestDetEntity(), data.transferDet);
+      this.syncSavedDetail(savedDetail, detail.Product);
+      if (!await this.savePendingTransferDetail(savedDetail)) {
+        return false;
+      }
+      return true;
+    } catch (e: any) {
+      this.toastrService.error(e.message);
+      return false;
+    } finally {
+      this.isSavingDetail = false;
+    }
+  }
+
+  private async deleteDetail(detail: TransferRequestDetEntity): Promise<boolean> {
+    if (this.isSavingDetail) return false;
+
+    try {
+      this.updateRequestFromInputs();
+      this.isSavingDetail = true;
+      const rpt: ResponseWsDto = await this.transferRequestDetService.Delete(this.buildDetailSaveDto(detail));
+      if (rpt.ErrorStatus) {
+        this.toastrService.error(rpt.Message || 'No se pudo eliminar el producto');
+        return false;
+      }
+
+      if (!await this.deletePendingTransferDetail(detail)) {
+        return false;
+      }
+
+      this.transferRequestRegister.transferDetList = this.transferRequestRegister.transferDetList
+        .filter(item => !this.sameDetailLine(item, detail));
+      return true;
+    } catch (e: any) {
+      this.toastrService.error(e.message);
+      return false;
+    } finally {
+      this.isSavingDetail = false;
+    }
   }
 
   private getCurrentStoreCod(): string {
@@ -163,7 +422,7 @@ export class DirecttransferComponent implements OnInit {
     }
 
     this.txtNumUnit.nativeElement.value = '';
-    const existing = this.transferRegister.transferDetList.find(e => e.ProductCod === product.ProductCod && !e.LotNumber);
+    const existing = this.transferRequestRegister.transferDetList.find(e => e.ProductCod === product.ProductCod && !e.LotNumber);
     if (existing) {
       this.txtNumUnit.nativeElement.value = String(this.toVisibleQuantity(existing.NumUnit, existing.ProductUnitFactor));
     }
@@ -174,6 +433,7 @@ export class DirecttransferComponent implements OnInit {
   }
 
   async AddProduct() {
+    if (this.isSavingDetail) return;
     this.clearConversionValidationMessage();
     const product = this.productSelect;
     if (!product || !product.ProductCod) {
@@ -187,8 +447,12 @@ export class DirecttransferComponent implements OnInit {
       return;
     }
 
-    let transferDet: TransferDetEntity = new TransferDetEntity();
-    let transferDetExist: TransferDetEntity | undefined = this.transferRegister.transferDetList.find(e => e.ProductCod === product.ProductCod && !e.LotNumber);
+    const isNewRequest = !this.transferRequestRegister.transferHead.TransferReqCod;
+    const previousDetailList = this.cloneDetailList();
+    let transferDet: TransferRequestDetEntity = new TransferRequestDetEntity();
+    let transferDetExist: TransferRequestDetEntity | undefined = this.transferRequestRegister.transferDetList.find(
+      e => e.ProductCod === product.ProductCod && !e.LotNumber
+    );
 
     if (transferDetExist) {
       transferDet = transferDetExist;
@@ -204,29 +468,35 @@ export class DirecttransferComponent implements OnInit {
       transferDet.NumUnit = previousNumUnit;
       return;
     }
+    transferDet.NumUnitDispatch = transferDet.NumUnit;
 
     if (!transferDetExist) {
-      this.transferRegister.transferDetList.push(transferDet);
+      this.transferRequestRegister.transferDetList.push(transferDet);
+    }
+
+    const saved = isNewRequest
+      ? await this.saveInitialRequest()
+      : await this.saveDetail(transferDet);
+    if (!saved) {
+      if (this.transferRequestRegister.transferHead.TransferReqCod) {
+        await this.loadRequestData();
+      } else {
+        this.transferRequestRegister.transferDetList = previousDetailList;
+      }
+      return;
     }
 
     this.txtNumUnit.nativeElement.value = '';
     this.closeModal();
-
-    if (this.isTransferWithLots) {
-      this.openLotDispatchModal(transferDet);
-      setTimeout(() => {
-        (window as any).$('#modalLotDispatch').modal('show');
-      }, 300);
-    }
   }
 
-  private async buildTransferDetail(product: ProductSearchEntity, numUnit: number): Promise<TransferDetEntity> {
+  private async buildTransferDetail(product: ProductSearchEntity, numUnit: number): Promise<TransferRequestDetEntity> {
     const productInfoDto: ProductInfoDto = await this.findDetailById(product.ProductCod);
     const productEntity: ProductEntity = new ProductEntity();
     productEntity.ProductCod = product.ProductCod;
     productEntity.ProductName = product.ProductName;
 
-    const transferDet = new TransferDetEntity();
+    const transferDet = new TransferRequestDetEntity();
     transferDet.ProductCod = product.ProductCod;
     transferDet.Variant = productInfoDto.VariantList[0]?.Variant ?? '0000';
     transferDet.NumUnit = numUnit;
@@ -242,7 +512,7 @@ export class DirecttransferComponent implements OnInit {
     this.btnCloseModal.nativeElement.click();
   }
 
-  private sameDetailLine(a: TransferDetEntity, b: TransferDetEntity): boolean {
+  private sameDetailLine(a: TransferRequestDetEntity, b: TransferRequestDetEntity): boolean {
     if ((a?.ItemNumber ?? 0) > 0 && (b?.ItemNumber ?? 0) > 0) {
       return a.ItemNumber === b.ItemNumber;
     }
@@ -252,11 +522,17 @@ export class DirecttransferComponent implements OnInit {
       && (a.ExpirationDate ?? '') === (b.ExpirationDate ?? '');
   }
 
-  async removeProduct(product: TransferDetEntity) {
-    this.transferRegister.transferDetList = this.transferRegister.transferDetList.filter(e => !this.sameDetailLine(e, product));
+  async removeProduct(product: TransferRequestDetEntity) {
+    if (!this.transferRequestRegister.transferHead.TransferReqCod) {
+      this.transferRequestRegister.transferDetList = this.transferRequestRegister.transferDetList
+        .filter(e => !this.sameDetailLine(e, product));
+      return;
+    }
+
+    await this.deleteDetail(product);
   }
 
-  openLotDispatchModal(det: TransferDetEntity) {
+  openLotDispatchModal(det: TransferRequestDetEntity) {
     this.clearConversionValidationMessage();
     this.selectedDetail = det;
     this.lotDispatchList = [];
@@ -320,6 +596,7 @@ export class DirecttransferComponent implements OnInit {
 
   async confirmLotDispatch(): Promise<void> {
     try {
+      if (this.isSavingDetail) return;
       if (this.lotDispatchList.length === 0) {
         throw new Error('Debe agregar al menos un lote');
       }
@@ -328,15 +605,38 @@ export class DirecttransferComponent implements OnInit {
         this.toastrService.warning('La cantidad despachada es menor a la cantidad solicitada');
       }
 
-      const detailList : TransferDetEntity[] = this.lotDispatchList.map((item, index) => this.createLotDetail(item, index))
+      const detailList: TransferRequestDetEntity[] = this.lotDispatchList.map((item, index) =>
+        this.createLotDetail(item, index)
+      );
 
-      for(const item of detailList){
-        if(!await this.validateConvertProductBetweenStores(item)){
+      for (const item of detailList) {
+        if (!await this.validateConvertProductBetweenStores(item)) {
           return;
         }
       }
 
-      this.replaceTransferLine(this.selectedDetail,detailList );
+      const isNewRequest = !this.transferRequestRegister.transferHead.TransferReqCod;
+      const previousDetailList = this.cloneDetailList();
+      this.replaceTransferLine(this.selectedDetail, detailList);
+
+      if (isNewRequest) {
+        if (!await this.saveInitialRequest()) {
+          if (this.transferRequestRegister.transferHead.TransferReqCod) {
+            await this.loadRequestData();
+          } else {
+            this.transferRequestRegister.transferDetList = previousDetailList;
+          }
+          return;
+        }
+      } else {
+        for (const detail of detailList) {
+          if (!await this.saveDetail(detail)) {
+            await this.loadRequestData();
+            return;
+          }
+        }
+      }
+
       this.lotDispatchList = [];
       this.clearConversionValidationMessage();
       this.btnCloseLotDispatchModal.nativeElement.click();
@@ -345,10 +645,10 @@ export class DirecttransferComponent implements OnInit {
     }
   }
 
-  private createLotDetail(item: TransferLotDispatchDto, index: number): TransferDetEntity {
-    const detail = new TransferDetEntity();
-    detail.TransferCod = this.selectedDetail.TransferCod;
-    detail.TypeOperation = this.selectedDetail.TypeOperation;
+  private createLotDetail(item: TransferLotDispatchDto, index: number): TransferRequestDetEntity {
+    const detail = new TransferRequestDetEntity();
+    detail.TransferReqCod = this.selectedDetail.TransferReqCod;
+    detail.TypeOperation = TransferConstants.TYPE_OPERATION_REQUEST;
     detail.ProductCod = this.selectedDetail.ProductCod;
     detail.Variant = this.selectedDetail.Variant;
     detail.ItemNumber = index === 0 ? this.selectedDetail.ItemNumber : 0;
@@ -357,7 +657,6 @@ export class DirecttransferComponent implements OnInit {
     detail.NumUnit = item.NumUnit;
     detail.NumUnitDispatch = item.NumUnit;
     detail.NumUnitReception = 0;
-    detail.FlgRequested = this.selectedDetail.FlgRequested;
     detail.ProductUnitName = this.selectedDetail.ProductUnitName;
     detail.ProductUnitFactor = this.selectedDetail.ProductUnitFactor;
     detail.LotNumber = item.LotNumber;
@@ -367,12 +666,12 @@ export class DirecttransferComponent implements OnInit {
     return detail;
   }
 
-  private replaceTransferLine(origin: TransferDetEntity, detailList: TransferDetEntity[]): void {
-    const index = this.transferRegister.transferDetList.indexOf(origin);
+  private replaceTransferLine(origin: TransferRequestDetEntity, detailList: TransferRequestDetEntity[]): void {
+    const index = this.transferRequestRegister.transferDetList.indexOf(origin);
     if (index >= 0) {
-      this.transferRegister.transferDetList.splice(index, 1, ...detailList);
+      this.transferRequestRegister.transferDetList.splice(index, 1, ...detailList);
     } else {
-      this.transferRegister.transferDetList.push(...detailList);
+      this.transferRequestRegister.transferDetList.push(...detailList);
     }
   }
 
@@ -412,54 +711,48 @@ export class DirecttransferComponent implements OnInit {
 
   async Save() {
     try {
-      const destStore = this.cboStoreDest.nativeElement.value;
-      ValidationHelper.validateIsNotEmpty(destStore, 'Seleccione un local destino');
-      if (destStore === this.getCurrentStoreCod()) {
-        throw new Error('No puede seleccionar el mismo local como destino');
-      }
+      if (this.isSavingDetail) return;
+      this.updateRequestFromInputs();
 
-      if (this.transferRegister.transferDetList.length === 0) {
+      if (this.transferRequestRegister.transferDetList.length === 0) {
         throw new Error('Debe agregar al menos un producto');
       }
 
-      if (this.isTransferWithLots && this.transferRegister.transferDetList.some(e => !e.LotNumber)) {
+      if (this.isTransferWithLots && this.transferRequestRegister.transferDetList.some(e => !e.LotNumber)) {
         throw new Error('Debe indicar lote para todos los productos');
       }
 
-      const originStore = this.getCurrentStoreCod();
-      const observation = this.txtObservation.nativeElement.value;
-      const transferReqCod = await this.createRequestCode(originStore);
-      const requestRegister = this.buildTransferRequestRegister(transferReqCod, originStore, destStore, observation);
+      if (!this.transferRequestRegister.transferHead.TransferReqCod) {
+        const saved = await this.saveInitialRequest();
+        if (!saved) return;
+      }
 
-      const rptRequest: ResponseWsDto = await this.transferRequestService.Save(requestRegister);
+      const productByItem = new Map(
+        this.transferRequestRegister.transferDetList.map(detail => [detail.ItemNumber, detail.Product])
+      );
+      this.isSavingDetail = true;
+      const rptRequest: ResponseWsDto = await this.transferRequestService.Save(this.transferRequestRegister);
       if (rptRequest.ErrorStatus) {
         this.toastrService.error(rptRequest.Message || 'Ocurrio un error al registrar la solicitud');
         return;
       }
+      this.applySavedRequest(rptRequest.Data, productByItem);
 
-      requestRegister.transferHead.TypeOperation = TransferConstants.TYPE_OPERATION_SEND;
-      requestRegister.transferHead.TransferStatus = TransferConstants.STATUS_PENDING;
-      this.transferRegister = requestRegister.buildTransferRegister();
+      const transferRegister = this.buildTransferRegister();
 
-      this.transferRegister.transferDocument.TransportModeCod = this.cboTransportMode?.nativeElement.value ?? '';
-      this.transferRegister.transferDocument.ReasonTransferCod = this.cboReason?.nativeElement.value ?? '';
-      this.transferRegister.transferDocument.VehiclePlate = this.txtVehiclePlate?.nativeElement.value ?? '';
-      this.transferRegister.transferDocument.DriverDocType = this.cboDriverDocType?.nativeElement.value ?? '';
-      this.transferRegister.transferDocument.DriverDocNumber = this.txtDriverDocNumber?.nativeElement.value ?? '';
-      this.transferRegister.transferDocument.DriverLicenseNumber = this.txtDriverLicenseNumber?.nativeElement.value ?? '';
-      this.transferRegister.transferDocument.CarrierRuc = this.txtCarrierRuc?.nativeElement.value ?? '';
-      this.transferRegister.transferDocument.CarrierName = this.txtCarrierName?.nativeElement.value ?? '';
-
-      const rpt: ResponseWsDto = await this.transferService.Save(this.transferRegister);
+      const rpt: ResponseWsDto = await this.transferService.Save(transferRegister);
 
       if (!rpt.ErrorStatus) {
-        const rptDispatch: ResponseWsDto = await this.dispatchDirectTransfer(this.transferRegister);
+        const rptDispatch: ResponseWsDto = await this.dispatchDirectTransfer(transferRegister);
         if (rptDispatch.ErrorStatus) {
           this.toastrService.error(rptDispatch.Message || 'La transferencia se registro, pero no se pudo despachar');
           return;
         }
 
-        const rptApproved: ResponseWsDto = await this.approveTransferRequest(this.transferRegister.transferHead.TransferCod, observation);
+        const rptApproved: ResponseWsDto = await this.approveTransferRequest(
+          this.transferRequestRegister.transferHead.TransferReqCod,
+          this.transferRequestRegister.transferHead.Observation
+        );
         if (rptApproved.ErrorStatus) {
           this.toastrService.error(rptApproved.Message || 'La transferencia se despacho, pero no se pudo aprobar la solicitud');
           return;
@@ -473,41 +766,9 @@ export class DirecttransferComponent implements OnInit {
       }
     } catch (e: any) {
       this.toastrService.error(e.message);
+    } finally {
+      this.isSavingDetail = false;
     }
-  }
-
-  private buildTransferRequestRegister(transferReqCod: string, originStore: string, destStore: string, observation: string): TransferRequestRegisterBundleDto {
-    const requestRegister = new TransferRequestRegisterBundleDto();
-    requestRegister.transferHead.TransferReqCod = transferReqCod;
-    requestRegister.transferHead.StoreCodOrigin = originStore;
-    requestRegister.transferHead.StoreCodDest = destStore;
-    requestRegister.transferHead.StoreCodRequestedBy = destStore;
-    requestRegister.transferHead.TypeOperation = TransferConstants.TYPE_OPERATION_REQUEST;
-    requestRegister.transferHead.TransferStatus = TransferConstants.STATUS_PENDING;
-    requestRegister.transferHead.Observation = observation;
-    requestRegister.allowPartial = false;
-
-    requestRegister.transferDetList = this.transferRegister.transferDetList.map((det, index) => {
-      const requestDet = new TransferRequestDetEntity();
-      requestDet.TransferReqCod = transferReqCod;
-      requestDet.ItemNumber = index + 1;
-      requestDet.TypeOperation = TransferConstants.TYPE_OPERATION_REQUEST;
-      requestDet.ProductCod = det.ProductCod;
-      requestDet.Variant = det.Variant;
-      requestDet.WarehouseCodOrigin = det.WarehouseCodOrigin;
-      requestDet.WarehouseCodDest = det.WarehouseCodDest;
-      requestDet.NumUnit = det.NumUnit;
-      requestDet.NumUnitDispatch = det.NumUnit;
-      requestDet.NumUnitReception = 0;
-      requestDet.ProductUnitName = det.ProductUnitName;
-      requestDet.ProductUnitFactor = det.ProductUnitFactor;
-      requestDet.LotNumber = det.LotNumber;
-      requestDet.ExpirationDate = det.ExpirationDate;
-      requestDet.Product = det.Product;
-      return requestDet;
-    });
-
-    return requestRegister;
   }
 
   private async dispatchDirectTransfer(transferRegister: TransferRegisterBundleDto): Promise<ResponseWsDto> {
@@ -573,7 +834,7 @@ export class DirecttransferComponent implements OnInit {
     return internalQuantity / factor;
   }
 
-  async validateConvertProductBetweenStores(transferDet: TransferDetEntity){
+  async validateConvertProductBetweenStores(transferDet: TransferRequestDetEntity){
 
     const request : ProductConversionRequestDto = new ProductConversionRequestDto();
     
@@ -605,7 +866,7 @@ export class DirecttransferComponent implements OnInit {
     this.conversionValidationMessage = '';
   }
 
-  private buildProductConversionErrorMessage(transferDet: TransferDetEntity, result: ProductConversionResultDto): string {
+  private buildProductConversionErrorMessage(transferDet: TransferRequestDetEntity, result: ProductConversionResultDto): string {
     const productName = transferDet.Product?.ProductCod;
     const visibleQuantity = ProductUnitHelper.toVisibleQuantity(transferDet.NumUnit, transferDet.ProductUnitFactor);
     const originStore = this.getStoredCodOrigin();
@@ -626,4 +887,17 @@ export class DirecttransferComponent implements OnInit {
   }
 
 
+  buildTransferRegister(): TransferRegisterBundleDto {
+      const transferRegister = this.buildPendingTransferRegister();
+
+      transferRegister.transferDocument.TransportModeCod = this.cboTransportMode?.nativeElement.value ?? '';
+      transferRegister.transferDocument.ReasonTransferCod = this.cboReason?.nativeElement.value ?? '';
+      transferRegister.transferDocument.VehiclePlate = this.txtVehiclePlate?.nativeElement.value ?? '';
+      transferRegister.transferDocument.DriverDocType = this.cboDriverDocType?.nativeElement.value ?? '';
+      transferRegister.transferDocument.DriverDocNumber = this.txtDriverDocNumber?.nativeElement.value ?? '';
+      transferRegister.transferDocument.DriverLicenseNumber = this.txtDriverLicenseNumber?.nativeElement.value ?? '';
+      transferRegister.transferDocument.CarrierRuc = this.txtCarrierRuc?.nativeElement.value ?? '';
+      transferRegister.transferDocument.CarrierName = this.txtCarrierName?.nativeElement.value ?? '';
+      return transferRegister;
+  }
 }

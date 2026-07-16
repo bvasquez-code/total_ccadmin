@@ -24,6 +24,7 @@ import com.ccadmin.app.transfer.model.entity.CarrierEntity;
 import com.ccadmin.app.transfer.model.entity.TransferDetEntity;
 import com.ccadmin.app.transfer.model.entity.TransferDocumentEntity;
 import com.ccadmin.app.transfer.model.entity.TransferHeadEntity;
+import com.ccadmin.app.transfer.model.entity.id.TransferDetId;
 import com.ccadmin.app.transfer.repository.CarrierRepository;
 import com.ccadmin.app.transfer.repository.TransferDetRepository;
 import com.ccadmin.app.transfer.repository.TransferDocumentRepository;
@@ -73,6 +74,7 @@ public class TransferCreateService extends SessionService {
         return this.transferHeadRepository.getTransferCod(storeCod);
     }
 
+    @Transactional
     public TransferRegisterBundleDto save(TransferRegisterBundleDto request) throws Exception {
         if (request == null || request.transferHead == null) {
             throw new TransferException("Información de transferencia es obligatoria");
@@ -85,9 +87,24 @@ public class TransferCreateService extends SessionService {
             throw new TransferException("Tipo de operación es obligatorio");
         }
 
-        boolean isNew = (head.TransferCod == null || head.TransferCod.trim().isEmpty());
-        if (isNew) {
+        if (StringUtil.isEmpty(head.TransferCod)) {
             throw new TransferException("TransferCod es obligatorio");
+        }
+
+        TransferHeadEntity existing = this.transferHeadRepository.findByTransferCodAndTypeOperation(
+                head.TransferCod,
+                typeOperation
+        );
+        boolean isNew = existing == null;
+
+        if (StringUtil.isEmpty(head.TransferMode)) {
+            head.TransferMode = existing != null && StringUtil.isNotEmpty(existing.TransferMode)
+                    ? existing.TransferMode
+                    : TransferConstants.TRANSFER_MODE_REGULAR;
+        }
+        if (!TransferConstants.TRANSFER_MODE_REGULAR.equals(head.TransferMode)
+                && !TransferConstants.TRANSFER_MODE_DIRECT.equals(head.TransferMode)) {
+            throw new TransferException("Modo de transferencia no valido");
         }
 
         if (TransferConstants.TYPE_OPERATION_REQUEST.equals(typeOperation)) {
@@ -115,15 +132,16 @@ public class TransferCreateService extends SessionService {
                 head.TransferStatus = TransferConstants.STATUS_PENDING;
             }
 
-            TransferHeadEntity existing = this.transferHeadRepository.findByTransferCodAndTypeOperation(
-                    head.TransferCod, TransferConstants.TYPE_OPERATION_SEND
-            );
             if (existing != null) {
                 if (TransferConstants.STATUS_CONFIRMED.equals(existing.TransferStatus)) {
                     throw new TransferException("No se puede modificar transferencia ya despachada o finalizada");
                 }
-                isNew = false;
             }
+        }
+
+        if (!isNew) {
+            head.CreationUser = existing.CreationUser;
+            head.CreationDate = existing.CreationDate;
         }
 
         head.validate();
@@ -652,31 +670,79 @@ public class TransferCreateService extends SessionService {
         this.genericQueuedService.addQueued(new TransferSunatEmissionTaskService(this.transferSunatEmissionService, transferCod));
     }
 
-    public TransferDetRegisterMassiveDto saveDet(TransferDetRegisterMassiveDto transferDetRegisterMassiveDto) throws TransferException {
+    @Transactional
+    public TransferDetRegisterMassiveDto saveDet(TransferDetRegisterMassiveDto request) throws Exception {
+        if (request == null || request.transferDetList == null || request.transferDetList.isEmpty()) {
+            throw new TransferException("Detalle de transferencia es obligatorio");
+        }
 
-        TransferDetEntity transferDet = transferDetRegisterMassiveDto.transferDetList.getFirst();
-
-        TransferHeadEntity transferHead = this.transferHeadRepository.findById(transferDet.TransferCod).orElse(null);
-
-        if(transferHead == null){
+        TransferHeadEntity transferHead = this.transferHeadRepository.findByTransferCodAndTypeOperation(
+                request.transferDetList.getFirst().TransferCod,
+                TransferConstants.TYPE_OPERATION_SEND
+        );
+        if (transferHead == null) {
             throw new TransferException("Transferencia no encontrada");
         }
-
-        if(transferHead.TransferStatus.equals(TransferConstants.STATUS_CONFIRMED)
-                && transferHead.ReceiveStatus.equals(TransferConstants.STATUS_CONFIRMED)){
-            throw new TransferException("Transferencia ya se encuentra completamente cerrada.");
+        if (TransferConstants.STATUS_CONFIRMED.equals(transferHead.TransferStatus)
+                && TransferConstants.STATUS_CONFIRMED.equals(transferHead.ReceiveStatus)) {
+            throw new TransferException("Transferencia ya se encuentra completamente cerrada");
         }
 
-        for(var item : transferDetRegisterMassiveDto.transferDetList){
-            item.addSession(getUserCod());
+        for (var detail : request.transferDetList) {
+            if (!transferHead.TransferCod.equals(detail.TransferCod)) {
+                throw new TransferException("Todos los detalles deben pertenecer a la misma transferencia");
+            }
+            detail.TypeOperation = TransferConstants.TYPE_OPERATION_SEND;
+            TransferDetId id = new TransferDetId();
+            id.TransferCod = detail.TransferCod;
+            id.ItemNumber = detail.ItemNumber;
+            this.transferDetRepository.findById(id).ifPresent(existingDetail -> {
+                detail.CreationUser = existingDetail.CreationUser;
+                detail.CreationDate = existingDetail.CreationDate;
+            });
+            detail.addSession(getUserCod());
         }
 
-        List<TransferDetEntity> transferDetListDB = this.transferDetRepository.saveAll(transferDetRegisterMassiveDto.transferDetList);
+        List<TransferDetEntity> transferDetListDB = this.transferDetRepository.saveAll(request.transferDetList);
 
         transferDetListDB.stream().forEach(e -> {
             e.Product = this.productShared.findById(e.ProductCod);
         });
 
         return new TransferDetRegisterMassiveDto(transferDetListDB);
+    }
+
+    @Transactional
+    public String deleteDet(TransferDetEntity request) throws TransferException {
+        if (request == null || StringUtil.isEmpty(request.TransferCod) || request.ItemNumber <= 0) {
+            throw new TransferException("TransferCod e ItemNumber son obligatorios");
+        }
+
+        findPendingSendHead(request.TransferCod);
+        TransferDetId id = new TransferDetId();
+        id.TransferCod = request.TransferCod;
+        id.ItemNumber = request.ItemNumber;
+
+        TransferDetEntity detail = this.transferDetRepository.findById(id)
+                .orElseThrow(() -> new TransferException("Detalle de transferencia no encontrado"));
+        detail.inactive(getUserCod());
+        this.transferDetRepository.save(detail);
+        return "Detalle de transferencia eliminado correctamente";
+    }
+
+    private TransferHeadEntity findPendingSendHead(String transferCod) throws TransferException {
+        if (StringUtil.isEmpty(transferCod)) {
+            throw new TransferException("TransferCod es obligatorio");
+        }
+
+        TransferHeadEntity transferHead = this.transferHeadRepository.findByTransferCodAndTypeOperation(
+                transferCod,
+                TransferConstants.TYPE_OPERATION_SEND
+        );
+        if (transferHead == null || !TransferConstants.STATUS_PENDING.equals(transferHead.TransferStatus)
+                || !"A".equals(transferHead.Status)) {
+            throw new TransferException("El envío de transferencia ya no está pendiente");
+        }
+        return transferHead;
     }
 }

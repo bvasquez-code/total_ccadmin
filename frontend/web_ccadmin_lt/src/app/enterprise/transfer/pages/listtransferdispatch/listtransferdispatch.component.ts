@@ -8,6 +8,7 @@ import { TransferSearchDto } from '../../model/dto/TransferSearchDto';
 import { ResponseWsDto } from 'src/app/enterprise/shared/model/dto/ResponseWsDto';
 import { StoreEntity } from 'src/app/enterprise/shared/model/entity/StoreEntity';
 import { DataSesionService } from 'src/app/enterprise/compartido/service/datasesion.service';
+import { TransferConstants } from '../../model/constants/TransferConstants';
 
 @Component({
   selector: 'app-listtransferdispatch',
@@ -62,7 +63,13 @@ export class ListtransferdispatchComponent implements OnInit, ActionTableService
     const data: DataTablaGeneticDto<TransferHeadEntity> = new DataTablaGeneticDto();
 
     const showDispatch = (transferHead: TransferHeadEntity) => {
-      return transferHead.TransferStatus === 'P';
+      return transferHead.TransferStatus === TransferConstants.STATUS_PENDING
+        && transferHead.TransferMode !== TransferConstants.TRANSFER_MODE_DIRECT;
+    };
+
+    const showDirectTransferDraft = (transferHead: TransferHeadEntity) => {
+      return transferHead.TransferStatus === TransferConstants.STATUS_PENDING
+        && transferHead.TransferMode === TransferConstants.TRANSFER_MODE_DIRECT;
     };
 
     data.init(
@@ -99,6 +106,12 @@ export class ListtransferdispatchComponent implements OnInit, ActionTableService
           Id: ['TransferCod'],
           Options: [
             { Type: 'Url', Name: 'fa fa-eye', Url: '/enterprise/transfer/pages/transferdetail?TransferCod={TransferCod}' },
+            {
+              Type: 'Url',
+              Name: 'fa fa-edit',
+              Url: '/enterprise/transfer/pages/directtransfer?TransferReqCod={TransferCod}',
+              Function: showDirectTransferDraft
+            },
             { Type: 'Url', Name: 'fa fa-truck', Url: '/enterprise/transfer/pages/dispatchtransfer?TransferCod={TransferCod}', Function: showDispatch }
           ]
         }

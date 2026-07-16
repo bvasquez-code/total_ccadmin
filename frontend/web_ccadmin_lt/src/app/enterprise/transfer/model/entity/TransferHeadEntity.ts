@@ -3,6 +3,7 @@ import { AuditTableEntity } from "src/app/enterprise/shared/model/entity/AuditTa
 export class TransferHeadEntity extends AuditTableEntity {
     public TransferCod: string;
     public TypeOperation: string;
+    public TransferMode: string;
     public StoreCodOrigin: string;
     public StoreCodDest: string;
     public StoreCodRequestedBy: string;
@@ -20,6 +21,7 @@ export class TransferHeadEntity extends AuditTableEntity {
         super();
         this.TransferCod = '';
         this.TypeOperation = '';
+        this.TransferMode = 'R';
         this.StoreCodOrigin = '';
         this.StoreCodDest = '';
         this.StoreCodRequestedBy = '';
