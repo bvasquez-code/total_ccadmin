@@ -69,9 +69,9 @@ public class TransferRequestCreateService extends SessionService {
             if (!isNew) {
                 TransferRequestHeadEntity existingHead = this.transferRequestHeadRepository.findById(head.TransferReqCod)
                         .orElseThrow(() -> new TransferException("Solicitud de transferencia no encontrada"));
-                if (!TransferConstants.STATUS_PENDING.equals(existingHead.TransferStatus)
+                if (!TransferConstants.isEditableRequestStatus(existingHead.TransferStatus)
                         || !"A".equals(existingHead.Status)) {
-                    throw new TransferException("La solicitud de transferencia ya no esta pendiente");
+                    throw new TransferException("La solicitud de transferencia ya no se puede editar");
                 }
                 head.TransferStatus = existingHead.TransferStatus;
                 head.CreationUser = existingHead.CreationUser;

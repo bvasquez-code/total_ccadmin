@@ -10,6 +10,7 @@ public final class TransferConstants {
 
     public static final String STATUS_APPROVED = "A";
     public static final String STATUS_PENDING = "P";
+    public static final String STATUS_DIRECT_DRAFT = "T";
     public static final String STATUS_CONFIRMED = "C";
     public static final String STATUS_REJECTED = "R";
     public static final String STATUS_CANCELLED = "X";
@@ -23,6 +24,10 @@ public final class TransferConstants {
     public static final String KARDEX_TYPE_IN = "S";
 
     public static final String DOCUMENT_TYPE_TRANSFER = "09";
+
+    public static boolean isEditableRequestStatus(String status) {
+        return STATUS_PENDING.equals(status) || STATUS_DIRECT_DRAFT.equals(status);
+    }
 
     private TransferConstants() {
     }

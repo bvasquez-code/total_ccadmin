@@ -22,7 +22,7 @@ BEGIN
           `StoreCodOrigin` varchar(4) NOT NULL COMMENT 'Codigo del local origen (FK store.StoreCod)',
           `StoreCodDest` varchar(4) NOT NULL COMMENT 'Codigo del local destino (FK store.StoreCod)',
           `StoreCodRequestedBy` varchar(4) DEFAULT NULL COMMENT 'Codigo del local que solicita/ordena la transferencia (ej. super local central). Puede ser distinto a origen/destino',
-          `TransferStatus` char(1) NOT NULL DEFAULT 'P' COMMENT 'Estado del proceso: P=Pending, C=Confirmed, D=Dispatched, F=Finalized, R=Rejected, X=Cancelled',
+          `TransferStatus` char(1) NOT NULL DEFAULT 'P' COMMENT 'Estado del proceso: P=Pending, T=Direct transfer draft, C=Confirmed, D=Dispatched, F=Finalized, R=Rejected, X=Cancelled',
           `DispatchDate` datetime DEFAULT NULL COMMENT 'Fecha/hora real de despacho desde origen',
           `ArrivalDate` datetime DEFAULT NULL COMMENT 'Fecha/hora real de recepcion/llegada a destino',
           `UserOriginConfirm` varchar(16) DEFAULT NULL COMMENT 'Usuario que confirma/autoriza la salida en el local origen',
@@ -156,6 +156,18 @@ BEGIN
         ) THEN
             ALTER TABLE `transfer_request_head` ADD KEY `idx_transfer_request_head_create` (`CreationDate`);
             SELECT 'Indice idx_transfer_request_head_create agregado exitosamente.' AS Mensaje;
+        END IF;
+
+        IF EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'transfer_head'
+            AND column_name = 'TransferMode'
+        ) THEN
+            UPDATE `transfer_request_head` trh
+            INNER JOIN `transfer_head` th ON th.TransferCod = trh.TransferReqCod
+            SET trh.TransferStatus = 'T'
+            WHERE th.TransferMode = 'D'
+            AND th.TransferStatus = 'P'
+            AND trh.TransferStatus = 'P';
         END IF;
 
     END IF;

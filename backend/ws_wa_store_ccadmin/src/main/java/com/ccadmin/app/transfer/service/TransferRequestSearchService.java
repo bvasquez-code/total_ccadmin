@@ -9,6 +9,7 @@ import com.ccadmin.app.store.model.dto.StoreInfoDto;
 import com.ccadmin.app.store.shared.StoreShared;
 import com.ccadmin.app.store.shared.WarehouseShared;
 import com.ccadmin.app.system.utility.StringUtil;
+import com.ccadmin.app.transfer.model.constants.TransferConstants;
 import com.ccadmin.app.transfer.model.dto.ProductConversionRequestDto;
 import com.ccadmin.app.transfer.model.dto.ProductConversionResultDto;
 import com.ccadmin.app.transfer.model.dto.TransferRequestDetailDto;
@@ -143,6 +144,7 @@ public class TransferRequestSearchService extends SessionService {
                 storeCodOrigin,
                 storeCodDest,
                 transferStatus,
+                TransferConstants.STATUS_DIRECT_DRAFT,
                 typeOperation,
                 storeCodRequestedBy,
                 dateStart,
@@ -154,6 +156,7 @@ public class TransferRequestSearchService extends SessionService {
                 storeCodOrigin,
                 storeCodDest,
                 transferStatus,
+                TransferConstants.STATUS_DIRECT_DRAFT,
                 typeOperation,
                 storeCodRequestedBy,
                 dateStart,

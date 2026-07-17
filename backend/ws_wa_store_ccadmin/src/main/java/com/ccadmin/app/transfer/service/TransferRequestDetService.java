@@ -39,7 +39,7 @@ public class TransferRequestDetService extends SessionService {
 
     @Transactional
     public TransferRequestDetSaveDto save(TransferRequestDetSaveDto request) throws Exception {
-        TransferRequestHeadEntity head = findPendingHead(request);
+        TransferRequestHeadEntity head = findEditableHead(request);
         if (request.transferDet.ItemNumber <= 0) {
             request.transferDet.ItemNumber = this.transferRequestDetRepository.findMaxItemNumber(head.TransferReqCod) + 1;
         }
@@ -118,7 +118,7 @@ public class TransferRequestDetService extends SessionService {
 
     @Transactional
     public TransferRequestDetSaveDto delete(TransferRequestDetSaveDto request) throws Exception {
-        TransferRequestHeadEntity head = findPendingHead(request);
+        TransferRequestHeadEntity head = findEditableHead(request);
         request.transferDet.TransferReqCod = head.TransferReqCod;
 
         TransferRequestDetEntity detail = this.transferRequestDetRepository.findById(buildId(request.transferDet))
@@ -129,7 +129,7 @@ public class TransferRequestDetService extends SessionService {
         return request;
     }
 
-    private TransferRequestHeadEntity findPendingHead(TransferRequestDetSaveDto request) throws TransferException {
+    private TransferRequestHeadEntity findEditableHead(TransferRequestDetSaveDto request) throws TransferException {
         if (request == null || request.transferHead == null || request.transferDet == null) {
             throw new TransferException("La cabecera y el detalle son obligatorios");
         }
@@ -145,9 +145,9 @@ public class TransferRequestDetService extends SessionService {
         TransferRequestHeadEntity head = this.transferRequestHeadRepository.findById(transferReqCod)
                 .orElseThrow(() -> new TransferException("Solicitud de transferencia no encontrada"));
         if (!TransferConstants.TYPE_OPERATION_REQUEST.equals(head.TypeOperation)
-                || !TransferConstants.STATUS_PENDING.equals(head.TransferStatus)
+                || !TransferConstants.isEditableRequestStatus(head.TransferStatus)
                 || !"A".equals(head.Status)) {
-            throw new TransferException("La solicitud de transferencia ya no esta pendiente");
+            throw new TransferException("La solicitud de transferencia ya no se puede editar");
         }
         return head;
     }

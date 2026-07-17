@@ -6,6 +6,7 @@ export class TransferConstants {
     static readonly TRANSFER_MODE_DIRECT = 'D';
 
     static readonly STATUS_PENDING = 'P';
+    static readonly STATUS_DIRECT_DRAFT = 'T';
     static readonly STATUS_CONFIRMED = 'C';
     static readonly STATUS_DISPATCHED = 'D';
     static readonly STATUS_FINALIZED = 'F';

@@ -172,7 +172,7 @@ export class DirecttransferComponent implements OnInit {
     this.transferRequestRegister.transferHead.StoreCodDest = destStore;
     this.transferRequestRegister.transferHead.StoreCodRequestedBy = destStore;
     this.transferRequestRegister.transferHead.TypeOperation = TransferConstants.TYPE_OPERATION_REQUEST;
-    this.transferRequestRegister.transferHead.TransferStatus = TransferConstants.STATUS_PENDING;
+    this.transferRequestRegister.transferHead.TransferStatus = TransferConstants.STATUS_DIRECT_DRAFT;
     this.transferRequestRegister.transferHead.Observation = this.txtObservation.nativeElement.value;
     this.transferRequestRegister.allowPartial = false;
   }

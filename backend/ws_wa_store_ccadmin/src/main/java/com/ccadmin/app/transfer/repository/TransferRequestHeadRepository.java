@@ -48,6 +48,7 @@ public interface TransferRequestHeadRepository extends JpaRepository<TransferReq
                 and (:storeCodOrigin = '' or th.StoreCodOrigin = :storeCodOrigin)
                 and (:storeCodDest = '' or th.StoreCodDest = :storeCodDest)
                 and (:transferStatus = '' or th.TransferStatus = :transferStatus)
+                and th.TransferStatus <> :excludedTransferStatus
                 and (:typeOperation = '' or th.TypeOperation = :typeOperation)
                 and (:storeCodRequestedBy = '' or th.StoreCodRequestedBy = :storeCodRequestedBy)
                 and (:dateStart is null or th.CreationDate >= :dateStart)
@@ -58,6 +59,7 @@ public interface TransferRequestHeadRepository extends JpaRepository<TransferReq
             @Param("storeCodOrigin") String storeCodOrigin,
             @Param("storeCodDest") String storeCodDest,
             @Param("transferStatus") String transferStatus,
+            @Param("excludedTransferStatus") String excludedTransferStatus,
             @Param("typeOperation") String typeOperation,
             @Param("storeCodRequestedBy") String storeCodRequestedBy,
             @Param("dateStart") String dateStart,
@@ -71,6 +73,7 @@ public interface TransferRequestHeadRepository extends JpaRepository<TransferReq
                 and (:storeCodOrigin = '' or th.StoreCodOrigin = :storeCodOrigin)
                 and (:storeCodDest = '' or th.StoreCodDest = :storeCodDest)
                 and (:transferStatus = '' or th.TransferStatus = :transferStatus)
+                and th.TransferStatus <> :excludedTransferStatus
                 and (:typeOperation = '' or th.TypeOperation = :typeOperation)
                 and (:storeCodRequestedBy = '' or th.StoreCodRequestedBy = :storeCodRequestedBy)
                 and (:dateStart is null or th.CreationDate >= :dateStart)
@@ -83,6 +86,7 @@ public interface TransferRequestHeadRepository extends JpaRepository<TransferReq
             @Param("storeCodOrigin") String storeCodOrigin,
             @Param("storeCodDest") String storeCodDest,
             @Param("transferStatus") String transferStatus,
+            @Param("excludedTransferStatus") String excludedTransferStatus,
             @Param("typeOperation") String typeOperation,
             @Param("storeCodRequestedBy") String storeCodRequestedBy,
             @Param("dateStart") String dateStart,
