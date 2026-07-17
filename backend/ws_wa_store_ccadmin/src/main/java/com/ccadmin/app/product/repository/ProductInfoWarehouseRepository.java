@@ -8,8 +8,22 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ProductInfoWarehouseRepository  extends JpaRepository<ProductInfoWarehouseEntity, ProductInfoWarehouseId> {
+
+    @Query(value = """
+            select * from product_info_warehouse
+            where ProductCod = :ProductCod
+              and Variant = :Variant
+              and WarehouseCod = :WarehouseCod
+            for update
+            """, nativeQuery = true)
+    Optional<ProductInfoWarehouseEntity> findByIdForUpdate(
+            @Param("ProductCod") String productCod,
+            @Param("Variant") String variant,
+            @Param("WarehouseCod") String warehouseCod
+    );
 
     @Query( value = """
             select * from product_info_warehouse T
