@@ -52,9 +52,11 @@ class KardexZoneServiceTest {
 
         assertThat(result).hasSize(2);
         assertThat(result.get(0).ZoneStockMoved).isEqualTo(KardexZoneConstants.ZONE_PHYSICAL);
+        assertThat(result.get(0).TypeOperation).isEqualTo(KardexZoneConstants.TYPE_OPERATION_SUBTRACT);
         assertThat(result.get(0).NumZoneStockBefore).isEqualTo(100);
         assertThat(result.get(0).NumZoneStockAfter).isEqualTo(90);
         assertThat(result.get(1).ZoneStockMoved).isEqualTo(KardexZoneConstants.ZONE_RESERVED);
+        assertThat(result.get(1).TypeOperation).isEqualTo(KardexZoneConstants.TYPE_OPERATION_ADD);
         assertThat(result.get(1).NumZoneStockBefore).isZero();
         assertThat(result.get(1).NumZoneStockAfter).isEqualTo(10);
         assertThat(warehouse.NumPhysicalStock).isEqualTo(90);

@@ -62,6 +62,8 @@ public class PresaleCreateService extends SessionService {
     private PresaleSearchService presaleSearchService;
     @Autowired
     private SaleCreateService saleCreateService;
+    @Autowired
+    private PresaleStockReservationService presaleStockReservationService;
 
     public String createCode(){
         String PresaleCod = presaleHeadRepository.getPresaleCod(getStoreCod());
@@ -104,7 +106,11 @@ public class PresaleCreateService extends SessionService {
         presale.addSession(getUserCod());
         this.presaleHeadRepository.save(presale);
 
-        return this.saleCreateService.save(presaleSearchService.findById(presaleRegister.Headboard.PresaleCod));
+        PresaleDetailDto presaleDetail = this.presaleSearchService.findById(presale.PresaleCod);
+        SaleDetailDto saleDetail = this.saleCreateService.save(presaleDetail);
+        this.presaleStockReservationService.reserve(presale, saleDetail.Headboard, getUserCod());
+
+        return saleDetail;
     }
 
     public PresaleHeadEntity recalculateAmountPresaleHead(PresaleRegisterDto presaleRegister){

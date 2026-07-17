@@ -33,4 +33,9 @@ public final class StatusConst {
      */
     public final static String FINALIZED = "F";
 
+    /**
+     * Status: Cancelled
+     */
+    public final static String CANCELLED = "X";
+
 }

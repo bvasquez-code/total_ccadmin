@@ -10,8 +10,40 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.Date;
 
 public interface SaleHeadRepository extends JpaRepository<SaleHeadEntity,String>, CcAdminRepository<SaleHeadEntity,String> {
+
+    @Query(value = """
+            select * from sale_head
+            where SaleCod = :SaleCod
+            for update
+            """, nativeQuery = true)
+    Optional<SaleHeadEntity> findByIdForUpdate(@Param("SaleCod") String saleCod);
+
+    @Query(value = """
+            select sh.*
+            from sale_head sh
+            inner join presale_head ph on ph.PresaleCod = sh.PresaleCod
+            where sh.SaleStatus = 'P'
+              and ph.SaleStatus = 'C'
+              and sh.Status = 'A'
+              and ph.Status = 'A'
+              and sh.CreationDate <= :ExpirationLimit
+              and not exists (
+                  select 1 from sale_document sd
+                  where sd.SaleCod = sh.SaleCod and sd.Status = 'A'
+              )
+              and not exists (
+                  select 1 from sale_payments sp
+                  where sp.SaleCod = sh.SaleCod
+              )
+            order by sh.CreationDate, sh.SaleCod
+            """, nativeQuery = true)
+    List<SaleHeadEntity> findExpiredPendingSales(
+            @Param("ExpirationLimit") Date expirationLimit
+    );
 
     @Query(value = """
             CALL db_store_01.get_cod_trx(:storeCod, 'sale_head')

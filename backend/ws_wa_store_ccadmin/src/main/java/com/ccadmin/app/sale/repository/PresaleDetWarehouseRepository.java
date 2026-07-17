@@ -11,6 +11,16 @@ import java.util.List;
 
 public interface PresaleDetWarehouseRepository extends JpaRepository<PresaleDetWarehouseEntity, PresaleDetWarehouseID> {
 
+    @Query(value = """
+            select * from presale_det_warehouse
+            where PresaleCod = :PresaleCod
+              and Status = 'A'
+            order by ProductCod, Variant, WarehouseCod, ItemNumber
+            """, nativeQuery = true)
+    List<PresaleDetWarehouseEntity> findActiveByPresaleCod(
+            @Param("PresaleCod") String presaleCod
+    );
+
     @Modifying
     @Query( value = """
             update presale_det_warehouse set Status = :Status where PresaleCod = :PresaleCod

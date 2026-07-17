@@ -23,6 +23,7 @@ BEGIN
           `StoreCod` varchar(4) NOT NULL COMMENT 'Codigo de tienda',
           `WarehouseCod` varchar(8) NOT NULL COMMENT 'Codigo de almacen',
           `ZoneStockMoved` varchar(16) NOT NULL COMMENT 'Zona cuyo saldo fue modificado',
+          `TypeOperation` char(1) NOT NULL COMMENT 'Tipo de operacion: R = resta, S = suma',
           `NumStockMoved` int NOT NULL COMMENT 'Cantidad absoluta movida',
           `NumZoneStockBefore` int NOT NULL DEFAULT '0' COMMENT 'Saldo de la zona antes del movimiento',
           `NumZoneStockAfter` int NOT NULL DEFAULT '0' COMMENT 'Saldo de la zona despues del movimiento',
@@ -45,11 +46,35 @@ BEGIN
           CONSTRAINT `chk_kardex_zone_qty` CHECK (`NumStockMoved` > 0),
           CONSTRAINT `chk_kardex_zone_before` CHECK (`NumZoneStockBefore` >= 0),
           CONSTRAINT `chk_kardex_zone_after` CHECK (`NumZoneStockAfter` >= 0),
-          CONSTRAINT `chk_kardex_zone_balance` CHECK (abs(`NumZoneStockAfter` - `NumZoneStockBefore`) = `NumStockMoved`)
+          CONSTRAINT `chk_kardex_zone_balance` CHECK (abs(`NumZoneStockAfter` - `NumZoneStockBefore`) = `NumStockMoved`),
+          CONSTRAINT `chk_kardex_zone_type` CHECK (`TypeOperation` in (_utf8mb4'R',_utf8mb4'S')),
+          CONSTRAINT `chk_kardex_zone_type_balance` CHECK (
+              (`TypeOperation` = _utf8mb4'S' AND `NumZoneStockAfter` > `NumZoneStockBefore`)
+              OR (`TypeOperation` = _utf8mb4'R' AND `NumZoneStockAfter` < `NumZoneStockBefore`)
+          )
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
         SELECT 'Tabla kardex_zone creada desde cero.' AS Mensaje;
     ELSE
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns
+            WHERE table_schema = DATABASE()
+              AND table_name = 'kardex_zone'
+              AND column_name = 'TypeOperation'
+        ) THEN
+            ALTER TABLE `kardex_zone`
+                ADD COLUMN `TypeOperation` char(1) DEFAULT NULL
+                COMMENT 'Tipo de operacion: R = resta, S = suma' AFTER `ZoneStockMoved`;
+            UPDATE `kardex_zone`
+            SET `TypeOperation` = CASE
+                WHEN `NumZoneStockAfter` > `NumZoneStockBefore` THEN 'S'
+                ELSE 'R'
+            END;
+            ALTER TABLE `kardex_zone`
+                MODIFY COLUMN `TypeOperation` char(1) NOT NULL
+                COMMENT 'Tipo de operacion: R = resta, S = suma';
+        END IF;
+
         IF NOT EXISTS (
             SELECT * FROM information_schema.columns
             WHERE table_schema = DATABASE()
@@ -60,6 +85,31 @@ BEGIN
                 ADD COLUMN `MovementEvent` varchar(32) NOT NULL DEFAULT 'LEGACY'
                 COMMENT 'Etapa de negocio que origina el movimiento' AFTER `SourceTable`;
             ALTER TABLE `kardex_zone` ALTER COLUMN `MovementEvent` DROP DEFAULT;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.table_constraints
+            WHERE table_schema = DATABASE()
+              AND table_name = 'kardex_zone'
+              AND constraint_name = 'chk_kardex_zone_type'
+        ) THEN
+            ALTER TABLE `kardex_zone`
+                ADD CONSTRAINT `chk_kardex_zone_type`
+                CHECK (`TypeOperation` in (_utf8mb4'R',_utf8mb4'S'));
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.table_constraints
+            WHERE table_schema = DATABASE()
+              AND table_name = 'kardex_zone'
+              AND constraint_name = 'chk_kardex_zone_type_balance'
+        ) THEN
+            ALTER TABLE `kardex_zone`
+                ADD CONSTRAINT `chk_kardex_zone_type_balance`
+                CHECK (
+                    (`TypeOperation` = _utf8mb4'S' AND `NumZoneStockAfter` > `NumZoneStockBefore`)
+                    OR (`TypeOperation` = _utf8mb4'R' AND `NumZoneStockAfter` < `NumZoneStockBefore`)
+                );
         END IF;
 
         IF NOT EXISTS (

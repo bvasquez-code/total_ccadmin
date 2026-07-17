@@ -104,6 +104,20 @@ public class KardexZoneService {
         return kardexZoneList;
     }
 
+    public List<KardexZoneEntity> findByEvent(
+            String sourceTable,
+            String operationCod,
+            int itemNumber,
+            String movementEvent
+    ) {
+        return this.kardexZoneRepository.findByEvent(
+                sourceTable,
+                operationCod,
+                itemNumber,
+                movementEvent
+        );
+    }
+
     private boolean exists(KardexZoneOperationDto operation) {
         return this.kardexZoneRepository.countByEvent(
                 operation.SourceTable,
@@ -146,6 +160,9 @@ public class KardexZoneService {
         kardexZone.StoreCod = operation.StoreCod;
         kardexZone.WarehouseCod = operation.WarehouseCod;
         kardexZone.ZoneStockMoved = movement.ZoneStockMoved;
+        kardexZone.TypeOperation = movement.NumStockDelta > 0
+                ? KardexZoneConstants.TYPE_OPERATION_ADD
+                : KardexZoneConstants.TYPE_OPERATION_SUBTRACT;
         kardexZone.NumStockMoved = Math.abs(movement.NumStockDelta);
         kardexZone.NumZoneStockBefore = stockBefore;
         kardexZone.NumZoneStockAfter = stockAfter;

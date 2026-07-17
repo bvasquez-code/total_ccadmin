@@ -17,4 +17,18 @@ public class KardexZoneShared {
     public List<KardexZoneEntity> apply(KardexZoneOperationDto operation, String userCod) {
         return this.kardexZoneService.apply(operation, userCod);
     }
+
+    public List<KardexZoneEntity> findByEvent(
+            String sourceTable,
+            String operationCod,
+            int itemNumber,
+            String movementEvent
+    ) {
+        return this.kardexZoneService.findByEvent(
+                sourceTable,
+                operationCod,
+                itemNumber,
+                movementEvent
+        );
+    }
 }

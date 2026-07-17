@@ -7,8 +7,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface PresaleHeadRepository extends JpaRepository<PresaleHeadEntity,String>, CcAdminRepository<PresaleHeadEntity,String> {
+
+    @Query(value = """
+            select * from presale_head
+            where PresaleCod = :PresaleCod
+            for update
+            """, nativeQuery = true)
+    Optional<PresaleHeadEntity> findByIdForUpdate(@Param("PresaleCod") String presaleCod);
 
     @Query(value = """
             CALL db_store_01.get_cod_trx(:storeCod, 'presale_head')

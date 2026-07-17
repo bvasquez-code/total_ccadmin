@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface KardexZoneRepository extends JpaRepository<KardexZoneEntity, Long> {
 
@@ -17,6 +19,21 @@ public interface KardexZoneRepository extends JpaRepository<KardexZoneEntity, Lo
               and MovementEvent = :MovementEvent
             """, nativeQuery = true)
     int countByEvent(
+            @Param("SourceTable") String sourceTable,
+            @Param("OperationCod") String operationCod,
+            @Param("ItemNumber") int itemNumber,
+            @Param("MovementEvent") String movementEvent
+    );
+
+    @Query(value = """
+            select * from kardex_zone
+            where SourceTable = :SourceTable
+              and OperationCod = :OperationCod
+              and ItemNumber = :ItemNumber
+              and MovementEvent = :MovementEvent
+            order by KardexZoneID
+            """, nativeQuery = true)
+    List<KardexZoneEntity> findByEvent(
             @Param("SourceTable") String sourceTable,
             @Param("OperationCod") String operationCod,
             @Param("ItemNumber") int itemNumber,

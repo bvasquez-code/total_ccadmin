@@ -32,13 +32,15 @@ public class SalePaymentCreateService extends SessionService {
     @Transactional
     public SalePaymentEntity save(SalePaymentRegisterDto payment) throws Exception {
 
+        SaleHeadEntity saleHead = this.saleHeadRepository.findByIdForUpdate(payment.SaleCod)
+                .orElseThrow(() -> new SalePaymentException("Sale does not exist"));
+
+        if(!StatusConst.PENDING.equals(saleHead.SaleStatus)){
+            throw new SalePaymentException("Sale is no longer pending");
+        }
+
         TrxPaymentEntity trxPayment = this.trxPaymentShared.findById(payment.TrxPaymentId);
         BigDecimal TotalPayment = this.salePaymentRepository.findTotalPayment(payment.SaleCod);
-        SaleHeadEntity saleHead = this.saleHeadRepository.findById(payment.SaleCod).get();
-
-        if(saleHead.SaleStatus.equals(StatusConst.CONFIRMED)){
-            throw new SalePaymentException("Sale has already been completed");
-        }
         if( TotalPayment.doubleValue() >= saleHead.NumTotalPrice.doubleValue() ) {
             throw new SalePaymentException("Sale is completed payment");
         }

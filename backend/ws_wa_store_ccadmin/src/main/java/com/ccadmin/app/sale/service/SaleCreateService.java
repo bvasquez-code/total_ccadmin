@@ -64,6 +64,8 @@ public class SaleCreateService extends SessionService {
     private SaleSunatEmissionService saleSunatEmissionService;
     @Autowired
     private SaleTaxCalculationService saleTaxCalculationService;
+    @Autowired
+    private SaleStockConfirmationService saleStockConfirmationService;
 
     @Transactional
     public SaleDetailDto save(PresaleDetailDto presaleDetail) throws SaleException, SaleBuildException {
@@ -248,14 +250,19 @@ public class SaleCreateService extends SessionService {
     public SaleDetailDto confirm(String SaleCod,String DocumentType,String CounterfoilCod) throws SaleException {
         log.info("INI - CONFIRMACION DE VENTA : {}",SaleCod);
 
-        SaleHeadEntity saleHead = this.saleHeadRepository.findById(SaleCod).get();
+        SaleHeadEntity saleHead = this.saleHeadRepository.findByIdForUpdate(SaleCod)
+                .orElseThrow(() -> new SaleException("No existe la venta " + SaleCod));
         List<SaleDetWarehouseEntity> saleDetWarehouseList = this.saleDetWarehouseRepository.findBySaleCod(SaleCod);
 
-        if(saleHead.SaleStatus.equals(SaleConstants.CONFIRMED)){
-            throw new SaleException("Sale has already been completed");
+        if(!SaleConstants.PENDING.equals(saleHead.SaleStatus)){
+            throw new SaleException("La venta ya no se encuentra pendiente");
+        }
+        if(saleDetWarehouseList.isEmpty()){
+            throw new SaleException("La venta no tiene stock asignado por almacen");
         }
 
         List<KardexEntity> kardexList = this.createkardexList(saleDetWarehouseList,saleHead);
+        this.saleStockConfirmationService.consumeReservation(saleHead, saleDetWarehouseList, getUserCod());
 
         saleHead.SaleStatus = SaleConstants.CONFIRMED;
         saleHead.addSession(getUserCod());
@@ -263,7 +270,7 @@ public class SaleCreateService extends SessionService {
         SaleDocumentEntity saleDocument = counterfoilShared.generateDocumentSale(saleHead.StoreCod,DocumentType,saleHead.SaleCod);
 
         this.saleHeadRepository.save(saleHead);
-        this.kardexShared.saveAll(kardexList);
+        this.kardexShared.saveAllLedgerOnly(kardexList);
         this.saleDocumentRepository.save(saleDocument);
 
         SaleDetailDto saleDetail = this.saleSearchService.findById(saleHead.SaleCod);

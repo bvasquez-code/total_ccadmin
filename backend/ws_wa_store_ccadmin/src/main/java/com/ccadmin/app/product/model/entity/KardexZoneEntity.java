@@ -26,6 +26,7 @@ public class KardexZoneEntity extends AuditTableEntity implements Serializable {
     public String StoreCod;
     public String WarehouseCod;
     public String ZoneStockMoved;
+    public String TypeOperation;
     public int NumStockMoved;
     public int NumZoneStockBefore;
     public int NumZoneStockAfter;
