@@ -5,7 +5,7 @@ import com.ccadmin.app.payment.model.entity.TrxPaymentEntity;
 import com.ccadmin.app.payment.shared.TrxPaymentShared;
 import com.ccadmin.app.product.model.entity.KardexEntity;
 import com.ccadmin.app.product.shared.KardexShared;
-import com.ccadmin.app.product.shared.StockZoneMovementShared;
+import com.ccadmin.app.product.shared.CreditNoteStockShared;
 import com.ccadmin.app.sale.exception.SaleException;
 import com.ccadmin.app.sale.exception.SalePaymentException;
 import com.ccadmin.app.sale.model.constants.SaleConstants;
@@ -71,7 +71,7 @@ public class CreditNoteCreateService extends SessionService {
     @Autowired
     private KardexShared kardexShared;
     @Autowired
-    private StockZoneMovementShared stockZoneMovementShared;
+    private CreditNoteStockShared creditNoteStockShared;
     @Autowired
     private TrxPaymentShared trxPaymentShared;
     @Autowired
@@ -189,7 +189,7 @@ public class CreditNoteCreateService extends SessionService {
 
         this.creditNoteHeadRepository.save(creditNoteHead);
         this.saleHeadRepository.updateHasCreditNote(creditNoteHead.SaleCod,"S");
-        this.stockZoneMovementShared.addCreditNoteUnavailableStock(creditNoteHead, detailList, warehouseDefault, getUserCod());
+        this.creditNoteStockShared.addUnavailableStock(creditNoteHead, detailList, warehouseDefault, getUserCod());
         this.kardexShared.saveAllLedgerOnly(
                 this.createCreditNoteKardexList(detailList, warehouseDefault, "S", false)
         );
@@ -277,13 +277,6 @@ public class CreditNoteCreateService extends SessionService {
         List<CreditNoteDetEntity> creditNoteDetList = this.creditNoteDetRepository.findByCreditNoteCod(creditNoteHead.CreditNoteCod);
         this.applyReturnedUnits(creditNoteDetList, creditNoteRegister.DetailList);
 
-        if(!this.stockZoneMovementShared.existsCreditNoteUnavailableStock(creditNoteHead.CreditNoteCod)){
-            this.stockZoneMovementShared.addCreditNoteUnavailableStock(creditNoteHead, creditNoteDetList, warehouseDefault, getUserCod());
-            this.kardexShared.saveAllLedgerOnly(
-                    this.createCreditNoteKardexList(creditNoteDetList, warehouseDefault, "S", false)
-            );
-        }
-
         List<CreditNoteDetWarehouseEntity> creditNoteDetWarehouseList = creditNoteDetList.stream()
                 .filter(e -> e.NumUnitStockReturned != null && e.NumUnitStockReturned > 0)
                 .map(e -> new CreditNoteDetWarehouseEntity(
@@ -302,7 +295,7 @@ public class CreditNoteCreateService extends SessionService {
 
         List<KardexEntity> kardexRejectedList = this.createCreditNoteKardexList(creditNoteDetList, warehouseDefault, "R", true);
 
-        this.stockZoneMovementShared.resolveCreditNoteUnavailableStock(creditNoteHead, creditNoteDetList, warehouseDefault, getUserCod());
+        this.creditNoteStockShared.resolveUnavailableStock(creditNoteHead, creditNoteDetList, warehouseDefault, getUserCod());
         this.creditNoteDetRepository.saveAll(creditNoteDetList);
         this.creditNoteHeadRepository.save(creditNoteHead);
         this.creditNoteDetWarehouseRepository.saveAll(creditNoteDetWarehouseList);

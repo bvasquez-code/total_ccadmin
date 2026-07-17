@@ -27,10 +27,10 @@ public class ProductInfoEntity extends AuditTableEntity implements Serializable 
     public int NumTotalStock;
 
     public void addStock(int NumNewStock){
-        this.applyStockZoneMovement(NumNewStock, 0, 0, NumNewStock);
+        this.applyStockAdjustment(NumNewStock, 0, 0, NumNewStock);
     }
 
-    public void applyStockZoneMovement(int physicalDelta, int unavailableDelta, int reservedDelta, int totalDelta) {
+    public void applyStockAdjustment(int physicalDelta, int unavailableDelta, int reservedDelta, int totalDelta) {
         this.NumDigitalStock = this.NumDigitalStock + physicalDelta;
         this.NumPhysicalStock = this.NumPhysicalStock + physicalDelta;
         this.NumUnavailableStock = this.NumUnavailableStock + unavailableDelta;
