@@ -1,7 +1,5 @@
 package com.ccadmin.app.pucharse.service;
 
-import com.ccadmin.app.product.model.entity.KardexEntity;
-import com.ccadmin.app.product.shared.KardexShared;
 import com.ccadmin.app.pucharse.exception.PucharseException;
 import com.ccadmin.app.pucharse.model.dto.PucharseDetConfirmDto;
 import com.ccadmin.app.pucharse.model.dto.PucharseDetLotConfirmDto;
@@ -12,6 +10,7 @@ import com.ccadmin.app.pucharse.model.entity.id.PucharseDetId;
 import com.ccadmin.app.pucharse.repository.PucharseDetDeliveryRepository;
 import com.ccadmin.app.pucharse.repository.PucharseDetRepository;
 import com.ccadmin.app.pucharse.repository.PucharseHeadRepository;
+import com.ccadmin.app.shared.model.myconst.StatusConst;
 import com.ccadmin.app.shared.service.SessionService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,72 +28,80 @@ public class PucharseDetService extends SessionService {
     @Autowired
     private PucharseDetDeliveryRepository pucharseDetDeliveryRepository;
     @Autowired
-    private KardexShared kardexShared;
+    private PurchaseStockReceiptService purchaseStockReceiptService;
     @Transactional
     public PucharseDetConfirmDto confirm(PucharseDetConfirmDto pucharseDetConfirm) throws PucharseException {
 
-        PucharseHeadEntity pucharseHead = this.pucharseHeadRepository.findById(pucharseDetConfirm.pucharseDet.PucharseCod).get();
-        pucharseDetConfirm.pucharseDetDelivery.PucharseCod = pucharseDetConfirm.pucharseDet.PucharseCod;
-        pucharseDetConfirm.pucharseDetDelivery.ItemNumber = pucharseDetConfirm.pucharseDet.ItemNumber;
-        pucharseDetConfirm.pucharseDetDelivery.ProductCod = pucharseDetConfirm.pucharseDet.ProductCod;
-        pucharseDetConfirm.pucharseDetDelivery.Variant = pucharseDetConfirm.pucharseDet.Variant;
-        pucharseDetConfirm.pucharseDetDelivery.ProductUnitName = pucharseDetConfirm.pucharseDet.ProductUnitName;
-        pucharseDetConfirm.pucharseDetDelivery.ProductUnitFactor = pucharseDetConfirm.pucharseDet.ProductUnitFactor;
-        pucharseDetConfirm.pucharseDetDelivery.LotNumber = pucharseDetConfirm.pucharseDet.LotNumber;
-        pucharseDetConfirm.pucharseDetDelivery.ExpirationDate = pucharseDetConfirm.pucharseDet.ExpirationDate;
-        pucharseDetConfirm.pucharseDet.validate();
-        pucharseDetConfirm.pucharseDetDelivery.validate();
+        if (pucharseDetConfirm == null || pucharseDetConfirm.pucharseDet == null
+                || pucharseDetConfirm.pucharseDetDelivery == null) {
+            throw new PucharseException("El detalle de recepcion es obligatorio");
+        }
+        String purchaseCod = pucharseDetConfirm.pucharseDet.PucharseCod;
+        int itemNumber = pucharseDetConfirm.pucharseDet.ItemNumber;
+        PucharseHeadEntity pucharseHead = this.pucharseHeadRepository.findByIdForUpdate(purchaseCod)
+                .orElseThrow(() -> new PucharseException("No existe la compra " + purchaseCod));
+        PucharseDetEntity originDet = this.pucharseDetRepository.findByIdForUpdate(purchaseCod, itemNumber)
+                .orElseThrow(() -> new PucharseException("No existe el detalle " + itemNumber));
+        this.validatePendingReceipt(pucharseHead, originDet);
 
-        KardexEntity kardexLast = this.kardexShared.findLastMovement(
-                pucharseDetConfirm.pucharseDet.ProductCod,
-                pucharseDetConfirm.pucharseDet.Variant,
-                pucharseDetConfirm.pucharseDetDelivery.WarehouseCod,
-                pucharseHead.StoreCod
-        );
-        KardexEntity kardex = new KardexEntity(
-                kardexLast,pucharseDetConfirm.pucharseDetDelivery,pucharseHead.StoreCod
-        );
-        kardex.addSession(getUserCod(),true);
+        PucharseDetDeliveryEntity delivery = pucharseDetConfirm.pucharseDetDelivery;
+        delivery.PucharseCod = purchaseCod;
+        delivery.ItemNumber = itemNumber;
+        delivery.ProductCod = originDet.ProductCod;
+        delivery.Variant = originDet.Variant;
+        delivery.ProductUnitName = originDet.ProductUnitName;
+        delivery.ProductUnitFactor = originDet.ProductUnitFactor;
+        delivery.LotNumber = originDet.LotNumber;
+        delivery.ExpirationDate = originDet.ExpirationDate;
+        originDet.validate();
+        delivery.validate();
 
-        pucharseDetConfirm.pucharseDet.IsKardexAffected = "S";
-        pucharseDetConfirm.pucharseDet.addSession(getUserCod(),false);
-        pucharseDetConfirm.pucharseDetDelivery.addSession(getUserCod(),false);
+        originDet.NumUnitDelivered = delivery.NumUnit;
+        originDet.IsKardexAffected = "S";
+        originDet.addSession(getUserCod(),false);
+        delivery.addSession(getUserCod(),false);
 
-        this.pucharseDetRepository.save(pucharseDetConfirm.pucharseDet);
+        this.purchaseStockReceiptService.receive(pucharseHead, List.of(delivery), getUserCod());
+        this.pucharseDetRepository.save(originDet);
         this.pucharseDetDeliveryRepository.save(pucharseDetConfirm.pucharseDetDelivery);
-        this.kardexShared.save(kardex);
 
+        pucharseDetConfirm.pucharseDet = originDet;
         return pucharseDetConfirm;
     }
 
     @Transactional
     public PucharseDetLotConfirmDto confirmWithLots(PucharseDetLotConfirmDto pucharseDetLotConfirm) throws PucharseException {
 
+        if (pucharseDetLotConfirm == null || pucharseDetLotConfirm.pucharseDet == null) {
+            throw new PucharseException("El detalle de recepcion es obligatorio");
+        }
+        if (pucharseDetLotConfirm.WarehouseCod == null || pucharseDetLotConfirm.WarehouseCod.isBlank()) {
+            throw new PucharseException("El almacen de recepcion es obligatorio");
+        }
         if (pucharseDetLotConfirm.lotDetailList == null || pucharseDetLotConfirm.lotDetailList.isEmpty()) {
-            throw new RuntimeException("Debe ingresar al menos un lote para confirmar la recepcion");
+            throw new PucharseException("Debe ingresar al menos un lote para confirmar la recepcion");
         }
 
-        PucharseHeadEntity pucharseHead = this.pucharseHeadRepository.findById(pucharseDetLotConfirm.pucharseDet.PucharseCod).get();
+        PucharseHeadEntity pucharseHead = this.pucharseHeadRepository.findByIdForUpdate(
+                        pucharseDetLotConfirm.pucharseDet.PucharseCod
+                )
+                .orElseThrow(() -> new PucharseException(
+                        "No existe la compra " + pucharseDetLotConfirm.pucharseDet.PucharseCod
+                ));
         PucharseDetId pucharseDetId = new PucharseDetId();
         pucharseDetId.PucharseCod = pucharseDetLotConfirm.pucharseDet.PucharseCod;
         pucharseDetId.ItemNumber = pucharseDetLotConfirm.pucharseDet.ItemNumber;
 
-        PucharseDetEntity originDet = this.pucharseDetRepository.findById(pucharseDetId).get();
-
-        if ("S".equals(originDet.IsKardexAffected)) {
-            throw new RuntimeException("Producto ya fue confirmado como ingresado");
-        }
+        PucharseDetEntity originDet = this.pucharseDetRepository.findByIdForUpdate(
+                        pucharseDetId.PucharseCod,
+                        pucharseDetId.ItemNumber
+                )
+                .orElseThrow(() -> new PucharseException("No existe el detalle " + pucharseDetId.ItemNumber));
+        this.validatePendingReceipt(pucharseHead, originDet);
 
         int nextItemNumber = this.pucharseDetRepository.findMaxItemNumber(originDet.PucharseCod) + 1;
         List<PucharseDetEntity> detailList = new ArrayList<>();
         List<PucharseDetDeliveryEntity> deliveryList = new ArrayList<>();
-        List<KardexEntity> kardexList = new ArrayList<>();
-        KardexEntity kardexLast = this.kardexShared.findLastMovement(
-                originDet.ProductCod,
-                originDet.Variant,
-                pucharseDetLotConfirm.WarehouseCod,
-                pucharseHead.StoreCod
-        );
 
         for (int index = 0; index < pucharseDetLotConfirm.lotDetailList.size(); index++) {
             PucharseDetEntity lotDet = pucharseDetLotConfirm.lotDetailList.get(index);
@@ -103,21 +110,28 @@ public class PucharseDetService extends SessionService {
             PucharseDetEntity detail = PucharseDetEntity.buildLotDetail(originDet, lotDet, itemNumber, index == 0, getUserCod());
             PucharseDetDeliveryEntity delivery = PucharseDetDeliveryEntity.buildLotDelivery(detail, pucharseDetLotConfirm.WarehouseCod, getUserCod());
 
-            KardexEntity kardex = new KardexEntity(kardexLast, delivery, pucharseHead.StoreCod);
-            kardex.addSession(getUserCod(), true);
-            kardexLast = kardex;
-
             detailList.add(detail);
             deliveryList.add(delivery);
-            kardexList.add(kardex);
         }
 
+        this.purchaseStockReceiptService.receive(pucharseHead, deliveryList, getUserCod());
         this.pucharseDetRepository.saveAll(detailList);
         this.pucharseDetDeliveryRepository.saveAll(deliveryList);
-        this.kardexShared.saveAll(kardexList);
 
         pucharseDetLotConfirm.lotDetailList = detailList;
         return pucharseDetLotConfirm;
+    }
+
+    private void validatePendingReceipt(
+            PucharseHeadEntity pucharseHead,
+            PucharseDetEntity detail
+    ) throws PucharseException {
+        if (!StatusConst.PENDING.equals(pucharseHead.PurchaseStatus)) {
+            throw new PucharseException("La recepcion de la compra ya fue finalizada");
+        }
+        if ("S".equals(detail.IsKardexAffected)) {
+            throw new PucharseException("Producto ya fue confirmado como ingresado");
+        }
     }
 
 }

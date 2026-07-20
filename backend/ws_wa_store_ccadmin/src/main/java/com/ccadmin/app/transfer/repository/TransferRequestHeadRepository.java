@@ -35,6 +35,7 @@ public interface TransferRequestHeadRepository extends JpaRepository<TransferReq
             select th.* from transfer_request_head th
             where th.TransferReqCod = :TransferReqCod
             and th.TypeOperation = :typeOperation
+            for update
             """, nativeQuery = true)
     TransferRequestHeadEntity findByTransferCodAndTypeOperationForUpdate(
             @Param("TransferReqCod") String TransferReqCod,

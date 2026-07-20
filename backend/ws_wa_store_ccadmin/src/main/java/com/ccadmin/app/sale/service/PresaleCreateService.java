@@ -92,7 +92,9 @@ public class PresaleCreateService extends SessionService {
     @Transactional
     public SaleDetailDto confirm(PresaleRegisterDto presaleRegister) throws PresaleException, SaleException, SaleBuildException {
 
-        Optional<PresaleHeadEntity> presaleOptional  = this.presaleHeadRepository.findById(presaleRegister.Headboard.PresaleCod);
+        Optional<PresaleHeadEntity> presaleOptional = this.presaleHeadRepository.findByIdForUpdate(
+                presaleRegister.Headboard.PresaleCod
+        );
 
         if(presaleOptional.isEmpty()){
             throw new PresaleException("There is no sales code");

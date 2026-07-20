@@ -108,6 +108,26 @@ class ExpiredSaleCancellationServiceTest {
         );
     }
 
+    @Test
+    void shouldIgnoreCancellationRetryAfterSaleWasAlreadyCancelled() throws SaleException {
+        SaleHeadEntity sale = pendingSale(new Date(1_000_000L));
+        sale.SaleStatus = SaleConstants.CANCELLED;
+        when(this.saleHeadRepository.findByIdForUpdate("SL001")).thenReturn(Optional.of(sale));
+
+        boolean cancelled = this.cancellationService.cancelExpiredSale(
+                "SL001",
+                new Date(2_000_000L),
+                "SYSTEM"
+        );
+
+        assertThat(cancelled).isFalse();
+        verify(this.salePaymentRepository, never()).countTotalPayment("SL001");
+        verify(this.kardexZoneShared, never()).apply(
+                org.mockito.ArgumentMatchers.any(KardexZoneOperationDto.class),
+                eq("SYSTEM")
+        );
+    }
+
     private SaleHeadEntity pendingSale(Date creationDate) {
         SaleHeadEntity entity = new SaleHeadEntity();
         entity.SaleCod = "SL001";

@@ -5,6 +5,7 @@ import { ICrudService } from "../../shared/interface/ICrudService";
 import { ResponseWsDto } from "../../shared/model/dto/ResponseWsDto";
 import { SearchDto } from "../../shared/model/dto/SearchDto";
 import { KardexEntity } from "../model/entity/KardexEntity";
+import { KardexZoneSearchDto } from "../model/dto/KardexZoneSearchDto";
 
 @Injectable({
     providedIn: 'root'
@@ -25,6 +26,11 @@ export class KardexService implements ICrudService<KardexEntity,number>{
         RespuestaWS = await this.apiService.ExecuteGetService(url,Search);
 
         return RespuestaWS;
+    }
+
+    async FindAllZone(Search: KardexZoneSearchDto): Promise<ResponseWsDto> {
+        const url: string = `${AppSetting.API}/api/v1/kardexZone/findAll`;
+        return await this.apiService.ExecuteGetService(url, Search);
     }
 
     Save(Entity: KardexEntity): Promise<ResponseWsDto> {

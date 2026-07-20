@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Date;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -128,6 +129,37 @@ class KardexZoneServiceTest {
                 .hasMessageContaining("Stock insuficiente");
 
         verify(this.kardexZoneRepository, never()).saveAll(anyList());
+    }
+
+    @Test
+    void shouldRecognizeLegacyUnavailableBaselineCreatedAfterOperation() {
+        Date operationCreationDate = new Date();
+        when(this.kardexZoneRepository.countLegacyUnavailableBaseline(
+                "P001", "0000", "S001", "W001", 10, operationCreationDate
+        )).thenReturn(1);
+
+        boolean result = this.kardexZoneService.hasLegacyUnavailableBaseline(
+                "P001", "0000", "S001", "W001", 10, operationCreationDate
+        );
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void shouldNotUseLegacyBaselineWithoutOperationCreationDate() {
+        boolean result = this.kardexZoneService.hasLegacyUnavailableBaseline(
+                "P001", "0000", "S001", "W001", 10, null
+        );
+
+        assertThat(result).isFalse();
+        verify(this.kardexZoneRepository, never()).countLegacyUnavailableBaseline(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.any(Date.class)
+        );
     }
 
     private void mockLockedStock(ProductInfoEntity productInfo, ProductInfoWarehouseEntity warehouse) {

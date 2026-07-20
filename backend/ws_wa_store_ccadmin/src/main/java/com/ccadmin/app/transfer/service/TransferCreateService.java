@@ -61,6 +61,10 @@ public class TransferCreateService extends SessionService {
     @Autowired
     private KardexShared kardexShared;
     @Autowired
+    private TransferStockDispatchService transferStockDispatchService;
+    @Autowired
+    private TransferStockReceiptService transferStockReceiptService;
+    @Autowired
     private CounterfoilShared counterfoilShared;
     @Autowired
     private ProductTransferConversionHelper productTransferConversionHelper;
@@ -139,6 +143,10 @@ public class TransferCreateService extends SessionService {
             }
         }
 
+        if (StringUtil.isEmpty(head.ReceiveStatus)) {
+            head.ReceiveStatus = TransferConstants.STATUS_PENDING;
+        }
+
         if (!isNew) {
             head.CreationUser = existing.CreationUser;
             head.CreationDate = existing.CreationDate;
@@ -196,15 +204,16 @@ public class TransferCreateService extends SessionService {
         return "Transferencia eliminada correctamente";
     }
 
-    @Transactional
+    @Transactional(rollbackOn = Exception.class)
     public ResponseWsDto dispatchTransfer(TransferDispatchDto request) throws Exception {
         if (request == null || StringUtil.isEmpty(request.transferCod)) {
             throw new TransferException("TransferCod es obligatorio");
         }
 
-        TransferHeadEntity head = this.transferHeadRepository.findById(
-                request.transferCod
-        ).orElse(null);
+        TransferHeadEntity head = this.transferHeadRepository.findByTransferCodAndTypeOperationForUpdate(
+                request.transferCod,
+                TransferConstants.TYPE_OPERATION_SEND
+        );
 
         if (head == null) {
             throw new TransferException("No existe transferencia TS para despacho");
@@ -270,10 +279,6 @@ public class TransferCreateService extends SessionService {
             }
         }
 
-        List<KardexEntity> kardexList = new ArrayList<>();
-        Map<String, KardexEntity> lastMovementByStock = new HashMap<>();
-
-
         List<TransferDetEntity> detListDispatch = detList.stream()
                 .filter( e -> e.NumUnitDispatch > 0)
                 .toList();
@@ -281,23 +286,14 @@ public class TransferCreateService extends SessionService {
         for (var det : detListDispatch) {
             String warehouseCodOrigin = resolveWarehouse(head.StoreCodOrigin, det.WarehouseCodOrigin);
             det.WarehouseCodOrigin = warehouseCodOrigin;
-
-            String stockKey = this.stockKey(det.ProductCod, det.Variant, head.StoreCodOrigin, warehouseCodOrigin);
-            KardexEntity kardexLast = lastMovementByStock.computeIfAbsent(
-                    stockKey,
-                    ignored -> this.kardexShared.findLastMovement(det.ProductCod, det.Variant, warehouseCodOrigin, head.StoreCodOrigin)
-            );
-
-            int stockBefore = (kardexLast == null) ? 0 : kardexLast.NumStockAfter;
-            if (stockBefore < det.NumUnitDispatch) {
-                throw new TransferException("Stock insuficiente para el producto "+det.ProductCod);
-            }
-
-            KardexEntity kardex = new KardexEntity(kardexLast, det, head.StoreCodOrigin, warehouseCodOrigin, TransferConstants.KARDEX_TYPE_OUT)
-                    .session(getUserSession(request.user));
-            kardexList.add(kardex);
-            lastMovementByStock.put(stockKey, kardex);
         }
+
+        this.transferStockDispatchService.dispatchTransfer(
+                head.TransferCod,
+                head.StoreCodOrigin,
+                detListDispatch,
+                getUserSession(request.user)
+        );
 
         TransferDocumentEntity transferDocument = this.counterfoilShared.generateDocumentTransfer(
                 head.StoreCodOrigin,
@@ -354,7 +350,6 @@ public class TransferCreateService extends SessionService {
 
         this.transferHeadRepository.save(head);
         this.transferDetRepository.saveAll(detList);
-        this.kardexShared.saveAll(kardexList);
         this.transferDocumentRepository.save(transferDocument);
         this.carrierRepository.save(carrier);
         this.emitSunatGuideAfterCommit(head.TransferCod);
@@ -362,19 +357,23 @@ public class TransferCreateService extends SessionService {
         return new ResponseWsDto("Transferencia despachada correctamente");
     }
 
-    @Transactional
+    @Transactional(rollbackOn = Exception.class)
     public ResponseWsDto receiveTransfer(TransferReceiveDto request) throws Exception {
         if (request == null || StringUtil.isEmpty(request.transferCod)) {
             throw new TransferException("TransferCod es obligatorio");
         }
 
-        TransferHeadEntity head = this.transferHeadRepository.findById(
-                request.transferCod
-        ).orElse(null);
+        TransferHeadEntity head = this.transferHeadRepository.findByTransferCodAndTypeOperationForUpdate(
+                request.transferCod,
+                TransferConstants.TYPE_OPERATION_SEND
+        );
         if (head == null) {
             throw new TransferException("No existe transferencia TE para recepción");
         }
 
+        if (!TransferConstants.STATUS_CONFIRMED.equals(head.TransferStatus)) {
+            throw new TransferException("La transferencia aun no fue despachada");
+        }
         if (TransferConstants.STATUS_CONFIRMED.equals(head.ReceiveStatus)) {
             return new ResponseWsDto("La transferencia ya fue recibida");
         }
@@ -386,7 +385,11 @@ public class TransferCreateService extends SessionService {
             throw new TransferException("Detalle de transferencia TS no encontrado");
         }
 
-        for(var detRequest : request.detailListReceive.stream()
+        List<TransferDetEntity> detailListReceive = request.detailListReceive == null
+                ? List.of()
+                : request.detailListReceive;
+
+        for(var detRequest : detailListReceive.stream()
                 .filter( e -> StringUtil.nvl(e.FlgRequested,"S").equals("S") ).toList()){
             detList.stream()
                     .filter(e -> e.ItemNumber == detRequest.ItemNumber)
@@ -394,34 +397,39 @@ public class TransferCreateService extends SessionService {
                     .ifPresent(det -> det.NumUnitReception = detRequest.NumUnitReception);
         }
 
-        for(var detRequest : request.detailListReceive.stream()
+        for(var detRequest : detailListReceive.stream()
                 .filter( e -> StringUtil.nvl(e.FlgRequested,"S").equals("N") ).toList()){
             detRequest.addSession(getUserCod());
             detList.add(detRequest);
         }
 
-        List<KardexEntity> kardexList = new ArrayList<>();
-        Map<String, KardexEntity> lastMovementByStock = new HashMap<>();
-
         List<TransferDetEntity> detListReceive = detList.stream()
                 .filter( e -> e.NumUnitReception > 0)
                 .toList();
 
+        for (TransferDetEntity det : detList) {
+            if (det.NumUnitReception < 0) {
+                throw new TransferException("La cantidad recibida no puede ser negativa");
+            }
+            if (!"N".equals(StringUtil.nvl(det.FlgRequested, "S"))
+                    && det.NumUnitReception > det.NumUnitDispatch) {
+                throw new TransferException(
+                        "La cantidad recibida supera lo despachado para el item " + det.ItemNumber
+                );
+            }
+        }
+
         for (var det : detListReceive) {
             String warehouseCodDest = resolveWarehouse(head.StoreCodDest, det.WarehouseCodDest);
             det.WarehouseCodDest = warehouseCodDest;
-
-            String stockKey = this.stockKey(det.ProductCod, det.Variant, head.StoreCodDest, warehouseCodDest);
-            KardexEntity kardexLast = lastMovementByStock.computeIfAbsent(
-                    stockKey,
-                    ignored -> this.kardexShared.findLastMovement(det.ProductCod, det.Variant, warehouseCodDest, head.StoreCodDest)
-            );
-
-            KardexEntity kardex = new KardexEntity(kardexLast, det, head.StoreCodDest, warehouseCodDest, TransferConstants.KARDEX_TYPE_IN)
-                    .session(getUserSession(request.user));
-            kardexList.add(kardex);
-            lastMovementByStock.put(stockKey, kardex);
         }
+
+        this.transferStockReceiptService.receiveTransfer(
+                head.TransferCod,
+                head.StoreCodDest,
+                detListReceive,
+                getUserSession(request.user)
+        );
 
         Date now = new Date();
         head.ArrivalDate = now;
@@ -435,7 +443,6 @@ public class TransferCreateService extends SessionService {
 
         this.transferHeadRepository.save(head);
         this.transferDetRepository.saveAll(detList);
-        this.kardexShared.saveAll(kardexList);
 
         return new ResponseWsDto("Transferencia recibida correctamente");
     }

@@ -7,8 +7,16 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface PucharseHeadRepository extends JpaRepository<PucharseHeadEntity,String>, CcAdminRepository<PucharseHeadEntity,String> {
+
+    @Query(value = """
+            select * from pucharse_head
+            where PucharseCod = :PucharseCod
+            for update
+            """, nativeQuery = true)
+    Optional<PucharseHeadEntity> findByIdForUpdate(@Param("PucharseCod") String pucharseCod);
 
     @Query(value = """
             CALL db_store_01.get_cod_trx(:storeCod, 'pucharse_head')

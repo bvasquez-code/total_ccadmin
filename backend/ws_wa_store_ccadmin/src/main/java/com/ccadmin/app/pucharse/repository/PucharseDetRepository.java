@@ -7,8 +7,20 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface PucharseDetRepository extends JpaRepository<PucharseDetEntity, PucharseDetId> {
+
+    @Query(value = """
+            select * from pucharse_det
+            where PucharseCod = :PucharseCod
+              and ItemNumber = :ItemNumber
+            for update
+            """, nativeQuery = true)
+    Optional<PucharseDetEntity> findByIdForUpdate(
+            @Param("PucharseCod") String pucharseCod,
+            @Param("ItemNumber") int itemNumber
+    );
 
     @Query( value = """
             select * from pucharse_det where PucharseCod = :PucharseCod and Status = 'A'

@@ -20,6 +20,9 @@ public final class TransferConstants {
     public static final String TRANSPORT_PRIVATE = "02";
 
     public static final String KARDEX_SOURCE_TABLE = "transfer_head";
+    public static final String KARDEX_ZONE_SOURCE_REQUEST = "transfer_request_head";
+    public static final String KARDEX_ZONE_EVENT_DISPATCH = "TRANSFER_DISPATCH";
+    public static final String KARDEX_ZONE_EVENT_RECEIPT = "TRANSFER_RECEIPT";
     public static final String KARDEX_TYPE_OUT = "R";
     public static final String KARDEX_TYPE_IN = "S";
 

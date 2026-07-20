@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -116,6 +117,27 @@ public class KardexZoneService {
                 itemNumber,
                 movementEvent
         );
+    }
+
+    public boolean hasLegacyUnavailableBaseline(
+            String productCod,
+            String variant,
+            String storeCod,
+            String warehouseCod,
+            int requiredStock,
+            Date operationCreationDate
+    ) {
+        if (operationCreationDate == null || requiredStock <= 0) {
+            return false;
+        }
+        return this.kardexZoneRepository.countLegacyUnavailableBaseline(
+                productCod,
+                variant,
+                storeCod,
+                warehouseCod,
+                requiredStock,
+                operationCreationDate
+        ) > 0;
     }
 
     private boolean exists(KardexZoneOperationDto operation) {

@@ -7,6 +7,10 @@ public final class SaleConstants {
     public static final String KARDEX_ZONE_SOURCE_SALE = "sale_head";
     public static final String KARDEX_ZONE_EVENT_CONFIRMATION = "SALE_CONFIRMATION";
     public static final String KARDEX_ZONE_EVENT_EXPIRATION_RELEASE = "SALE_EXPIRATION_RELEASE";
+    public static final String KARDEX_ZONE_SOURCE_CREDIT_NOTE = "credit_note_head";
+    public static final String KARDEX_ZONE_EVENT_CREDIT_NOTE_CONFIRMATION = "CREDIT_NOTE_CONFIRMATION";
+    public static final String KARDEX_ZONE_EVENT_CREDIT_NOTE_ACCEPTED_RETURN = "CREDIT_NOTE_ACCEPTED_RETURN";
+    public static final String KARDEX_ZONE_EVENT_CREDIT_NOTE_REJECTED_STOCK_EXIT = "CREDIT_NOTE_REJECTED_STOCK_EXIT";
 
     /**
      * Status: Pending

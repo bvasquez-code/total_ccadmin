@@ -1,16 +1,7 @@
 package com.ccadmin.app.pucharse.service;
 
-import com.ccadmin.app.product.model.entity.KardexEntity;
-import com.ccadmin.app.product.model.entity.ProductInfoEntity;
-import com.ccadmin.app.product.model.entity.ProductInfoWarehouseEntity;
-import com.ccadmin.app.product.model.entity.id.ProductInfoId;
-import com.ccadmin.app.product.model.entity.id.ProductInfoWarehouseId;
-import com.ccadmin.app.product.shared.KardexShared;
-import com.ccadmin.app.product.shared.ProductInfoShared;
-import com.ccadmin.app.product.shared.ProductInfoWarehouseShared;
 import com.ccadmin.app.product.shared.ProductShared;
 import com.ccadmin.app.pucharse.exception.PucharseException;
-import com.ccadmin.app.pucharse.model.dto.PucharseDetConfirmDto;
 import com.ccadmin.app.pucharse.model.dto.PucharseDetailsDto;
 import com.ccadmin.app.pucharse.model.dto.PucharseRegisterDto;
 import com.ccadmin.app.pucharse.model.entity.*;
@@ -32,9 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class PucharseService extends SessionService {
@@ -51,11 +40,7 @@ public class PucharseService extends SessionService {
     @Autowired
     private PucharseDetDeliveryRepository pucharseDetDeliveryRepository;
     @Autowired
-    private KardexShared kardexShared;
-    @Autowired
-    private ProductInfoWarehouseShared productInfoWarehouseShared;
-    @Autowired
-    private ProductInfoShared productInfoShared;
+    private PurchaseStockReceiptService purchaseStockReceiptService;
     @Autowired
     private WarehouseShared warehouseShared;
     @Autowired
@@ -114,13 +99,10 @@ public class PucharseService extends SessionService {
     @Transactional
     public PucharseDetailsDto confirm(PucharseRegisterDto pucharseRegister) throws Exception {
 
-        PucharseHeadEntity Headboard = this.pucharseHeadRepository.findById(pucharseRegister.PucharseCod).get();
+        PucharseHeadEntity Headboard = this.pucharseHeadRepository.findByIdForUpdate(pucharseRegister.PucharseCod)
+                .orElseThrow(() -> new PucharseException("No existe la compra " + pucharseRegister.PucharseCod));
         List<PucharseDetEntity> DetailList = this.pucharseDetRepository.findAllActive(pucharseRegister.PucharseCod);
-        List<KardexEntity> kardexList = new ArrayList<>();
-        List<ProductInfoEntity> productInfoList = new ArrayList<>();
-        List<ProductInfoWarehouseEntity> productWarehouseList = new ArrayList<>();
         List<PucharseDetDeliveryEntity> DeliveryList = new ArrayList<>();
-        Map<String, KardexEntity> lastMovementByStock = new HashMap<>();
         WarehouseEntity warehouseUnit = new WarehouseEntity();
 
         boolean IsMultipleWarehouse = warehouseShared.IsMultipleWarehouse(Headboard.StoreCod);
@@ -164,8 +146,6 @@ public class PucharseService extends SessionService {
 
             for(var itemWarehouse : detailWarehouseCod )
             {
-                int NumStockBefore = 0;
-
                 itemWarehouse.PucharseCod = pucharseRegister.PucharseCod;
                 itemWarehouse.ItemNumber = item.ItemNumber;
                 itemWarehouse.ProductCod = item.ProductCod;
@@ -176,44 +156,24 @@ public class PucharseService extends SessionService {
                 itemWarehouse.ExpirationDate = item.ExpirationDate;
                 itemWarehouse.addSession(getUserCod(),true);
 
-                String stockKey = this.stockKey(item.ProductCod, item.Variant, Headboard.StoreCod, itemWarehouse.WarehouseCod);
-                KardexEntity kardexLast = lastMovementByStock.computeIfAbsent(
-                        stockKey,
-                        ignored -> this.kardexShared.findLastMovement(item.ProductCod,item.Variant,itemWarehouse.WarehouseCod,Headboard.StoreCod)
-                );
-
-                if( kardexLast != null ) NumStockBefore = kardexLast.NumStockAfter;
-
-                KardexEntity kardex = new KardexEntity(kardexLast,itemWarehouse,Headboard.StoreCod);
-                kardex.addSession(getUserCod(),true);
-                kardexList.add(kardex);
-                lastMovementByStock.put(stockKey, kardex);
-
-                ProductInfoWarehouseEntity productInfoWarehouse = this.productInfoWarehouseShared.findById(
-                        new ProductInfoWarehouseId(item.ProductCod,item.Variant,itemWarehouse.WarehouseCod)
-                );
-                productInfoWarehouse.addStock(itemWarehouse.NumUnit);
-                productInfoWarehouse.addSession(getUserCod(),false);
-                productWarehouseList.add(productInfoWarehouse);
-
                 DeliveryList.add(itemWarehouse);
             }
 
-            ProductInfoEntity productInfo = this.productInfoShared.findById(
-                    new ProductInfoId(item.ProductCod,item.Variant,Headboard.StoreCod)
-            );
-            productInfo.addStock(item.NumUnit);
-            productInfo.addSession(getUserCod(),false);
-            productInfoList.add(productInfo);
+            int receivedQuantity = detailWarehouseCod.stream().mapToInt(e -> e.NumUnit).sum();
+            if (receivedQuantity <= 0) {
+                throw new PucharseException("La cantidad recibida debe ser mayor que cero para el item " + item.ItemNumber);
+            }
+            item.NumUnitDelivered = receivedQuantity;
+            item.IsKardexAffected = "S";
+            item.addSession(getUserCod(), false);
         }
 
+        this.purchaseStockReceiptService.receive(Headboard, DeliveryList, getUserCod());
         Headboard.PurchaseStatus = StatusConst.FINALIZED;
         Headboard.addSession(getUserCod(),false);
         this.pucharseHeadRepository.save(Headboard);
+        this.pucharseDetRepository.saveAll(DetailList);
         this.pucharseDetDeliveryRepository.saveAll(DeliveryList);
-        this.kardexShared.saveAll(kardexList);
-        this.productInfoShared.saveAll(productInfoList);
-        this.productInfoWarehouseShared.saveAll(productWarehouseList);
 
         return findById(Headboard.PucharseCod);
     }
@@ -241,7 +201,8 @@ public class PucharseService extends SessionService {
     @Transactional
     public PucharseHeadEntity endReception(PucharseHeadEntity pucharseHead) throws PucharseException {
 
-        PucharseHeadEntity pucharseHeadDB = this.pucharseHeadRepository.findById(pucharseHead.PucharseCod).get();
+        PucharseHeadEntity pucharseHeadDB = this.pucharseHeadRepository.findByIdForUpdate(pucharseHead.PucharseCod)
+                .orElseThrow(() -> new PucharseException("No existe la compra " + pucharseHead.PucharseCod));
 
         if( !pucharseHeadDB.PurchaseStatus.equals(StatusConst.PENDING) )
         {
@@ -257,9 +218,5 @@ public class PucharseService extends SessionService {
         SearchDto search = new SearchDto(Query,Page,StoreCod);
         this.searchService = new SearchService(this.pucharseHeadRepository);
         return this.searchService.findAllStore(search,10);
-    }
-
-    private String stockKey(String productCod, String variant, String storeCod, String warehouseCod) {
-        return productCod + "|" + variant + "|" + storeCod + "|" + warehouseCod;
     }
 }

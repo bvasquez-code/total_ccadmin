@@ -1,154 +1,189 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
-import { KardexDto } from '../../model/dto/KardexDto';
 import { ActionTableService } from 'src/app/enterprise/shared/interface/ActionTableService';
 import { ActionModalConfirmService } from 'src/app/enterprise/shared/interface/ActionModalConfirmService';
-import { ResponsePageSearch } from 'src/app/enterprise/shared/model/dto/ResponsePageSearch';
-import { KardexService } from '../../service/KardexService';
-import { SearchDto } from 'src/app/enterprise/shared/model/dto/SearchDto';
 import { DataSesionService } from 'src/app/enterprise/compartido/service/datasesion.service';
 import { DataTablaGeneticDto } from 'src/app/enterprise/shared/model/dto/DataTablaGeneticDto';
+import { ResponsePageSearch } from 'src/app/enterprise/shared/model/dto/ResponsePageSearch';
+import { SearchDto } from 'src/app/enterprise/shared/model/dto/SearchDto';
+import { KardexDto } from '../../model/dto/KardexDto';
+import { KardexZoneDto } from '../../model/dto/KardexZoneDto';
+import { KardexZoneSearchDto } from '../../model/dto/KardexZoneSearchDto';
+import { KardexService } from '../../service/KardexService';
+
+type KardexView = 'total' | 'zone';
 
 @Component({
   selector: 'app-listkardex',
   templateUrl: './listkardex.component.html'
 })
-export class ListkardexComponent implements OnInit,ActionTableService<KardexDto>,ActionModalConfirmService{
+export class ListkardexComponent implements OnInit, ActionTableService<any>, ActionModalConfirmService {
 
   @ViewChild('txtSearch') txtSearch!: ElementRef<HTMLInputElement>;
-  
-  responsePageSearch : ResponsePageSearch<KardexDto> = new ResponsePageSearch();
-  dataTablaGenetic : DataTablaGeneticDto<KardexDto> = new DataTablaGeneticDto();
-  KardexSelect : KardexDto = new KardexDto();
 
+  viewMode: KardexView = 'total';
+  zoneFilter: string = '';
+  typeOperationFilter: string = '';
+  dataTablaGenetic: DataTablaGeneticDto<KardexDto> = new DataTablaGeneticDto();
+  dataTablaGeneticZone: DataTablaGeneticDto<KardexZoneDto> = new DataTablaGeneticDto();
 
   constructor(
-    private kardexService : KardexService,
-    private dataSesionService : DataSesionService,
-  ){
-
+    private kardexService: KardexService,
+    private dataSesionService: DataSesionService
+  ) {
   }
 
   ngOnInit(): void {
-    this.findAll(1,"");
+    this.findAll(1, '');
   }
 
-  actionModal(ModalId: string): void {
-    throw new Error('Method not implemented.');
-  }
-  filter(Page: number): void {
-    this.findAll(Page,this.txtSearch.nativeElement.value);
+  actionModal(_modalId: string): void {
   }
 
-  loadingTable(responsePageSearch: ResponsePageSearch<KardexDto>): void {
-    
-    const data : DataTablaGeneticDto<KardexDto> = new DataTablaGeneticDto();
+  filter(page: number): void {
+    this.findAll(page, this.txtSearch.nativeElement.value);
+  }
 
-    const viewkardexID = (kardexDto : KardexDto) =>{
-      return kardexDto.kardex.kardexID;
+  loadingTable(response: ResponsePageSearch<any>): void {
+    if (this.viewMode === 'zone') {
+      this.loadingZoneTable(response as ResponsePageSearch<KardexZoneDto>);
+      return;
     }
-    const viewProduct = (kardexDto : KardexDto) =>{
-      return kardexDto.product.ProductCod +" - "+kardexDto.product.ProductName;
-    }
-    const viewCreationDate = (kardexDto : KardexDto) =>{
-      return kardexDto.kardex.CreationDate;
-    }
-    const viewOperationCod = (kardexDto : KardexDto) =>{
-      return kardexDto.kardex.OperationCod;
-    }
-    const viewNumStockMoved = (kardexDto : KardexDto) =>{
+    this.loadingTotalTable(response as ResponsePageSearch<KardexDto>);
+  }
 
-      let signo = (kardexDto.kardex.TypeOperation === "R") ? "-" : "+";
+  changeView(view: KardexView): void {
+    if (this.viewMode === view) {
+      return;
+    }
+    this.viewMode = view;
+    this.findAll(1, this.txtSearch.nativeElement.value);
+  }
 
-      return signo + kardexDto.kardex.NumStockMoved;
+  async findAll(page: number, query: string): Promise<void> {
+    if (this.viewMode === 'zone') {
+      await this.findAllZone(page, query);
+      return;
     }
 
-    const viewNumStockBefore = (kardexDto : KardexDto) =>{
+    const search: SearchDto = new SearchDto();
+    search.Page = page;
+    search.Query = query;
+    search.StoreCod = this.storeCod();
+    const response = await this.kardexService.FindAll(search);
 
-      return kardexDto.kardex.NumStockBefore;
+    if (!response.ErrorStatus) {
+      this.loadingTotalTable(response.Data);
     }
-    const viewNumStockAfter = (kardexDto : KardexDto) =>{
+  }
 
-      return kardexDto.kardex.NumStockAfter;
-    }
-    const viewLotNumber = (kardexDto : KardexDto) =>{
+  private async findAllZone(page: number, query: string): Promise<void> {
+    const search: KardexZoneSearchDto = new KardexZoneSearchDto();
+    search.Page = page;
+    search.Query = query;
+    search.StoreCod = this.storeCod();
+    search.ZoneStockMoved = this.zoneFilter;
+    search.TypeOperation = this.typeOperationFilter;
+    const response = await this.kardexService.FindAllZone(search);
 
-      return kardexDto.kardex.LotNumber && kardexDto.kardex.LotNumber.trim() ? kardexDto.kardex.LotNumber : "SN";
+    if (!response.ErrorStatus) {
+      this.loadingZoneTable(response.Data);
     }
-    const viewExpirationDate = (kardexDto : KardexDto) =>{
+  }
 
-      return this.formatDateOnly(kardexDto.kardex.ExpirationDate);
-    }
-    const viewTypeOperation = (kardexDto : KardexDto) =>{
-
-      return kardexDto.dataTypeOperation.ConfigVal;
-    }
+  private loadingTotalTable(response: ResponsePageSearch<KardexDto>): void {
+    const data: DataTablaGeneticDto<KardexDto> = new DataTablaGeneticDto();
 
     data.init(
       [
-        { Name :  "Id" , key : "viewkardexID", FunctionKey : viewkardexID } ,
-        { Name :  "Producto" , key : "viewProduct" , FunctionKey : viewProduct } ,
-        { Name :  "Stock Anter" , key : "viewNumStockBefore" , FunctionKey : viewNumStockBefore } ,
-        { Name :  "Movimiento Stock" , key : "viewNumStockMoved" , FunctionKey : viewNumStockMoved } ,
-        { Name :  "Stock Resultante" , key : "NumStockAfter" , FunctionKey : viewNumStockAfter } ,
-        { Name :  "Lote" , key : "viewLotNumber" , FunctionKey : viewLotNumber } ,
-        { Name :  "Fecha venc." , key : "viewExpirationDate" , FunctionKey : viewExpirationDate } ,
-        { Name :  "Tipo de operación" , key : "viewTypeOperation" , FunctionKey : viewTypeOperation} ,
-        { Name :  "Cod. Operación" , key : "viewOperationCod" , FunctionKey : viewOperationCod} ,
-        { Name :  "Fecha de venta", key : "viewCreationDate" , FunctionKey : viewCreationDate , IsDate : true },
-        { Name :  "Opciones" , 
-          ColumnAction : true , 
-          Id : ["Id"] , 
-          Options : [
-            { Type : "Modal" , Name : "fa fa-search", ID : "modal_operation"  }
-          ] 
-        }
+        { Name: 'Id', key: 'id', FunctionKey: (item: KardexDto) => item.kardex.kardexID },
+        { Name: 'Producto', key: 'product', FunctionKey: (item: KardexDto) => this.productLabel(item) },
+        { Name: 'Stock anterior', key: 'before', FunctionKey: (item: KardexDto) => item.kardex.NumStockBefore },
+        { Name: 'Movimiento', key: 'movement', FunctionKey: (item: KardexDto) => this.signedMovement(item.kardex.TypeOperation, item.kardex.NumStockMoved) },
+        { Name: 'Stock resultante', key: 'after', FunctionKey: (item: KardexDto) => item.kardex.NumStockAfter },
+        { Name: 'Lote', key: 'lot', FunctionKey: (item: KardexDto) => this.lotLabel(item.kardex.LotNumber) },
+        { Name: 'Fecha venc.', key: 'expiration', FunctionKey: (item: KardexDto) => this.formatDateOnly(item.kardex.ExpirationDate) },
+        { Name: 'Tipo de operación', key: 'type', FunctionKey: (item: KardexDto) => item.dataTypeOperation?.ConfigVal || item.kardex.TypeOperation },
+        { Name: 'Cod. operación', key: 'operation', FunctionKey: (item: KardexDto) => item.kardex.OperationCod },
+        { Name: 'Fecha', key: 'date', FunctionKey: (item: KardexDto) => item.kardex.CreationDate, IsDate: true }
       ],
-      {
-        data : responsePageSearch
-      },
-      "Movimientos de kardex"
+      { data: response },
+      'Movimientos de Kardex total'
     );
 
     this.dataTablaGenetic = data;
-
   }
-  
-  async findAll(Page: number, Query: string): Promise<void> {
 
-    const search: SearchDto = new SearchDto();
-    search.Page = Page;
-    search.Query = Query;
-    search.StoreCod = this.dataSesionService.getSessionStorageDto().StoreCod;
+  private loadingZoneTable(response: ResponsePageSearch<KardexZoneDto>): void {
+    const data: DataTablaGeneticDto<KardexZoneDto> = new DataTablaGeneticDto();
 
-    const rpt = await this.kardexService.FindAll(search);
+    data.init(
+      [
+        { Name: 'Id', key: 'id', FunctionKey: (item: KardexZoneDto) => item.kardexZone.KardexZoneID },
+        { Name: 'Producto', key: 'product', FunctionKey: (item: KardexZoneDto) => this.zoneProductLabel(item) },
+        { Name: 'Almacén', key: 'warehouse', FunctionKey: (item: KardexZoneDto) => item.kardexZone.WarehouseCod },
+        { Name: 'Zona', key: 'zone', FunctionKey: (item: KardexZoneDto) => this.zoneLabel(item.kardexZone.ZoneStockMoved) },
+        { Name: 'Saldo anterior', key: 'before', FunctionKey: (item: KardexZoneDto) => item.kardexZone.NumZoneStockBefore },
+        { Name: 'Movimiento', key: 'movement', FunctionKey: (item: KardexZoneDto) => this.signedMovement(item.kardexZone.TypeOperation, item.kardexZone.NumStockMoved) },
+        { Name: 'Saldo resultante', key: 'after', FunctionKey: (item: KardexZoneDto) => item.kardexZone.NumZoneStockAfter },
+        { Name: 'Evento', key: 'event', FunctionKey: (item: KardexZoneDto) => item.kardexZone.MovementEvent },
+        { Name: 'Documento origen', key: 'source', FunctionKey: (item: KardexZoneDto) => `${item.kardexZone.SourceTable} / ${item.kardexZone.OperationCod}` },
+        { Name: 'Ítem', key: 'item', FunctionKey: (item: KardexZoneDto) => item.kardexZone.ItemNumber },
+        { Name: 'Lote', key: 'lot', FunctionKey: (item: KardexZoneDto) => this.lotLabel(item.kardexZone.LotNumber) },
+        { Name: 'Fecha', key: 'date', FunctionKey: (item: KardexZoneDto) => item.kardexZone.CreationDate, IsDate: true }
+      ],
+      { data: response },
+      'Movimientos de Kardex por zonas'
+    );
 
-    if( !rpt.ErrorStatus )
-    {
-      this.responsePageSearch = rpt.Data;  
-
-      this.loadingTable(this.responsePageSearch);
-    }
+    this.dataTablaGeneticZone = data;
   }
-  getDataRow(item: any): void {
-    console.log({ item : item });
+
+  getDataRow(_item: any): void {
+  }
+
+  private productLabel(item: KardexDto): string {
+    return item.product
+      ? `${item.product.ProductCod} - ${item.product.ProductName}`
+      : item.kardex.ProductCod;
+  }
+
+  private zoneProductLabel(item: KardexZoneDto): string {
+    return item.product
+      ? `${item.product.ProductCod} - ${item.product.ProductName}`
+      : item.kardexZone.ProductCod;
+  }
+
+  private signedMovement(typeOperation: string, quantity: number): string {
+    return `${typeOperation === 'R' ? '-' : '+'}${quantity}`;
+  }
+
+  private zoneLabel(zone: string): string {
+    const labels: { [key: string]: string } = {
+      PHYSICAL: 'Stock físico',
+      RESERVED: 'Stock reservado',
+      UNAVAILABLE: 'Stock no disponible'
+    };
+    return labels[zone] || zone;
+  }
+
+  private lotLabel(lotNumber: string): string {
+    return lotNumber && lotNumber.trim() ? lotNumber : 'SN';
+  }
+
+  private storeCod(): string {
+    return this.dataSesionService.getSessionStorageDto().StoreCod;
   }
 
   private formatDateOnly(value: any): string {
     if (!value) {
-      return "";
+      return '';
     }
-
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) {
-      return "";
+      return '';
     }
-
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const year = date.getFullYear();
-
-    return `${day}/${month}/${year}`;
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month}/${date.getFullYear()}`;
   }
-  
-
 }

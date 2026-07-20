@@ -5,7 +5,7 @@
 --   tables/table_warehouse.sql
 --
 -- Crea un movimiento inicial 0 -> saldo actual por cada zona con stock.
--- Es idempotente: no duplica una inicializacion ya registrada.
+-- Es idempotente: no crea una linea base si la zona ya tiene cualquier movimiento.
 
 DROP PROCEDURE IF EXISTS `p_initialize_kardex_zone`;
 
@@ -170,10 +170,7 @@ BEGIN
     WHERE NOT EXISTS (
         SELECT 1
         FROM kardex_zone kz
-        WHERE kz.SourceTable = 'no_table'
-          AND kz.OperationCod = '00000000'
-          AND kz.MovementEvent = 'INITIALIZATION'
-          AND kz.ProductCod = stock.ProductCod
+        WHERE kz.ProductCod = stock.ProductCod
           AND kz.Variant = stock.Variant
           AND kz.StoreCod = stock.StoreCod
           AND kz.WarehouseCod = stock.WarehouseCod

@@ -23,6 +23,7 @@ BEGIN
           `StoreCodDest` varchar(4) NOT NULL COMMENT 'Codigo del local destino (FK store.StoreCod)',
           `StoreCodRequestedBy` varchar(4) DEFAULT NULL COMMENT 'Codigo del local que solicita/ordena la transferencia (ej. super local central). Puede ser distinto a origen/destino',
           `TransferStatus` char(1) NOT NULL DEFAULT 'P' COMMENT 'Estado del proceso: P=Pending, T=Direct transfer draft, C=Confirmed, D=Dispatched, F=Finalized, R=Rejected, X=Cancelled',
+          `ReceiveStatus` char(1) NOT NULL DEFAULT 'P' COMMENT 'Estado de recepcion: P=Pending, C=Confirmed, R=Rejected, X=Cancelled',
           `DispatchDate` datetime DEFAULT NULL COMMENT 'Fecha/hora real de despacho desde origen',
           `ArrivalDate` datetime DEFAULT NULL COMMENT 'Fecha/hora real de recepcion/llegada a destino',
           `UserOriginConfirm` varchar(16) DEFAULT NULL COMMENT 'Usuario que confirma/autoriza la salida en el local origen',
@@ -53,6 +54,17 @@ BEGIN
         -- =============================================
         -- CASO: LA TABLA YA EXISTE -> APLICAR ALTERS
         -- =============================================
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'transfer_request_head'
+            AND column_name = 'ReceiveStatus'
+        ) THEN
+            ALTER TABLE `transfer_request_head`
+                ADD COLUMN `ReceiveStatus` char(1) NOT NULL DEFAULT 'P'
+                COMMENT 'Estado de recepcion: P=Pending, C=Confirmed, R=Rejected, X=Cancelled'
+                AFTER `TransferStatus`;
+            SELECT 'Columna ReceiveStatus agregada exitosamente.' AS Mensaje;
+        END IF;
 
         IF NOT EXISTS (
             SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'transfer_request_head'

@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Date;
 
 @Service
 public class KardexZoneShared {
@@ -29,6 +30,24 @@ public class KardexZoneShared {
                 operationCod,
                 itemNumber,
                 movementEvent
+        );
+    }
+
+    public boolean hasLegacyUnavailableBaseline(
+            String productCod,
+            String variant,
+            String storeCod,
+            String warehouseCod,
+            int requiredStock,
+            Date operationCreationDate
+    ) {
+        return this.kardexZoneService.hasLegacyUnavailableBaseline(
+                productCod,
+                variant,
+                storeCod,
+                warehouseCod,
+                requiredStock,
+                operationCreationDate
         );
     }
 }

@@ -8,9 +8,17 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface CreditNoteHeadRepository extends JpaRepository<CreditNoteHeadEntity,String>, CcAdminRepository<CreditNoteHeadEntity,String> {
+
+    @Query(value = """
+            select * from credit_note_head
+            where CreditNoteCod = :CreditNoteCod
+            for update
+            """, nativeQuery = true)
+    Optional<CreditNoteHeadEntity> findByIdForUpdate(@Param("CreditNoteCod") String creditNoteCod);
 
     /*@Query(value = """
             SELECT

@@ -20,6 +20,7 @@ public class TransferRequestHeadEntity extends AuditTableEntity implements Seria
     public String StoreCodDest;
     public String StoreCodRequestedBy;
     public String TransferStatus;
+    public String ReceiveStatus;
     public Date DispatchDate;
     public Date ArrivalDate;
     public String UserOriginConfirm;

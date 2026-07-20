@@ -35,6 +35,7 @@ public interface TransferHeadRepository extends JpaRepository<TransferHeadEntity
             select th.* from transfer_head th
             where th.TransferCod = :transferCod
             and th.TypeOperation = :typeOperation
+            for update
             """, nativeQuery = true)
     TransferHeadEntity findByTransferCodAndTypeOperationForUpdate(
             @Param("transferCod") String transferCod,

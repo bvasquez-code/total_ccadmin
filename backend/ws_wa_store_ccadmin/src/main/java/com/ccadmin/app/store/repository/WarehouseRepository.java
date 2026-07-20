@@ -15,7 +15,9 @@ public interface WarehouseRepository extends JpaRepository<WarehouseEntity,Strin
     public int countNumberWarehouse(@Param("StoreCod") String StoreCod);
 
     @Query(value = """
-            select *  from warehouse w where w.StoreCod = :StoreCod and Status = 'A'
+            select * from warehouse w
+            where w.StoreCod = :StoreCod and Status = 'A'
+            order by w.WarehouseCod
             """,nativeQuery = true)
     public List<WarehouseEntity> findByStore(@Param("StoreCod") String StoreCod);
 

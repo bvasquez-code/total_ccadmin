@@ -1,43 +1,85 @@
 <div role="main" class="main-content">
-
-    <div class="page-content container container-plus">
-
-        <div class="card-header">
-            <h3 class="card-title text-125 text-primary-d2">
-                <i class="far fa-edit text-dark-l3 mr-1"></i>
-                Solicitudes de venta
-            </h3>
-        </div>
-
-        <div class="row">
-            <div class="col-12">
-                <div class="card dcard">
-                    <div class="card-body px-1 px-md-3">
-                        <div autocomplete="off">
-                            <div class="d-flex justify-content-between flex-column flex-sm-row mb-3 px-2 px-sm-0">
-
-                                <div class="pos-rel ml-sm-auto mr-sm-2 order-last order-sm-0">
-                                    <i class="fa fa-search position-lc ml-25 text-primary-m1"></i>
-                                    <input type="text" 
-                                        class="form-control w-100 pl-45 radius-1 brc-primary-m4" 
-                                        placeholder="Buscar ..."
-                                        #txtSearch
-                                    >
-                                </div>
-                            
-                                <div class="mb-2 mb-sm-0">
-                                    <a class="btn px-4 btn-primary mb-1" (click)="filter(1)">
-                                        Buscar
-                                    </a>
-                                </div>
-                            </div>
-                            <app-table [data]="dataTablaGenetic" [action]="this"></app-table>
-                        </div>               
-                    </div>
-                </div>
-            </div>
-        </div>
-        
+  <div class="page-content container container-plus">
+    <div class="card-header">
+      <h3 class="card-title text-125 text-primary-d2">
+        <i class="fa fa-exchange-alt text-dark-l3 mr-1"></i>
+        Kardex de inventario
+      </h3>
     </div>
 
+    <div class="row">
+      <div class="col-12">
+        <div class="card dcard">
+          <div class="card-body px-1 px-md-3">
+            <div class="btn-group mb-3" role="group" aria-label="Tipo de Kardex">
+              <button type="button"
+                      class="btn"
+                      [ngClass]="viewMode === 'total' ? 'btn-primary' : 'btn-light'"
+                      (click)="changeView('total')">
+                Kardex total
+              </button>
+              <button type="button"
+                      class="btn"
+                      [ngClass]="viewMode === 'zone' ? 'btn-primary' : 'btn-light'"
+                      (click)="changeView('zone')">
+                Kardex por zonas
+              </button>
+            </div>
+
+            <div class="row align-items-end mb-3">
+              <div class="col-12 col-lg-4 mb-2 mb-lg-0">
+                <label class="text-90 text-grey-m1 mb-1">Buscar</label>
+                <div class="pos-rel">
+                  <i class="fa fa-search position-lc ml-25 text-primary-m1"></i>
+                  <input type="text"
+                         class="form-control w-100 pl-45 radius-1 brc-primary-m4"
+                         placeholder="Producto, operación, evento, almacén o lote"
+                         #txtSearch
+                         (keyup.enter)="filter(1)">
+                </div>
+              </div>
+
+              <ng-container *ngIf="viewMode === 'zone'">
+                <div class="col-12 col-md-4 col-lg-3 mb-2 mb-lg-0">
+                  <label class="text-90 text-grey-m1 mb-1">Zona de stock</label>
+                  <select class="form-control" [(ngModel)]="zoneFilter">
+                    <option value="">Todas las zonas</option>
+                    <option value="PHYSICAL">Stock físico</option>
+                    <option value="RESERVED">Stock reservado</option>
+                    <option value="UNAVAILABLE">Stock no disponible</option>
+                  </select>
+                </div>
+                <div class="col-12 col-md-4 col-lg-3 mb-2 mb-lg-0">
+                  <label class="text-90 text-grey-m1 mb-1">Tipo de operación</label>
+                  <select class="form-control" [(ngModel)]="typeOperationFilter">
+                    <option value="">Suma y resta</option>
+                    <option value="S">Suma</option>
+                    <option value="R">Resta</option>
+                  </select>
+                </div>
+              </ng-container>
+
+              <div class="col-12 col-md-4 col-lg-2">
+                <button type="button" class="btn btn-primary btn-block" (click)="filter(1)">
+                  <i class="fa fa-search mr-1"></i> Buscar
+                </button>
+              </div>
+            </div>
+
+            <app-table
+              *ngIf="viewMode === 'total'"
+              [data]="dataTablaGenetic"
+              [action]="this">
+            </app-table>
+
+            <app-table
+              *ngIf="viewMode === 'zone'"
+              [data]="dataTablaGeneticZone"
+              [action]="this">
+            </app-table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

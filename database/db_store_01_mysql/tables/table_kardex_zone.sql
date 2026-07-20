@@ -37,6 +37,7 @@ BEGIN
           PRIMARY KEY (`KardexZoneID`),
           KEY `idx_kardex_zone_source_item` (`SourceTable`,`OperationCod`,`ItemNumber`,`MovementEvent`),
           KEY `idx_kardex_zone_product` (`ProductCod`,`Variant`,`StoreCod`,`WarehouseCod`,`ZoneStockMoved`,`KardexZoneID`),
+          KEY `idx_kardex_zone_search` (`StoreCod`,`ZoneStockMoved`,`TypeOperation`,`KardexZoneID`),
           KEY `fk_kardex_zone_store` (`StoreCod`),
           KEY `fk_kardex_zone_warehouse` (`WarehouseCod`),
           CONSTRAINT `fk_kardex_zone_product` FOREIGN KEY (`ProductCod`) REFERENCES `product` (`ProductCod`),
@@ -110,6 +111,16 @@ BEGIN
                     (`TypeOperation` = _utf8mb4'S' AND `NumZoneStockAfter` > `NumZoneStockBefore`)
                     OR (`TypeOperation` = _utf8mb4'R' AND `NumZoneStockAfter` < `NumZoneStockBefore`)
                 );
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.statistics
+            WHERE table_schema = DATABASE()
+              AND table_name = 'kardex_zone'
+              AND index_name = 'idx_kardex_zone_search'
+        ) THEN
+            ALTER TABLE `kardex_zone`
+                ADD KEY `idx_kardex_zone_search` (`StoreCod`,`ZoneStockMoved`,`TypeOperation`,`KardexZoneID`);
         END IF;
 
         IF NOT EXISTS (
