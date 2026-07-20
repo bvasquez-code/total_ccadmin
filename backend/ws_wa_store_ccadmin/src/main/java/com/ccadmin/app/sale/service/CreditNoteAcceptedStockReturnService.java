@@ -1,9 +1,8 @@
 package com.ccadmin.app.sale.service;
 
 import com.ccadmin.app.product.model.constants.KardexZoneConstants;
-import com.ccadmin.app.product.model.dto.KardexZoneMovementDto;
-import com.ccadmin.app.product.model.dto.KardexZoneOperationDto;
 import com.ccadmin.app.product.model.entity.KardexZoneEntity;
+import com.ccadmin.app.product.model.entity.ProductInfoWarehouseEntity;
 import com.ccadmin.app.product.shared.KardexZoneShared;
 import com.ccadmin.app.sale.exception.SaleException;
 import com.ccadmin.app.sale.model.constants.SaleConstants;
@@ -14,7 +13,10 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class CreditNoteAcceptedStockReturnService {
@@ -31,6 +33,8 @@ public class CreditNoteAcceptedStockReturnService {
     ) throws SaleException {
         this.validate(creditNoteHead, detailList, warehouse);
 
+        List<KardexZoneEntity> kardexZoneList = new ArrayList<>();
+        Map<String, ProductInfoWarehouseEntity> stockCursorByWarehouse = new HashMap<>();
         for (CreditNoteDetEntity detail : detailList) {
             int returned = detail.NumUnitStockReturned == null ? 0 : detail.NumUnitStockReturned;
             if (returned < 0 || returned > detail.NumUnit) {
@@ -41,11 +45,27 @@ public class CreditNoteAcceptedStockReturnService {
             }
 
             this.validateUnavailableStockOrigin(creditNoteHead, detail, warehouse);
-            this.kardexZoneShared.apply(
-                    this.buildAcceptedReturn(creditNoteHead, detail, warehouse, returned),
-                    userCod
+            if (this.kardexZoneShared.isApplied(
+                    SaleConstants.KARDEX_ZONE_SOURCE_CREDIT_NOTE,
+                    creditNoteHead.CreditNoteCod, detail.ItemNumber,
+                    SaleConstants.KARDEX_ZONE_EVENT_CREDIT_NOTE_ACCEPTED_RETURN
+            )) {
+                continue;
+            }
+            String key = detail.ProductCod + "|" + detail.Variant + "|"
+                    + creditNoteHead.StoreCod + "|" + warehouse.WarehouseCod;
+            ProductInfoWarehouseEntity stockCursor = stockCursorByWarehouse.computeIfAbsent(
+                    key,
+                    ignored -> this.kardexZoneShared.findStockForUpdate(
+                            detail.ProductCod, detail.Variant,
+                            creditNoteHead.StoreCod, warehouse.WarehouseCod
+                    )
             );
+            kardexZoneList.addAll(KardexZoneEntity.buildCreditNoteAcceptedReturn(
+                    creditNoteHead, detail, warehouse, returned, stockCursor, userCod
+            ));
         }
+        this.kardexZoneShared.saveAll(kardexZoneList);
     }
 
     private void validateUnavailableStockOrigin(
@@ -85,30 +105,6 @@ public class CreditNoteAcceptedStockReturnService {
                             + " de la nota de credito " + creditNoteHead.CreditNoteCod
             );
         }
-    }
-
-    private KardexZoneOperationDto buildAcceptedReturn(
-            CreditNoteHeadEntity creditNoteHead,
-            CreditNoteDetEntity detail,
-            WarehouseEntity warehouse,
-            int returned
-    ) {
-        KardexZoneOperationDto operation = new KardexZoneOperationDto();
-        operation.OperationCod = creditNoteHead.CreditNoteCod;
-        operation.ItemNumber = detail.ItemNumber;
-        operation.SourceTable = SaleConstants.KARDEX_ZONE_SOURCE_CREDIT_NOTE;
-        operation.MovementEvent = SaleConstants.KARDEX_ZONE_EVENT_CREDIT_NOTE_ACCEPTED_RETURN;
-        operation.ProductCod = detail.ProductCod;
-        operation.Variant = detail.Variant;
-        operation.StoreCod = creditNoteHead.StoreCod;
-        operation.WarehouseCod = warehouse.WarehouseCod;
-        operation.LotNumber = detail.LotNumber;
-        operation.ExpirationDate = detail.ExpirationDate;
-        operation.MovementList = List.of(
-                new KardexZoneMovementDto(KardexZoneConstants.ZONE_UNAVAILABLE, returned * -1),
-                new KardexZoneMovementDto(KardexZoneConstants.ZONE_PHYSICAL, returned)
-        );
-        return operation;
     }
 
     private void validate(

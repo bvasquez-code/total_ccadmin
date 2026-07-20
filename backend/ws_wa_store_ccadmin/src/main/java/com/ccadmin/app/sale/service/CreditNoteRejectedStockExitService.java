@@ -1,10 +1,9 @@
 package com.ccadmin.app.sale.service;
 
 import com.ccadmin.app.product.model.constants.KardexZoneConstants;
-import com.ccadmin.app.product.model.dto.KardexZoneMovementDto;
-import com.ccadmin.app.product.model.dto.KardexZoneOperationDto;
 import com.ccadmin.app.product.model.entity.KardexEntity;
 import com.ccadmin.app.product.model.entity.KardexZoneEntity;
+import com.ccadmin.app.product.model.entity.ProductInfoWarehouseEntity;
 import com.ccadmin.app.product.shared.KardexShared;
 import com.ccadmin.app.product.shared.KardexZoneShared;
 import com.ccadmin.app.sale.exception.SaleException;
@@ -38,6 +37,10 @@ public class CreditNoteRejectedStockExitService {
     ) throws SaleException {
         this.validate(creditNoteHead, detailList, warehouse);
 
+        List<KardexZoneEntity> kardexZoneList = this.createKardexZoneList(
+                creditNoteHead, detailList, warehouse, userCod
+        );
+        List<KardexZoneEntity> savedKardexZoneList = this.kardexZoneShared.saveAll(kardexZoneList);
         List<KardexEntity> kardexList = new ArrayList<>();
         Map<String, KardexEntity> lastMovementByStock = new HashMap<>();
 
@@ -52,11 +55,7 @@ public class CreditNoteRejectedStockExitService {
                 continue;
             }
 
-            this.validateUnavailableStockOrigin(creditNoteHead, detail, warehouse);
-            if (this.kardexZoneShared.apply(
-                    this.buildRejectedExit(creditNoteHead, detail, warehouse, rejected),
-                    userCod
-            ).isEmpty()) {
+            if (!this.wasSaved(savedKardexZoneList, detail.ItemNumber)) {
                 continue;
             }
 
@@ -86,6 +85,52 @@ public class CreditNoteRejectedStockExitService {
             this.kardexShared.saveAllLedgerOnly(kardexList);
         }
         return kardexList;
+    }
+
+    private List<KardexZoneEntity> createKardexZoneList(
+            CreditNoteHeadEntity head, List<CreditNoteDetEntity> detailList,
+            WarehouseEntity warehouse, String userCod
+    ) throws SaleException {
+        List<KardexZoneEntity> result = new ArrayList<>();
+        Map<String, ProductInfoWarehouseEntity> stockCursorByWarehouse = new HashMap<>();
+        for (CreditNoteDetEntity detail : detailList) {
+            int returned = detail.NumUnitStockReturned == null ? 0 : detail.NumUnitStockReturned;
+            if (returned < 0 || returned > detail.NumUnit) {
+                throw new SaleException("Cantidad de retorno invalida para el producto " + detail.ProductCod);
+            }
+            int rejected = detail.NumUnit - returned;
+            if (rejected == 0) {
+                continue;
+            }
+            this.validateUnavailableStockOrigin(head, detail, warehouse);
+            if (this.kardexZoneShared.isApplied(
+                    SaleConstants.KARDEX_ZONE_SOURCE_CREDIT_NOTE,
+                    head.CreditNoteCod, detail.ItemNumber,
+                    SaleConstants.KARDEX_ZONE_EVENT_CREDIT_NOTE_REJECTED_STOCK_EXIT
+            )) {
+                continue;
+            }
+            String key = this.stockKey(head, detail, warehouse);
+            ProductInfoWarehouseEntity stockCursor = stockCursorByWarehouse.computeIfAbsent(
+                    key,
+                    ignored -> this.kardexZoneShared.findStockForUpdate(
+                            detail.ProductCod, detail.Variant,
+                            head.StoreCod, warehouse.WarehouseCod
+                    )
+            );
+            result.addAll(KardexZoneEntity.buildCreditNoteRejectedStockExit(
+                    head, detail, warehouse, rejected, stockCursor, userCod
+            ));
+        }
+        return result;
+    }
+
+    private boolean wasSaved(List<KardexZoneEntity> movementList, int itemNumber) {
+        return movementList.stream().anyMatch(movement ->
+                movement.ItemNumber == itemNumber
+                        && SaleConstants.KARDEX_ZONE_EVENT_CREDIT_NOTE_REJECTED_STOCK_EXIT
+                        .equals(movement.MovementEvent)
+        );
     }
 
     private void validateUnavailableStockOrigin(
@@ -125,29 +170,6 @@ public class CreditNoteRejectedStockExitService {
                             + " de la nota de credito " + creditNoteHead.CreditNoteCod
             );
         }
-    }
-
-    private KardexZoneOperationDto buildRejectedExit(
-            CreditNoteHeadEntity creditNoteHead,
-            CreditNoteDetEntity detail,
-            WarehouseEntity warehouse,
-            int rejected
-    ) {
-        KardexZoneOperationDto operation = new KardexZoneOperationDto();
-        operation.OperationCod = creditNoteHead.CreditNoteCod;
-        operation.ItemNumber = detail.ItemNumber;
-        operation.SourceTable = SaleConstants.KARDEX_ZONE_SOURCE_CREDIT_NOTE;
-        operation.MovementEvent = SaleConstants.KARDEX_ZONE_EVENT_CREDIT_NOTE_REJECTED_STOCK_EXIT;
-        operation.ProductCod = detail.ProductCod;
-        operation.Variant = detail.Variant;
-        operation.StoreCod = creditNoteHead.StoreCod;
-        operation.WarehouseCod = warehouse.WarehouseCod;
-        operation.LotNumber = detail.LotNumber;
-        operation.ExpirationDate = detail.ExpirationDate;
-        operation.MovementList = List.of(
-                new KardexZoneMovementDto(KardexZoneConstants.ZONE_UNAVAILABLE, rejected * -1)
-        );
-        return operation;
     }
 
     private void validate(

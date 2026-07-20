@@ -1,8 +1,11 @@
 package com.ccadmin.app.sale.service;
 
 import com.ccadmin.app.product.model.entity.KardexEntity;
+import com.ccadmin.app.product.model.entity.KardexZoneEntity;
+import com.ccadmin.app.product.model.entity.ProductInfoWarehouseEntity;
 import com.ccadmin.app.product.service.ProductRankingService;
 import com.ccadmin.app.product.shared.KardexShared;
+import com.ccadmin.app.product.shared.KardexZoneShared;
 import com.ccadmin.app.sale.exception.SaleBuildException;
 import com.ccadmin.app.sale.exception.SaleException;
 import com.ccadmin.app.sale.model.constants.SaleConstants;
@@ -65,7 +68,7 @@ public class SaleCreateService extends SessionService {
     @Autowired
     private SaleTaxCalculationService saleTaxCalculationService;
     @Autowired
-    private SaleStockConfirmationService saleStockConfirmationService;
+    private KardexZoneShared kardexZoneShared;
 
     @Transactional
     public SaleDetailDto save(PresaleDetailDto presaleDetail) throws SaleException, SaleBuildException {
@@ -262,7 +265,7 @@ public class SaleCreateService extends SessionService {
         }
 
         List<KardexEntity> kardexList = this.createkardexList(saleDetWarehouseList,saleHead);
-        this.saleStockConfirmationService.consumeReservation(saleHead, saleDetWarehouseList, getUserCod());
+        List<KardexZoneEntity> kardexZoneList = this.createKardexZoneList(saleDetWarehouseList, saleHead);
 
         saleHead.SaleStatus = SaleConstants.CONFIRMED;
         saleHead.addSession(getUserCod());
@@ -271,6 +274,7 @@ public class SaleCreateService extends SessionService {
 
         this.saleHeadRepository.save(saleHead);
         this.kardexShared.saveAllLedgerOnly(kardexList);
+        this.kardexZoneShared.saveAll(kardexZoneList);
         this.saleDocumentRepository.save(saleDocument);
 
         SaleDetailDto saleDetail = this.saleSearchService.findById(saleHead.SaleCod);
@@ -323,6 +327,53 @@ public class SaleCreateService extends SessionService {
             lastMovementByStock.put(key, kardex);
         }
         return kardexList;
+    }
+
+    private List<KardexZoneEntity> createKardexZoneList(
+            List<SaleDetWarehouseEntity> detailList,
+            SaleHeadEntity saleHead
+    ) throws SaleException {
+        if (saleHead.PresaleCod == null || saleHead.PresaleCod.isBlank()) {
+            throw new SaleException("La venta no tiene una preventa reservada asociada");
+        }
+
+        List<KardexZoneEntity> result = new ArrayList<>();
+        Map<String, ProductInfoWarehouseEntity> stockCursorByWarehouse = new HashMap<>();
+        for (SaleDetWarehouseEntity detail : detailList) {
+            this.validateReservation(saleHead, detail);
+            String key = this.stockKey(
+                    detail.ProductCod, detail.Variant, saleHead.StoreCod, detail.WarehouseCod
+            );
+            ProductInfoWarehouseEntity stockCursor = stockCursorByWarehouse.computeIfAbsent(
+                    key,
+                    ignored -> this.kardexZoneShared.findStockForUpdate(
+                            detail.ProductCod, detail.Variant, saleHead.StoreCod, detail.WarehouseCod
+                    )
+            );
+            List<KardexZoneEntity> movementList = KardexZoneEntity.buildSaleConfirmation(
+                    saleHead, detail, stockCursor, getUserCod()
+            );
+            result.addAll(movementList);
+        }
+        return result;
+    }
+
+    private void validateReservation(
+            SaleHeadEntity saleHead,
+            SaleDetWarehouseEntity detail
+    ) throws SaleException {
+        List<KardexZoneEntity> reservationList = this.kardexZoneShared.findByEvent(
+                SaleConstants.KARDEX_ZONE_SOURCE_PRESALE,
+                saleHead.PresaleCod,
+                detail.ItemNumber,
+                SaleConstants.KARDEX_ZONE_EVENT_RESERVATION
+        );
+        if (!KardexZoneEntity.isValidPresaleReservation(reservationList, detail)) {
+            throw new SaleException(
+                    "No existe una reserva valida para el item " + detail.ItemNumber
+                            + " de la venta " + saleHead.SaleCod
+            );
+        }
     }
 
     private String stockKey(String productCod, String variant, String storeCod, String warehouseCod) {

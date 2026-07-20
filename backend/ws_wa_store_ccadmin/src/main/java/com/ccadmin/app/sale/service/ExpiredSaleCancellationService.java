@@ -1,9 +1,8 @@
 package com.ccadmin.app.sale.service;
 
-import com.ccadmin.app.product.model.constants.KardexZoneConstants;
-import com.ccadmin.app.product.model.dto.KardexZoneMovementDto;
-import com.ccadmin.app.product.model.dto.KardexZoneOperationDto;
 import com.ccadmin.app.product.shared.KardexZoneShared;
+import com.ccadmin.app.product.model.entity.KardexZoneEntity;
+import com.ccadmin.app.product.model.entity.ProductInfoWarehouseEntity;
 import com.ccadmin.app.sale.exception.SaleException;
 import com.ccadmin.app.sale.model.constants.SaleConstants;
 import com.ccadmin.app.sale.model.entity.PresaleHeadEntity;
@@ -19,8 +18,11 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class ExpiredSaleCancellationService {
@@ -35,8 +37,6 @@ public class ExpiredSaleCancellationService {
     private SalePaymentRepository salePaymentRepository;
     @Autowired
     private SaleDocumentRepository saleDocumentRepository;
-    @Autowired
-    private SaleStockConfirmationService saleStockConfirmationService;
     @Autowired
     private KardexZoneShared kardexZoneShared;
 
@@ -80,10 +80,31 @@ public class ExpiredSaleCancellationService {
             throw new SaleException("La venta no tiene stock reservado por almacen");
         }
 
+        List<KardexZoneEntity> kardexZoneList = new ArrayList<>();
+        Map<String, ProductInfoWarehouseEntity> stockCursorByWarehouse = new HashMap<>();
         for (SaleDetWarehouseEntity detail : detailList) {
-            this.saleStockConfirmationService.validateReservation(saleHead, detail);
-            this.kardexZoneShared.apply(this.buildRelease(saleHead, detail), userCod);
+            this.validateReservation(saleHead, detail);
+            if (this.kardexZoneShared.isApplied(
+                    SaleConstants.KARDEX_ZONE_SOURCE_SALE,
+                    saleHead.SaleCod, detail.ItemNumber,
+                    SaleConstants.KARDEX_ZONE_EVENT_EXPIRATION_RELEASE
+            )) {
+                continue;
+            }
+            String key = detail.ProductCod + "|" + detail.Variant + "|"
+                    + saleHead.StoreCod + "|" + detail.WarehouseCod;
+            ProductInfoWarehouseEntity stockCursor = stockCursorByWarehouse.computeIfAbsent(
+                    key,
+                    ignored -> this.kardexZoneShared.findStockForUpdate(
+                            detail.ProductCod, detail.Variant,
+                            saleHead.StoreCod, detail.WarehouseCod
+                    )
+            );
+            kardexZoneList.addAll(KardexZoneEntity.buildSaleExpirationRelease(
+                    saleHead, detail, stockCursor, userCod
+            ));
         }
+        this.kardexZoneShared.saveAll(kardexZoneList);
 
         saleHead.SaleStatus = SaleConstants.CANCELLED;
         saleHead.addSessionModify(userCod);
@@ -94,25 +115,22 @@ public class ExpiredSaleCancellationService {
         return true;
     }
 
-    private KardexZoneOperationDto buildRelease(
+    private void validateReservation(
             SaleHeadEntity saleHead,
             SaleDetWarehouseEntity detail
-    ) {
-        KardexZoneOperationDto operation = new KardexZoneOperationDto();
-        operation.OperationCod = saleHead.SaleCod;
-        operation.ItemNumber = detail.ItemNumber;
-        operation.SourceTable = SaleConstants.KARDEX_ZONE_SOURCE_SALE;
-        operation.MovementEvent = SaleConstants.KARDEX_ZONE_EVENT_EXPIRATION_RELEASE;
-        operation.ProductCod = detail.ProductCod;
-        operation.Variant = detail.Variant;
-        operation.StoreCod = saleHead.StoreCod;
-        operation.WarehouseCod = detail.WarehouseCod;
-        operation.LotNumber = detail.LotNumber;
-        operation.ExpirationDate = detail.ExpirationDate;
-        operation.MovementList = List.of(
-                new KardexZoneMovementDto(KardexZoneConstants.ZONE_RESERVED, detail.NumUnit * -1),
-                new KardexZoneMovementDto(KardexZoneConstants.ZONE_PHYSICAL, detail.NumUnit)
+    ) throws SaleException {
+        List<KardexZoneEntity> reservationList = this.kardexZoneShared.findByEvent(
+                SaleConstants.KARDEX_ZONE_SOURCE_PRESALE,
+                saleHead.PresaleCod,
+                detail.ItemNumber,
+                SaleConstants.KARDEX_ZONE_EVENT_RESERVATION
         );
-        return operation;
+        if (!KardexZoneEntity.isValidPresaleReservation(reservationList, detail)) {
+            throw new SaleException(
+                    "No existe una reserva valida para el item " + detail.ItemNumber
+                            + " de la venta " + saleHead.SaleCod
+            );
+        }
     }
+
 }

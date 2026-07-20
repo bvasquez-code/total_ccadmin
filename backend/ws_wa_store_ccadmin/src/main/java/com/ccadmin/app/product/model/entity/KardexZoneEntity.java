@@ -1,6 +1,20 @@
 package com.ccadmin.app.product.model.entity;
 
+import com.ccadmin.app.product.exception.KardexZoneException;
+import com.ccadmin.app.product.model.constants.KardexZoneConstants;
+import com.ccadmin.app.pucharse.model.constants.PucharseConstants;
+import com.ccadmin.app.pucharse.model.entity.PucharseDetDeliveryEntity;
+import com.ccadmin.app.pucharse.model.entity.PucharseHeadEntity;
+import com.ccadmin.app.sale.model.constants.SaleConstants;
+import com.ccadmin.app.sale.model.entity.CreditNoteDetEntity;
+import com.ccadmin.app.sale.model.entity.CreditNoteHeadEntity;
+import com.ccadmin.app.sale.model.entity.PresaleDetWarehouseEntity;
+import com.ccadmin.app.sale.model.entity.PresaleHeadEntity;
+import com.ccadmin.app.sale.model.entity.SaleDetWarehouseEntity;
+import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
 import com.ccadmin.app.shared.model.entity.AuditTableEntity;
+import com.ccadmin.app.store.model.entity.WarehouseEntity;
+import com.ccadmin.app.transfer.model.constants.TransferConstants;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -8,7 +22,11 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "kardex_zone")
@@ -34,5 +52,308 @@ public class KardexZoneEntity extends AuditTableEntity implements Serializable {
     public Date ExpirationDate;
 
     public KardexZoneEntity() {
+    }
+
+    public static boolean isValidPresaleReservation(
+            List<KardexZoneEntity> reservationList,
+            SaleDetWarehouseEntity detail
+    ) {
+        boolean physicalWasSubtracted = reservationList.stream().anyMatch(movement ->
+                matches(movement, detail, KardexZoneConstants.ZONE_PHYSICAL,
+                        KardexZoneConstants.TYPE_OPERATION_SUBTRACT)
+        );
+        boolean reservedWasAdded = reservationList.stream().anyMatch(movement ->
+                matches(movement, detail, KardexZoneConstants.ZONE_RESERVED,
+                        KardexZoneConstants.TYPE_OPERATION_ADD)
+        );
+        return physicalWasSubtracted && reservedWasAdded;
+    }
+
+    public static void advanceStockCursor(
+            ProductInfoWarehouseEntity stockCursor,
+            List<KardexZoneEntity> movementList
+    ) {
+        for (KardexZoneEntity movement : movementList) {
+            switch (movement.ZoneStockMoved) {
+                case KardexZoneConstants.ZONE_PHYSICAL ->
+                        stockCursor.NumPhysicalStock = movement.NumZoneStockAfter;
+                case KardexZoneConstants.ZONE_UNAVAILABLE ->
+                        stockCursor.NumUnavailableStock = movement.NumZoneStockAfter;
+                case KardexZoneConstants.ZONE_RESERVED ->
+                        stockCursor.NumReservedStock = movement.NumZoneStockAfter;
+                default -> throw new KardexZoneException("Zona de stock no soportada");
+            }
+        }
+        stockCursor.NumTotalStock = stockCursor.NumPhysicalStock
+                + stockCursor.NumUnavailableStock
+                + stockCursor.NumReservedStock;
+    }
+
+    public static List<KardexZoneEntity> buildPresaleReservation(
+            PresaleHeadEntity head,
+            PresaleDetWarehouseEntity detail,
+            ProductInfoWarehouseEntity stock,
+            String userCod
+    ) {
+        return build(
+                head.PresaleCod, detail.ItemNumber,
+                SaleConstants.KARDEX_ZONE_SOURCE_PRESALE,
+                SaleConstants.KARDEX_ZONE_EVENT_RESERVATION,
+                detail.ProductCod, detail.Variant, head.StoreCod, detail.WarehouseCod,
+                detail.LotNumber, detail.ExpirationDate, stock, userCod,
+                movement(KardexZoneConstants.ZONE_PHYSICAL, -detail.NumUnit),
+                movement(KardexZoneConstants.ZONE_RESERVED, detail.NumUnit)
+        );
+    }
+
+    public static List<KardexZoneEntity> buildSaleConfirmation(
+            SaleHeadEntity head,
+            SaleDetWarehouseEntity detail,
+            ProductInfoWarehouseEntity stock,
+            String userCod
+    ) {
+        return build(
+                head.SaleCod, detail.ItemNumber,
+                SaleConstants.KARDEX_ZONE_SOURCE_SALE,
+                SaleConstants.KARDEX_ZONE_EVENT_CONFIRMATION,
+                detail.ProductCod, detail.Variant, head.StoreCod, detail.WarehouseCod,
+                detail.LotNumber, detail.ExpirationDate, stock, userCod,
+                movement(KardexZoneConstants.ZONE_RESERVED, -detail.NumUnit),
+                movement(KardexZoneConstants.ZONE_PHYSICAL, detail.NumUnit),
+                movement(KardexZoneConstants.ZONE_PHYSICAL, -detail.NumUnit)
+        );
+    }
+
+    public static List<KardexZoneEntity> buildSaleExpirationRelease(
+            SaleHeadEntity head,
+            SaleDetWarehouseEntity detail,
+            ProductInfoWarehouseEntity stock,
+            String userCod
+    ) {
+        return build(
+                head.SaleCod, detail.ItemNumber,
+                SaleConstants.KARDEX_ZONE_SOURCE_SALE,
+                SaleConstants.KARDEX_ZONE_EVENT_EXPIRATION_RELEASE,
+                detail.ProductCod, detail.Variant, head.StoreCod, detail.WarehouseCod,
+                detail.LotNumber, detail.ExpirationDate, stock, userCod,
+                movement(KardexZoneConstants.ZONE_RESERVED, -detail.NumUnit),
+                movement(KardexZoneConstants.ZONE_PHYSICAL, detail.NumUnit)
+        );
+    }
+
+    public static List<KardexZoneEntity> buildPurchaseReceipt(
+            PucharseHeadEntity head,
+            PucharseDetDeliveryEntity detail,
+            ProductInfoWarehouseEntity stock,
+            String userCod
+    ) {
+        return build(
+                head.PucharseCod, detail.ItemNumber,
+                PucharseConstants.KARDEX_ZONE_SOURCE,
+                PucharseConstants.KARDEX_ZONE_EVENT_RECEIPT,
+                detail.ProductCod, detail.Variant, head.StoreCod, detail.WarehouseCod,
+                detail.LotNumber, detail.ExpirationDate, stock, userCod,
+                movement(KardexZoneConstants.ZONE_PHYSICAL, detail.NumUnit)
+        );
+    }
+
+    public static List<KardexZoneEntity> buildTransferDispatch(
+            String operationCod,
+            String sourceTable,
+            String storeCod,
+            int itemNumber,
+            String productCod,
+            String variant,
+            String warehouseCod,
+            int quantity,
+            String lotNumber,
+            Date expirationDate,
+            ProductInfoWarehouseEntity stock,
+            String userCod
+    ) {
+        return build(
+                operationCod, itemNumber, sourceTable,
+                TransferConstants.KARDEX_ZONE_EVENT_DISPATCH,
+                productCod, variant, storeCod, warehouseCod,
+                lotNumber, expirationDate, stock, userCod,
+                movement(KardexZoneConstants.ZONE_PHYSICAL, -quantity)
+        );
+    }
+
+    public static List<KardexZoneEntity> buildTransferReceipt(
+            String operationCod,
+            String sourceTable,
+            String storeCod,
+            int itemNumber,
+            String productCod,
+            String variant,
+            String warehouseCod,
+            int quantity,
+            String lotNumber,
+            Date expirationDate,
+            ProductInfoWarehouseEntity stock,
+            String userCod
+    ) {
+        return build(
+                operationCod, itemNumber, sourceTable,
+                TransferConstants.KARDEX_ZONE_EVENT_RECEIPT,
+                productCod, variant, storeCod, warehouseCod,
+                lotNumber, expirationDate, stock, userCod,
+                movement(KardexZoneConstants.ZONE_PHYSICAL, quantity)
+        );
+    }
+
+    public static List<KardexZoneEntity> buildCreditNoteConfirmation(
+            CreditNoteHeadEntity head,
+            CreditNoteDetEntity detail,
+            WarehouseEntity warehouse,
+            ProductInfoWarehouseEntity stock,
+            String userCod
+    ) {
+        return buildCreditNote(
+                head, detail, warehouse, stock, userCod,
+                SaleConstants.KARDEX_ZONE_EVENT_CREDIT_NOTE_CONFIRMATION,
+                movement(KardexZoneConstants.ZONE_UNAVAILABLE, detail.NumUnit)
+        );
+    }
+
+    public static List<KardexZoneEntity> buildCreditNoteAcceptedReturn(
+            CreditNoteHeadEntity head,
+            CreditNoteDetEntity detail,
+            WarehouseEntity warehouse,
+            int returned,
+            ProductInfoWarehouseEntity stock,
+            String userCod
+    ) {
+        return buildCreditNote(
+                head, detail, warehouse, stock, userCod,
+                SaleConstants.KARDEX_ZONE_EVENT_CREDIT_NOTE_ACCEPTED_RETURN,
+                movement(KardexZoneConstants.ZONE_UNAVAILABLE, -returned),
+                movement(KardexZoneConstants.ZONE_PHYSICAL, returned)
+        );
+    }
+
+    public static List<KardexZoneEntity> buildCreditNoteRejectedStockExit(
+            CreditNoteHeadEntity head,
+            CreditNoteDetEntity detail,
+            WarehouseEntity warehouse,
+            int rejected,
+            ProductInfoWarehouseEntity stock,
+            String userCod
+    ) {
+        return buildCreditNote(
+                head, detail, warehouse, stock, userCod,
+                SaleConstants.KARDEX_ZONE_EVENT_CREDIT_NOTE_REJECTED_STOCK_EXIT,
+                movement(KardexZoneConstants.ZONE_UNAVAILABLE, -rejected)
+        );
+    }
+
+    private static List<KardexZoneEntity> buildCreditNote(
+            CreditNoteHeadEntity head,
+            CreditNoteDetEntity detail,
+            WarehouseEntity warehouse,
+            ProductInfoWarehouseEntity stock,
+            String userCod,
+            String movementEvent,
+            ZoneMovement... movementList
+    ) {
+        return build(
+                head.CreditNoteCod, detail.ItemNumber,
+                SaleConstants.KARDEX_ZONE_SOURCE_CREDIT_NOTE, movementEvent,
+                detail.ProductCod, detail.Variant, head.StoreCod, warehouse.WarehouseCod,
+                detail.LotNumber, detail.ExpirationDate, stock, userCod, movementList
+        );
+    }
+
+    private static List<KardexZoneEntity> build(
+            String operationCod,
+            int itemNumber,
+            String sourceTable,
+            String movementEvent,
+            String productCod,
+            String variant,
+            String storeCod,
+            String warehouseCod,
+            String lotNumber,
+            Date expirationDate,
+            ProductInfoWarehouseEntity stock,
+            String userCod,
+            ZoneMovement... movementList
+    ) {
+        if (stock == null) {
+            throw new KardexZoneException("El stock anterior por almacen es obligatorio");
+        }
+        Map<String, Integer> balanceByZone = balances(stock);
+        List<KardexZoneEntity> result = new ArrayList<>();
+
+        for (ZoneMovement movement : movementList) {
+            if (!KardexZoneConstants.isSupported(movement.zone)) {
+                throw new KardexZoneException("Zona de stock no soportada");
+            }
+            if (movement.delta == 0) {
+                throw new KardexZoneException("La cantidad movida debe ser diferente de cero");
+            }
+            int stockBefore = balanceByZone.get(movement.zone);
+            int stockAfter = stockBefore + movement.delta;
+            if (stockAfter < 0) {
+                throw new KardexZoneException(
+                        "Stock insuficiente en zona " + movement.zone + " para producto " + productCod
+                );
+            }
+
+            KardexZoneEntity entity = new KardexZoneEntity();
+            entity.OperationCod = operationCod;
+            entity.ItemNumber = itemNumber;
+            entity.SourceTable = sourceTable;
+            entity.MovementEvent = movementEvent;
+            entity.ProductCod = productCod;
+            entity.Variant = variant;
+            entity.StoreCod = storeCod;
+            entity.WarehouseCod = warehouseCod;
+            entity.ZoneStockMoved = movement.zone;
+            entity.TypeOperation = movement.delta > 0
+                    ? KardexZoneConstants.TYPE_OPERATION_ADD
+                    : KardexZoneConstants.TYPE_OPERATION_SUBTRACT;
+            entity.NumStockMoved = Math.abs(movement.delta);
+            entity.NumZoneStockBefore = stockBefore;
+            entity.NumZoneStockAfter = stockAfter;
+            entity.LotNumber = lotNumber;
+            entity.ExpirationDate = expirationDate;
+            entity.addSession(userCod);
+            result.add(entity);
+            balanceByZone.put(movement.zone, stockAfter);
+        }
+        List<KardexZoneEntity> movementResult = List.copyOf(result);
+        advanceStockCursor(stock, movementResult);
+        return movementResult;
+    }
+
+    private static Map<String, Integer> balances(ProductInfoWarehouseEntity stock) {
+        Map<String, Integer> result = new LinkedHashMap<>();
+        result.put(KardexZoneConstants.ZONE_PHYSICAL, stock.NumPhysicalStock);
+        result.put(KardexZoneConstants.ZONE_RESERVED, stock.NumReservedStock);
+        result.put(KardexZoneConstants.ZONE_UNAVAILABLE, stock.NumUnavailableStock);
+        return result;
+    }
+
+    private static ZoneMovement movement(String zone, int delta) {
+        return new ZoneMovement(zone, delta);
+    }
+
+    private static boolean matches(
+            KardexZoneEntity movement,
+            SaleDetWarehouseEntity detail,
+            String zone,
+            String typeOperation
+    ) {
+        return zone.equals(movement.ZoneStockMoved)
+                && typeOperation.equals(movement.TypeOperation)
+                && detail.NumUnit == movement.NumStockMoved
+                && detail.ProductCod.equals(movement.ProductCod)
+                && detail.Variant.equals(movement.Variant)
+                && detail.WarehouseCod.equals(movement.WarehouseCod);
+    }
+
+    private record ZoneMovement(String zone, int delta) {
     }
 }

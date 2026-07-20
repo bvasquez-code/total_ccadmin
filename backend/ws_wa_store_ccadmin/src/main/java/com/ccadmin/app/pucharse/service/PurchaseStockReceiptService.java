@@ -1,9 +1,8 @@
 package com.ccadmin.app.pucharse.service;
 
-import com.ccadmin.app.product.model.constants.KardexZoneConstants;
-import com.ccadmin.app.product.model.dto.KardexZoneMovementDto;
-import com.ccadmin.app.product.model.dto.KardexZoneOperationDto;
 import com.ccadmin.app.product.model.entity.KardexEntity;
+import com.ccadmin.app.product.model.entity.KardexZoneEntity;
+import com.ccadmin.app.product.model.entity.ProductInfoWarehouseEntity;
 import com.ccadmin.app.product.shared.KardexShared;
 import com.ccadmin.app.product.shared.KardexZoneShared;
 import com.ccadmin.app.pucharse.exception.PucharseException;
@@ -35,11 +34,15 @@ public class PurchaseStockReceiptService {
     ) throws PucharseException {
         this.validate(purchaseHead, deliveryList);
 
+        List<KardexZoneEntity> kardexZoneList = this.createKardexZoneList(
+                purchaseHead, deliveryList, userCod
+        );
+        List<KardexZoneEntity> savedKardexZoneList = this.kardexZoneShared.saveAll(kardexZoneList);
         List<KardexEntity> kardexList = new ArrayList<>();
         Map<String, KardexEntity> lastMovementByStock = new HashMap<>();
 
         for (PucharseDetDeliveryEntity delivery : deliveryList) {
-            if (this.kardexZoneShared.apply(this.buildReceipt(purchaseHead, delivery), userCod).isEmpty()) {
+            if (!this.wasSaved(savedKardexZoneList, delivery.ItemNumber)) {
                 continue;
             }
 
@@ -65,25 +68,42 @@ public class PurchaseStockReceiptService {
         return kardexList;
     }
 
-    private KardexZoneOperationDto buildReceipt(
+    private List<KardexZoneEntity> createKardexZoneList(
             PucharseHeadEntity purchaseHead,
-            PucharseDetDeliveryEntity delivery
+            List<PucharseDetDeliveryEntity> deliveryList,
+            String userCod
     ) {
-        KardexZoneOperationDto operation = new KardexZoneOperationDto();
-        operation.OperationCod = purchaseHead.PucharseCod;
-        operation.ItemNumber = delivery.ItemNumber;
-        operation.SourceTable = PucharseConstants.KARDEX_ZONE_SOURCE;
-        operation.MovementEvent = PucharseConstants.KARDEX_ZONE_EVENT_RECEIPT;
-        operation.ProductCod = delivery.ProductCod;
-        operation.Variant = delivery.Variant;
-        operation.StoreCod = purchaseHead.StoreCod;
-        operation.WarehouseCod = delivery.WarehouseCod;
-        operation.LotNumber = delivery.LotNumber;
-        operation.ExpirationDate = delivery.ExpirationDate;
-        operation.MovementList = List.of(
-                new KardexZoneMovementDto(KardexZoneConstants.ZONE_PHYSICAL, delivery.NumUnit)
+        List<KardexZoneEntity> result = new ArrayList<>();
+        Map<String, ProductInfoWarehouseEntity> stockCursorByWarehouse = new HashMap<>();
+        for (PucharseDetDeliveryEntity delivery : deliveryList) {
+            if (this.kardexZoneShared.isApplied(
+                    PucharseConstants.KARDEX_ZONE_SOURCE,
+                    purchaseHead.PucharseCod,
+                    delivery.ItemNumber,
+                    PucharseConstants.KARDEX_ZONE_EVENT_RECEIPT
+            )) {
+                continue;
+            }
+            String key = this.stockKey(purchaseHead, delivery);
+            ProductInfoWarehouseEntity stockCursor = stockCursorByWarehouse.computeIfAbsent(
+                    key,
+                    ignored -> this.kardexZoneShared.findStockForUpdate(
+                            delivery.ProductCod, delivery.Variant,
+                            purchaseHead.StoreCod, delivery.WarehouseCod
+                    )
+            );
+            result.addAll(KardexZoneEntity.buildPurchaseReceipt(
+                    purchaseHead, delivery, stockCursor, userCod
+            ));
+        }
+        return result;
+    }
+
+    private boolean wasSaved(List<KardexZoneEntity> movementList, int itemNumber) {
+        return movementList.stream().anyMatch(movement ->
+                movement.ItemNumber == itemNumber
+                        && PucharseConstants.KARDEX_ZONE_EVENT_RECEIPT.equals(movement.MovementEvent)
         );
-        return operation;
     }
 
     private void validate(

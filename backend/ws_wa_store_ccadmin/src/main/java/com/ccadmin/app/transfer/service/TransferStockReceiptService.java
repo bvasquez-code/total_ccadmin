@@ -1,9 +1,8 @@
 package com.ccadmin.app.transfer.service;
 
-import com.ccadmin.app.product.model.constants.KardexZoneConstants;
-import com.ccadmin.app.product.model.dto.KardexZoneMovementDto;
-import com.ccadmin.app.product.model.dto.KardexZoneOperationDto;
 import com.ccadmin.app.product.model.entity.KardexEntity;
+import com.ccadmin.app.product.model.entity.KardexZoneEntity;
+import com.ccadmin.app.product.model.entity.ProductInfoWarehouseEntity;
 import com.ccadmin.app.product.shared.KardexShared;
 import com.ccadmin.app.product.shared.KardexZoneShared;
 import com.ccadmin.app.transfer.exception.TransferException;
@@ -98,14 +97,15 @@ public class TransferStockReceiptService {
             throw new TransferException("La transferencia no tiene unidades para recibir");
         }
 
+        List<KardexZoneEntity> kardexZoneList = this.createKardexZoneList(
+                operationCod, sourceTable, storeCodDest, lineList, userCod
+        );
+        List<KardexZoneEntity> savedKardexZoneList = this.kardexZoneShared.saveAll(kardexZoneList);
         List<KardexEntity> kardexList = new ArrayList<>();
         Map<String, KardexEntity> lastMovementByStock = new HashMap<>();
 
         for (ReceiptLine line : lineList) {
-            if (this.kardexZoneShared.apply(
-                    this.buildReceipt(operationCod, sourceTable, storeCodDest, line),
-                    userCod
-            ).isEmpty()) {
+            if (!this.wasSaved(savedKardexZoneList, line.itemNumber)) {
                 continue;
             }
 
@@ -136,27 +136,40 @@ public class TransferStockReceiptService {
         return kardexList;
     }
 
-    private KardexZoneOperationDto buildReceipt(
-            String operationCod,
-            String sourceTable,
-            String storeCodDest,
-            ReceiptLine line
+    private List<KardexZoneEntity> createKardexZoneList(
+            String operationCod, String sourceTable, String storeCod,
+            List<ReceiptLine> lineList, String userCod
     ) {
-        KardexZoneOperationDto operation = new KardexZoneOperationDto();
-        operation.OperationCod = operationCod;
-        operation.ItemNumber = line.itemNumber;
-        operation.SourceTable = sourceTable;
-        operation.MovementEvent = TransferConstants.KARDEX_ZONE_EVENT_RECEIPT;
-        operation.ProductCod = line.productCod;
-        operation.Variant = line.variant;
-        operation.StoreCod = storeCodDest;
-        operation.WarehouseCod = line.warehouseCod;
-        operation.LotNumber = line.lotNumber;
-        operation.ExpirationDate = line.expirationDate;
-        operation.MovementList = List.of(
-                new KardexZoneMovementDto(KardexZoneConstants.ZONE_PHYSICAL, line.quantity)
+        List<KardexZoneEntity> result = new ArrayList<>();
+        Map<String, ProductInfoWarehouseEntity> stockCursorByWarehouse = new HashMap<>();
+        for (ReceiptLine line : lineList) {
+            if (this.kardexZoneShared.isApplied(
+                    sourceTable, operationCod, line.itemNumber,
+                    TransferConstants.KARDEX_ZONE_EVENT_RECEIPT
+            )) {
+                continue;
+            }
+            String key = this.stockKey(storeCod, line);
+            ProductInfoWarehouseEntity stockCursor = stockCursorByWarehouse.computeIfAbsent(
+                    key,
+                    ignored -> this.kardexZoneShared.findStockForUpdate(
+                            line.productCod, line.variant, storeCod, line.warehouseCod
+                    )
+            );
+            result.addAll(KardexZoneEntity.buildTransferReceipt(
+                    operationCod, sourceTable, storeCod, line.itemNumber,
+                    line.productCod, line.variant, line.warehouseCod, line.quantity,
+                    line.lotNumber, line.expirationDate, stockCursor, userCod
+            ));
+        }
+        return result;
+    }
+
+    private boolean wasSaved(List<KardexZoneEntity> movementList, int itemNumber) {
+        return movementList.stream().anyMatch(movement ->
+                movement.ItemNumber == itemNumber
+                        && TransferConstants.KARDEX_ZONE_EVENT_RECEIPT.equals(movement.MovementEvent)
         );
-        return operation;
     }
 
     private KardexEntity buildKardex(

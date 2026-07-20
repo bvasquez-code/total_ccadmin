@@ -1,9 +1,8 @@
 package com.ccadmin.app.transfer.service;
 
-import com.ccadmin.app.product.model.constants.KardexZoneConstants;
-import com.ccadmin.app.product.model.dto.KardexZoneMovementDto;
-import com.ccadmin.app.product.model.dto.KardexZoneOperationDto;
 import com.ccadmin.app.product.model.entity.KardexEntity;
+import com.ccadmin.app.product.model.entity.KardexZoneEntity;
+import com.ccadmin.app.product.model.entity.ProductInfoWarehouseEntity;
 import com.ccadmin.app.product.shared.KardexShared;
 import com.ccadmin.app.product.shared.KardexZoneShared;
 import com.ccadmin.app.transfer.exception.TransferException;
@@ -98,6 +97,10 @@ public class TransferStockDispatchService {
             throw new TransferException("La transferencia no tiene unidades para despachar");
         }
 
+        List<KardexZoneEntity> kardexZoneList = this.createKardexZoneList(
+                operationCod, sourceTable, storeCodOrigin, lineList, userCod
+        );
+        List<KardexZoneEntity> savedKardexZoneList = this.kardexZoneShared.saveAll(kardexZoneList);
         List<KardexEntity> kardexList = new ArrayList<>();
         Map<String, KardexEntity> lastMovementByStock = new HashMap<>();
 
@@ -105,10 +108,7 @@ public class TransferStockDispatchService {
             if (line.quantity <= 0) {
                 throw new TransferException("La cantidad a despachar debe ser mayor que cero");
             }
-            if (this.kardexZoneShared.apply(
-                    this.buildDispatch(operationCod, sourceTable, storeCodOrigin, line),
-                    userCod
-            ).isEmpty()) {
+            if (!this.wasSaved(savedKardexZoneList, line.itemNumber)) {
                 continue;
             }
 
@@ -139,27 +139,40 @@ public class TransferStockDispatchService {
         return kardexList;
     }
 
-    private KardexZoneOperationDto buildDispatch(
-            String operationCod,
-            String sourceTable,
-            String storeCodOrigin,
-            DispatchLine line
+    private List<KardexZoneEntity> createKardexZoneList(
+            String operationCod, String sourceTable, String storeCod,
+            List<DispatchLine> lineList, String userCod
     ) {
-        KardexZoneOperationDto operation = new KardexZoneOperationDto();
-        operation.OperationCod = operationCod;
-        operation.ItemNumber = line.itemNumber;
-        operation.SourceTable = sourceTable;
-        operation.MovementEvent = TransferConstants.KARDEX_ZONE_EVENT_DISPATCH;
-        operation.ProductCod = line.productCod;
-        operation.Variant = line.variant;
-        operation.StoreCod = storeCodOrigin;
-        operation.WarehouseCod = line.warehouseCod;
-        operation.LotNumber = line.lotNumber;
-        operation.ExpirationDate = line.expirationDate;
-        operation.MovementList = List.of(
-                new KardexZoneMovementDto(KardexZoneConstants.ZONE_PHYSICAL, line.quantity * -1)
+        List<KardexZoneEntity> result = new ArrayList<>();
+        Map<String, ProductInfoWarehouseEntity> stockCursorByWarehouse = new HashMap<>();
+        for (DispatchLine line : lineList) {
+            if (this.kardexZoneShared.isApplied(
+                    sourceTable, operationCod, line.itemNumber,
+                    TransferConstants.KARDEX_ZONE_EVENT_DISPATCH
+            )) {
+                continue;
+            }
+            String key = this.stockKey(storeCod, line);
+            ProductInfoWarehouseEntity stockCursor = stockCursorByWarehouse.computeIfAbsent(
+                    key,
+                    ignored -> this.kardexZoneShared.findStockForUpdate(
+                            line.productCod, line.variant, storeCod, line.warehouseCod
+                    )
+            );
+            result.addAll(KardexZoneEntity.buildTransferDispatch(
+                    operationCod, sourceTable, storeCod, line.itemNumber,
+                    line.productCod, line.variant, line.warehouseCod, line.quantity,
+                    line.lotNumber, line.expirationDate, stockCursor, userCod
+            ));
+        }
+        return result;
+    }
+
+    private boolean wasSaved(List<KardexZoneEntity> movementList, int itemNumber) {
+        return movementList.stream().anyMatch(movement ->
+                movement.ItemNumber == itemNumber
+                        && TransferConstants.KARDEX_ZONE_EVENT_DISPATCH.equals(movement.MovementEvent)
         );
-        return operation;
     }
 
     private KardexEntity buildKardex(

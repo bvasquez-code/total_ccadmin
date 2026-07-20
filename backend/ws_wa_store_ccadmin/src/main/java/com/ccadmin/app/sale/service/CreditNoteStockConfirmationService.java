@@ -1,9 +1,9 @@
 package com.ccadmin.app.sale.service;
 
 import com.ccadmin.app.product.model.constants.KardexZoneConstants;
-import com.ccadmin.app.product.model.dto.KardexZoneMovementDto;
-import com.ccadmin.app.product.model.dto.KardexZoneOperationDto;
 import com.ccadmin.app.product.model.entity.KardexEntity;
+import com.ccadmin.app.product.model.entity.KardexZoneEntity;
+import com.ccadmin.app.product.model.entity.ProductInfoWarehouseEntity;
 import com.ccadmin.app.product.shared.KardexShared;
 import com.ccadmin.app.product.shared.KardexZoneShared;
 import com.ccadmin.app.sale.exception.SaleException;
@@ -37,14 +37,15 @@ public class CreditNoteStockConfirmationService {
     ) throws SaleException {
         this.validate(creditNoteHead, detailList, warehouse);
 
+        List<KardexZoneEntity> kardexZoneList = this.createKardexZoneList(
+                creditNoteHead, detailList, warehouse, userCod
+        );
+        List<KardexZoneEntity> savedKardexZoneList = this.kardexZoneShared.saveAll(kardexZoneList);
         List<KardexEntity> kardexList = new ArrayList<>();
         Map<String, KardexEntity> lastMovementByStock = new HashMap<>();
 
         for (CreditNoteDetEntity detail : detailList) {
-            if (this.kardexZoneShared.apply(
-                    this.buildUnavailableEntry(creditNoteHead, detail, warehouse),
-                    userCod
-            ).isEmpty()) {
+            if (!this.wasSaved(savedKardexZoneList, detail.ItemNumber)) {
                 continue;
             }
 
@@ -76,26 +77,41 @@ public class CreditNoteStockConfirmationService {
         return kardexList;
     }
 
-    private KardexZoneOperationDto buildUnavailableEntry(
-            CreditNoteHeadEntity creditNoteHead,
-            CreditNoteDetEntity detail,
-            WarehouseEntity warehouse
+    private List<KardexZoneEntity> createKardexZoneList(
+            CreditNoteHeadEntity head, List<CreditNoteDetEntity> detailList,
+            WarehouseEntity warehouse, String userCod
     ) {
-        KardexZoneOperationDto operation = new KardexZoneOperationDto();
-        operation.OperationCod = creditNoteHead.CreditNoteCod;
-        operation.ItemNumber = detail.ItemNumber;
-        operation.SourceTable = SaleConstants.KARDEX_ZONE_SOURCE_CREDIT_NOTE;
-        operation.MovementEvent = SaleConstants.KARDEX_ZONE_EVENT_CREDIT_NOTE_CONFIRMATION;
-        operation.ProductCod = detail.ProductCod;
-        operation.Variant = detail.Variant;
-        operation.StoreCod = creditNoteHead.StoreCod;
-        operation.WarehouseCod = warehouse.WarehouseCod;
-        operation.LotNumber = detail.LotNumber;
-        operation.ExpirationDate = detail.ExpirationDate;
-        operation.MovementList = List.of(
-                new KardexZoneMovementDto(KardexZoneConstants.ZONE_UNAVAILABLE, detail.NumUnit)
+        List<KardexZoneEntity> result = new ArrayList<>();
+        Map<String, ProductInfoWarehouseEntity> stockCursorByWarehouse = new HashMap<>();
+        for (CreditNoteDetEntity detail : detailList) {
+            if (this.kardexZoneShared.isApplied(
+                    SaleConstants.KARDEX_ZONE_SOURCE_CREDIT_NOTE,
+                    head.CreditNoteCod, detail.ItemNumber,
+                    SaleConstants.KARDEX_ZONE_EVENT_CREDIT_NOTE_CONFIRMATION
+            )) {
+                continue;
+            }
+            String key = this.stockKey(head, detail, warehouse);
+            ProductInfoWarehouseEntity stockCursor = stockCursorByWarehouse.computeIfAbsent(
+                    key,
+                    ignored -> this.kardexZoneShared.findStockForUpdate(
+                            detail.ProductCod, detail.Variant,
+                            head.StoreCod, warehouse.WarehouseCod
+                    )
+            );
+            result.addAll(KardexZoneEntity.buildCreditNoteConfirmation(
+                    head, detail, warehouse, stockCursor, userCod
+            ));
+        }
+        return result;
+    }
+
+    private boolean wasSaved(List<KardexZoneEntity> movementList, int itemNumber) {
+        return movementList.stream().anyMatch(movement ->
+                movement.ItemNumber == itemNumber
+                        && SaleConstants.KARDEX_ZONE_EVENT_CREDIT_NOTE_CONFIRMATION
+                        .equals(movement.MovementEvent)
         );
-        return operation;
     }
 
     private void validate(
