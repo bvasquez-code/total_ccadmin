@@ -8,6 +8,7 @@ import com.ccadmin.app.sale.model.entity.PresaleHeadEntity;
 import com.ccadmin.app.sale.repository.PresaleDetRepository;
 import com.ccadmin.app.sale.repository.PresaleDetWarehouseRepository;
 import com.ccadmin.app.sale.repository.PresaleHeadRepository;
+import com.ccadmin.app.sale.repository.SaleHeadRepository;
 import com.ccadmin.app.shared.model.dto.ResponsePageSearchT;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import com.ccadmin.app.shared.model.dto.SearchDto;
@@ -36,6 +37,8 @@ public class PresaleSearchService {
     private ProductShared productShared;
     @Autowired
     private CurrencyShared currencyShared;
+    @Autowired
+    private SaleHeadRepository saleHeadRepository;
 
     private SearchTService searchService;
 
@@ -58,6 +61,10 @@ public class PresaleSearchService {
 
             for (PresaleHeadEntity Presale : responsePage.resultSearch)
             {
+                this.saleHeadRepository.findByPresaleCod(Presale.PresaleCod).ifPresent(sale -> {
+                    Presale.RelatedSaleCod = sale.SaleCod;
+                    Presale.RelatedSaleStatus = sale.SaleStatus;
+                });
                 if(Presale.existClient()) {
                     Presale.Client = clientList.stream()
                             .filter( Client -> Client.ClientCod.equals(Presale.ClientCod) )

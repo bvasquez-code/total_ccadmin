@@ -47,16 +47,28 @@ export class ListpresaleComponent implements OnInit,ActionTableService<PresaleHe
   }
   loadingTable(responsePageSearch: ResponsePageSearch<PresaleHeadEntity>): void {
     const showPending = (presale: PresaleHeadEntity): boolean => presale.SaleStatus === 'P';
+    const hasClosedSale = (presale: PresaleHeadEntity): boolean =>
+      presale.RelatedSaleStatus === 'C';
     const showCancellable = (presale: PresaleHeadEntity): boolean =>
-      presale.SaleStatus === 'P' || presale.SaleStatus === 'C';
+      (presale.SaleStatus === 'P' || presale.SaleStatus === 'C') && !hasClosedSale(presale);
     const showForceCancellation = (presale: PresaleHeadEntity): boolean =>
-      presale.SaleStatus === 'C';
+      presale.SaleStatus === 'C' && !hasClosedSale(presale);
+    const viewRelatedSale = (presale: PresaleHeadEntity): string => {
+      if (!presale.RelatedSaleCod) return '';
+      const status: Record<string, string> = {
+        P: 'Pendiente',
+        C: 'Confirmada',
+        X: 'Anulada'
+      };
+      return `${presale.RelatedSaleCod} - ${status[presale.RelatedSaleStatus] || presale.RelatedSaleStatus}`;
+    };
 
     const data : DataTablaGeneticDto<PresaleHeadEntity> = new DataTablaGeneticDto();
     data.init(
       [
         { Name :  "Codigo" , key : "PresaleCod" } ,
         { Name :  "Monto total" , key : "NumTotalPrice", IsMoney : true } ,
+        { Name :  "Venta relacionada" , key : "RelatedSaleCod", FunctionKey: viewRelatedSale } ,
         { Name :  "Vendedor" , key : "CreationUser"} ,
         { Name :  "Fecha de venta", key : "CreationDate" , IsDate : true },
         { Name :  "Estado" , 

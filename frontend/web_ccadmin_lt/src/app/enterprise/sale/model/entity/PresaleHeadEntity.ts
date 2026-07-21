@@ -18,6 +18,8 @@ export class PresaleHeadEntity extends AuditTableEntity
     public CurrencyCodSys: string = "";
     public NumExchangevalue: number = 0;
     public IsPaid: string = "";
+    public RelatedSaleCod: string = "";
+    public RelatedSaleStatus: string = "";
 
     public Client : ClientEntity  = new ClientEntity();
 
@@ -43,6 +45,8 @@ export class PresaleHeadEntity extends AuditTableEntity
         this.CurrencyCodSys = DataSession.CurrencyCodSys;
         this.NumExchangevalue = DataSession.NumExchangevalue;
         this.IsPaid = DataSession.IsPaid;
+        this.RelatedSaleCod = DataSession.RelatedSaleCod;
+        this.RelatedSaleStatus = DataSession.RelatedSaleStatus;
         this.Client = DataSession.Client;
         this.addSession(DataSession);
     }

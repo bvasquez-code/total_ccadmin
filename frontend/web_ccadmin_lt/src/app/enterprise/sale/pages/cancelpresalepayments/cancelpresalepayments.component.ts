@@ -22,6 +22,7 @@ export class CancelpresalepaymentsComponent implements OnInit {
   cancellationDetail: PresaleCancellationDetailDto = new PresaleCancellationDetailDto();
   trxPaymentRequest: TrxPaymentComponenRequestDto = new TrxPaymentComponenRequestDto();
   isLoading: boolean = true;
+  returnUrl: string = '/enterprise/sale/pages/listpresale';
 
   constructor(
     private activatedRoute: ActivatedRoute,
@@ -33,6 +34,10 @@ export class CancelpresalepaymentsComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    const requestedReturnUrl: string = this.activatedRoute.snapshot.queryParamMap.get('ReturnUrl') || '';
+    this.returnUrl = requestedReturnUrl === '/enterprise/sale/pages/listsale'
+      ? requestedReturnUrl
+      : '/enterprise/sale/pages/listpresale';
     this.presaleCod = this.activatedRoute.snapshot.queryParamMap.get('PresaleCod') || '';
     this.cancellationMode = this.activatedRoute.snapshot.queryParamMap.get('Mode') === 'forced'
       ? 'forced'
@@ -40,7 +45,7 @@ export class CancelpresalepaymentsComponent implements OnInit {
 
     if (!this.presaleCod) {
       this.toastrService.error('Debe indicar la preventa que desea anular.');
-      this.router.navigate(['/enterprise/sale/pages/listpresale']);
+      this.router.navigate([this.returnUrl]);
       return;
     }
     this.loadCancellationDetail();
@@ -134,7 +139,7 @@ export class CancelpresalepaymentsComponent implements OnInit {
     }
 
     this.toastrService.success('Preventa anulada correctamente.');
-    await this.router.navigate(['/enterprise/sale/pages/listpresale']);
+    await this.router.navigate([this.returnUrl]);
   }
 
   hasPendingPayments(): boolean {

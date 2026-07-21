@@ -35,6 +35,10 @@ public class PresaleHeadEntity extends AuditTableEntity implements Serializable 
 
     @Transient
     public ClientEntity Client;
+    @Transient
+    public String RelatedSaleCod;
+    @Transient
+    public String RelatedSaleStatus;
 
     public PresaleHeadEntity(){
 
