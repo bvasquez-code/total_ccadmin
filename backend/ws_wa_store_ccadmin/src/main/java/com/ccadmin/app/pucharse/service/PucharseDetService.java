@@ -1,5 +1,8 @@
 package com.ccadmin.app.pucharse.service;
 
+import com.ccadmin.app.product.model.entity.KardexEntity;
+import com.ccadmin.app.product.model.entity.KardexZoneEntity;
+import com.ccadmin.app.product.shared.KardexShared;
 import com.ccadmin.app.pucharse.exception.PucharseException;
 import com.ccadmin.app.pucharse.model.dto.PucharseDetConfirmDto;
 import com.ccadmin.app.pucharse.model.dto.PucharseDetLotConfirmDto;
@@ -28,7 +31,7 @@ public class PucharseDetService extends SessionService {
     @Autowired
     private PucharseDetDeliveryRepository pucharseDetDeliveryRepository;
     @Autowired
-    private PurchaseStockReceiptService purchaseStockReceiptService;
+    private KardexShared kardexShared;
     @Transactional
     public PucharseDetConfirmDto confirm(PucharseDetConfirmDto pucharseDetConfirm) throws PucharseException {
 
@@ -61,9 +64,15 @@ public class PucharseDetService extends SessionService {
         originDet.addSession(getUserCod(),false);
         delivery.addSession(getUserCod(),false);
 
-        this.purchaseStockReceiptService.receive(pucharseHead, List.of(delivery), getUserCod());
+        List<KardexEntity> kardexList = this.kardexShared.buildPurchaseReceipt(
+                pucharseHead, List.of(delivery), getUserCod()
+        );
+        List<KardexZoneEntity> kardexZoneList = this.kardexShared.buildZonePurchaseReceipt(
+                pucharseHead, List.of(delivery), getUserCod()
+        );
         this.pucharseDetRepository.save(originDet);
         this.pucharseDetDeliveryRepository.save(pucharseDetConfirm.pucharseDetDelivery);
+        this.kardexShared.saveAll(kardexList, kardexZoneList);
 
         pucharseDetConfirm.pucharseDet = originDet;
         return pucharseDetConfirm;
@@ -114,9 +123,15 @@ public class PucharseDetService extends SessionService {
             deliveryList.add(delivery);
         }
 
-        this.purchaseStockReceiptService.receive(pucharseHead, deliveryList, getUserCod());
+        List<KardexEntity> kardexList = this.kardexShared.buildPurchaseReceipt(
+                pucharseHead, deliveryList, getUserCod()
+        );
+        List<KardexZoneEntity> kardexZoneList = this.kardexShared.buildZonePurchaseReceipt(
+                pucharseHead, deliveryList, getUserCod()
+        );
         this.pucharseDetRepository.saveAll(detailList);
         this.pucharseDetDeliveryRepository.saveAll(deliveryList);
+        this.kardexShared.saveAll(kardexList, kardexZoneList);
 
         pucharseDetLotConfirm.lotDetailList = detailList;
         return pucharseDetLotConfirm;

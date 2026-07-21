@@ -61,4 +61,23 @@ export class PresaleService
 
         return RespuestaWS;
     }
+
+    async cancellationDetail(PresaleCod: string): Promise<ResponseWsDto> {
+        const url: string = `${AppSetting.API}/api/v1/presale/cancellationDetail`;
+        return await this.apiService.ExecuteGetService(url, { PresaleCod: PresaleCod });
+    }
+
+    async cancel(PresaleCod: string): Promise<ResponseWsDto> {
+        const url: string = `${AppSetting.API}/api/v1/presale/cancel?${new URLSearchParams({
+            PresaleCod: PresaleCod
+        }).toString()}`;
+        return await this.apiService.ExecutePostService(url, {});
+    }
+
+    async forceCancel(PresaleCod: string): Promise<ResponseWsDto> {
+        const url: string = `${AppSetting.API}/api/v1/presale/forceCancel?${new URLSearchParams({
+            PresaleCod: PresaleCod
+        }).toString()}`;
+        return await this.apiService.ExecutePostService(url, {});
+    }
 }

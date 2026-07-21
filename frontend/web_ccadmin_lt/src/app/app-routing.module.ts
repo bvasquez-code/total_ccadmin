@@ -75,6 +75,7 @@ import { CreatebusinessconfiggroupComponent } from './enterprise/businessconfigg
 import { CreatebusinessconfigComponent } from './enterprise/businessconfiggroup/pages/createbusinessconfig/createbusinessconfig.component';
 import { MenuAccessGuard } from './enterprise/menu/service/menu-access.guard';
 import { PermissiondeniedComponent } from './enterprise/shared/component/permissiondenied/permissiondenied.component';
+import { CancelpresalepaymentsComponent } from './enterprise/sale/pages/cancelpresalepayments/cancelpresalepayments.component';
 
 const routes: Routes = [
   {
@@ -110,6 +111,10 @@ const routes: Routes = [
       {
         path: 'enterprise/sale/pages/listpresale',
         component: ListpresaleComponent
+      },
+      {
+        path: 'enterprise/sale/pages/cancelpresalepayments',
+        component: CancelpresalepaymentsComponent
       },
       {
         path: 'enterprise/sale/pages/listsale',

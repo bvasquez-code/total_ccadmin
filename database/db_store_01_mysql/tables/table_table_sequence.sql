@@ -25,7 +25,7 @@ BEGIN
           -- Nueva columna solicitada
           `UsePrefix` char(1) NOT NULL DEFAULT 'S' COMMENT 'Usar prefijo (S/N)',
 
-          PRIMARY KEY (`SequenceTrx`)
+          PRIMARY KEY (`SequenceTableType`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
         
         SELECT 'Tabla table_sequence creada desde cero con UsePrefix.' AS Mensaje;

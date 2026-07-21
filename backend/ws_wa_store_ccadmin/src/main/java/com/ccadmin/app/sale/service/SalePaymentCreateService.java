@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class SalePaymentCreateService extends SessionService {
@@ -67,6 +68,58 @@ public class SalePaymentCreateService extends SessionService {
             // this.saleCreateService.confirm(payment.SaleCod,payment.DocumentType,payment.CounterfoilCod);
         }
         return salePayment;
+    }
+
+    @Transactional
+    public SalePaymentEntity saveReversal(SalePaymentRegisterDto payment) throws Exception {
+        SaleHeadEntity saleHead = this.saleHeadRepository.findByIdForUpdate(payment.SaleCod)
+                .orElseThrow(() -> new SalePaymentException("La venta no existe"));
+        if (!StatusConst.PENDING.equals(saleHead.SaleStatus)) {
+            throw new SalePaymentException("La venta ya no se encuentra pendiente");
+        }
+
+        TrxPaymentEntity reversal = this.trxPaymentShared.findById(payment.TrxPaymentId);
+        if (!"E".equals(reversal.TypeMovement) || reversal.ReversalOfTrxPaymentId == null) {
+            throw new SalePaymentException("La transaccion de pago no corresponde a una reversa");
+        }
+
+        List<SalePaymentEntity> paymentList = this.salePaymentRepository.findBySaleCod(payment.SaleCod);
+        if (paymentList.stream().anyMatch(item -> item.TrxPaymentId == reversal.TrxPaymentId)) {
+            throw new SalePaymentException("La reversa de pago ya fue registrada");
+        }
+
+        SalePaymentEntity originalPayment = paymentList.stream()
+                .filter(item -> item.TrxPaymentId == reversal.ReversalOfTrxPaymentId)
+                .findFirst()
+                .orElseThrow(() -> new SalePaymentException("El pago original no pertenece a la venta"));
+
+        BigDecimal alreadyReversed = BigDecimal.ZERO;
+        for (SalePaymentEntity item : paymentList) {
+            TrxPaymentEntity registeredPayment = this.trxPaymentShared.findById(item.TrxPaymentId);
+            if ("E".equals(registeredPayment.TypeMovement)
+                    && Objects.equals(registeredPayment.ReversalOfTrxPaymentId, originalPayment.TrxPaymentId)) {
+                alreadyReversed = alreadyReversed.add(item.NumAmountPaid.abs());
+            }
+        }
+
+        BigDecimal exchangeValue = originalPayment.NumExchangevalue == null
+                ? BigDecimal.ONE
+                : originalPayment.NumExchangevalue;
+        BigDecimal reversalAmount = reversal.AmountPaid.abs().multiply(exchangeValue);
+        BigDecimal reversibleAmount = originalPayment.NumAmountPaid.abs().subtract(alreadyReversed);
+        if (reversalAmount.signum() <= 0 || reversalAmount.compareTo(reversibleAmount) > 0) {
+            throw new SalePaymentException("El monto de reversa supera el saldo del pago original");
+        }
+
+        SalePaymentEntity salePayment = SalePaymentEntity.buildReversal(
+                originalPayment,
+                reversal,
+                getUserCod(),
+                paymentList.size() + 1
+        );
+        salePayment.NumAmountPaid = reversal.AmountPaid.multiply(exchangeValue);
+        salePayment.NumAmountPaidOrigin = reversal.AmountPaid;
+        return this.salePaymentRepository.save(salePayment);
     }
 
     @Transactional

@@ -2,10 +2,8 @@ package com.ccadmin.app.sale.service;
 
 import com.ccadmin.app.product.model.entity.KardexEntity;
 import com.ccadmin.app.product.model.entity.KardexZoneEntity;
-import com.ccadmin.app.product.model.entity.ProductInfoWarehouseEntity;
 import com.ccadmin.app.product.service.ProductRankingService;
 import com.ccadmin.app.product.shared.KardexShared;
-import com.ccadmin.app.product.shared.KardexZoneShared;
 import com.ccadmin.app.sale.exception.SaleBuildException;
 import com.ccadmin.app.sale.exception.SaleException;
 import com.ccadmin.app.sale.model.constants.SaleConstants;
@@ -28,7 +26,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,8 +64,6 @@ public class SaleCreateService extends SessionService {
     private SaleSunatEmissionService saleSunatEmissionService;
     @Autowired
     private SaleTaxCalculationService saleTaxCalculationService;
-    @Autowired
-    private KardexZoneShared kardexZoneShared;
 
     @Transactional
     public SaleDetailDto save(PresaleDetailDto presaleDetail) throws SaleException, SaleBuildException {
@@ -264,8 +259,12 @@ public class SaleCreateService extends SessionService {
             throw new SaleException("La venta no tiene stock asignado por almacen");
         }
 
-        List<KardexEntity> kardexList = this.createkardexList(saleDetWarehouseList,saleHead);
-        List<KardexZoneEntity> kardexZoneList = this.createKardexZoneList(saleDetWarehouseList, saleHead);
+        List<KardexEntity> kardexList = this.kardexShared.buildSaleConfirmation(
+                saleHead, saleDetWarehouseList, getUserCod()
+        );
+        List<KardexZoneEntity> kardexZoneList = this.kardexShared.buildZoneSaleConfirmation(
+                saleHead, saleDetWarehouseList, getUserCod()
+        );
 
         saleHead.SaleStatus = SaleConstants.CONFIRMED;
         saleHead.addSession(getUserCod());
@@ -273,9 +272,8 @@ public class SaleCreateService extends SessionService {
         SaleDocumentEntity saleDocument = counterfoilShared.generateDocumentSale(saleHead.StoreCod,DocumentType,saleHead.SaleCod);
 
         this.saleHeadRepository.save(saleHead);
-        this.kardexShared.saveAllLedgerOnly(kardexList);
-        this.kardexZoneShared.saveAll(kardexZoneList);
         this.saleDocumentRepository.save(saleDocument);
+        this.kardexShared.saveAll(kardexList, kardexZoneList);
 
         SaleDetailDto saleDetail = this.saleSearchService.findById(saleHead.SaleCod);
 
@@ -310,76 +308,6 @@ public class SaleCreateService extends SessionService {
     private void queueSunatEmission(String saleCod) {
         this.genericQueuedService.addQueued(new SaleSunatEmissionTaskService(this.saleSunatEmissionService, saleCod));
     }
-
-    private List<KardexEntity> createkardexList(List<SaleDetWarehouseEntity> saleDetWarehouseList,SaleHeadEntity saleHead){
-        List<KardexEntity> kardexList = new ArrayList<>();
-        Map<String, KardexEntity> lastMovementByStock = new HashMap<>();
-
-        for (var item : saleDetWarehouseList) {
-            String key = this.stockKey(item.ProductCod, item.Variant, saleHead.StoreCod, item.WarehouseCod);
-            KardexEntity kardexLast = lastMovementByStock.computeIfAbsent(
-                    key,
-                    ignored -> this.kardexShared.findLastMovement(item.ProductCod,item.Variant,item.WarehouseCod,saleHead.StoreCod)
-            );
-            KardexEntity kardex = new KardexEntity(kardexLast,item,saleHead.StoreCod)
-                    .session(getUserCod());
-            kardexList.add(kardex);
-            lastMovementByStock.put(key, kardex);
-        }
-        return kardexList;
-    }
-
-    private List<KardexZoneEntity> createKardexZoneList(
-            List<SaleDetWarehouseEntity> detailList,
-            SaleHeadEntity saleHead
-    ) throws SaleException {
-        if (saleHead.PresaleCod == null || saleHead.PresaleCod.isBlank()) {
-            throw new SaleException("La venta no tiene una preventa reservada asociada");
-        }
-
-        List<KardexZoneEntity> result = new ArrayList<>();
-        Map<String, ProductInfoWarehouseEntity> stockCursorByWarehouse = new HashMap<>();
-        for (SaleDetWarehouseEntity detail : detailList) {
-            this.validateReservation(saleHead, detail);
-            String key = this.stockKey(
-                    detail.ProductCod, detail.Variant, saleHead.StoreCod, detail.WarehouseCod
-            );
-            ProductInfoWarehouseEntity stockCursor = stockCursorByWarehouse.computeIfAbsent(
-                    key,
-                    ignored -> this.kardexZoneShared.findStockForUpdate(
-                            detail.ProductCod, detail.Variant, saleHead.StoreCod, detail.WarehouseCod
-                    )
-            );
-            List<KardexZoneEntity> movementList = KardexZoneEntity.buildSaleConfirmation(
-                    saleHead, detail, stockCursor, getUserCod()
-            );
-            result.addAll(movementList);
-        }
-        return result;
-    }
-
-    private void validateReservation(
-            SaleHeadEntity saleHead,
-            SaleDetWarehouseEntity detail
-    ) throws SaleException {
-        List<KardexZoneEntity> reservationList = this.kardexZoneShared.findByEvent(
-                SaleConstants.KARDEX_ZONE_SOURCE_PRESALE,
-                saleHead.PresaleCod,
-                detail.ItemNumber,
-                SaleConstants.KARDEX_ZONE_EVENT_RESERVATION
-        );
-        if (!KardexZoneEntity.isValidPresaleReservation(reservationList, detail)) {
-            throw new SaleException(
-                    "No existe una reserva valida para el item " + detail.ItemNumber
-                            + " de la venta " + saleHead.SaleCod
-            );
-        }
-    }
-
-    private String stockKey(String productCod, String variant, String storeCod, String warehouseCod) {
-        return productCod + "|" + variant + "|" + storeCod + "|" + warehouseCod;
-    }
-
 
     public SaleHeadEntity saveClientSale(String SaleCod, String ClientCod) throws SaleException {
         SaleHeadEntity saleHead = this.saleHeadRepository.findById(SaleCod).get();

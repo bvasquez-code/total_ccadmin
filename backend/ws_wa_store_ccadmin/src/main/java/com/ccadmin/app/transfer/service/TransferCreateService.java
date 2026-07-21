@@ -1,6 +1,7 @@
 package com.ccadmin.app.transfer.service;
 
 import com.ccadmin.app.product.model.entity.KardexEntity;
+import com.ccadmin.app.product.model.entity.KardexZoneEntity;
 import com.ccadmin.app.product.model.entity.ProductConfigEntity;
 import com.ccadmin.app.product.model.entity.ProductEntity;
 import com.ccadmin.app.product.shared.KardexShared;
@@ -60,10 +61,6 @@ public class TransferCreateService extends SessionService {
     private StoreShared storeShared;
     @Autowired
     private KardexShared kardexShared;
-    @Autowired
-    private TransferStockDispatchService transferStockDispatchService;
-    @Autowired
-    private TransferStockReceiptService transferStockReceiptService;
     @Autowired
     private CounterfoilShared counterfoilShared;
     @Autowired
@@ -288,11 +285,13 @@ public class TransferCreateService extends SessionService {
             det.WarehouseCodOrigin = warehouseCodOrigin;
         }
 
-        this.transferStockDispatchService.dispatchTransfer(
-                head.TransferCod,
-                head.StoreCodOrigin,
-                detListDispatch,
-                getUserSession(request.user)
+        List<KardexEntity> kardexList = this.kardexShared.buildTransferDispatch(
+                head.TransferCod, head.StoreCodOrigin,
+                detListDispatch, getUserSession(request.user)
+        );
+        List<KardexZoneEntity> kardexZoneList = this.kardexShared.buildZoneTransferDispatch(
+                head.TransferCod, head.StoreCodOrigin,
+                detListDispatch, getUserSession(request.user)
         );
 
         TransferDocumentEntity transferDocument = this.counterfoilShared.generateDocumentTransfer(
@@ -352,6 +351,7 @@ public class TransferCreateService extends SessionService {
         this.transferDetRepository.saveAll(detList);
         this.transferDocumentRepository.save(transferDocument);
         this.carrierRepository.save(carrier);
+        this.kardexShared.saveAll(kardexList, kardexZoneList);
         this.emitSunatGuideAfterCommit(head.TransferCod);
 
         return new ResponseWsDto("Transferencia despachada correctamente");
@@ -424,11 +424,13 @@ public class TransferCreateService extends SessionService {
             det.WarehouseCodDest = warehouseCodDest;
         }
 
-        this.transferStockReceiptService.receiveTransfer(
-                head.TransferCod,
-                head.StoreCodDest,
-                detListReceive,
-                getUserSession(request.user)
+        List<KardexEntity> kardexList = this.kardexShared.buildTransferReceipt(
+                head.TransferCod, head.StoreCodDest,
+                detListReceive, getUserSession(request.user)
+        );
+        List<KardexZoneEntity> kardexZoneList = this.kardexShared.buildZoneTransferReceipt(
+                head.TransferCod, head.StoreCodDest,
+                detListReceive, getUserSession(request.user)
         );
 
         Date now = new Date();
@@ -443,6 +445,7 @@ public class TransferCreateService extends SessionService {
 
         this.transferHeadRepository.save(head);
         this.transferDetRepository.saveAll(detList);
+        this.kardexShared.saveAll(kardexList, kardexZoneList);
 
         return new ResponseWsDto("Transferencia recibida correctamente");
     }

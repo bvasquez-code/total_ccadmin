@@ -100,6 +100,7 @@ import { ListbusinessconfiggroupComponent } from './enterprise/businessconfiggro
 import { CreatebusinessconfiggroupComponent } from './enterprise/businessconfiggroup/pages/createbusinessconfiggroup/createbusinessconfiggroup.component';
 import { CreatebusinessconfigComponent } from './enterprise/businessconfiggroup/pages/createbusinessconfig/createbusinessconfig.component';
 import { PermissiondeniedComponent } from './enterprise/shared/component/permissiondenied/permissiondenied.component';
+import { CancelpresalepaymentsComponent } from './enterprise/sale/pages/cancelpresalepayments/cancelpresalepayments.component';
 
 @NgModule({
   declarations: [
@@ -135,6 +136,7 @@ import { PermissiondeniedComponent } from './enterprise/shared/component/permiss
     CreatesupplierComponent,
     ModalsearchsupplierComponent,
     ListpresaleComponent,
+    CancelpresalepaymentsComponent,
     ListbrandComponent,
     CreatebrandComponent,
     CreatecategoryComponent,

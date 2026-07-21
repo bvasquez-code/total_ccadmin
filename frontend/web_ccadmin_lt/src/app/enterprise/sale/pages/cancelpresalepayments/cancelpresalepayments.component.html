@@ -1,0 +1,53 @@
+<div role="main" class="main-content">
+  <div class="page-content container container-plus">
+    <div class="card dcard mt-2 mt-lg-3">
+      <div class="card-header">
+        <h3 class="card-title text-125 text-primary-d2">
+          <i class="fa fa-undo text-dark-l3 mr-1"></i>
+          Anulacion de preventa {{ presaleCod }}
+        </h3>
+      </div>
+
+      <div class="card-body px-3" *ngIf="!isLoading">
+        <div class="alert alert-info">
+          <div><b>Tipo:</b> Anulacion {{ cancellationMode === 'forced' ? 'forzada' : 'regular' }}</div>
+          <div><b>Venta:</b> {{ cancellationDetail.SaleDetail?.Headboard?.SaleCod || 'Sin venta asociada' }}</div>
+          <div><b>Reserva de stock:</b> {{ cancellationDetail.HasStockReservation ? 'Si' : 'No' }}</div>
+          <div><b>Saldo pagado por anular:</b> {{ cancellationDetail.PendingPaymentAmount | FormatoMonedaPeruana : true }}</div>
+        </div>
+
+        <div class="alert alert-warning" *ngIf="cancellationMode === 'forced' && cancellationDetail.HasStockReservation">
+          Esta preventa tiene stock reservado. Regrese a la lista y use la anulacion regular.
+        </div>
+
+        <div class="alert alert-warning" *ngIf="cancellationMode === 'regular' && cancellationDetail.Headboard.SaleStatus === 'C' && !cancellationDetail.HasStockReservation">
+          Esta preventa antigua no tiene stock reservado. Regrese a la lista y use la anulacion forzada.
+        </div>
+
+        <app-createtrxpayment
+          *ngIf="hasPendingPayments() && trxPaymentRequest.TrxPaymentReversalList.length > 0"
+          [TrxPaymentComponenRequest]="trxPaymentRequest"
+          (ResultForm)="registerReversal($event)"
+        >
+        </app-createtrxpayment>
+
+        <div class="alert alert-danger" *ngIf="hasPendingPayments() && trxPaymentRequest.TrxPaymentReversalList.length === 0">
+          Existe saldo pagado, pero no se encontraron pagos originales que puedan revertirse.
+        </div>
+
+        <div class="d-flex justify-content-between mt-4">
+          <a class="btn btn-secondary px-4" routerLink="/enterprise/sale/pages/listpresale">
+            <i class="fa fa-arrow-left mr-1"></i> Volver
+          </a>
+          <button
+            type="button"
+            class="btn btn-danger px-4"
+            [disabled]="hasPendingPayments()"
+            (click)="finishCancellation()">
+            <i class="fa fa-ban mr-1"></i> Finalizar anulacion
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

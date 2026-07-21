@@ -23,6 +23,23 @@ public interface SaleHeadRepository extends JpaRepository<SaleHeadEntity,String>
     Optional<SaleHeadEntity> findByIdForUpdate(@Param("SaleCod") String saleCod);
 
     @Query(value = """
+            select * from sale_head
+            where PresaleCod = :PresaleCod
+            order by CreationDate desc
+            limit 1
+            """, nativeQuery = true)
+    Optional<SaleHeadEntity> findByPresaleCod(@Param("PresaleCod") String presaleCod);
+
+    @Query(value = """
+            select * from sale_head
+            where PresaleCod = :PresaleCod
+            order by CreationDate desc
+            limit 1
+            for update
+            """, nativeQuery = true)
+    Optional<SaleHeadEntity> findByPresaleCodForUpdate(@Param("PresaleCod") String presaleCod);
+
+    @Query(value = """
             select sh.*
             from sale_head sh
             inner join presale_head ph on ph.PresaleCod = sh.PresaleCod

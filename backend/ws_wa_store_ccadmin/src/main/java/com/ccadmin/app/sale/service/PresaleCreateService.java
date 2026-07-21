@@ -1,7 +1,9 @@
 package com.ccadmin.app.sale.service;
 
 import com.ccadmin.app.product.model.entity.ProductConfigEntity;
+import com.ccadmin.app.product.model.entity.KardexZoneEntity;
 import com.ccadmin.app.product.service.ProductRankingService;
+import com.ccadmin.app.product.shared.KardexShared;
 import com.ccadmin.app.product.shared.ProductOperationConfigShared;
 import com.ccadmin.app.sale.exception.PresaleBuildException;
 import com.ccadmin.app.sale.exception.PresaleException;
@@ -63,7 +65,7 @@ public class PresaleCreateService extends SessionService {
     @Autowired
     private SaleCreateService saleCreateService;
     @Autowired
-    private PresaleStockReservationService presaleStockReservationService;
+    private KardexShared kardexShared;
 
     public String createCode(){
         String PresaleCod = presaleHeadRepository.getPresaleCod(getStoreCod());
@@ -110,7 +112,19 @@ public class PresaleCreateService extends SessionService {
 
         PresaleDetailDto presaleDetail = this.presaleSearchService.findById(presale.PresaleCod);
         SaleDetailDto saleDetail = this.saleCreateService.save(presaleDetail);
-        this.presaleStockReservationService.reserve(presale, saleDetail.Headboard, getUserCod());
+        if (!StatusConst.PENDING.equals(saleDetail.Headboard.SaleStatus)
+                || !presale.PresaleCod.equals(saleDetail.Headboard.PresaleCod)) {
+            throw new PresaleException("La venta pendiente no corresponde a la preventa confirmada");
+        }
+        List<PresaleDetWarehouseEntity> detailList =
+                this.presaleDetWarehouseRepository.findActiveByPresaleCod(presale.PresaleCod);
+        if (detailList.isEmpty()) {
+            throw new PresaleException("La preventa no tiene stock asignado por almacen");
+        }
+        List<KardexZoneEntity> kardexZoneList = this.kardexShared.buildPresaleReservation(
+                presale, detailList, getUserCod()
+        );
+        this.kardexShared.saveAll(List.of(), kardexZoneList);
 
         return saleDetail;
     }

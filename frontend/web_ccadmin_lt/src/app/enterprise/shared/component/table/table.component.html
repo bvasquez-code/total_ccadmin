@@ -45,6 +45,7 @@
                       <a *ngFor="let option of Headers.Options">
 
                         <a *ngIf="(option.Type === 'Url' && showOption(option,item))" href="{{ generateUrl(option,item,Headers) }}"
+                          [attr.title]="option.Title || null"
                           class="mx-2px btn radius-1 border-2 btn-xs btn-brc-tp btn-light-secondary btn-h-lighter-success btn-a-lighter-success"
                           (click)="getDataRow(item)"
                         >
@@ -53,6 +54,7 @@
 
                         <a *ngIf="(option.Type === 'Modal' && showOption(option,item))" href="#" data-toggle="modal"
                           [attr.data-target]="'#'+option.ID"
+                          [attr.title]="option.Title || null"
                           class="mx-2px btn radius-1 border-2 btn-xs btn-brc-tp btn-light-secondary btn-h-lighter-success btn-a-lighter-success"
                           (click)="getDataRow(item)"
                         >

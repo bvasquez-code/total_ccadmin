@@ -13,6 +13,24 @@ import java.util.Date;
 public interface KardexZoneRepository extends JpaRepository<KardexZoneEntity, Long> {
 
     @Query(value = """
+            select kz.* from kardex_zone kz
+            where kz.ProductCod = :ProductCod
+              and kz.Variant = :Variant
+              and kz.StoreCod = :StoreCod
+              and kz.WarehouseCod = :WarehouseCod
+              and kz.ZoneStockMoved = :ZoneStockMoved
+            order by kz.KardexZoneID desc
+            limit 1
+            """, nativeQuery = true)
+    KardexZoneEntity findLastMovement(
+            @Param("ProductCod") String productCod,
+            @Param("Variant") String variant,
+            @Param("StoreCod") String storeCod,
+            @Param("WarehouseCod") String warehouseCod,
+            @Param("ZoneStockMoved") String zoneStockMoved
+    );
+
+    @Query(value = """
             select count(1)
             from kardex_zone kz
             where kz.SourceTable = 'no_table'
@@ -104,6 +122,19 @@ public interface KardexZoneRepository extends JpaRepository<KardexZoneEntity, Lo
             @Param("SourceTable") String sourceTable,
             @Param("OperationCod") String operationCod,
             @Param("ItemNumber") int itemNumber,
+            @Param("MovementEvent") String movementEvent
+    );
+
+    @Query(value = """
+            select count(1) from kardex_zone
+            where SourceTable = :SourceTable
+              and OperationCod = :OperationCod
+              and MovementEvent = :MovementEvent
+              and Status = 'A'
+            """, nativeQuery = true)
+    int countByOperationEvent(
+            @Param("SourceTable") String sourceTable,
+            @Param("OperationCod") String operationCod,
             @Param("MovementEvent") String movementEvent
     );
 

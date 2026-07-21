@@ -10,6 +10,8 @@ import { DataSesionService } from 'src/app/enterprise/compartido/service/datases
 import { ResponseWsDto } from 'src/app/enterprise/shared/model/dto/ResponseWsDto';
 import { PresaleRegisterDto } from '../../model/dto/PresaleRegisterDto';
 import { ToastrService } from 'ngx-toastr';
+import { Router } from '@angular/router';
+import { PresaleCancellationDetailDto } from '../../model/dto/PresaleCancellationDetailDto';
 
 @Component({
   selector: 'app-listpresale',
@@ -29,7 +31,8 @@ export class ListpresaleComponent implements OnInit,ActionTableService<PresaleHe
   constructor(
     private presaleService : PresaleService,
     private dataSesionService : DataSesionService,
-    private toastrService : ToastrService
+    private toastrService : ToastrService,
+    private router: Router
   )
   {
     
@@ -43,7 +46,12 @@ export class ListpresaleComponent implements OnInit,ActionTableService<PresaleHe
     this.findAll(Page,this.txtSearch.nativeElement.value);
   }
   loadingTable(responsePageSearch: ResponsePageSearch<PresaleHeadEntity>): void {
-    
+    const showPending = (presale: PresaleHeadEntity): boolean => presale.SaleStatus === 'P';
+    const showCancellable = (presale: PresaleHeadEntity): boolean =>
+      presale.SaleStatus === 'P' || presale.SaleStatus === 'C';
+    const showForceCancellation = (presale: PresaleHeadEntity): boolean =>
+      presale.SaleStatus === 'C';
+
     const data : DataTablaGeneticDto<PresaleHeadEntity> = new DataTablaGeneticDto();
     data.init(
       [
@@ -56,7 +64,7 @@ export class ListpresaleComponent implements OnInit,ActionTableService<PresaleHe
           IsStatus : true,
           Html : {
             P : 'badge badge-sm bgc-info-d1 text-white pb-1 px-25',
-            C : 'badge badge-sm bgc-red-d1 text-white pb-1 px-25'
+            C : 'badge badge-sm bgc-success-d1 text-white pb-1 px-25'
           },
           Mask : {
             P : "Pendiente",
@@ -67,9 +75,10 @@ export class ListpresaleComponent implements OnInit,ActionTableService<PresaleHe
           ColumnAction : true , 
           Id : ["PresaleCod"] , 
           Options : [
-            { Type : "Url" , Name : "fa fa-pencil-alt" , Url : "/enterprise/sale/pages/createpresale?PresaleCod={PresaleCod}" },
-            { Type : "Url" , Name : "fa fa-trash-alt" , Url : "#" },
-            { Type : "Modal" , Name : "fa fa-check" , Url : "#", ID : "modal_confirm" }
+            { Type : "Url" , Name : "fa fa-pencil-alt" , Title: "Editar preventa", Url : "/enterprise/sale/pages/createpresale?PresaleCod={PresaleCod}", Function: showPending },
+            { Type : "Modal" , Name : "fa fa-check" , Title: "Confirmar preventa", Url : "#", ID : "modal_confirm", Function: showPending },
+            { Type : "Modal" , Name : "fa fa-ban" , Title: "Anulacion regular", Url : "#", ID : "modal_cancel", Function: showCancellable },
+            { Type : "Modal" , Name : "fa fa-exclamation-triangle" , Title: "Forzar anulacion sin reserva", Url : "#", ID : "modal_force_cancel", Function: showForceCancellation }
           ] 
         }
       ],
@@ -104,6 +113,8 @@ export class ListpresaleComponent implements OnInit,ActionTableService<PresaleHe
   actionModal(ModalId: string): void {
 
     if(ModalId === "modal_confirm") this.Confirm();
+    if(ModalId === "modal_cancel") this.cancelPresale(false);
+    if(ModalId === "modal_force_cancel") this.cancelPresale(true);
   
   }
 
@@ -121,6 +132,40 @@ export class ListpresaleComponent implements OnInit,ActionTableService<PresaleHe
       this.findAll(1,"");
     }
 
+  }
+
+  async cancelPresale(forced: boolean): Promise<void> {
+    const presaleCod: string = this.PresaleHeadSelect.PresaleCod;
+    const detailResponse: ResponseWsDto = await this.presaleService.cancellationDetail(presaleCod);
+
+    if (detailResponse.ErrorStatus) {
+      this.toastrService.error(detailResponse.Message);
+      return;
+    }
+
+    const detail: PresaleCancellationDetailDto = detailResponse.Data;
+    if (Number(detail.PendingPaymentAmount || 0) > 0) {
+      this.toastrService.warning("La venta tiene pagos pendientes de anular.");
+      await this.router.navigate(
+        ['/enterprise/sale/pages/cancelpresalepayments'],
+        { queryParams: { PresaleCod: presaleCod, Mode: forced ? 'forced' : 'regular' } }
+      );
+      return;
+    }
+
+    const response: ResponseWsDto = forced
+      ? await this.presaleService.forceCancel(presaleCod)
+      : await this.presaleService.cancel(presaleCod);
+
+    if (response.ErrorStatus) {
+      this.toastrService.error(response.Message);
+      return;
+    }
+
+    this.toastrService.success(forced
+      ? "Preventa anulada de manera forzada"
+      : "Preventa anulada correctamente");
+    await this.findAll(1, this.txtSearch.nativeElement.value);
   }
 
 }

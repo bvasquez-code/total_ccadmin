@@ -6,7 +6,6 @@ import com.ccadmin.app.product.model.entity.ProductEntity;
 import com.ccadmin.app.product.model.entity.ProductInfoEntity;
 import com.ccadmin.app.product.model.entity.ProductInfoWarehouseEntity;
 import com.ccadmin.app.product.model.entity.id.ProductInfoId;
-import com.ccadmin.app.product.model.entity.id.ProductInfoWarehouseId;
 import com.ccadmin.app.product.repository.KardexRepository;
 import com.ccadmin.app.product.shared.*;
 import com.ccadmin.app.pucharse.model.entity.PucharseHeadEntity;
@@ -23,7 +22,6 @@ import com.ccadmin.app.shared.service.SearchService;
 import com.ccadmin.app.shared.service.SessionService;
 import com.ccadmin.app.store.model.entity.StoreEntity;
 import com.ccadmin.app.store.shared.StoreShared;
-import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -55,54 +53,6 @@ public class KardexService extends SessionService {
     @Autowired
     private BusinessConfigSearchService businessConfigSearchService;
     private SearchService searchService;
-
-    @Transactional
-    public KardexEntity save(KardexEntity kardex) {
-        kardex = this.kardexRepository.save(kardex);
-        this.saveInfoProduct(kardex);
-        return kardex;
-    }
-
-    @Transactional
-    public List<KardexEntity> saveAll(List<KardexEntity> kardexList) {
-        kardexList.forEach(KardexEntity::validateNonNegativeStock);
-
-        kardexList = this.kardexRepository.saveAll(kardexList);
-        for (var kardex : kardexList) {
-            this.saveInfoProduct(kardex);
-        }
-        return kardexList;
-    }
-
-    @Transactional
-    public List<KardexEntity> saveAllLedgerOnly(List<KardexEntity> kardexList) {
-        kardexList.forEach(KardexEntity::validateNonNegativeStock);
-        return this.kardexRepository.saveAll(kardexList);
-    }
-
-    public KardexEntity findLastMovement(String ProductCod, String Variant, String WarehouseCod, String StoreCod) {
-        return this.kardexRepository.findLastMovement(ProductCod, Variant, WarehouseCod, StoreCod);
-    }
-
-    private void saveInfoProduct(KardexEntity kardex) {
-        ProductInfoEntity productInfo = this.productInfoShared.findById(
-                new ProductInfoId(kardex.ProductCod, kardex.Variant, kardex.StoreCod));
-        productInfo.addStock(kardex.NumStockMoved * getSign(kardex.TypeOperation));
-        productInfo.addSession(getUserCod(), false);
-
-        ProductInfoWarehouseEntity productInfoWarehouse = this.productInfoWarehouseShared.findById(
-                new ProductInfoWarehouseId(kardex.ProductCod, kardex.Variant, kardex.WarehouseCod));
-        productInfoWarehouse.addStock(kardex.NumStockMoved * getSign(kardex.TypeOperation));
-        productInfoWarehouse.addSession(getUserCod(), false);
-
-        this.productInfoShared.save(productInfo);
-        this.productInfoWarehouseShared.save(productInfoWarehouse);
-        this.productFindCreateShared.save(kardex.ProductCod, kardex.StoreCod);
-    }
-
-    private int getSign(String TypeOperation) {
-        return ((TypeOperation.equals("S")) ? 1 : -1);
-    }
 
     public ResponseWsDto regularizeAllKardex() {
         List<StoreEntity> storeList = this.storeShared.findAll();

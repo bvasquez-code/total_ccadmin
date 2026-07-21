@@ -1,5 +1,8 @@
 package com.ccadmin.app.pucharse.service;
 
+import com.ccadmin.app.product.model.entity.KardexEntity;
+import com.ccadmin.app.product.model.entity.KardexZoneEntity;
+import com.ccadmin.app.product.shared.KardexShared;
 import com.ccadmin.app.product.shared.ProductShared;
 import com.ccadmin.app.pucharse.exception.PucharseException;
 import com.ccadmin.app.pucharse.model.dto.PucharseDetailsDto;
@@ -40,7 +43,7 @@ public class PucharseService extends SessionService {
     @Autowired
     private PucharseDetDeliveryRepository pucharseDetDeliveryRepository;
     @Autowired
-    private PurchaseStockReceiptService purchaseStockReceiptService;
+    private KardexShared kardexShared;
     @Autowired
     private WarehouseShared warehouseShared;
     @Autowired
@@ -168,12 +171,18 @@ public class PucharseService extends SessionService {
             item.addSession(getUserCod(), false);
         }
 
-        this.purchaseStockReceiptService.receive(Headboard, DeliveryList, getUserCod());
+        List<KardexEntity> kardexList = this.kardexShared.buildPurchaseReceipt(
+                Headboard, DeliveryList, getUserCod()
+        );
+        List<KardexZoneEntity> kardexZoneList = this.kardexShared.buildZonePurchaseReceipt(
+                Headboard, DeliveryList, getUserCod()
+        );
         Headboard.PurchaseStatus = StatusConst.FINALIZED;
         Headboard.addSession(getUserCod(),false);
         this.pucharseHeadRepository.save(Headboard);
         this.pucharseDetRepository.saveAll(DetailList);
         this.pucharseDetDeliveryRepository.saveAll(DeliveryList);
+        this.kardexShared.saveAll(kardexList, kardexZoneList);
 
         return findById(Headboard.PucharseCod);
     }

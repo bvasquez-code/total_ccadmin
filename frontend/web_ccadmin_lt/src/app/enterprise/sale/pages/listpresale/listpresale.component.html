@@ -54,3 +54,19 @@
   [action]="this"
 >
 </app-modalconfirm>
+
+<app-modalconfirm
+  [id]="'modal_cancel'"
+  [title]="'Anulacion regular'"
+  [message]="'¿Esta seguro que desea anular la preventa? Si tiene stock reservado, este sera liberado.'"
+  [action]="this"
+>
+</app-modalconfirm>
+
+<app-modalconfirm
+  [id]="'modal_force_cancel'"
+  [title]="'Forzar anulacion'"
+  [message]="'¿Esta seguro? Esta opcion solo se permite para preventas antiguas que no tienen stock reservado.'"
+  [action]="this"
+>
+</app-modalconfirm>

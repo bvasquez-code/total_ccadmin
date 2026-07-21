@@ -3,6 +3,9 @@ package com.ccadmin.app.sale.service;
 
 import com.ccadmin.app.payment.model.entity.TrxPaymentEntity;
 import com.ccadmin.app.payment.shared.TrxPaymentShared;
+import com.ccadmin.app.product.model.entity.KardexEntity;
+import com.ccadmin.app.product.model.entity.KardexZoneEntity;
+import com.ccadmin.app.product.shared.KardexShared;
 import com.ccadmin.app.sale.exception.SaleException;
 import com.ccadmin.app.sale.exception.SalePaymentException;
 import com.ccadmin.app.sale.model.constants.SaleConstants;
@@ -65,11 +68,7 @@ public class CreditNoteCreateService extends SessionService {
     @Autowired
     private WarehouseShared warehouseShared;
     @Autowired
-    private CreditNoteStockConfirmationService creditNoteStockConfirmationService;
-    @Autowired
-    private CreditNoteAcceptedStockReturnService creditNoteAcceptedStockReturnService;
-    @Autowired
-    private CreditNoteRejectedStockExitService creditNoteRejectedStockExitService;
+    private KardexShared kardexShared;
     @Autowired
     private TrxPaymentShared trxPaymentShared;
     @Autowired
@@ -195,14 +194,16 @@ public class CreditNoteCreateService extends SessionService {
             this.creditNoteDocumentRepository.save(creditNoteDocument);
         }
 
+        List<KardexEntity> kardexList = this.kardexShared.buildCreditNoteConfirmation(
+                creditNoteHead, detailList, warehouseDefault, getUserCod()
+        );
+        List<KardexZoneEntity> kardexZoneList = this.kardexShared.buildZoneCreditNoteConfirmation(
+                creditNoteHead, detailList, warehouseDefault, getUserCod()
+        );
+
         this.creditNoteHeadRepository.save(creditNoteHead);
         this.saleHeadRepository.updateHasCreditNote(creditNoteHead.SaleCod,"S");
-        this.creditNoteStockConfirmationService.addUnavailableStock(
-                creditNoteHead,
-                detailList,
-                warehouseDefault,
-                getUserCod()
-        );
+        this.kardexShared.saveAll(kardexList, kardexZoneList);
 
         CreditNoteDetailDto creditNoteDetail = this.creditNoteSearchService.findById(creditNoteRegister.Headboard.CreditNoteCod);
         this.emitSunatAfterCommit(creditNoteHead.CreditNoteCod);
@@ -310,21 +311,16 @@ public class CreditNoteCreateService extends SessionService {
                 ).session(getUserCod()))
                 .toList();
 
-        this.creditNoteAcceptedStockReturnService.moveAcceptedStockToPhysical(
-                creditNoteHead,
-                creditNoteDetList,
-                warehouseDefault,
-                getUserCod()
+        List<KardexEntity> kardexList = this.kardexShared.buildCreditNoteRejectedExit(
+                creditNoteHead, creditNoteDetList, warehouseDefault, getUserCod()
         );
-        this.creditNoteRejectedStockExitService.removeRejectedStock(
-                creditNoteHead,
-                creditNoteDetList,
-                warehouseDefault,
-                getUserCod()
+        List<KardexZoneEntity> kardexZoneList = this.kardexShared.buildZoneCreditNoteReturn(
+                creditNoteHead, creditNoteDetList, warehouseDefault, getUserCod()
         );
         this.creditNoteDetRepository.saveAll(creditNoteDetList);
         this.creditNoteHeadRepository.save(creditNoteHead);
         this.creditNoteDetWarehouseRepository.saveAll(creditNoteDetWarehouseList);
+        this.kardexShared.saveAll(kardexList, kardexZoneList);
 
         return this.creditNoteSearchService.findById(creditNoteRegister.Headboard.CreditNoteCod);
     }

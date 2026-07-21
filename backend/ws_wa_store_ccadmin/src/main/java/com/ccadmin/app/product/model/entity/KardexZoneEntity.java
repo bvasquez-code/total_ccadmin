@@ -24,9 +24,7 @@ import jakarta.persistence.Table;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 @Entity
 @Table(name = "kardex_zone")
@@ -69,30 +67,9 @@ public class KardexZoneEntity extends AuditTableEntity implements Serializable {
         return physicalWasSubtracted && reservedWasAdded;
     }
 
-    public static void advanceStockCursor(
-            ProductInfoWarehouseEntity stockCursor,
-            List<KardexZoneEntity> movementList
-    ) {
-        for (KardexZoneEntity movement : movementList) {
-            switch (movement.ZoneStockMoved) {
-                case KardexZoneConstants.ZONE_PHYSICAL ->
-                        stockCursor.NumPhysicalStock = movement.NumZoneStockAfter;
-                case KardexZoneConstants.ZONE_UNAVAILABLE ->
-                        stockCursor.NumUnavailableStock = movement.NumZoneStockAfter;
-                case KardexZoneConstants.ZONE_RESERVED ->
-                        stockCursor.NumReservedStock = movement.NumZoneStockAfter;
-                default -> throw new KardexZoneException("Zona de stock no soportada");
-            }
-        }
-        stockCursor.NumTotalStock = stockCursor.NumPhysicalStock
-                + stockCursor.NumUnavailableStock
-                + stockCursor.NumReservedStock;
-    }
-
     public static List<KardexZoneEntity> buildPresaleReservation(
             PresaleHeadEntity head,
             PresaleDetWarehouseEntity detail,
-            ProductInfoWarehouseEntity stock,
             String userCod
     ) {
         return build(
@@ -100,7 +77,7 @@ public class KardexZoneEntity extends AuditTableEntity implements Serializable {
                 SaleConstants.KARDEX_ZONE_SOURCE_PRESALE,
                 SaleConstants.KARDEX_ZONE_EVENT_RESERVATION,
                 detail.ProductCod, detail.Variant, head.StoreCod, detail.WarehouseCod,
-                detail.LotNumber, detail.ExpirationDate, stock, userCod,
+                detail.LotNumber, detail.ExpirationDate, userCod,
                 movement(KardexZoneConstants.ZONE_PHYSICAL, -detail.NumUnit),
                 movement(KardexZoneConstants.ZONE_RESERVED, detail.NumUnit)
         );
@@ -109,7 +86,6 @@ public class KardexZoneEntity extends AuditTableEntity implements Serializable {
     public static List<KardexZoneEntity> buildSaleConfirmation(
             SaleHeadEntity head,
             SaleDetWarehouseEntity detail,
-            ProductInfoWarehouseEntity stock,
             String userCod
     ) {
         return build(
@@ -117,7 +93,7 @@ public class KardexZoneEntity extends AuditTableEntity implements Serializable {
                 SaleConstants.KARDEX_ZONE_SOURCE_SALE,
                 SaleConstants.KARDEX_ZONE_EVENT_CONFIRMATION,
                 detail.ProductCod, detail.Variant, head.StoreCod, detail.WarehouseCod,
-                detail.LotNumber, detail.ExpirationDate, stock, userCod,
+                detail.LotNumber, detail.ExpirationDate, userCod,
                 movement(KardexZoneConstants.ZONE_RESERVED, -detail.NumUnit),
                 movement(KardexZoneConstants.ZONE_PHYSICAL, detail.NumUnit),
                 movement(KardexZoneConstants.ZONE_PHYSICAL, -detail.NumUnit)
@@ -127,7 +103,6 @@ public class KardexZoneEntity extends AuditTableEntity implements Serializable {
     public static List<KardexZoneEntity> buildSaleExpirationRelease(
             SaleHeadEntity head,
             SaleDetWarehouseEntity detail,
-            ProductInfoWarehouseEntity stock,
             String userCod
     ) {
         return build(
@@ -135,7 +110,7 @@ public class KardexZoneEntity extends AuditTableEntity implements Serializable {
                 SaleConstants.KARDEX_ZONE_SOURCE_SALE,
                 SaleConstants.KARDEX_ZONE_EVENT_EXPIRATION_RELEASE,
                 detail.ProductCod, detail.Variant, head.StoreCod, detail.WarehouseCod,
-                detail.LotNumber, detail.ExpirationDate, stock, userCod,
+                detail.LotNumber, detail.ExpirationDate, userCod,
                 movement(KardexZoneConstants.ZONE_RESERVED, -detail.NumUnit),
                 movement(KardexZoneConstants.ZONE_PHYSICAL, detail.NumUnit)
         );
@@ -144,7 +119,6 @@ public class KardexZoneEntity extends AuditTableEntity implements Serializable {
     public static List<KardexZoneEntity> buildPurchaseReceipt(
             PucharseHeadEntity head,
             PucharseDetDeliveryEntity detail,
-            ProductInfoWarehouseEntity stock,
             String userCod
     ) {
         return build(
@@ -152,7 +126,7 @@ public class KardexZoneEntity extends AuditTableEntity implements Serializable {
                 PucharseConstants.KARDEX_ZONE_SOURCE,
                 PucharseConstants.KARDEX_ZONE_EVENT_RECEIPT,
                 detail.ProductCod, detail.Variant, head.StoreCod, detail.WarehouseCod,
-                detail.LotNumber, detail.ExpirationDate, stock, userCod,
+                detail.LotNumber, detail.ExpirationDate, userCod,
                 movement(KardexZoneConstants.ZONE_PHYSICAL, detail.NumUnit)
         );
     }
@@ -168,14 +142,13 @@ public class KardexZoneEntity extends AuditTableEntity implements Serializable {
             int quantity,
             String lotNumber,
             Date expirationDate,
-            ProductInfoWarehouseEntity stock,
             String userCod
     ) {
         return build(
                 operationCod, itemNumber, sourceTable,
                 TransferConstants.KARDEX_ZONE_EVENT_DISPATCH,
                 productCod, variant, storeCod, warehouseCod,
-                lotNumber, expirationDate, stock, userCod,
+                lotNumber, expirationDate, userCod,
                 movement(KardexZoneConstants.ZONE_PHYSICAL, -quantity)
         );
     }
@@ -191,14 +164,13 @@ public class KardexZoneEntity extends AuditTableEntity implements Serializable {
             int quantity,
             String lotNumber,
             Date expirationDate,
-            ProductInfoWarehouseEntity stock,
             String userCod
     ) {
         return build(
                 operationCod, itemNumber, sourceTable,
                 TransferConstants.KARDEX_ZONE_EVENT_RECEIPT,
                 productCod, variant, storeCod, warehouseCod,
-                lotNumber, expirationDate, stock, userCod,
+                lotNumber, expirationDate, userCod,
                 movement(KardexZoneConstants.ZONE_PHYSICAL, quantity)
         );
     }
@@ -207,11 +179,10 @@ public class KardexZoneEntity extends AuditTableEntity implements Serializable {
             CreditNoteHeadEntity head,
             CreditNoteDetEntity detail,
             WarehouseEntity warehouse,
-            ProductInfoWarehouseEntity stock,
             String userCod
     ) {
         return buildCreditNote(
-                head, detail, warehouse, stock, userCod,
+                head, detail, warehouse, userCod,
                 SaleConstants.KARDEX_ZONE_EVENT_CREDIT_NOTE_CONFIRMATION,
                 movement(KardexZoneConstants.ZONE_UNAVAILABLE, detail.NumUnit)
         );
@@ -222,11 +193,10 @@ public class KardexZoneEntity extends AuditTableEntity implements Serializable {
             CreditNoteDetEntity detail,
             WarehouseEntity warehouse,
             int returned,
-            ProductInfoWarehouseEntity stock,
             String userCod
     ) {
         return buildCreditNote(
-                head, detail, warehouse, stock, userCod,
+                head, detail, warehouse, userCod,
                 SaleConstants.KARDEX_ZONE_EVENT_CREDIT_NOTE_ACCEPTED_RETURN,
                 movement(KardexZoneConstants.ZONE_UNAVAILABLE, -returned),
                 movement(KardexZoneConstants.ZONE_PHYSICAL, returned)
@@ -238,11 +208,10 @@ public class KardexZoneEntity extends AuditTableEntity implements Serializable {
             CreditNoteDetEntity detail,
             WarehouseEntity warehouse,
             int rejected,
-            ProductInfoWarehouseEntity stock,
             String userCod
     ) {
         return buildCreditNote(
-                head, detail, warehouse, stock, userCod,
+                head, detail, warehouse, userCod,
                 SaleConstants.KARDEX_ZONE_EVENT_CREDIT_NOTE_REJECTED_STOCK_EXIT,
                 movement(KardexZoneConstants.ZONE_UNAVAILABLE, -rejected)
         );
@@ -252,7 +221,6 @@ public class KardexZoneEntity extends AuditTableEntity implements Serializable {
             CreditNoteHeadEntity head,
             CreditNoteDetEntity detail,
             WarehouseEntity warehouse,
-            ProductInfoWarehouseEntity stock,
             String userCod,
             String movementEvent,
             ZoneMovement... movementList
@@ -261,7 +229,7 @@ public class KardexZoneEntity extends AuditTableEntity implements Serializable {
                 head.CreditNoteCod, detail.ItemNumber,
                 SaleConstants.KARDEX_ZONE_SOURCE_CREDIT_NOTE, movementEvent,
                 detail.ProductCod, detail.Variant, head.StoreCod, warehouse.WarehouseCod,
-                detail.LotNumber, detail.ExpirationDate, stock, userCod, movementList
+                detail.LotNumber, detail.ExpirationDate, userCod, movementList
         );
     }
 
@@ -276,14 +244,9 @@ public class KardexZoneEntity extends AuditTableEntity implements Serializable {
             String warehouseCod,
             String lotNumber,
             Date expirationDate,
-            ProductInfoWarehouseEntity stock,
             String userCod,
             ZoneMovement... movementList
     ) {
-        if (stock == null) {
-            throw new KardexZoneException("El stock anterior por almacen es obligatorio");
-        }
-        Map<String, Integer> balanceByZone = balances(stock);
         List<KardexZoneEntity> result = new ArrayList<>();
 
         for (ZoneMovement movement : movementList) {
@@ -293,14 +256,6 @@ public class KardexZoneEntity extends AuditTableEntity implements Serializable {
             if (movement.delta == 0) {
                 throw new KardexZoneException("La cantidad movida debe ser diferente de cero");
             }
-            int stockBefore = balanceByZone.get(movement.zone);
-            int stockAfter = stockBefore + movement.delta;
-            if (stockAfter < 0) {
-                throw new KardexZoneException(
-                        "Stock insuficiente en zona " + movement.zone + " para producto " + productCod
-                );
-            }
-
             KardexZoneEntity entity = new KardexZoneEntity();
             entity.OperationCod = operationCod;
             entity.ItemNumber = itemNumber;
@@ -315,25 +270,37 @@ public class KardexZoneEntity extends AuditTableEntity implements Serializable {
                     ? KardexZoneConstants.TYPE_OPERATION_ADD
                     : KardexZoneConstants.TYPE_OPERATION_SUBTRACT;
             entity.NumStockMoved = Math.abs(movement.delta);
-            entity.NumZoneStockBefore = stockBefore;
-            entity.NumZoneStockAfter = stockAfter;
             entity.LotNumber = lotNumber;
             entity.ExpirationDate = expirationDate;
             entity.addSession(userCod);
             result.add(entity);
-            balanceByZone.put(movement.zone, stockAfter);
         }
-        List<KardexZoneEntity> movementResult = List.copyOf(result);
-        advanceStockCursor(stock, movementResult);
-        return movementResult;
+        return List.copyOf(result);
     }
 
-    private static Map<String, Integer> balances(ProductInfoWarehouseEntity stock) {
-        Map<String, Integer> result = new LinkedHashMap<>();
-        result.put(KardexZoneConstants.ZONE_PHYSICAL, stock.NumPhysicalStock);
-        result.put(KardexZoneConstants.ZONE_RESERVED, stock.NumReservedStock);
-        result.put(KardexZoneConstants.ZONE_UNAVAILABLE, stock.NumUnavailableStock);
-        return result;
+    public void applyLastMovement(KardexZoneEntity lastMovement) {
+        this.NumZoneStockBefore = lastMovement == null ? 0 : lastMovement.NumZoneStockAfter;
+        this.NumZoneStockAfter = this.NumZoneStockBefore + this.signedQuantity();
+        this.validateNonNegativeStock();
+    }
+
+    public int signedQuantity() {
+        if (KardexZoneConstants.TYPE_OPERATION_ADD.equals(this.TypeOperation)) {
+            return this.NumStockMoved;
+        }
+        if (KardexZoneConstants.TYPE_OPERATION_SUBTRACT.equals(this.TypeOperation)) {
+            return -this.NumStockMoved;
+        }
+        throw new KardexZoneException("Tipo de operacion de zona no soportado");
+    }
+
+    public void validateNonNegativeStock() {
+        if (this.NumZoneStockAfter < 0) {
+            throw new KardexZoneException(
+                    "Stock insuficiente en zona " + this.ZoneStockMoved
+                            + " para producto " + this.ProductCod
+            );
+        }
     }
 
     private static ZoneMovement movement(String zone, int delta) {

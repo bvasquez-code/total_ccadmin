@@ -34,6 +34,11 @@ export class SaleService
         return RespuestaWS;
     }
 
+    async AddReversalPayment(salePayment: SalePaymentRegisterDto): Promise<ResponseWsDto> {
+        const url: string = `${AppSetting.API}/api/v1/sale/addReversalPayment`;
+        return await this.apiService.ExecutePostService(url, salePayment);
+    }
+
     async FindAll(search : SearchDto)
     {
         let url: string = `${AppSetting.API}/api/v1/sale/findAll`;

@@ -42,6 +42,22 @@ public class SaleController {
         }
     }
 
+    @PostMapping("addReversalPayment")
+    public ResponseEntity<ResponseWsDto> addReversalPayment(@RequestBody SalePaymentRegisterDto salePayment)
+    {
+        try{
+            return new ResponseEntity<ResponseWsDto>(
+                    new ResponseWsDto(this.salePaymentCreateService.saveReversal(salePayment))
+                    , HttpStatus.OK
+            );
+        }
+        catch (Exception ex)
+        {
+            log.error("Error :{}",ex.getMessage(), ex);
+            return new ResponseEntity<ResponseWsDto>(new ResponseWsDto(ex),HttpStatus.BAD_REQUEST);
+        }
+    }
+
     @GetMapping("findDataForm")
     public ResponseEntity<ResponseWsDto> findDataForm(@RequestParam String SaleCod)
     {
