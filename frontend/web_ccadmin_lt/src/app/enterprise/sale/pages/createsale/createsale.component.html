@@ -416,9 +416,9 @@
           <div class="col-sm-8">
             <select class="form-control" #cboDocumentType [disabled]="DocumentType === '01' || ClientSearchMode === 'advance'">
               <option value="06" *ngIf="DocumentType === '01' && ClientSearchMode !== 'advance'">RUC</option>
-              <option value="01" *ngIf="DocumentType === '03' || ClientSearchMode === 'advance'">DNI</option>
-              <option value="04" *ngIf="DocumentType === '03' && ClientSearchMode !== 'advance'">CARNET DE EXTRANJERIA</option>
-              <option value="06" *ngIf="DocumentType === '03' && ClientSearchMode !== 'advance'">RUC</option>
+              <option value="01" *ngIf="!DocumentType || DocumentType === '03' || ClientSearchMode === 'advance'">DNI</option>
+              <option value="04" *ngIf="(!DocumentType || DocumentType === '03') && ClientSearchMode !== 'advance'">CARNET DE EXTRANJERIA</option>
+              <option value="06" *ngIf="(!DocumentType || DocumentType === '03') && ClientSearchMode !== 'advance'">RUC</option>
             </select>
           </div>
         </div>
