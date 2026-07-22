@@ -76,11 +76,13 @@ export class ListpresaleComponent implements OnInit,ActionTableService<PresaleHe
           IsStatus : true,
           Html : {
             P : 'badge badge-sm bgc-info-d1 text-white pb-1 px-25',
-            C : 'badge badge-sm bgc-success-d1 text-white pb-1 px-25'
+            C : 'badge badge-sm bgc-success-d1 text-white pb-1 px-25',
+            X: 'badge badge-sm bgc-secondary text-white pb-1 px-25'
           },
           Mask : {
             P : "Pendiente",
-            C : "Confirmado"
+            C : "Confirmado",
+            X : "Anulado"
           },
         },
         { Name :  "Opciones" , 

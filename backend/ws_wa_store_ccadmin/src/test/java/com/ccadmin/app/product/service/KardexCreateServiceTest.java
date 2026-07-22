@@ -24,6 +24,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -44,26 +45,14 @@ class KardexCreateServiceTest {
     private KardexCreateService kardexCreateService;
 
     @Test
-    void saleMovementsAreChainedValidatedAndSavedAsOneStockOperation() throws Exception {
+    void saleMovementsUseInfoTablesAndAreSavedAsOneStockOperation() throws Exception {
         ProductInfoEntity productStock = productStock();
         ProductInfoWarehouseEntity warehouseStock = warehouseStock();
-        KardexEntity lastKardex = new KardexEntity();
-        lastKardex.NumStockAfter = 10;
-        KardexZoneEntity lastPhysical = zoneBalance(KardexZoneConstants.ZONE_PHYSICAL, 8);
-        KardexZoneEntity lastReserved = zoneBalance(KardexZoneConstants.ZONE_RESERVED, 2);
 
         when(productInfoRepository.findByIdForUpdate("PR001", "0000", "T001"))
                 .thenReturn(Optional.of(productStock));
         when(productInfoWarehouseRepository.findByIdForUpdate("PR001", "0000", "A001"))
                 .thenReturn(Optional.of(warehouseStock));
-        when(kardexRepository.findLastMovement("PR001", "0000", "A001", "T001"))
-                .thenReturn(lastKardex);
-        when(kardexZoneRepository.findLastMovement(
-                "PR001", "0000", "T001", "A001", KardexZoneConstants.ZONE_PHYSICAL
-        )).thenReturn(lastPhysical);
-        when(kardexZoneRepository.findLastMovement(
-                "PR001", "0000", "T001", "A001", KardexZoneConstants.ZONE_RESERVED
-        )).thenReturn(lastReserved);
         when(kardexRepository.save(any(KardexEntity.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(kardexZoneRepository.save(any(KardexZoneEntity.class)))
@@ -104,6 +93,12 @@ class KardexCreateServiceTest {
         assertEquals(8, productStock.NumTotalStock);
         verify(kardexRepository).save(kardexList.get(0));
         verify(kardexZoneRepository, times(3)).save(any(KardexZoneEntity.class));
+        verify(kardexRepository, never()).findLastMovement(
+                "PR001", "0000", "A001", "T001"
+        );
+        verify(kardexZoneRepository, never()).findLastMovement(
+                "PR001", "0000", "T001", "A001", KardexZoneConstants.ZONE_PHYSICAL
+        );
     }
 
     private ProductInfoEntity productStock() {
@@ -130,10 +125,4 @@ class KardexCreateServiceTest {
         return stock;
     }
 
-    private KardexZoneEntity zoneBalance(String zone, int balance) {
-        KardexZoneEntity movement = new KardexZoneEntity();
-        movement.ZoneStockMoved = zone;
-        movement.NumZoneStockAfter = balance;
-        return movement;
-    }
 }

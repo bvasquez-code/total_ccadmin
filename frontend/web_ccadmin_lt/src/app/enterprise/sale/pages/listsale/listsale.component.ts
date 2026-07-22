@@ -81,7 +81,7 @@ export class ListsaleComponent implements OnInit,ActionTableService<SaleHeadEnti
           Html : {
             P : 'badge badge-sm bgc-info-d1 text-white pb-1 px-25',
             C : 'badge badge-sm bgc-success-d1 text-white pb-1 px-25',
-            X : 'badge badge-sm bgc-red-d1 text-white pb-1 px-25'
+            X : 'badge badge-sm bgc-secondary text-white pb-1 px-25'
           },
           Mask : {
             P : "Pendiente",

@@ -73,6 +73,12 @@ public class KardexEntity extends AuditTableEntity implements Serializable {
         this.validateNonNegativeStock();
     }
 
+    public void applyCurrentStock(int currentStock) {
+        this.NumStockBefore = currentStock;
+        this.NumStockAfter = this.NumStockBefore + this.signedQuantity();
+        this.validateNonNegativeStock();
+    }
+
     public int signedQuantity() {
         if ("S".equals(this.TypeOperation)) {
             return this.NumStockMoved;

@@ -717,7 +717,7 @@ public class KardexCreateService {
             List<KardexEntity> movementList,
             Map<StockKey, ProductInfoWarehouseEntity> warehouseStockMap
     ) {
-        Map<StockKey, KardexEntity> lastMovementMap = new LinkedHashMap<>();
+        Map<StockKey, Integer> currentStockMap = new LinkedHashMap<>();
         List<KardexEntity> orderedList = movementList.stream()
                 .sorted(Comparator.comparing(StockKey::from, STOCK_KEY_COMPARATOR))
                 .toList();
@@ -727,29 +727,12 @@ public class KardexCreateService {
                 throw new KardexExcepcion("La cantidad movida de Kardex debe ser mayor que cero");
             }
             StockKey key = StockKey.from(movement);
-            KardexEntity lastMovement;
-            if (lastMovementMap.containsKey(key)) {
-                lastMovement = lastMovementMap.get(key);
-            } else {
-                lastMovement = this.kardexRepository.findLastMovement(
-                        key.productCod, key.variant, key.warehouseCod, key.storeCod
-                );
-                int currentTotal = warehouseStockMap.get(key).NumTotalStock;
-                if (lastMovement == null && currentTotal != 0) {
-                    throw new KardexExcepcion(
-                            "No existe Kardex inicial para el producto " + key.productCod
-                                    + " en el almacen " + key.warehouseCod
-                    );
-                }
-                if (lastMovement != null && lastMovement.NumStockAfter != currentTotal) {
-                    throw new KardexExcepcion(
-                            "El ultimo Kardex no coincide con el stock total del producto "
-                                    + key.productCod + " en el almacen " + key.warehouseCod
-                    );
-                }
-            }
-            movement.applyLastMovement(lastMovement);
-            lastMovementMap.put(key, movement);
+            int currentStock = currentStockMap.getOrDefault(
+                    key,
+                    warehouseStockMap.get(key).NumTotalStock
+            );
+            movement.applyCurrentStock(currentStock);
+            currentStockMap.put(key, movement.NumStockAfter);
         }
     }
 
@@ -758,7 +741,7 @@ public class KardexCreateService {
             Map<StockKey, ProductInfoEntity> productStockMap,
             Map<StockKey, ProductInfoWarehouseEntity> warehouseStockMap
     ) {
-        Map<ZoneStockKey, KardexZoneEntity> lastMovementMap = new LinkedHashMap<>();
+        Map<ZoneStockKey, Integer> currentStockMap = new LinkedHashMap<>();
         List<KardexZoneEntity> orderedList = movementList.stream()
                 .sorted(Comparator.comparing(StockKey::from, STOCK_KEY_COMPARATOR))
                 .toList();
@@ -770,34 +753,15 @@ public class KardexCreateService {
             ProductInfoWarehouseEntity warehouseStock = warehouseStockMap.get(stockKey);
             ProductInfoEntity productStock = productStockMap.get(stockKey);
 
-            KardexZoneEntity lastMovement;
-            if (lastMovementMap.containsKey(zoneKey)) {
-                lastMovement = lastMovementMap.get(zoneKey);
-            } else {
-                lastMovement = this.kardexZoneRepository.findLastMovement(
-                        zoneKey.productCod, zoneKey.variant, zoneKey.storeCod,
-                        zoneKey.warehouseCod, zoneKey.zone
-                );
-                int currentZoneStock = this.zoneStock(warehouseStock, zoneKey.zone);
-                if (lastMovement == null && currentZoneStock != 0) {
-                    throw new KardexZoneException(
-                            "No existe Kardex Zona inicial para " + zoneKey.zone
-                                    + " del producto " + zoneKey.productCod
-                    );
-                }
-                if (lastMovement != null && lastMovement.NumZoneStockAfter != currentZoneStock) {
-                    throw new KardexZoneException(
-                            "El ultimo Kardex Zona no coincide con el saldo " + zoneKey.zone
-                                    + " del producto " + zoneKey.productCod
-                    );
-                }
-            }
-
-            movement.applyLastMovement(lastMovement);
+            int currentStock = currentStockMap.getOrDefault(
+                    zoneKey,
+                    this.zoneStock(warehouseStock, zoneKey.zone)
+            );
+            movement.applyCurrentStock(currentStock);
             StockDelta delta = StockDelta.from(movement.ZoneStockMoved, movement.signedQuantity());
             this.apply(warehouseStock, delta);
             this.apply(productStock, delta);
-            lastMovementMap.put(zoneKey, movement);
+            currentStockMap.put(zoneKey, movement.NumZoneStockAfter);
         }
     }
 

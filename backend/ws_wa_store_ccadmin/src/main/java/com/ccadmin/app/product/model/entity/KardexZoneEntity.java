@@ -284,6 +284,12 @@ public class KardexZoneEntity extends AuditTableEntity implements Serializable {
         this.validateNonNegativeStock();
     }
 
+    public void applyCurrentStock(int currentStock) {
+        this.NumZoneStockBefore = currentStock;
+        this.NumZoneStockAfter = this.NumZoneStockBefore + this.signedQuantity();
+        this.validateNonNegativeStock();
+    }
+
     public int signedQuantity() {
         if (KardexZoneConstants.TYPE_OPERATION_ADD.equals(this.TypeOperation)) {
             return this.NumStockMoved;

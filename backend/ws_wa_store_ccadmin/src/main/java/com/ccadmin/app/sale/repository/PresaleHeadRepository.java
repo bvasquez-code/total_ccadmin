@@ -43,7 +43,7 @@ public interface PresaleHeadRepository extends JpaRepository<PresaleHeadEntity,S
             where        
             (ph.PresaleCod = :id or ph.PresaleCod like %:query%)
             and ph.StoreCod = :storeCod
-            and ph.SaleStatus in ('P', 'C')
+            and ph.SaleStatus in ('P', 'C','X')
             order by ph.PresaleCod desc
             limit :init,:limit
             """,nativeQuery = true)
