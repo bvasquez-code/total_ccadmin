@@ -83,30 +83,48 @@ export class MenusidebarComponent implements OnInit {
   }
 
   private markActiveMenu(): void {
-    const url = this.document.location.href;
+    const url = this.normalizeUrl(this.document.location.pathname);
+    const requestedShadeUrl = new URLSearchParams(this.document.location.search).get('ReturnUrl') || '';
     this.isOpenMenu = false;
 
     for (const menu of this.g_list_menu) {
       for (const submenu of menu.list_sub_menu) {
-        if (submenu.url !== "" && submenu.url !== null && url.includes(submenu.url_position)) {
+        const urlPosition = this.normalizeUrl(submenu.url_position);
+        if (submenu.url !== "" && submenu.url !== null && url.includes(urlPosition)) {
           submenu.flg_menu_activo = true;
           menu.flg_menu_activo = true;
           this.isOpenMenu = true;
-          this.markShadedSubMenu(submenu);
+          this.markShadedSubMenu(submenu, requestedShadeUrl);
         }
       }
     }
   }
 
-  private markShadedSubMenu(submenu: SubMenuPagina): void {
-    const shadeUrl = submenu.url_shade || submenu.url;
+  private markShadedSubMenu(submenu: SubMenuPagina, requestedShadeUrl: string): void {
+    const normalizedRequestedShadeUrl = this.normalizeUrl(requestedShadeUrl);
+    const canUseRequestedShade = this.g_list_menu.some(menu =>
+      menu.list_sub_menu.some(item =>
+        item.IsVisible && this.normalizeUrl(item.url) === normalizedRequestedShadeUrl
+      )
+    );
+    const shadeUrl = canUseRequestedShade
+      ? normalizedRequestedShadeUrl
+      : this.normalizeUrl(submenu.url_shade || submenu.url);
 
     this.g_list_menu.forEach(menu => {
-      const itemView = menu.list_sub_menu.find(item => item.url === shadeUrl);
+      const itemView = menu.list_sub_menu.find(item => this.normalizeUrl(item.url) === shadeUrl);
       if (itemView) {
         itemView.shadedMenu = true;
       }
     });
+  }
+
+  private normalizeUrl(url: string): string {
+    return (url || '')
+      .split('?')[0]
+      .split('#')[0]
+      .replace(/^\/+/, '')
+      .replace(/\/+$/, '');
   }
 
   private permissionExists(menuCod: string): boolean {

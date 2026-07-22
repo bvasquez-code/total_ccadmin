@@ -124,7 +124,7 @@ export class ListtransferrequestComponent implements OnInit, ActionTableService<
           ColumnAction: true,
           Id: ['TransferReqCod'],
           Options: [
-            { Type: 'Url', Name: 'fa fa-eye', Url: '/enterprise/transfer/pages/transferdetail?TransferCod={TransferReqCod}' },
+            { Type: 'Url', Name: 'fa fa-eye', Url: '/enterprise/transfer/pages/transferdetail?TransferCod={TransferReqCod}&ReturnUrl=/enterprise/transfer/pages/listtransferrequest' },
             { Type: 'Url', Name: 'fa fa-edit', Url: '/enterprise/transfer/pages/createtransferrequest?TransferReqCod={TransferReqCod}', Function: showEdit },
             { Type: 'Modal', Name: 'fa fa-ban', ID: 'modal_cancel_transfer_request', Function: showEdit },
             { Type: 'Url', Name: 'fa fa-check', Url: '/enterprise/transfer/pages/receivetransfer?TransferReqCod={TransferReqCod}', Function: showReceive }

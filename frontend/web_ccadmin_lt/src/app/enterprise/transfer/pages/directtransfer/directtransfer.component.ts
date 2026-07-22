@@ -759,7 +759,16 @@ export class DirecttransferComponent implements OnInit {
         }
         this.toastrService.success(rpt.Message || 'Envío directo registrado correctamente');
         setTimeout(() => {
-          this.router.navigate(['/enterprise/transfer/pages/listtransferdispatch']);
+          this.router.navigate(
+            ['/enterprise/transfer/pages/transferdetail'],
+            {
+              queryParams: {
+                TransferCod: transferRegister.transferHead.TransferCod,
+                AutoPrint: 'Y',
+                ReturnUrl: '/enterprise/transfer/pages/listtransferdispatch'
+              }
+            }
+          );
         }, 1000);
       } else {
         this.toastrService.error(rpt.Message || 'Ocurrió un error al registrar el envío');

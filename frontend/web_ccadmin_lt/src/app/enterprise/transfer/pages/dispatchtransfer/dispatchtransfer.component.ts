@@ -404,7 +404,16 @@ export class DispatchtransferComponent implements OnInit, ActionModalConfirmServ
       if (!rptApproved.ErrorStatus) {
         this.toastrService.success(rptApproved.Message || 'Transferencia aprobada correctamente');
         setTimeout(() => {
-          this.router.navigate(['/enterprise/transfer/pages/listtransferdispatch']);
+          this.router.navigate(
+            ['/enterprise/transfer/pages/transferdetail'],
+            {
+              queryParams: {
+                TransferCod: this.TransferCod,
+                AutoPrint: 'Y',
+                ReturnUrl: '/enterprise/transfer/pages/listtransferdispatch'
+              }
+            }
+          );
         }, 1000);
       }
 

@@ -105,7 +105,7 @@ export class ListtransferdispatchComponent implements OnInit, ActionTableService
           ColumnAction: true,
           Id: ['TransferCod'],
           Options: [
-            { Type: 'Url', Name: 'fa fa-eye', Url: '/enterprise/transfer/pages/transferdetail?TransferCod={TransferCod}' },
+            { Type: 'Url', Name: 'fa fa-eye', Url: '/enterprise/transfer/pages/transferdetail?TransferCod={TransferCod}&ReturnUrl=/enterprise/transfer/pages/listtransferdispatch' },
             {
               Type: 'Url',
               Name: 'fa fa-edit',

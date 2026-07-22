@@ -17,6 +17,8 @@ import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitH
 export class TransferdetailComponent implements OnInit {
 
   TransferCod: string = '';
+  AutoPrint: boolean = false;
+  returnUrl: string = '/enterprise/transfer/pages/listtransferrequest';
   transferDetail: TransferRequestDetailDto = new TransferRequestDetailDto();
   transferDetailPrintData: ResponseWsDto = new ResponseWsDto();
   storeList: StoreEntity[] = [];
@@ -49,6 +51,10 @@ export class TransferdetailComponent implements OnInit {
   ) {
     let urlTree: any = this.router.parseUrl(this.router.url);
     this.TransferCod = (urlTree.queryParams['TransferCod']) ? urlTree.queryParams['TransferCod'] : '';
+    this.AutoPrint = urlTree.queryParams['AutoPrint'] === 'Y';
+    if (urlTree.queryParams['ReturnUrl'] === '/enterprise/transfer/pages/listtransferdispatch') {
+      this.returnUrl = urlTree.queryParams['ReturnUrl'];
+    }
   }
 
   ngOnInit(): void {
@@ -61,6 +67,10 @@ export class TransferdetailComponent implements OnInit {
     if (!rpt.ErrorStatus) {
       this.transferDetail = rpt.DataAdditional?.find(e => e.Name === 'transferDetail')?.Data ?? new TransferDetailDto();
       this.storeList = rpt.DataAdditional?.find(e => e.Name === 'storeList')?.Data ?? [];
+      if (this.AutoPrint) {
+        this.AutoPrint = false;
+        await this.print();
+      }
     }
   }
 
@@ -78,18 +88,19 @@ export class TransferdetailComponent implements OnInit {
   }
 
 
-  async findDataPrint() {
+  async findDataPrint(): Promise<boolean> {
     const rpt: ResponseWsDto = await this.transferRequestService.FindDataPrint(this.TransferCod);
     if (!rpt.ErrorStatus) {
       this.transferDetailPrintData = rpt;
+      return true;
     } else {
       this.toastrService.error(rpt.Message || 'No se pudo obtener la información de impresión');
     }
+    return false;
   }
 
   async print() {
-    await this.findDataPrint();
-    if (!this.transferDetailPrintData?.ErrorStatus) {
+    if (await this.findDataPrint()) {
       await this.ticketSunatService.printTransferReferralGuide(this.transferDetailPrintData);
     }
   }

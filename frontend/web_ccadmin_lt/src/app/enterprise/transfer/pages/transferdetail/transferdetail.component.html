@@ -5,10 +5,16 @@
         <i class="fa fa-eye text-dark-l3 mr-1"></i>
         Detalle de transferencia {{ TransferCod }}
       </h3>
-      <button type="button" class="btn bg-white btn-light mx-1px text-95 shadow-sm" (click)="print()">
-        <i class="mr-1 fa fa-print text-primary text-120 w-2" aria-hidden="true"></i>
-        Imprimir
-      </button>
+      <div>
+        <a class="btn btn-secondary mx-1px text-95 shadow-sm" [routerLink]="returnUrl">
+          <i class="mr-1 fa fa-arrow-left" aria-hidden="true"></i>
+          Volver
+        </a>
+        <button type="button" class="btn bg-white btn-light mx-1px text-95 shadow-sm" (click)="print()">
+          <i class="mr-1 fa fa-print text-primary text-120 w-2" aria-hidden="true"></i>
+          Imprimir
+        </button>
+      </div>
     </div>
 
     <div class="row">
