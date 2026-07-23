@@ -101,6 +101,20 @@ import { CreatebusinessconfiggroupComponent } from './enterprise/businessconfigg
 import { CreatebusinessconfigComponent } from './enterprise/businessconfiggroup/pages/createbusinessconfig/createbusinessconfig.component';
 import { PermissiondeniedComponent } from './enterprise/shared/component/permissiondenied/permissiondenied.component';
 import { CancelpresalepaymentsComponent } from './enterprise/sale/pages/cancelpresalepayments/cancelpresalepayments.component';
+import { ListStockEntryComponent } from './enterprise/inventory/pages/liststockentry/liststockentry.component';
+import { CreateStockEntryComponent } from './enterprise/inventory/pages/createstockentry/createstockentry.component';
+import { ViewStockEntryComponent } from './enterprise/inventory/pages/viewstockentry/viewstockentry.component';
+import { ResolveStockEntryComponent } from './enterprise/inventory/pages/resolvestockentry/resolvestockentry.component';
+import { ListStockExitComponent } from './enterprise/inventory/pages/liststockexit/liststockexit.component';
+import { CreateStockExitComponent } from './enterprise/inventory/pages/createstockexit/createstockexit.component';
+import { ViewStockExitComponent } from './enterprise/inventory/pages/viewstockexit/viewstockexit.component';
+import { ResolveStockExitComponent } from './enterprise/inventory/pages/resolvestockexit/resolvestockexit.component';
+import { StockMovementListComponent } from './enterprise/inventory/components/stock-movement-list/stock-movement-list.component';
+import { StockMovementFormComponent } from './enterprise/inventory/components/stock-movement-form/stock-movement-form.component';
+import { StockMovementHeaderFormComponent } from './enterprise/inventory/components/stock-movement-header-form/stock-movement-header-form.component';
+import { StockMovementDetailEditorComponent } from './enterprise/inventory/components/stock-movement-detail-editor/stock-movement-detail-editor.component';
+import { StockQuantitySummaryComponent } from './enterprise/inventory/components/stock-quantity-summary/stock-quantity-summary.component';
+import { StockResolutionEditorComponent } from './enterprise/inventory/components/stock-resolution-editor/stock-resolution-editor.component';
 
 @NgModule({
   declarations: [
@@ -194,7 +208,21 @@ import { CancelpresalepaymentsComponent } from './enterprise/sale/pages/cancelpr
     ListbusinessconfiggroupComponent,
     CreatebusinessconfiggroupComponent,
     CreatebusinessconfigComponent,
-    PermissiondeniedComponent
+    PermissiondeniedComponent,
+    ListStockEntryComponent,
+    CreateStockEntryComponent,
+    ViewStockEntryComponent,
+    ResolveStockEntryComponent,
+    ListStockExitComponent,
+    CreateStockExitComponent,
+    ViewStockExitComponent,
+    ResolveStockExitComponent,
+    StockMovementListComponent,
+    StockMovementFormComponent,
+    StockMovementHeaderFormComponent,
+    StockMovementDetailEditorComponent,
+    StockQuantitySummaryComponent,
+    StockResolutionEditorComponent,
   ],
   imports: [
     BrowserModule,

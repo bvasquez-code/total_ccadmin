@@ -216,10 +216,12 @@ BEGIN
             0 as SequenceTrx, 
             tmp.Prefix, 
             tmp.SequenceTableType, 
-            7 as SequenceLength
+            tmp.SequenceLength as SequenceLength
         from 
         (
-            select distinct st.SequenceTableType,st.Prefix from store_sequence st
+            select distinct st.SequenceTableType,st.Prefix,st.SequenceLength from store_sequence st
+            union select 'stock_entry_head', 'IE', 6
+            union select 'stock_exit_head', 'IS', 6
         ) tmp where tmp.SequenceTableType not in (
             select SequenceTableType from store_sequence where StoreCod = p_StoreCod
         );

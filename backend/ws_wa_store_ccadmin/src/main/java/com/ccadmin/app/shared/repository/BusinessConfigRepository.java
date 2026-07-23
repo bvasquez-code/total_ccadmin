@@ -50,6 +50,27 @@ public interface BusinessConfigRepository extends JpaRepository<BusinessConfigEn
             """, nativeQuery = true)
     List<BusinessConfigEntity> findActives();
 
+    @Query(value = """
+            select *
+            from business_config bc
+            where bc.GroupId = :groupId
+              and bc.Status = 'A'
+            order by bc.ConfigCorr
+            """, nativeQuery = true)
+    List<BusinessConfigEntity> findActivesByGroupId(@Param("groupId") Integer groupId);
+
+    @Query(value = """
+            select count(1)
+            from business_config bc
+            where bc.GroupId = :groupId
+              and bc.ConfigCod = :configCod
+              and bc.Status = 'A'
+            """, nativeQuery = true)
+    int countActiveByGroupIdAndConfigCod(
+            @Param("groupId") Integer groupId,
+            @Param("configCod") String configCod
+    );
+
     @Override
     @Query(value = """
             select count(1)

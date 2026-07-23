@@ -32,7 +32,15 @@ export class SidebarMenuConfigService {
                 { permission: "AT000001", label: "Bandeja de Clientes", url: "enterprise/client/pages/listclient" },
                 { permission: "AT000002", label: "Creacion de clientes", url: "enterprise/client/pages/createclient", urlShade: "enterprise/client/pages/listclient", isVisible: false },
                 { permission: "AT000003", label: "Bandeja de Proveedores", url: "enterprise/supplier/pages/listsupplier" },
-                { permission: "AT000004", label: "Creacion de proveedores", url: "enterprise/supplier/pages/createsupplier", urlShade: "enterprise/supplier/pages/listsupplier", isVisible: false }
+                { permission: "AT000004", label: "Creacion de proveedores", url: "enterprise/supplier/pages/createsupplier", urlShade: "enterprise/supplier/pages/listsupplier", isVisible: false },
+                { permission: "AT000005", label: "Entradas de stock", url: "enterprise/inventory/pages/liststockentry" },
+                { permission: "AT000006", label: "Crear/editar entrada de stock", url: "enterprise/inventory/pages/createstockentry", urlShade: "enterprise/inventory/pages/liststockentry", isVisible: false },
+                { permission: "AT000007", label: "Ver entrada de stock", url: "enterprise/inventory/pages/viewstockentry", urlShade: "enterprise/inventory/pages/liststockentry", isVisible: false },
+                { permission: "AT000008", label: "Resolver entrada de stock", url: "enterprise/inventory/pages/resolvestockentry", urlShade: "enterprise/inventory/pages/liststockentry", isVisible: false },
+                { permission: "AT000009", label: "Retiros de stock", url: "enterprise/inventory/pages/liststockexit" },
+                { permission: "AT000010", label: "Crear/editar retiro de stock", url: "enterprise/inventory/pages/createstockexit", urlShade: "enterprise/inventory/pages/liststockexit", isVisible: false },
+                { permission: "AT000011", label: "Ver retiro de stock", url: "enterprise/inventory/pages/viewstockexit", urlShade: "enterprise/inventory/pages/liststockexit", isVisible: false },
+                { permission: "AT000012", label: "Resolver retiro de stock", url: "enterprise/inventory/pages/resolvestockexit", urlShade: "enterprise/inventory/pages/liststockexit", isVisible: false }
             ]
         }),
         new SidebarMenuConfigDto({

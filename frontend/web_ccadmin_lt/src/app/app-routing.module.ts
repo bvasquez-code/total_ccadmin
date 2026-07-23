@@ -76,6 +76,14 @@ import { CreatebusinessconfigComponent } from './enterprise/businessconfiggroup/
 import { MenuAccessGuard } from './enterprise/menu/service/menu-access.guard';
 import { PermissiondeniedComponent } from './enterprise/shared/component/permissiondenied/permissiondenied.component';
 import { CancelpresalepaymentsComponent } from './enterprise/sale/pages/cancelpresalepayments/cancelpresalepayments.component';
+import { ListStockEntryComponent } from './enterprise/inventory/pages/liststockentry/liststockentry.component';
+import { CreateStockEntryComponent } from './enterprise/inventory/pages/createstockentry/createstockentry.component';
+import { ViewStockEntryComponent } from './enterprise/inventory/pages/viewstockentry/viewstockentry.component';
+import { ResolveStockEntryComponent } from './enterprise/inventory/pages/resolvestockentry/resolvestockentry.component';
+import { ListStockExitComponent } from './enterprise/inventory/pages/liststockexit/liststockexit.component';
+import { CreateStockExitComponent } from './enterprise/inventory/pages/createstockexit/createstockexit.component';
+import { ViewStockExitComponent } from './enterprise/inventory/pages/viewstockexit/viewstockexit.component';
+import { ResolveStockExitComponent } from './enterprise/inventory/pages/resolvestockexit/resolvestockexit.component';
 
 const routes: Routes = [
   {
@@ -140,6 +148,20 @@ const routes: Routes = [
         path: 'enterprise/sale/pages/viewcreditnote',
         component: ViewcreditnoteComponent
       }
+    ]
+  },
+  {
+    path: '',
+    canActivateChild: [MenuAccessGuard],
+    children: [
+      { path: 'enterprise/inventory/pages/liststockentry', component: ListStockEntryComponent },
+      { path: 'enterprise/inventory/pages/createstockentry', component: CreateStockEntryComponent },
+      { path: 'enterprise/inventory/pages/viewstockentry', component: ViewStockEntryComponent },
+      { path: 'enterprise/inventory/pages/resolvestockentry', component: ResolveStockEntryComponent },
+      { path: 'enterprise/inventory/pages/liststockexit', component: ListStockExitComponent },
+      { path: 'enterprise/inventory/pages/createstockexit', component: CreateStockExitComponent },
+      { path: 'enterprise/inventory/pages/viewstockexit', component: ViewStockExitComponent },
+      { path: 'enterprise/inventory/pages/resolvestockexit', component: ResolveStockExitComponent }
     ]
   },
   {

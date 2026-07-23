@@ -278,6 +278,39 @@ public class KardexZoneEntity extends AuditTableEntity implements Serializable {
         return List.copyOf(result);
     }
 
+    public static List<KardexZoneEntity> buildInventoryMovement(
+            String operationCod,
+            int itemNumber,
+            String sourceTable,
+            String movementEvent,
+            String productCod,
+            String variant,
+            String storeCod,
+            String warehouseCod,
+            String lotNumber,
+            Date expirationDate,
+            String userCod,
+            int physicalDelta,
+            int unavailableDelta
+    ) {
+        List<ZoneMovement> movementList = new ArrayList<>();
+        if (physicalDelta != 0) {
+            movementList.add(movement(KardexZoneConstants.ZONE_PHYSICAL, physicalDelta));
+        }
+        if (unavailableDelta != 0) {
+            movementList.add(movement(KardexZoneConstants.ZONE_UNAVAILABLE, unavailableDelta));
+        }
+        if (movementList.isEmpty()) {
+            return List.of();
+        }
+        return build(
+                operationCod, itemNumber, sourceTable, movementEvent,
+                productCod, variant, storeCod, warehouseCod,
+                lotNumber, expirationDate, userCod,
+                movementList.toArray(new ZoneMovement[0])
+        );
+    }
+
     public void applyLastMovement(KardexZoneEntity lastMovement) {
         this.NumZoneStockBefore = lastMovement == null ? 0 : lastMovement.NumZoneStockAfter;
         this.NumZoneStockAfter = this.NumZoneStockBefore + this.signedQuantity();
