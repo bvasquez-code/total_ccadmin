@@ -116,6 +116,8 @@ import { StockMovementDetailEditorComponent } from './enterprise/inventory/compo
 import { StockQuantitySummaryComponent } from './enterprise/inventory/components/stock-quantity-summary/stock-quantity-summary.component';
 import { StockResolutionEditorComponent } from './enterprise/inventory/components/stock-resolution-editor/stock-resolution-editor.component';
 import { StockMovementViewComponent } from './enterprise/inventory/components/stock-movement-view/stock-movement-view.component';
+import { ListBulkLoadComponent } from './enterprise/bulkload/pages/listbulkload/listbulkload.component';
+import { CreateBulkLoadComponent } from './enterprise/bulkload/pages/createbulkload/createbulkload.component';
 
 @NgModule({
   declarations: [
@@ -225,6 +227,8 @@ import { StockMovementViewComponent } from './enterprise/inventory/components/st
     StockQuantitySummaryComponent,
     StockResolutionEditorComponent,
     StockMovementViewComponent,
+    ListBulkLoadComponent,
+    CreateBulkLoadComponent,
   ],
   imports: [
     BrowserModule,

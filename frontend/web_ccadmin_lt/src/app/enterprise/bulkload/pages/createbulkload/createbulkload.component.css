@@ -1,0 +1,21 @@
+.bulk-summary {
+  border: 1px solid #e3e6ea;
+  border-radius: 0.35rem;
+  background: #f8f9fb;
+  padding: 1rem;
+}
+
+.destination-badge {
+  border: 1px solid #d9dde3;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.65rem;
+}
+
+.error-detail {
+  min-width: 260px;
+  white-space: normal;
+}
+
+td {
+  vertical-align: middle;
+}

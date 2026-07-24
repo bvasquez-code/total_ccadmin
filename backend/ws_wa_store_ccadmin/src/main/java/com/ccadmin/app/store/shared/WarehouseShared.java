@@ -23,6 +23,11 @@ public class WarehouseShared {
         return this.warehouseService.findByStore(StoreCod);
     }
 
+    public WarehouseEntity findMainWarehouseByStore(String StoreCod)
+    {
+        return this.warehouseService.findMainWarehouseByStore(StoreCod);
+    }
+
     public List<WarehouseEntity> findAll()
     {
         return this.warehouseService.findAll();

@@ -1,7 +1,7 @@
 package com.ccadmin.app.product.shared;
 
 import com.ccadmin.app.product.model.entity.ProductConfigEntity;
-import com.ccadmin.app.product.service.ProductSearchService;
+import com.ccadmin.app.product.service.ProductConfigSearchService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -9,9 +9,9 @@ import org.springframework.stereotype.Service;
 public class ProductSearchShared {
 
     @Autowired
-    private ProductSearchService productSearchService;
+    private ProductConfigSearchService productConfigSearchService;
 
     public ProductConfigEntity findConfigByIdAndStore(String ProductCod, String StoreCod){
-        return this.productSearchService.findConfigByIdAndStore(ProductCod,StoreCod);
+        return this.productConfigSearchService.findByIdAndStore(ProductCod,StoreCod);
     }
 }

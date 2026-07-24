@@ -800,7 +800,10 @@ public class KardexCreateService {
             if (affectedStockSet.contains(key) && savedProductSet.add(productKey)) {
                 stock.addSession(this.userForProduct(movementList, productKey), false);
                 this.productInfoRepository.save(stock);
-                this.productFindCreateShared.save(key.productCod, key.storeCod);
+                this.productFindCreateShared.save(
+                        key.productCod, key.storeCod,
+                        this.userForProduct(movementList, productKey)
+                );
             }
         });
         warehouseStockMap.forEach((key, stock) -> {

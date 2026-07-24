@@ -22,4 +22,15 @@ public interface ProductConfigRepository extends JpaRepository<ProductConfigEnti
             limit 1
             """, nativeQuery = true)
     ProductConfigEntity findAnyByProductCod(@Param("ProductCod") String ProductCod);
+
+    @Query(value = """
+            select *
+            from product_config
+            where ProductCod = :ProductCod and StoreCod = :StoreCod
+            for update
+            """, nativeQuery = true)
+    ProductConfigEntity findForUpdate(
+            @Param("ProductCod") String ProductCod,
+            @Param("StoreCod") String StoreCod
+    );
 }

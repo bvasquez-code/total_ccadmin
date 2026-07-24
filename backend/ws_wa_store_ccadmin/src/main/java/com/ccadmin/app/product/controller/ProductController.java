@@ -5,6 +5,8 @@ import com.ccadmin.app.product.model.dto.ProductRegisterMassiveDto;
 import com.ccadmin.app.product.model.dto.ProductConfigStoreUpdateDto;
 import com.ccadmin.app.product.model.entity.ProductPictureEntity;
 import com.ccadmin.app.product.service.ProductCreateService;
+import com.ccadmin.app.product.service.ProductConfigCreateService;
+import com.ccadmin.app.product.service.ProductConfigSearchService;
 import com.ccadmin.app.product.service.ProductSearchService;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +20,10 @@ public class ProductController {
 
     @Autowired
     private ProductCreateService productCreateService;
+    @Autowired
+    private ProductConfigCreateService productConfigCreateService;
+    @Autowired
+    private ProductConfigSearchService productConfigSearchService;
     @Autowired
     private ProductSearchService productSearchService;
 
@@ -65,7 +71,7 @@ public class ProductController {
     public ResponseEntity<ResponseWsDto> findDataConfigForm(@RequestParam String ProductCod, @RequestParam String StoreCod) {
         try {
             return new ResponseEntity<ResponseWsDto>(
-                    this.productSearchService.findDataConfigForm(ProductCod, StoreCod), HttpStatus.OK);
+                    this.productConfigSearchService.findDataConfigForm(ProductCod, StoreCod), HttpStatus.OK);
         } catch (Exception ex) {
             return new ResponseEntity<ResponseWsDto>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
         }
@@ -116,7 +122,7 @@ public class ProductController {
     public ResponseEntity<ResponseWsDto> saveConfigByStores(@RequestBody ProductConfigStoreUpdateDto request) {
         try {
             return new ResponseEntity<ResponseWsDto>(
-                    new ResponseWsDto(this.productCreateService.saveConfigByStores(request)), HttpStatus.OK);
+                    new ResponseWsDto(this.productConfigCreateService.saveConfigByStores(request)), HttpStatus.OK);
         } catch (Exception ex) {
             return new ResponseEntity<ResponseWsDto>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
         }

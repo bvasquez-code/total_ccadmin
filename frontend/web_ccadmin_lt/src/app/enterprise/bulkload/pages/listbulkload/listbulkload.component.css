@@ -1,0 +1,12 @@
+.progress-column {
+  min-width: 180px;
+}
+
+.progress-sm {
+  height: 0.55rem;
+  min-width: 130px;
+}
+
+td {
+  vertical-align: middle;
+}

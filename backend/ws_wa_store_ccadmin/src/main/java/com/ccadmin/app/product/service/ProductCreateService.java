@@ -1,12 +1,9 @@
 package com.ccadmin.app.product.service;
 
 import com.ccadmin.app.product.exception.ProductBuildException;
-import com.ccadmin.app.product.model.dto.ProductConfigStoreUpdateDto;
 import com.ccadmin.app.product.model.dto.ProductRegisterDto;
 import com.ccadmin.app.product.model.dto.ProductRegisterMassiveDto;
-import com.ccadmin.app.product.model.dto.ProductTaxConfigRegisterDto;
 import com.ccadmin.app.product.model.entity.*;
-import com.ccadmin.app.product.model.entity.id.ProductConfigID;
 import com.ccadmin.app.product.model.entity.id.ProductPictureID;
 import com.ccadmin.app.product.repository.*;
 import com.ccadmin.app.product.shared.ProductOperationConfigShared;
@@ -218,82 +215,6 @@ public class ProductCreateService extends SessionService {
         ProductCreateTaskService productCreateTaskService = new ProductCreateTaskService(
                 this.productFindCreateService, productCodList);
         this.genericQueuedService.addQueued(productCreateTaskService);
-    }
-
-    @Transactional
-    public ProductConfigStoreUpdateDto saveConfigByStores(ProductConfigStoreUpdateDto request) {
-        if (request == null || request.ProductCod == null || request.ProductCod.isEmpty()) {
-            throw new ProductBuildException("Debe seleccionar un producto.");
-        }
-        if (request.config == null) {
-            throw new ProductBuildException("Debe ingresar la configuracion del producto.");
-        }
-
-        ProductConfigEntity baseConfig = this.productConfigRepository.findAnyByProductCod(request.ProductCod);
-        List<String> storeCodList = resolveTargetStores(request);
-
-        for (String storeCod : storeCodList) {
-            ProductConfigEntity config = this.productConfigRepository
-                    .findById(new ProductConfigID(request.ProductCod, storeCod))
-                    .orElseGet(() -> this.buildConfigForStore(
-                            baseConfig != null ? baseConfig : request.config,
-                            storeCod
-                    ));
-
-            config.ProductCod = request.ProductCod;
-            config.StoreCod = storeCod;
-            config.NumPrice = request.config.NumPrice;
-            config.NumMaxStock = request.config.NumMaxStock;
-            config.NumMinStock = request.config.NumMinStock;
-            config.ProductUnitName = request.config.ProductUnitName;
-            config.ProductUnitFactor = request.config.ProductUnitFactor;
-            config.session(getUserCod());
-            this.productOperationConfigShared.normalize(config);
-            this.productConfigRepository.save(config);
-            if (request.TaxConfigList != null && !request.TaxConfigList.isEmpty()) {
-                ProductTaxConfigRegisterDto taxRequest = new ProductTaxConfigRegisterDto();
-                taxRequest.ProductCod = config.ProductCod;
-                taxRequest.StoreCod = config.StoreCod;
-                taxRequest.TaxConfigList = copyTaxConfigList(request.TaxConfigList);
-                this.productTaxConfigCreateService.saveAllByProductStore(taxRequest);
-            } else {
-                this.productTaxConfigCreateService.ensureDefaultMainTax(config.ProductCod, config.StoreCod);
-            }
-            this.productFindCreateService.save(request.ProductCod, storeCod);
-        }
-
-        return request;
-    }
-
-    private List<ProductTaxConfigEntity> copyTaxConfigList(List<ProductTaxConfigEntity> sourceList) {
-        return sourceList.stream().map(source -> {
-            ProductTaxConfigEntity copy = new ProductTaxConfigEntity();
-            copy.ProductCod = source.ProductCod;
-            copy.StoreCod = source.StoreCod;
-            copy.TaxCod = source.TaxCod;
-            copy.TaxAffectationCod = source.TaxAffectationCod;
-            copy.IsMainTax = source.IsMainTax;
-            copy.TaxRateValue = source.TaxRateValue;
-            copy.FixedUnitAmount = source.FixedUnitAmount;
-            copy.TaxCalculationType = source.TaxCalculationType;
-            copy.IsInformative = source.IsInformative;
-            copy.CalculationOrder = source.CalculationOrder;
-            copy.Status = source.Status;
-            return copy;
-        }).toList();
-    }
-
-    private List<String> resolveTargetStores(ProductConfigStoreUpdateDto request) {
-        if (request.ApplyAllStores) {
-            return this.storeShared.findAll().stream().map(store -> store.StoreCod).toList();
-        }
-        if (request.StoreCod != null && !request.StoreCod.isEmpty()) {
-            return List.of(request.StoreCod);
-        }
-        if (request.StoreCodList != null && !request.StoreCodList.isEmpty()) {
-            return request.StoreCodList;
-        }
-        throw new ProductBuildException("Debe seleccionar al menos una tienda.");
     }
 
     private List<ProductConfigEntity> buildConfigForAllStores(ProductConfigEntity source) {

@@ -1,0 +1,211 @@
+<div role="main" class="main-content">
+  <div class="page-content container container-plus">
+    <div class="card-header">
+      <h3 class="card-title text-125 text-primary-d2">
+        <i class="far fa-file-excel text-dark-l3 mr-1"></i>
+        {{current ? 'Detalle de carga masiva' : 'Nueva carga masiva'}}
+      </h3>
+    </div>
+
+    <div class="card dcard">
+      <div class="card-body px-2 px-md-3">
+        <div class="d-flex flex-wrap justify-content-between mb-3">
+          <a class="btn px-4 btn-light-secondary mb-2"
+             href="enterprise/bulkload/pages/listbulkload">
+            <i class="fa fa-arrow-left mr-1"></i>Volver
+          </a>
+          <div>
+            <button *ngIf="errors.length > 0"
+                    class="btn px-4 btn-danger mb-2 mr-2"
+                    type="button" (click)="exportErrors()">
+              <i class="fa fa-file-excel mr-1"></i>
+              Descargar errores ({{errors.length}})
+            </button>
+            <button *ngIf="current?.Head?.ProcessStatus === constants.PENDING"
+                    class="btn px-4 btn-light-danger mb-2 mr-2"
+                    type="button" [disabled]="loading" (click)="cancel()">
+              Anular
+            </button>
+            <button *ngIf="canConfirm"
+                    class="btn px-4 btn-success mb-2"
+                    type="button" [disabled]="loading" (click)="confirm()">
+              <i class="fa fa-check mr-1"></i>Confirmar y procesar
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="!current" class="row align-items-end">
+          <div class="col-md-4 mb-3">
+            <label for="bulkLoadType">Tipo de carga</label>
+            <select id="bulkLoadType" class="form-control" [(ngModel)]="type"
+                    [disabled]="loading">
+              <option value="PRODUCT_PRICE">Carga masiva de precios</option>
+              <option value="STOCK_ENTRY">Carga masiva de stock</option>
+            </select>
+          </div>
+          <div class="col-md-8 mb-3">
+            <button class="btn btn-light-primary mr-2 mb-1"
+                    type="button" [disabled]="loading"
+                    (click)="downloadTemplate()">
+              <i class="fa fa-download mr-1"></i>Descargar formato
+            </button>
+            <label class="btn btn-primary mb-1" [class.disabled]="loading">
+              <i class="fa fa-upload mr-1"></i>Seleccionar Excel
+              <input hidden type="file" accept=".xlsx"
+                     [disabled]="loading" (change)="onFileSelected($event)">
+            </label>
+          </div>
+        </div>
+
+        <div class="alert alert-info" *ngIf="!current && !selectedFileName">
+          <strong>Precios:</strong> puede indicar locales específicos o usar
+          <code>TODOS</code> como único destino.
+          <br>
+          <strong>Stock:</strong> debe indicar exactamente un local; el almacén principal
+          se resuelve automáticamente y la cantidad debe cumplir <code>NUMERO(7)</code>.
+        </div>
+
+        <div *ngIf="loading" class="text-center py-4">
+          <i class="fa fa-spinner fa-spin fa-2x text-primary"></i>
+          <div class="mt-2">Validando...</div>
+        </div>
+
+        <div class="alert alert-danger" *ngIf="localErrors.length > 0">
+          El formato contiene errores. No se registró ninguna carga; descargue el Excel
+          de errores, corrija el archivo y vuelva a seleccionarlo.
+        </div>
+
+        <div *ngIf="current" class="bulk-summary mb-4">
+          <div class="row">
+            <div class="col-md-3 mb-2">
+              <small class="text-muted d-block">Código</small>
+              <strong>{{current.Head.BulkLoadCod}}</strong>
+            </div>
+            <div class="col-md-3 mb-2">
+              <small class="text-muted d-block">Tipo</small>
+              <strong>{{constants.typeDescription(current.Head.BulkLoadType)}}</strong>
+            </div>
+            <div class="col-md-3 mb-2">
+              <small class="text-muted d-block">Archivo</small>
+              <strong>{{current.Head.OriginalFileName}}</strong>
+            </div>
+            <div class="col-md-3 mb-2">
+              <small class="text-muted d-block">Estado</small>
+              <span class="badge"
+                    [ngClass]="constants.statusClass(current.Head.ProcessStatus)">
+                {{constants.statusDescription(
+                  current.Head.ProcessStatus, current.Head.NumErrorDetails
+                )}}
+              </span>
+            </div>
+          </div>
+          <div class="row mt-2">
+            <div class="col-md-2 col-6">
+              <small class="text-muted d-block">Filas Excel</small>
+              <strong>{{current.Head.NumSourceRows}}</strong>
+            </div>
+            <div class="col-md-2 col-6">
+              <small class="text-muted d-block">Locales</small>
+              <strong>{{current.Head.NumDestinations}}</strong>
+            </div>
+            <div class="col-md-2 col-6">
+              <small class="text-muted d-block">Detalles</small>
+              <strong>{{current.Head.NumTotalDetails}}</strong>
+            </div>
+            <div class="col-md-2 col-6">
+              <small class="text-muted d-block">Procesados</small>
+              <strong>{{current.Head.NumProcessedDetails}}</strong>
+            </div>
+            <div class="col-md-2 col-6 text-success">
+              <small class="d-block">Correctos</small>
+              <strong>{{current.Head.NumSuccessDetails}}</strong>
+            </div>
+            <div class="col-md-2 col-6 text-danger">
+              <small class="d-block">Errores</small>
+              <strong>{{current.Head.NumErrorDetails}}</strong>
+            </div>
+          </div>
+          <small class="d-block mt-2 text-muted">{{current.Head.StatusMessage}}</small>
+        </div>
+
+        <div *ngIf="current?.DestinationList?.length" class="mb-4">
+          <h5 class="text-secondary-d1">Locales de destino</h5>
+          <span *ngFor="let destination of current?.DestinationList"
+                class="badge badge-light mr-2 mb-1 destination-badge">
+            {{destination.StoreCod}}:
+            {{destination.NumProcessedDetails}}/{{destination.NumTotalDetails}}
+          </span>
+        </div>
+
+        <div *ngIf="current" class="table-responsive">
+          <h5 class="text-secondary-d1">Preview paginado</h5>
+          <table class="table table-bordered table-striped table-hover table-sm">
+            <thead class="bg-light">
+              <tr>
+                <th>Item</th>
+                <th>Fila Excel</th>
+                <th>Local</th>
+                <th>Producto</th>
+                <th *ngIf="type === constants.TYPE_PRODUCT_PRICE">Precio</th>
+                <th *ngIf="type === constants.TYPE_STOCK_ENTRY">Cantidad a agregar</th>
+                <th *ngIf="type === constants.TYPE_STOCK_ENTRY">Almacén</th>
+                <th>Estado</th>
+                <th>Error</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let detail of details.resultSearch"
+                  [class.table-danger]="detail.ProcessStatus === constants.ERROR">
+                <td>{{detail.ItemNumber}}</td>
+                <td>{{detail.SourceRowNumber}}</td>
+                <td>{{detail.StoreCod || '-'}}</td>
+                <td>{{detailValue(detail, 'ProductCod')}}</td>
+                <td *ngIf="type === constants.TYPE_PRODUCT_PRICE">
+                  {{detailValue(detail, 'NumPrice')}}
+                </td>
+                <td *ngIf="type === constants.TYPE_STOCK_ENTRY">
+                  {{detailValue(detail, 'NumPhysicalStock')}}
+                </td>
+                <td *ngIf="type === constants.TYPE_STOCK_ENTRY">
+                  {{detailValue(detail, 'WarehouseCod')}}
+                </td>
+                <td>
+                  <span class="badge"
+                        [ngClass]="constants.statusClass(detail.ProcessStatus)">
+                    {{constants.statusDescription(detail.ProcessStatus)}}
+                  </span>
+                </td>
+                <td class="error-detail">{{detailErrors(detail) || '-'}}</td>
+              </tr>
+              <tr *ngIf="!loadingDetails && details.resultSearch.length === 0">
+                <td [attr.colspan]="type === constants.TYPE_STOCK_ENTRY ? 9 : 8"
+                    class="text-center text-muted py-3">
+                  No existen detalles.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="d-flex justify-content-between align-items-center"
+               *ngIf="details.TotalPages > 1">
+            <small>
+              Página {{details.Page}} de {{details.TotalPages}}
+              — {{details.TotalResult}} registros
+            </small>
+            <div>
+              <button class="btn btn-sm btn-light-secondary mr-1"
+                      [disabled]="details.Page <= 1 || loadingDetails"
+                      (click)="loadDetails(details.Page - 1)">
+                Anterior
+              </button>
+              <button class="btn btn-sm btn-light-secondary"
+                      [disabled]="details.Page >= details.TotalPages || loadingDetails"
+                      (click)="loadDetails(details.Page + 1)">
+                Siguiente
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

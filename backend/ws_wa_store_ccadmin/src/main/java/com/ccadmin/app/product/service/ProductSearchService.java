@@ -7,15 +7,11 @@ import com.ccadmin.app.product.model.entity.ProductConfigEntity;
 import com.ccadmin.app.product.model.entity.ProductEntity;
 import com.ccadmin.app.product.model.entity.id.ProductConfigID;
 import com.ccadmin.app.product.repository.*;
-import com.ccadmin.app.sale.repository.TaxAffectationRepository;
-import com.ccadmin.app.sale.repository.TaxRepository;
 import com.ccadmin.app.shared.model.dto.ResponsePageSearchT;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import com.ccadmin.app.shared.model.dto.SearchDto;
 import com.ccadmin.app.shared.service.SearchTService;
 import com.ccadmin.app.shared.service.SessionService;
-import com.ccadmin.app.shared.shared.CatalogSearchShared;
-import com.ccadmin.app.store.shared.StoreShared;
 import com.ccadmin.app.system.shared.AppFileShared;
 import com.ccadmin.app.system.shared.SystemDocumentShared;
 import lombok.extern.slf4j.Slf4j;
@@ -51,16 +47,6 @@ public class ProductSearchService extends SessionService {
     private AppFileShared appFileShared;
     @Autowired
     private SystemDocumentShared systemDocumentShared;
-    @Autowired
-    private StoreShared storeShared;
-    @Autowired
-    private ProductTaxConfigRepository productTaxConfigRepository;
-    @Autowired
-    private TaxRepository taxRepository;
-    @Autowired
-    private TaxAffectationRepository taxAffectationRepository;
-    @Autowired
-    private CatalogSearchShared catalogSearchShared;
 
     private SearchTService<ProductEntity> searchTService;
 
@@ -159,33 +145,6 @@ public class ProductSearchService extends SessionService {
         rpt.AddResponseAdditional("categoryList",this.categoryRepository.findAllActiveNoDad());
         rpt.AddResponseAdditional("bulkUploadFormatProducts",this.systemDocumentShared.findById("EXCEL_REG_MASIVO_PROD"));
         return rpt;
-    }
-
-    public ResponseWsDto findDataConfigForm(String ProductCod, String StoreCod) {
-
-        ResponseWsDto rpt = new ResponseWsDto();
-        String storeCod = StoreCod != null && !StoreCod.isEmpty() ? StoreCod : getStoreCod();
-        ProductConfigEntity config = this.productConfigRepository.findById(new ProductConfigID(ProductCod, storeCod))
-                .orElseGet(() -> this.productConfigRepository.findAnyByProductCod(ProductCod));
-        if (config == null) {
-            config = new ProductConfigEntity();
-            config.ProductCod = ProductCod;
-            config.StoreCod = storeCod;
-        }
-
-        rpt.AddResponseAdditional("product", this.findById(ProductCod));
-        rpt.AddResponseAdditional("config", config);
-        rpt.AddResponseAdditional("productTaxConfigList", this.productTaxConfigRepository.findByProductAndStore(ProductCod, storeCod));
-        rpt.AddResponseAdditional("taxList", this.taxRepository.findAllActive());
-        rpt.AddResponseAdditional("taxAffectationList", this.taxAffectationRepository.findAllActive());
-        rpt.AddResponseAdditional("store", this.storeShared.findById(storeCod));
-        rpt.AddResponseAdditional("storeList", this.storeShared.findAll());
-        rpt.AddResponseAdditional("indDetailedTaxIndicator",catalogSearchShared.findIndicator("ActiTaxCalcFunctionalities","IndDetailedTaxIndicator"));
-        return rpt;
-    }
-
-    public ProductConfigEntity findConfigByIdAndStore(String ProductCod,String StoreCod){
-        return this.productConfigRepository.findById(new ProductConfigID(ProductCod, StoreCod)).orElse(null);
     }
 
 }

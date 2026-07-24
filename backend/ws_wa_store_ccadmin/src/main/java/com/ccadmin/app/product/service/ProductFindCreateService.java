@@ -6,6 +6,7 @@ import com.ccadmin.app.product.model.entity.id.ProductConfigID;
 import com.ccadmin.app.product.model.entity.id.ProductRankingID;
 import com.ccadmin.app.product.repository.*;
 import com.ccadmin.app.shared.service.SessionService;
+import com.ccadmin.app.shared.model.myconst.StatusConst;
 import com.ccadmin.app.store.model.entity.StoreEntity;
 import com.ccadmin.app.store.shared.StoreShared;
 import com.ccadmin.app.system.model.entity.AppFileEntity;
@@ -53,6 +54,12 @@ public class ProductFindCreateService extends SessionService {
     @Transactional
     public ProductSearchEntity save(String ProductCod, String StoreCod)
     {
+        return save(ProductCod, StoreCod, getUserCod());
+    }
+
+    @Transactional
+    public ProductSearchEntity save(String ProductCod, String StoreCod, String userCod)
+    {
         log.info("GENERAR INFO PRODUCTO : {} PARA LA TIENDA {}",ProductCod,StoreCod);
         ProductEntity product = this.productRepository.findById(ProductCod).get();
         ProductConfigEntity productConfig = this.productConfigRepository.findById(new ProductConfigID(ProductCod, StoreCod))
@@ -92,7 +99,7 @@ public class ProductFindCreateService extends SessionService {
                 ,productRanking
                 ,StoreCod
         );
-        productSearch.addSession(getUserCod());
+        productSearch.addSession(userCod);
 
         log.info("PRODUCTO RESUMEN : {} => {}",ProductCod,productSearch.toString());
         return this.productSearchRepository.save(productSearch);
@@ -100,13 +107,20 @@ public class ProductFindCreateService extends SessionService {
 
     public List<ProductSearchEntity> generateSearch(String ProductCod)
     {
+        return generateSearch(ProductCod, getUserCod());
+    }
+
+    public List<ProductSearchEntity> generateSearch(String ProductCod, String userCod)
+    {
         List<ProductSearchEntity> productSearchList = new ArrayList<>();
 
         List<StoreEntity> storeList = this.storeShared.findAll();
 
         for (var store : storeList)
         {
-            save(ProductCod,store.StoreCod);
+            if (StatusConst.ACTIVE.equals(store.Status)) {
+                productSearchList.add(save(ProductCod, store.StoreCod, userCod));
+            }
         }
 
         return productSearchList;

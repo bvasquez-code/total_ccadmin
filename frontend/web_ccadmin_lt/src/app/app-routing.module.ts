@@ -84,6 +84,8 @@ import { ListStockExitComponent } from './enterprise/inventory/pages/liststockex
 import { CreateStockExitComponent } from './enterprise/inventory/pages/createstockexit/createstockexit.component';
 import { ViewStockExitComponent } from './enterprise/inventory/pages/viewstockexit/viewstockexit.component';
 import { ResolveStockExitComponent } from './enterprise/inventory/pages/resolvestockexit/resolvestockexit.component';
+import { ListBulkLoadComponent } from './enterprise/bulkload/pages/listbulkload/listbulkload.component';
+import { CreateBulkLoadComponent } from './enterprise/bulkload/pages/createbulkload/createbulkload.component';
 
 const routes: Routes = [
   {
@@ -161,7 +163,9 @@ const routes: Routes = [
       { path: 'enterprise/inventory/pages/liststockexit', component: ListStockExitComponent },
       { path: 'enterprise/inventory/pages/createstockexit', component: CreateStockExitComponent },
       { path: 'enterprise/inventory/pages/viewstockexit', component: ViewStockExitComponent },
-      { path: 'enterprise/inventory/pages/resolvestockexit', component: ResolveStockExitComponent }
+      { path: 'enterprise/inventory/pages/resolvestockexit', component: ResolveStockExitComponent },
+      { path: 'enterprise/bulkload/pages/listbulkload', component: ListBulkLoadComponent },
+      { path: 'enterprise/bulkload/pages/createbulkload', component: CreateBulkLoadComponent }
     ]
   },
   {

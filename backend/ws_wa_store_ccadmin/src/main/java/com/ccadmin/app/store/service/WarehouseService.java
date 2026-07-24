@@ -31,6 +31,26 @@ public class WarehouseService {
         return this.warehouseRepository.findByStore(StoreCod);
     }
 
+    /**
+     * Punto unico para resolver el almacen principal de una tienda.
+     * Hoy una tienda debe tener exactamente un almacen activo. Cuando existan
+     * reglas de prioridad, solamente se modificara este metodo.
+     */
+    public WarehouseEntity findMainWarehouseByStore(String StoreCod)
+    {
+        List<WarehouseEntity> warehouseList = this.warehouseRepository.findByStore(StoreCod);
+        if (warehouseList.isEmpty()) {
+            throw new IllegalArgumentException("La tienda " + StoreCod + " no tiene un almacen activo");
+        }
+        if (warehouseList.size() > 1) {
+            throw new IllegalStateException(
+                    "La tienda " + StoreCod
+                            + " tiene mas de un almacen activo; aun no existe una regla para elegir el principal"
+            );
+        }
+        return warehouseList.getFirst();
+    }
+
     public List<WarehouseEntity> findAll()
     {
         return this.warehouseRepository.findAll();

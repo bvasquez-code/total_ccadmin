@@ -17,8 +17,16 @@ public class ProductFindCreateShared {
         return this.productFindCreateService.save(ProductCod,StoreCod);
     }
 
+    public ProductSearchEntity save(String ProductCod, String StoreCod, String userCod) {
+        return this.productFindCreateService.save(ProductCod, StoreCod, userCod);
+    }
+
     public List<ProductSearchEntity> generateSearch(String ProductCod){
         return this.productFindCreateService.generateSearch(ProductCod);
+    }
+
+    public List<ProductSearchEntity> generateSearch(String ProductCod, String userCod) {
+        return this.productFindCreateService.generateSearch(ProductCod, userCod);
     }
 
 }
