@@ -13,6 +13,10 @@ export class StockMovementHead {
   ProcessStatus: 'P' | 'C' | 'R' | 'X' = 'P'; // P=Pendiente, C=Confirmado, R=Rechazado, X=Anulado
   Observation: string = '';
   CreationDate?: Date;
+  ConfirmUser?: string;
+  ConfirmDate?: Date;
+  ResolutionUser?: string;
+  ResolutionDate?: Date;
 }
 
 export class StockMovementDetail {

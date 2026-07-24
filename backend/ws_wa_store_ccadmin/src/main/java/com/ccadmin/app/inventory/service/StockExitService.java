@@ -9,6 +9,8 @@ import com.ccadmin.app.inventory.repository.StockExitHeadRepository;
 import com.ccadmin.app.product.model.constants.KardexZoneConstants;
 import com.ccadmin.app.product.model.entity.KardexEntity;
 import com.ccadmin.app.product.model.entity.KardexZoneEntity;
+import com.ccadmin.app.product.model.entity.ProductEntity;
+import com.ccadmin.app.product.repository.ProductRepository;
 import com.ccadmin.app.product.service.KardexCreateService;
 import com.ccadmin.app.shared.model.dto.ResponsePageSearchT;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
@@ -22,6 +24,9 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class StockExitService extends SessionService {
@@ -32,19 +37,22 @@ public class StockExitService extends SessionService {
     private final BusinessConfigRepository businessConfigRepository;
     private final WarehouseRepository warehouseRepository;
     private final KardexCreateService kardexCreateService;
+    private final ProductRepository productRepository;
 
     public StockExitService(StockExitHeadRepository headRepository,
                             StockExitDetRepository detRepository,
                             StockMovementValidationService validation,
                             BusinessConfigRepository businessConfigRepository,
                             WarehouseRepository warehouseRepository,
-                            KardexCreateService kardexCreateService) {
+                            KardexCreateService kardexCreateService,
+                            ProductRepository productRepository) {
         this.headRepository = headRepository;
         this.detRepository = detRepository;
         this.validation = validation;
         this.businessConfigRepository = businessConfigRepository;
         this.warehouseRepository = warehouseRepository;
         this.kardexCreateService = kardexCreateService;
+        this.productRepository = productRepository;
     }
 
     public ResponsePageSearchT<StockExitHeadEntity> findAll(StockMovementSearchDto request) {
@@ -70,6 +78,7 @@ public class StockExitService extends SessionService {
         StockExitRegisterDto result = new StockExitRegisterDto();
         result.Head = head;
         result.DetailList = detRepository.findByCode(code);
+        populateProductNames(result.DetailList);
         return result;
     }
 
@@ -308,6 +317,16 @@ public class StockExitService extends SessionService {
         if (!StatusConst.PENDING.equals(head.ProcessStatus)) {
             throw new IllegalStateException("El documento ya no se encuentra pendiente");
         }
+    }
+
+    private void populateProductNames(List<StockExitDetEntity> detailList) {
+        Map<String, ProductEntity> productMap = productRepository.findAllById(
+                detailList.stream().map(detail -> detail.ProductCod).distinct().toList()
+        ).stream().collect(Collectors.toMap(product -> product.ProductCod, Function.identity()));
+        detailList.forEach(detail -> {
+            ProductEntity product = productMap.get(detail.ProductCod);
+            detail.ProductName = product == null ? detail.ProductCod : product.ProductName;
+        });
     }
 
     private void requireStore(String storeCod) {

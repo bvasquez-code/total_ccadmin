@@ -6,6 +6,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -40,4 +41,6 @@ public class StockExitDetEntity extends AuditTableEntity implements Serializable
     public String ResolutionReasonCode;
     public String Observation;
     public Date NextReviewDate;
+    @Transient
+    public String ProductName;
 }

@@ -1,0 +1,191 @@
+<div role="main" class="main-content">
+  <div class="page-content container container-plus">
+    <div class="container px-0">
+      <div class="row mt-4">
+        <div class="col-12">
+
+          <div class="page-header border-0 mb-0">
+            <h1 class="page-title text-dark-l3 text-115">
+              {{ sectionTitle }}
+              <i class="fa fa-angle-right text-80 ml-1"></i>
+              <small class="page-info text-dark-m3">
+                Detalle de {{ noun }} — {{ code }}
+              </small>
+            </h1>
+            <div class="page-tools">
+              <div class="action-buttons">
+                <a class="btn bg-white btn-light mx-1px text-95 shadow-sm"
+                   (click)="goBack()" style="cursor:pointer;">
+                  <i class="mr-1 fa fa-arrow-left text-primary text-120 w-2"></i>
+                  Volver
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="loading" class="card dcard mb-4">
+            <div class="card-body py-5 text-center text-muted">
+              <i class="fa fa-spinner fa-spin mr-1"></i>
+              Consultando movimiento...
+            </div>
+          </div>
+
+          <div *ngIf="!loading" class="card dcard mb-4">
+            <div class="card-body px-4 px-lg-5">
+
+              <div class="row mt-4">
+                <div class="col-sm-6">
+                  <div class="text-100 text-grey-m1 align-middle mb-1">
+                    Motivo de {{ noun }}
+                  </div>
+                  <div class="text-600 text-110 text-primary mt-1 mb-2">
+                    {{ reasonName(head.ReasonCode, reasonList) }}
+                  </div>
+
+                  <div class="text-dark-l1">
+                    <div class="my-1">
+                      <i class="fa fa-random text-purple mr-1"></i>
+                      <b class="text-600">Modalidad:</b>
+                      {{ movementModeLabel(head.MovementMode) }}
+                    </div>
+                    <div class="my-1" *ngIf="head.Observation">
+                      <i class="fa fa-comment text-orange mr-1"></i>
+                      <b class="text-600">Observación:</b>
+                      {{ head.Observation }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-sm-6 align-self-start d-sm-flex justify-content-end text-95">
+                  <hr class="d-sm-none">
+                  <div class="text-dark-l1">
+                    <div class="mt-1 mb-2 text-secondary-d1 text-600 text-125">
+                      Datos del movimiento
+                    </div>
+
+                    <div class="my-2">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                      <span class="text-600 text-90">ID:</span>
+                      {{ code }}
+                    </div>
+                    <div class="my-2">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                      <span class="text-600 text-90">Tienda:</span>
+                      {{ head.StoreCod }}
+                    </div>
+                    <div class="my-2">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                      <span class="text-600 text-90">Estado:</span>
+                      <span [class]="statusClass(head.ProcessStatus)">
+                        {{ statusLabel(head.ProcessStatus) }}
+                      </span>
+                    </div>
+                    <div class="my-2">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                      <span class="text-600 text-90">Creación:</span>
+                      {{ head.CreationDate | date: 'dd/MM/yyyy HH:mm:ss' }}
+                    </div>
+                    <div class="my-2" *ngIf="head.ConfirmDate">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                      <span class="text-600 text-90">Confirmación:</span>
+                      {{ head.ConfirmDate | date: 'dd/MM/yyyy HH:mm:ss' }}
+                    </div>
+                    <div class="my-2" *ngIf="head.ResolutionDate">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                      <span class="text-600 text-90">Última resolución:</span>
+                      {{ head.ResolutionDate | date: 'dd/MM/yyyy HH:mm:ss' }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <div class="row text-600 text-95 text-secondary-d3 brc-green-l1 py-25 border-y-2">
+                  <div class="d-none d-sm-block col-sm-1">Código</div>
+                  <div class="d-none d-sm-block col-sm-1 text-center">Item</div>
+                  <div class="d-none d-sm-block col-sm-2">Producto</div>
+                  <div class="d-none d-sm-block col-sm-1">Almacén</div>
+                  <div class="d-none d-sm-block col-sm-1 text-center">Cantidad</div>
+                  <div class="d-none d-sm-block col-sm-1">Lote</div>
+                  <div class="d-none d-sm-block col-sm-1">Venc.</div>
+                  <div class="d-none d-sm-block col-sm-2">Motivo no disponible</div>
+                  <div class="d-none d-sm-block col-sm-2">Resultado</div>
+                </div>
+
+                <div class="text-95 text-dark-m3">
+                  <div class="row mb-2 mb-sm-0 py-25"
+                       [ngClass]="(i + 1) % 2 === 0 ? 'bgc-green-l4' : ''"
+                       *ngFor="let item of register.DetailList; let i = index">
+                    <div class="col-12 col-sm-1 text-secondary-d3 text-600">
+                      {{ item.ProductCod }}
+                    </div>
+                    <div class="col-4 col-sm-1 text-sm-center text-secondary-d3 text-600">
+                      <span class="d-sm-none text-600">Item: </span>{{ item.ItemNumber }}
+                    </div>
+                    <div class="col-8 col-sm-2">
+                      {{ item.ProductName || item.ProductCod }}
+                      <small class="d-block text-muted">Variante: {{ item.Variant }}</small>
+                    </div>
+                    <div class="col-6 col-sm-1" [title]="warehouseName(item.WarehouseCod)">
+                      {{ item.WarehouseCod }}
+                    </div>
+                    <div class="col-6 col-sm-1 text-sm-center">
+                      {{ quantity(item.NumUnit, item) }}
+                    </div>
+                    <div class="col-6 col-sm-1">{{ lotNumber(item.LotNumber) }}</div>
+                    <div class="col-6 col-sm-1">
+                      {{ item.ExpirationDate ? (item.ExpirationDate | date: 'dd/MM/yyyy') : '—' }}
+                    </div>
+                    <div class="col-12 col-sm-2">
+                      {{ reasonName(item.UnavailableReasonCode, unavailableReasonList) }}
+                    </div>
+                    <div class="col-12 col-sm-2">
+                      <span [class]="detailStatusClass(item)">
+                        {{ detailStatusLabel(item) }}
+                      </span>
+                      <small class="d-block mt-1" *ngIf="item.NumUnitPending">
+                        Pendiente: {{ quantity(item.NumUnitPending, item) }}
+                      </small>
+                      <small class="d-block" *ngIf="item.NumUnitResolvedIn">
+                        Disponible: {{ quantity(item.NumUnitResolvedIn, item) }}
+                      </small>
+                      <small class="d-block" *ngIf="item.ResolvedInReasonCode">
+                        {{ reasonName(item.ResolvedInReasonCode, releaseReasonList) }}
+                      </small>
+                      <small class="d-block" *ngIf="item.NumUnitResolvedOut">
+                        Retirado: {{ quantity(item.NumUnitResolvedOut, item) }}
+                      </small>
+                      <small class="d-block" *ngIf="item.ResolvedOutReasonCode">
+                        {{ resolvedOutReason(item) }}
+                      </small>
+                    </div>
+                  </div>
+
+                  <div class="row py-4" *ngIf="register.DetailList.length === 0">
+                    <div class="col-12 text-center text-muted">
+                      El movimiento no contiene productos.
+                    </div>
+                  </div>
+                </div>
+
+                <div class="row border-b-2 brc-green-l1"></div>
+              </div>
+
+              <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
+                <div class="offset-md-5 col-md-9 text-nowrap">
+                  <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4"
+                     (click)="goBack()" style="cursor:pointer;">
+                    <i class="fa fa-undo mr-1"></i>
+                    Volver
+                  </a>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

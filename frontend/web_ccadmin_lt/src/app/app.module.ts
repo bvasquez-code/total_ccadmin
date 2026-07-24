@@ -115,6 +115,7 @@ import { StockMovementHeaderFormComponent } from './enterprise/inventory/compone
 import { StockMovementDetailEditorComponent } from './enterprise/inventory/components/stock-movement-detail-editor/stock-movement-detail-editor.component';
 import { StockQuantitySummaryComponent } from './enterprise/inventory/components/stock-quantity-summary/stock-quantity-summary.component';
 import { StockResolutionEditorComponent } from './enterprise/inventory/components/stock-resolution-editor/stock-resolution-editor.component';
+import { StockMovementViewComponent } from './enterprise/inventory/components/stock-movement-view/stock-movement-view.component';
 
 @NgModule({
   declarations: [
@@ -223,6 +224,7 @@ import { StockResolutionEditorComponent } from './enterprise/inventory/component
     StockMovementDetailEditorComponent,
     StockQuantitySummaryComponent,
     StockResolutionEditorComponent,
+    StockMovementViewComponent,
   ],
   imports: [
     BrowserModule,
