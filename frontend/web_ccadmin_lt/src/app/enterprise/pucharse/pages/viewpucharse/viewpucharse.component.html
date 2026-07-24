@@ -16,6 +16,12 @@
             </h1>
             <div class="page-tools">
               <div class="action-buttons">
+                <button type="button" class="btn bg-white btn-light mx-1px text-95 shadow-sm"
+                  (click)="copyPucharse()" [disabled]="isCopying || !PucharseDetails.Headboard.PucharseCod">
+                  <i class="mr-1 fa text-success text-120 w-2"
+                    [ngClass]="isCopying ? 'fa-spinner fa-spin' : 'fa-copy'"></i>
+                  {{ isCopying ? 'Copiando...' : 'Copiar compra' }}
+                </button>
                 <a class="btn bg-white btn-light mx-1px text-95 shadow-sm" (click)="print()" style="cursor:pointer;">
                   <i class="mr-1 fa fa-print text-primary text-120 w-2"></i>
                   Imprimir
