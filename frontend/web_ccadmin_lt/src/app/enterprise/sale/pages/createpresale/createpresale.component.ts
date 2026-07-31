@@ -23,6 +23,8 @@ import { ClientEntity } from '../../../client/model/entity/ClientEntity';
 import Swal from 'sweetalert2';
 import { PaginationUtil } from '../../utility/PaginationUtility';
 import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
+import { CreditNoteService } from '../../service/CreditNote.service';
+import { CreditNoteDetailDto } from '../../model/dto/CreditNoteDetailDto';
 
 @Component({
   selector: 'app-createpresale',
@@ -53,6 +55,12 @@ export class CreatepresaleComponent implements OnInit {
   ShoppingCartResult: PresaleDetailDto = new PresaleDetailDto();
   SaleDetail: SaleDetailDto = new SaleDetailDto();
   PresaleDetail: PresaleDetailDto = new PresaleDetailDto();
+  CreditNoteDetail: CreditNoteDetailDto = new CreditNoteDetailDto();
+  CreditNoteCod: string = "";
+  isProductExchangeMode: boolean = false;
+  isProductExchangeLoading: boolean = false;
+  productExchangeLoadError: boolean = false;
+  creditNoteBalance: number = 0;
   ShowClientRegister: boolean = false;
   ShowClient: boolean = false;
   ShowClientSearch: boolean = false;
@@ -76,21 +84,95 @@ export class CreatepresaleComponent implements OnInit {
     , private toastrService: ToastrService
     , private router: Router
     , private clientService: ClientService
+    , private creditNoteService: CreditNoteService
   ) {
     let urlTree: any = this.router.parseUrl(this.router.url);
     this.ShoppingCart.Headboard.PresaleCod = urlTree.queryParams['PresaleCod'];
+    this.CreditNoteCod = urlTree.queryParams['CreditNoteCod'] ?? "";
+    this.isProductExchangeLoading = !!this.CreditNoteCod;
     this.productSearch.StoreCod = this.session.getSessionStorageDto().StoreCod;
     this.productSearch.Page = 1;
     this.findAllProduct();
     this.findDataForm(this.ShoppingCart.Headboard.PresaleCod);
   }
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     if (!this.ShoppingCart.Headboard.PresaleCod) {
       this.Clean();
     }
     this.shoppingCartService.Init();
     this.updateShoppingCart();
+    if (this.CreditNoteCod) {
+      await this.loadProductExchange();
+    }
+  }
+
+  async loadProductExchange(): Promise<void> {
+    const response: ResponseWsDto = await this.creditNoteService.FindById(this.CreditNoteCod);
+    if (response?.ErrorStatus || !response?.Data) {
+      this.isProductExchangeLoading = false;
+      this.productExchangeLoadError = true;
+      this.toastrService.error(response?.Message || "No se pudo cargar la nota de credito.");
+      return;
+    }
+
+    const creditNoteDetail: CreditNoteDetailDto = response.Data;
+    const creditNoteHead = creditNoteDetail.Headboard;
+    const availableBalance: number = this.toMoney(
+      Number(creditNoteDetail.NumAvailableBalance ?? creditNoteHead?.NumTotalPrice ?? 0)
+    );
+
+    if (creditNoteHead?.CreditNoteStatus !== "C" || creditNoteHead?.IsProductExchange !== "S") {
+      this.isProductExchangeLoading = false;
+      this.productExchangeLoadError = true;
+      this.toastrService.error("La nota de credito no esta habilitada para cambio de producto.");
+      return;
+    }
+    if (availableBalance <= 0) {
+      this.isProductExchangeLoading = false;
+      this.productExchangeLoadError = true;
+      this.toastrService.error("La nota de credito ya no tiene saldo disponible.");
+      return;
+    }
+
+    this.CreditNoteDetail = creditNoteDetail;
+    this.creditNoteBalance = availableBalance;
+    this.isProductExchangeMode = true;
+    this.isProductExchangeLoading = false;
+    this.productExchangeLoadError = false;
+
+    if (creditNoteHead.ClientCod && creditNoteDetail.Client) {
+      this.shoppingCartService.AddClient(creditNoteDetail.Client);
+      this.updateShoppingCart();
+    }
+  }
+
+  isProductExchangeTotalValid(): boolean {
+    if (this.CreditNoteCod && (this.isProductExchangeLoading || this.productExchangeLoadError)) {
+      return false;
+    }
+    return !this.isProductExchangeMode
+      || this.toMoney(this.ShoppingCart.Headboard.NumTotalPrice) >= this.creditNoteBalance;
+  }
+
+  getProductExchangeDifference(): number {
+    return this.toMoney(Math.max(
+      Number(this.ShoppingCart.Headboard.NumTotalPrice || 0) - this.creditNoteBalance,
+      0
+    ));
+  }
+
+  private validateProductExchangeTotal(): boolean {
+    if (this.isProductExchangeTotalValid()) return true;
+
+    this.toastrService.error(
+      `El total de la nueva compra debe ser igual o mayor a ${this.creditNoteBalance.toFixed(2)}.`
+    );
+    return false;
+  }
+
+  private toMoney(value: number): number {
+    return Math.round(Number(value || 0) * 100) / 100;
   }
 
   async createCode() {
@@ -287,6 +369,7 @@ export class CreatepresaleComponent implements OnInit {
   }
 
   async save() {
+    if (!this.validateProductExchangeTotal()) return;
 
     await this.createCode();
 
@@ -322,6 +405,8 @@ export class CreatepresaleComponent implements OnInit {
   async Confirm() {
     this.ShoppingCart.Headboard = this.ShoppingCartResult.Headboard;
     this.ShoppingCart.DetailList = this.ShoppingCartResult.DetailList;
+    if (!this.validateProductExchangeTotal()) return;
+    this.ShoppingCart.CreditNoteCod = this.isProductExchangeMode ? this.CreditNoteCod : "";
 
     const response: ResponseWsDto = await this.presaleService.confirm(this.ShoppingCart);
 

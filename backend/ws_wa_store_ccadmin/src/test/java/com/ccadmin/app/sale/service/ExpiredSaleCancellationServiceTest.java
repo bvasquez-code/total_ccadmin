@@ -47,6 +47,8 @@ class ExpiredSaleCancellationServiceTest {
     private KardexZoneRepository kardexZoneRepository;
     @Mock
     private SaleSearchService saleSearchService;
+    @Mock
+    private CreditNoteApplicationCreateService creditNoteApplicationCreateService;
     @InjectMocks
     private ExpiredSaleCancellationService cancellationService;
 
@@ -112,7 +114,8 @@ class ExpiredSaleCancellationServiceTest {
         )).thenReturn(0);
         when(saleHeadRepository.findByPresaleCodForUpdate(presale.PresaleCod))
                 .thenReturn(Optional.of(sale));
-        when(salePaymentRepository.findTotalPayment(sale.SaleCod)).thenReturn(BigDecimal.ZERO);
+        when(salePaymentRepository.findTotalPaymentExcludingCreditNoteApplications(sale.SaleCod))
+                .thenReturn(BigDecimal.ZERO);
         when(presaleHeadRepository.findById(presale.PresaleCod)).thenReturn(Optional.of(presale));
         when(saleHeadRepository.findByPresaleCod(presale.PresaleCod)).thenReturn(Optional.of(sale));
         when(saleSearchService.findById(sale.SaleCod)).thenReturn(new SaleDetailDto());

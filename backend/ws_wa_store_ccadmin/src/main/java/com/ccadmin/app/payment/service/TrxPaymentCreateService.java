@@ -21,6 +21,7 @@ public class TrxPaymentCreateService extends SessionService {
     private CurrencyShared currencyShared;
 
     public TrxPaymentEntity save(TrxPaymentEntity trxPayment) {
+        rejectManualCreditNotePayment(trxPayment);
         prepareForSave(trxPayment);
         validatePaymentCreditNote(trxPayment);
         return this.trxPaymentRepository.save(trxPayment);
@@ -28,10 +29,39 @@ public class TrxPaymentCreateService extends SessionService {
 
     public List<TrxPaymentEntity> saveAll(List<TrxPaymentEntity> trxPaymentList) {
         trxPaymentList.forEach(trxPayment -> {
+            rejectManualCreditNotePayment(trxPayment);
             prepareForSave(trxPayment);
             validatePaymentCreditNote(trxPayment);
         });
         return this.trxPaymentRepository.saveAll(trxPaymentList);
+    }
+
+    public TrxPaymentEntity saveCreditNoteApplication(TrxPaymentEntity trxPayment) {
+        if (!"NC001".equals(trxPayment.PaymentMethodCod) || !"I".equals(trxPayment.TypeMovement)) {
+            throw new TrxPaymentBuildException(
+                    "La transaccion interna debe corresponder a una aplicacion de nota de credito"
+            );
+        }
+        prepareForSave(trxPayment);
+        validatePaymentCreditNote(trxPayment);
+        return this.trxPaymentRepository.save(trxPayment);
+    }
+
+    public TrxPaymentEntity inactivateCreditNoteApplication(
+            Long trxPaymentId,
+            String userCod
+    ) {
+        TrxPaymentEntity trxPayment = this.trxPaymentRepository.findById(trxPaymentId)
+                .orElseThrow(() -> new TrxPaymentBuildException(
+                        "No existe la transaccion interna de nota de credito"
+                ));
+        if (!"NC001".equals(trxPayment.PaymentMethodCod)) {
+            throw new TrxPaymentBuildException(
+                    "La transaccion no corresponde a una aplicacion de nota de credito"
+            );
+        }
+        trxPayment.inactive(userCod);
+        return this.trxPaymentRepository.save(trxPayment);
     }
 
     private void prepareForSave(TrxPaymentEntity trxPayment) {
@@ -42,8 +72,16 @@ public class TrxPaymentCreateService extends SessionService {
         trxPayment.CurrencyCodSys = currencySystem.CurrencyCod;
     }
 
+    private void rejectManualCreditNotePayment(TrxPaymentEntity trxPayment) {
+        if ("NC001".equals(trxPayment.PaymentMethodCod) && "I".equals(trxPayment.TypeMovement)) {
+            throw new TrxPaymentBuildException(
+                    "La nota de credito se aplica automaticamente desde el cambio de producto"
+            );
+        }
+    }
+
     private void validatePaymentCreditNote(TrxPaymentEntity trxPayment) {
-        if (trxPayment.PaymentMethodCod.equals("NC001")) {
+        if ("NC001".equals(trxPayment.PaymentMethodCod) && "I".equals(trxPayment.TypeMovement)) {
             TrxPaymentEntity trxPaymentDB = this.trxPaymentRepository.findByTransactionId(trxPayment.TransactionId);
             if (trxPaymentDB != null && trxPaymentDB.Status.equals("A")) {
                 throw new TrxPaymentBuildException("Pago con nota de crédito ya fue usado : " + trxPaymentDB.TransactionId);

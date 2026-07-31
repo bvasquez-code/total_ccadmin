@@ -1,0 +1,75 @@
+<div class="card border-1 brc-secondary-l2">
+  <div class="card-header bgc-secondary-l4 border-0 py-3">
+    <div class="d-flex align-items-center">
+      <h5 class="mb-0 text-secondary-d3">
+        <i class="fa fa-wallet mr-2 text-primary"></i>
+        Pagos realizados
+      </h5>
+      <span class="badge badge-primary ml-auto px-3 py-2">
+        Neto aplicado: {{ currencyCod }} {{ getNetPaid() | FormatoMonedaPeruana:false }}
+      </span>
+    </div>
+  </div>
+
+  <div class="card-body p-0" *ngIf="paymentList && paymentList.length > 0; else noPayments">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 text-dark-m2">
+        <thead class="bgc-grey-l4 text-90">
+          <tr>
+            <th>N°</th>
+            <th>Medio de pago</th>
+            <th>Referencia</th>
+            <th>Estado</th>
+            <th class="text-right">Monto</th>
+            <th class="text-right">Vuelto</th>
+            <th>Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let payment of paymentList"
+            [ngClass]="{
+              'bgc-red-l4 text-danger': payment.TrxPayment.TypeMovement === 'E',
+              'text-grey-m2': payment.Status === 'I' || payment.TrxPayment.Status === 'I'
+            }">
+            <td class="text-600">{{ payment.PaymentNumber }}</td>
+            <td>
+              <i class="fa mr-1"
+                [ngClass]="isCreditNoteApplication(payment.TrxPayment) ? 'fa-file-invoice-dollar text-success' : 'fa-money-check-alt text-primary'">
+              </i>
+              {{ getPaymentMethodName(payment.TrxPayment) }}
+              <small class="d-block text-grey" *ngIf="payment.TrxPayment?.PaymentPlatform">
+                {{ payment.TrxPayment.PaymentPlatform }}
+              </small>
+            </td>
+            <td>{{ payment.TrxPayment.TransactionId || '-' }}</td>
+            <td>
+              <span class="badge"
+                [ngClass]="{
+                  'badge-success': getPaymentStatus(payment) === 'Registrado' || getPaymentStatus(payment) === 'OK',
+                  'badge-info': getPaymentStatus(payment) === 'Crédito aplicado',
+                  'badge-danger': getPaymentStatus(payment) === 'Reversión',
+                  'badge-secondary': getPaymentStatus(payment) === 'Inactivo'
+                }">
+                {{ getPaymentStatus(payment) }}
+              </span>
+            </td>
+            <td class="text-right text-600">
+              {{ getPaymentCurrency(payment) }} {{ getPaymentAmount(payment) | FormatoMonedaPeruana:false }}
+            </td>
+            <td class="text-right">
+              {{ getPaymentCurrency(payment) }} {{ getReturnedAmount(payment) | FormatoMonedaPeruana:false }}
+            </td>
+            <td>{{ getPaymentDate(payment) | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <ng-template #noPayments>
+    <div class="card-body text-center text-grey-d1 py-4">
+      <i class="fa fa-info-circle mr-1"></i>
+      Esta venta todavía no tiene pagos registrados.
+    </div>
+  </ng-template>
+</div>

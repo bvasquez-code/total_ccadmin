@@ -4,6 +4,7 @@ import com.ccadmin.app.client.model.entity.ClientEntity;
 import com.ccadmin.app.sale.model.entity.*;
 
 import java.util.List;
+import java.math.BigDecimal;
 
 public class CreditNoteDetailDto {
 
@@ -14,5 +15,7 @@ public class CreditNoteDetailDto {
     public SaleDocumentEntity DocumentReference;
     public List<CreditNoteDetDto> DetailList;
     public List<SalePaymentEntity> DetailPayment;
+    public List<CreditNoteApplicationEntity> ApplicationList;
+    public BigDecimal NumAvailableBalance;
 
 }

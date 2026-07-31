@@ -11,4 +11,6 @@ public class PresaleRegisterDto {
 
     public List<PresaleDetEntity> DetailList;
 
+    public String CreditNoteCod;
+
 }

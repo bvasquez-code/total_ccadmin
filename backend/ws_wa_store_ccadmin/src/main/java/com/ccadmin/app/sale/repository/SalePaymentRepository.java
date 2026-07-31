@@ -16,6 +16,22 @@ public interface SalePaymentRepository extends JpaRepository<SalePaymentEntity, 
             """, nativeQuery = true)
     public BigDecimal findTotalPayment(String SaleCod);
 
+    @Query(value = """
+            select IFNULL(sum(sp.NumAmountPaid), 0)
+            from sale_payments sp
+            where sp.SaleCod = :SaleCod
+              and sp.Status = 'A'
+              and not exists (
+                  select 1
+                  from credit_note_application cna
+                  where cna.TrxPaymentId = sp.TrxPaymentId
+                    and cna.Status = 'A'
+              )
+            """, nativeQuery = true)
+    BigDecimal findTotalPaymentExcludingCreditNoteApplications(
+            @Param("SaleCod") String SaleCod
+    );
+
     @Query( value = """
             select count(1) from sale_payments sp where sp.SaleCod = :SaleCod
             """, nativeQuery = true)

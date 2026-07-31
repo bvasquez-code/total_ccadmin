@@ -1,0 +1,204 @@
+<div role="main" class="main-content">
+  <div class="page-content container container-plus">
+    <div class="container px-0">
+      <div class="row mt-4">
+        <div class="col-12">
+          <div class="page-header border-0 mb-0">
+            <h1 class="page-title text-dark-l3 text-115">
+              Detalle de venta
+              <i class="fa fa-angle-right text-80 ml-1"></i>
+              <small class="page-info text-dark-m3">{{ SaleDetail.Headboard.SaleCod }}</small>
+            </h1>
+            <div class="page-tools">
+              <button type="button" class="btn bg-white btn-light mx-1px text-95 shadow-sm"
+                [disabled]="loading" (click)="print()">
+                <i class="mr-1 fa fa-print text-primary text-120 w-2"></i>
+                Imprimir
+              </button>
+            </div>
+          </div>
+
+          <div class="card dcard mb-4">
+            <div class="card-body px-4 px-lg-5">
+              <div class="row mt-4">
+                <div class="col-sm-6">
+                  <div class="text-100 text-grey-m1">Cliente:</div>
+                  <div class="text-600 text-110 text-primary mt-2">{{ getClientName() }}</div>
+                  <div class="text-dark-l1" *ngIf="hasClient()">
+                    <div class="my-1">
+                      N° Documento: {{ SaleDetail.Headboard.Client.Person.DocumentNum }}
+                    </div>
+                    <div class="my-1" *ngIf="SaleDetail.Headboard.Client.Person.CellPhone">
+                      <i class="fa fa-phone fa-flip-horizontal text-purple mr-1"></i>
+                      {{ SaleDetail.Headboard.Client.Person.CellPhone }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-sm-6 align-self-start d-sm-flex justify-content-end text-95">
+                  <div class="text-dark-l1">
+                    <div class="mt-1 mb-2 text-secondary-d1 text-600 text-125">Datos de venta</div>
+                    <div class="my-2">
+                      <span class="text-600 text-90">Código:</span>
+                      {{ SaleDetail.Headboard.SaleCod }}
+                    </div>
+                    <div class="my-2" *ngIf="SaleDetail.SaleDocument?.DocumentCod">
+                      <span class="text-600 text-90">Documento:</span>
+                      {{ SaleDetail.SaleDocument.CounterfoilCod }}-{{ SaleDetail.SaleDocument.DocumentCod }}
+                    </div>
+                    <div class="my-2">
+                      <span class="text-600 text-90">Fecha:</span>
+                      {{ SaleDetail.Headboard.CreationDate | date:'dd/MM/yyyy HH:mm:ss' }}
+                    </div>
+                    <div class="my-2">
+                      <span class="text-600 text-90">Estado:</span>
+                      <span class="badge bgc-success-d1 text-white badge-pill px-25">
+                        {{ SaleDetail.Headboard.SaleStatus | SaleStatusPipe }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <div class="row text-600 text-95 text-secondary-d3 brc-green-l1 py-25 border-y-2">
+                  <div class="d-none d-sm-block col-sm-3">Producto</div>
+                  <div class="d-none d-sm-block col-sm-1">Unid.</div>
+                  <div class="d-none d-sm-block col-sm-2">Precio unitario</div>
+                  <div class="d-none d-sm-block col-sm-2">Subtotal</div>
+                  <div class="d-none d-sm-block col-sm-2">Descuento</div>
+                  <div class="d-none d-sm-block col-sm-2">Total</div>
+                </div>
+
+                <div class="text-95 text-dark-m3">
+                  <div class="row mb-2 mb-sm-0 py-25"
+                    *ngFor="let item of SaleDetail.DetailList; let index = index"
+                    [ngClass]="(index + 1) % 2 === 0 ? 'bgc-green-l4' : ''">
+                    <div class="col-7 col-sm-3">
+                      ({{ item.Product.ProductCod }}) - {{ item.Product.ProductName }}
+                    </div>
+                    <div class="d-none d-sm-block col-sm-1">
+                      {{ getVisibleQuantity(item.NumUnit, item.ProductUnitFactor) }} {{ item.ProductUnitName }}
+                    </div>
+                    <div class="d-none d-sm-block col-sm-2">
+                      {{ SaleDetail.Headboard.CurrencyCod }}
+                      {{ getVisibleUnitPrice(item.NumUnitPriceSale, item.ProductUnitFactor) | FormatoMonedaPeruana:false }}
+                    </div>
+                    <div class="d-none d-sm-block col-sm-2">
+                      {{ SaleDetail.Headboard.CurrencyCod }} {{ item.NumPriceSubTotal | FormatoMonedaPeruana:false }}
+                    </div>
+                    <div class="d-none d-sm-block col-sm-2">
+                      {{ SaleDetail.Headboard.CurrencyCod }} {{ item.NumDiscount | FormatoMonedaPeruana:false }}
+                    </div>
+                    <div class="col-5 col-sm-2 text-secondary-d3 text-600">
+                      {{ SaleDetail.Headboard.CurrencyCod }} {{ item.NumTotalPrice | FormatoMonedaPeruana:false }}
+                    </div>
+                    <div class="col-12 mt-1 text-90 text-grey-d2" *ngIf="hasTaxDetail(item)">
+                      <span class="mr-3">
+                        Impuesto: {{ SaleDetail.Headboard.CurrencyCod }} {{ item.NumTotalTax | FormatoMonedaPeruana:false }}
+                      </span>
+                      <span class="badge badge-sm bgc-secondary-l3 text-dark-m2 mr-1"
+                        *ngFor="let tax of getTaxDetailList(item)">
+                        {{ getTaxLineLabel(tax) }}: {{ SaleDetail.Headboard.CurrencyCod }}
+                        {{ tax.TaxAmount | FormatoMonedaPeruana:false }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="row border-b-2 brc-green-l1"></div>
+
+                <div class="row mt-4">
+                  <div class="col-12 col-sm-7"></div>
+                  <div class="col-12 col-sm-5 text-dark-l1 text-90">
+                    <div class="row my-2">
+                      <div class="col-7 text-right">Subtotal</div>
+                      <div class="col-5 text-115 text-secondary-d3">
+                        {{ SaleDetail.Headboard.CurrencyCod }}
+                        {{ SaleDetail.Headboard.NumTotalPriceNoTax | FormatoMonedaPeruana:false }}
+                      </div>
+                    </div>
+                    <div class="row my-2">
+                      <div class="col-7 text-right">Impuestos</div>
+                      <div class="col-5 text-115 text-secondary-d3">
+                        {{ SaleDetail.Headboard.CurrencyCod }}
+                        {{ SaleDetail.Headboard.NumTotalTax | FormatoMonedaPeruana:false }}
+                      </div>
+                    </div>
+                    <div class="row my-3">
+                      <div class="col-7 text-right text-150"><b>Total</b></div>
+                      <div class="col-5 text-150 text-secondary-d3">
+                        {{ SaleDetail.Headboard.CurrencyCod }}
+                        {{ SaleDetail.Headboard.NumTotalPrice | FormatoMonedaPeruana:false }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <app-salepaymentdetail
+                  [paymentList]="SaleDetail.DetailPayment"
+                  [paymentMethodList]="PaymentMethodList"
+                  [currencyCod]="SaleDetail.Headboard.CurrencyCod">
+                </app-salepaymentdetail>
+              </div>
+
+              <div class="card border-1 brc-orange-l2 mt-4" *ngIf="hasCreditNote()">
+                <div class="card-header bgc-orange-l4 border-0 py-3">
+                  <h5 class="mb-0 text-orange-d3">
+                    <i class="fa fa-file-invoice-dollar mr-2"></i>
+                    Nota de crédito asociada
+                  </h5>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-md-3 mb-2">
+                      <span class="text-grey-d1 d-block">Código</span>
+                      <b>{{ getCreditNote()?.Headboard?.CreditNoteCod }}</b>
+                    </div>
+                    <div class="col-md-3 mb-2">
+                      <span class="text-grey-d1 d-block">Destino</span>
+                      <b>{{ getCreditNotePurpose() }}</b>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                      <span class="text-grey-d1 d-block">Estado</span>
+                      <b>{{ getCreditNoteStatus() }}</b>
+                    </div>
+                    <div class="col-md-2 mb-2">
+                      <span class="text-grey-d1 d-block">Monto</span>
+                      <b>
+                        {{ getCreditNote()?.Headboard?.CurrencyCod }}
+                        {{ getCreditNote()?.Headboard?.NumTotalPrice | FormatoMonedaPeruana:false }}
+                      </b>
+                    </div>
+                    <div class="col-md-2 text-md-right align-self-center">
+                      <a class="btn btn-sm btn-outline-warning"
+                        [routerLink]="['/enterprise/sale/pages/viewcreditnote']"
+                        [queryParams]="{ CreditNoteCod: getCreditNote()?.Headboard?.CreditNoteCod }">
+                        Ver nota
+                      </a>
+                    </div>
+                  </div>
+                  <div class="mt-2" *ngIf="getCreditNote()?.Headboard?.Commenter">
+                    <span class="text-grey-d1">Motivo:</span>
+                    {{ getCreditNote()?.Headboard?.Commenter }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
+                <div class="offset-md-5 col-md-7">
+                  <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4"
+                    routerLink="/enterprise/sale/pages/listsale">
+                    <i class="fa fa-undo mr-1"></i>
+                    Volver
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

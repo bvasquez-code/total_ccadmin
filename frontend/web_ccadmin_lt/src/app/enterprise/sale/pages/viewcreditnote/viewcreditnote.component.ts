@@ -80,6 +80,15 @@ export class ViewcreditnoteComponent implements OnInit {
     return '-';
   }
 
+  getClientName(): string {
+    const person = this.Detail?.Client?.Person;
+
+    if (!person) return '-';
+
+    const naturalPersonName = `${person.Names || ''} ${person.LastNames || ''}`.trim();
+    return (person.BusinessName || person.CommercialName || naturalPersonName || '-').trim();
+  }
+
   getVisibleQuantity(internalQuantity: number, productUnitFactor: number): number {
     return ProductUnitHelper.toVisibleQuantity(internalQuantity, productUnitFactor);
   }

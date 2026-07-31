@@ -5,11 +5,13 @@ export class PresaleRegisterDto
 {
     public Headboard : PresaleHeadEntity = new PresaleHeadEntity();
     public DetailList : PresaleDetEntity[] = [];
+    public CreditNoteCod: string = "";
 
     public constructor()
     {
         this.Headboard = new PresaleHeadEntity();
         this.DetailList = [];
+        this.CreditNoteCod = "";
     }
 
     public ReBuild():void
@@ -42,6 +44,7 @@ export class PresaleRegisterDto
     SetDataSession( DataSession : any )
     {
         this.Headboard.SetDataSession( DataSession.Headboard );
+        this.CreditNoteCod = DataSession.CreditNoteCod ?? "";
 
         for(let Item of DataSession.DetailList)
         {

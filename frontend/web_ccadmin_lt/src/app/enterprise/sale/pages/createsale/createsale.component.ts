@@ -15,6 +15,7 @@ import { SaleConfirmDto } from '../../model/dto/SaleConfirmDto';
 import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
 import { SaleDetTaxEntity } from '../../model/entity/SaleDetTaxEntity';
 import { SaleDetEntity } from '../../model/entity/SaleDetEntity';
+import { PaymentMethodEntity } from 'src/app/enterprise/shared/model/entity/PaymentMethodEntity';
 
 @Component({
   selector: 'app-createsale',
@@ -28,6 +29,7 @@ export class CreatesaleComponent implements OnInit {
 
   SaleCod: string = "";
   SaleDetail: SaleDetailDto = new SaleDetailDto();
+  PaymentMethodList: PaymentMethodEntity[] = [];
   TrxPaymentList: TrxPaymentEntity[] = [];
   ItemCount: number = 0;
   SaleDetailPrintData: ResponseWsDto = new ResponseWsDto();
@@ -64,6 +66,15 @@ export class CreatesaleComponent implements OnInit {
 
     if (!rpt.ErrorStatus) {
       this.SaleDetail = rpt.DataAdditional.find(e => e.Name == "SaleDetail")?.Data;
+      this.PaymentMethodList = rpt.DataAdditional.find(e => e.Name == "PaymentMethodList")?.Data ?? [];
+
+      if (this.SaleDetail.Headboard.SaleStatus === "C") {
+        await this.router.navigate(
+          ['/enterprise/sale/pages/viewsale'],
+          { queryParams: { SaleCod: this.SaleDetail.Headboard.SaleCod } }
+        );
+        return;
+      }
 
       this.TrxPaymentComponenRequest.InputOutstandingBalance = this.getOutstandingbalance();
       this.TrxPaymentComponenRequest.TrxPaymentList = this.getTrxPaymentList();
@@ -178,7 +189,11 @@ export class CreatesaleComponent implements OnInit {
   }
 
   getOutstandingbalance(): number {
-    return this.SaleDetail.Headboard.NumTotalPrice - this.SaleDetail.DetailPayment.reduce((sum, e) => sum + e.NumAmountPaid, 0);
+    const totalPrice: number = Number(this.SaleDetail.Headboard.NumTotalPrice || 0);
+    const totalPaid: number = this.SaleDetail.DetailPayment
+      .reduce((sum, e) => sum + Number(e.NumAmountPaid || 0), 0);
+
+    return this.toMoney(totalPrice - totalPaid);
   }
 
   getTrxPaymentList(): TrxPaymentEntity[] {
@@ -232,7 +247,10 @@ export class CreatesaleComponent implements OnInit {
   }
 
   getAmountReturned(): number {
-    return this.SaleDetail.DetailPayment.reduce((sum, e) => sum + (e.NumAmountReturned ? e.NumAmountReturned : 0), 0);
+    const totalReturned: number = this.SaleDetail.DetailPayment
+      .reduce((sum, e) => sum + Number(e.NumAmountReturned || 0), 0);
+
+    return this.toMoney(totalReturned);
   }
 
   getVisibleQuantity(internalQuantity: number, productUnitFactor: number): number {
@@ -317,9 +335,15 @@ export class CreatesaleComponent implements OnInit {
   }
 
   getTotalPaid(): number {
-    return this.SaleDetail.DetailPayment
+    const totalPaid: number = this.SaleDetail.DetailPayment
       .filter(e => e?.TrxPayment?.TypeMovement === "I" || !e?.TrxPayment)
       .reduce((sum, e) => sum + Number(e?.NumAmountPaid || 0), 0);
+
+    return this.toMoney(totalPaid);
+  }
+
+  toMoney(value: number): number {
+    return Math.round(Number(value || 0) * 100) / 100;
   }
 
   hasOfficialDocument(): boolean {
@@ -352,7 +376,11 @@ export class CreatesaleComponent implements OnInit {
       this.refreshPaymentAvailability();
 
       if(this.SaleDetail.Headboard.SaleStatus === "C"){
-        this.print();
+        await this.print();
+        await this.router.navigate(
+          ['/enterprise/sale/pages/viewsale'],
+          { queryParams: { SaleCod: this.SaleDetail.Headboard.SaleCod } }
+        );
       }
     }
   }

@@ -42,6 +42,8 @@ public class ExpiredSaleCancellationService extends SessionService {
     private KardexZoneRepository kardexZoneRepository;
     @Autowired
     private SaleSearchService saleSearchService;
+    @Autowired
+    private CreditNoteApplicationCreateService creditNoteApplicationCreateService;
 
     public PresaleCancellationDetailDto findCancellationDetail(String presaleCod) throws SaleException {
         PresaleHeadEntity presaleHead = this.presaleHeadRepository.findById(presaleCod)
@@ -86,6 +88,10 @@ public class ExpiredSaleCancellationService extends SessionService {
         }
 
         SaleHeadEntity saleHead = saleOptional.get();
+        this.creditNoteApplicationCreateService.releaseBySale(
+                saleHead.SaleCod,
+                getUserCod()
+        );
         this.validateManualSaleCancellation(saleHead);
         this.cancelLockedSale(saleHead, presaleHead, forced, hasStockReservation, getUserCod());
         return this.findCancellationDetail(presaleCod);
@@ -109,7 +115,8 @@ public class ExpiredSaleCancellationService extends SessionService {
         if (saleHead.CreationDate == null || saleHead.CreationDate.after(expirationLimit)) {
             return false;
         }
-        if (this.salePaymentRepository.countTotalPayment(saleCod) > 0) {
+        this.creditNoteApplicationCreateService.releaseBySale(saleCod, userCod);
+        if (this.pendingPaymentAmount(saleCod).signum() > 0) {
             throw new SaleException("La venta pendiente tiene pagos y requiere gestion manual");
         }
         if (this.saleDocumentRepository.findBySaleCod(saleCod) != null) {
@@ -202,7 +209,8 @@ public class ExpiredSaleCancellationService extends SessionService {
     }
 
     private java.math.BigDecimal pendingPaymentAmount(String saleCod) {
-        java.math.BigDecimal amount = this.salePaymentRepository.findTotalPayment(saleCod);
+        java.math.BigDecimal amount =
+                this.salePaymentRepository.findTotalPaymentExcludingCreditNoteApplications(saleCod);
         return amount == null || amount.signum() < 0 ? java.math.BigDecimal.ZERO : amount;
     }
 

@@ -68,11 +68,15 @@ export class CancelpresalepaymentsComponent implements OnInit {
   prepareReversalRequest(): void {
     const paymentList: SalePaymentEntity[] = this.cancellationDetail.SaleDetail?.DetailPayment ?? [];
     const originalPaymentList: TrxPaymentEntity[] = paymentList
-      .filter(item => item.TrxPayment && item.TrxPayment.TypeMovement !== 'E')
+      .filter(item => item.TrxPayment
+        && item.TrxPayment.TypeMovement !== 'E'
+        && !this.isInternalCreditNoteApplication(item.TrxPayment))
       .map(item => this.buildOriginalPayment(item));
     const reversalPaymentList: TrxPaymentEntity[] = paymentList
       .map(item => item.TrxPayment)
-      .filter(item => item && item.TypeMovement === 'E');
+      .filter(item => item
+        && item.TypeMovement === 'E'
+        && !this.isInternalCreditNoteApplication(item));
 
     const request: TrxPaymentComponenRequestDto = new TrxPaymentComponenRequestDto();
     request.InputTypeMovement = 'E';
@@ -143,7 +147,17 @@ export class CancelpresalepaymentsComponent implements OnInit {
   }
 
   hasPendingPayments(): boolean {
-    return Number(this.cancellationDetail.PendingPaymentAmount || 0) > 0.009;
+    const originalAmount: number = this.trxPaymentRequest.TrxPaymentReversalList
+      .reduce((sum, item) => sum + Math.abs(Number(item.AmountPaid || 0)), 0);
+    const reversedAmount: number = this.trxPaymentRequest.TrxPaymentList
+      .filter(item => item.TypeMovement === 'E')
+      .reduce((sum, item) => sum + Math.abs(Number(item.AmountPaid || 0)), 0);
+    return this.toMoney(originalAmount - reversedAmount) > 0.009;
+  }
+
+  isInternalCreditNoteApplication(payment: TrxPaymentEntity): boolean {
+    return payment.PaymentMethodCod === 'NC001'
+      && payment.PaymentPlatform === 'CREDITO_INTERNO';
   }
 
   toMoney(value: number): number {

@@ -51,6 +51,8 @@ public class CreditNoteSearchService {
     private StoreShared storeShared;
     @Autowired
     private PaymentMethodShared paymentMethodShared;
+    @Autowired
+    private CreditNoteApplicationSearchService creditNoteApplicationSearchService;
 
     private SearchTService<CreditNoteHeadEntity> searchTService;
 
@@ -105,6 +107,10 @@ public class CreditNoteSearchService {
             creditNoteDetail.Client = this.clientShared.findById(creditNoteDetail.Headboard.ClientCod);
         }
         creditNoteDetail.DetailPayment = this.salePaymentRepository.findByCreditNoteCod(creditNoteDetail.Headboard.CreditNoteCod);
+        creditNoteDetail.ApplicationList =
+                this.creditNoteApplicationSearchService.findActiveByCreditNoteCod(CreditNoteCod);
+        creditNoteDetail.NumAvailableBalance =
+                this.creditNoteApplicationSearchService.findAvailableBalance(creditNoteDetail.Headboard);
         creditNoteDetail.Document = this.creditNoteDocumentRepository.findByCreditNoteCod(creditNoteDetail.Headboard.CreditNoteCod);
         creditNoteDetail.DocumentReference = this.saleDocumentRepository.findBySaleCod(creditNoteDetail.Headboard.SaleCod);
         return creditNoteDetail;

@@ -95,7 +95,7 @@ export class ListsaleComponent implements OnInit,ActionTableService<SaleHeadEnti
           Options : [
             { Type : "Url" , Name : "fa fa-check" , Title: "Procesar venta pendiente", Url : "/enterprise/sale/pages/createsale?SaleCod={SaleCod}", Function :showConfirmSale  },
             { Type : "Modal" , Name : "fa fa-ban" , Title: "Anular venta pendiente", Url : "#", ID: "modal_cancel_pending_sale", Function: showConfirmSale },
-            { Type : "Url" , Name : "fa fa-search" , Title: "Ver venta confirmada", Url : "/enterprise/sale/pages/createsale?SaleCod={SaleCod}", Function :showViewSale  }
+            { Type : "Url" , Name : "fa fa-search" , Title: "Ver venta confirmada", Url : "/enterprise/sale/pages/viewsale?SaleCod={SaleCod}", Function :showViewSale  }
           ] 
         }
       ],

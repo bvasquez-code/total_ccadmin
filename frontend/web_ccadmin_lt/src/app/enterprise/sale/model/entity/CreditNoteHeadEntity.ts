@@ -17,6 +17,7 @@ export class CreditNoteHeadEntity extends AuditTableEntity {
     public NumExchangevalue: number = 0; // Inicializado con 0
     public IsPaid: string = '';
     public IsStockReturned: string = 'N';
+    public IsProductExchange: string = 'N';
     public TypeCreditNote: string = '';
 
     constructor() {

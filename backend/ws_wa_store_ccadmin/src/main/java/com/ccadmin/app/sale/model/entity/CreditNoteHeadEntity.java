@@ -30,6 +30,7 @@ public class CreditNoteHeadEntity extends AuditTableEntity implements Serializab
     public BigDecimal NumExchangevalue;
     public String IsPaid;
     public String IsStockReturned;
+    public String IsProductExchange = "N";
     public String TypeCreditNote;
 
     public CreditNoteHeadEntity(){
@@ -65,6 +66,9 @@ public class CreditNoteHeadEntity extends AuditTableEntity implements Serializab
         }
         if(this.NumTotalTax.compareTo(BigDecimal.ZERO) < 0){
             throw new SaleBuildException("El impuesto total debe ser mayor a cero");
+        }
+        if(!"S".equals(this.IsProductExchange) && !"N".equals(this.IsProductExchange)){
+            throw new SaleBuildException("El indicador de cambio de producto debe ser S o N");
         }
         return this;
     }

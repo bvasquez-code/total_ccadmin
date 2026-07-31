@@ -316,6 +316,14 @@
                     </div>
                   </div>
 
+                  <div class="mt-4">
+                    <app-salepaymentdetail
+                      [paymentList]="SaleDetail.DetailPayment"
+                      [paymentMethodList]="PaymentMethodList"
+                      [currencyCod]="SaleDetail.Headboard.CurrencyCod">
+                    </app-salepaymentdetail>
+                  </div>
+
                   <hr class="brc-secondary-l3 border-t-2">
 
                   <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">

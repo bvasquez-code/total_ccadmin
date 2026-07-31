@@ -34,6 +34,7 @@ CREATE TABLE `credit_note_head` (
   `NumExchangevalue` decimal(16,4) DEFAULT NULL COMMENT 'valor de cambio',
   `IsPaid` char(1) NOT NULL DEFAULT 'N',
   `IsStockReturned` char(1) NOT NULL DEFAULT 'N' COMMENT 'Indica si el stock fue regresado a la tienda',
+  `IsProductExchange` char(1) NOT NULL DEFAULT 'N' COMMENT 'Indica si la nota genera saldo para cambio de producto (S/N)',
   `CreationUser` varchar(16) NOT NULL,
   `CreationDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `ModifyUser` varchar(16) DEFAULT NULL,
@@ -53,7 +54,8 @@ CREATE TABLE `credit_note_head` (
   CONSTRAINT `fk_credit_note_head_period` FOREIGN KEY (`PeriodId`) REFERENCES `period` (`PeriodId`),
   CONSTRAINT `fk_credit_note_head_sale` FOREIGN KEY (`SaleCod`) REFERENCES `sale_head` (`SaleCod`),
   CONSTRAINT `fk_credit_note_head_store` FOREIGN KEY (`StoreCod`) REFERENCES `store` (`StoreCod`),
-  CONSTRAINT `chk_credit_note_type` CHECK ((`TypeCreditNote` in (_utf8mb4'T',_utf8mb4'P')))
+  CONSTRAINT `chk_credit_note_type` CHECK ((`TypeCreditNote` in (_utf8mb4'T',_utf8mb4'P'))),
+  CONSTRAINT `chk_credit_note_product_exchange` CHECK ((`IsProductExchange` in (_utf8mb4'S',_utf8mb4'N')))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -82,6 +84,30 @@ CREATE TABLE `credit_note_head` (
         ) THEN
             ALTER TABLE `credit_note_head` ADD COLUMN `NumTotalTax` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Total de impuestos' AFTER `NumTotalPriceNoTax`;
             SELECT 'Columna NumTotalTax agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'credit_note_head'
+            AND column_name = 'IsProductExchange'
+        ) THEN
+            ALTER TABLE `credit_note_head`
+                ADD COLUMN `IsProductExchange` char(1) NOT NULL DEFAULT 'N'
+                COMMENT 'Indica si la nota genera saldo para cambio de producto (S/N)'
+                AFTER `IsStockReturned`;
+            SELECT 'Columna IsProductExchange agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.table_constraints
+            WHERE table_schema = DATABASE()
+              AND table_name = 'credit_note_head'
+              AND constraint_name = 'chk_credit_note_product_exchange'
+              AND constraint_type = 'CHECK'
+        ) THEN
+            ALTER TABLE `credit_note_head`
+                ADD CONSTRAINT `chk_credit_note_product_exchange`
+                CHECK (`IsProductExchange` IN ('S', 'N'));
+            SELECT 'Restriccion chk_credit_note_product_exchange agregada exitosamente.' AS Mensaje;
         END IF;
         
         SELECT 'Tabla credit_note_head ya existe. Validacion de estructura completada.' AS Mensaje;

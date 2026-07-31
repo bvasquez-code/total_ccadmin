@@ -20,6 +20,20 @@ public class TrxPaymentShared {
         return this.trxPaymentCreateService.save(trxPayment);
     }
 
+    public TrxPaymentEntity saveCreditNoteApplication(TrxPaymentEntity trxPayment) {
+        return this.trxPaymentCreateService.saveCreditNoteApplication(trxPayment);
+    }
+
+    public TrxPaymentEntity inactivateCreditNoteApplication(
+            Long trxPaymentId,
+            String userCod
+    ) {
+        return this.trxPaymentCreateService.inactivateCreditNoteApplication(
+                trxPaymentId,
+                userCod
+        );
+    }
+
     public List<TrxPaymentEntity> saveAll(List<TrxPaymentEntity> trxPaymentList) {
         return this.trxPaymentCreateService.saveAll(trxPaymentList);
     }

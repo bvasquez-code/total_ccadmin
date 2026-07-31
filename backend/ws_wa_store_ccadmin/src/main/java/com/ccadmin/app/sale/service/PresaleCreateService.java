@@ -66,6 +66,10 @@ public class PresaleCreateService extends SessionService {
     private SaleCreateService saleCreateService;
     @Autowired
     private KardexShared kardexShared;
+    @Autowired
+    private CreditNoteApplicationCreateService creditNoteApplicationCreateService;
+    @Autowired
+    private SaleSearchService saleSearchService;
 
     public String createCode(){
         String PresaleCod = presaleHeadRepository.getPresaleCod(getStoreCod());
@@ -92,7 +96,7 @@ public class PresaleCreateService extends SessionService {
     }
 
     @Transactional
-    public SaleDetailDto confirm(PresaleRegisterDto presaleRegister) throws PresaleException, SaleException, SaleBuildException {
+    public SaleDetailDto confirm(PresaleRegisterDto presaleRegister) throws Exception {
 
         Optional<PresaleHeadEntity> presaleOptional = this.presaleHeadRepository.findByIdForUpdate(
                 presaleRegister.Headboard.PresaleCod
@@ -115,6 +119,13 @@ public class PresaleCreateService extends SessionService {
         if (!StatusConst.PENDING.equals(saleDetail.Headboard.SaleStatus)
                 || !presale.PresaleCod.equals(saleDetail.Headboard.PresaleCod)) {
             throw new PresaleException("La venta pendiente no corresponde a la preventa confirmada");
+        }
+        if (presaleRegister.CreditNoteCod != null && !presaleRegister.CreditNoteCod.isBlank()) {
+            this.creditNoteApplicationCreateService.applyAvailableBalance(
+                    presaleRegister.CreditNoteCod,
+                    saleDetail.Headboard
+            );
+            saleDetail = this.saleSearchService.findById(saleDetail.Headboard.SaleCod);
         }
         List<PresaleDetWarehouseEntity> detailList =
                 this.presaleDetWarehouseRepository.findActiveByPresaleCod(presale.PresaleCod);

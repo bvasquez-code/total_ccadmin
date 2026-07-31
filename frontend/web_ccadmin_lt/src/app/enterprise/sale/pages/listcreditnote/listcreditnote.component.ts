@@ -175,6 +175,12 @@ export class ListcreditnoteComponent implements OnInit, ActionTableService<Credi
 
     if (!rpt.ErrorStatus) {
       this.toastrService.success("Nota de credito confirmada");
+      if (rpt.Data?.Headboard?.IsProductExchange === "S") {
+        window.location.assign(
+          `/enterprise/sale/pages/createpresale?CreditNoteCod=${rpt.Data.Headboard.CreditNoteCod}`
+        );
+        return;
+      }
       this.findAll(1, "");
     }
 

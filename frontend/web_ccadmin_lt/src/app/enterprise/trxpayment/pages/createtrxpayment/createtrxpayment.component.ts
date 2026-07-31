@@ -63,7 +63,7 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
     if(!rpt.ErrorStatus){
       this.paymentMethodList = rpt.DataAdditional.find( e => e.Name === "paymentMethodList" )?.Data ?? [];
       this.currencyList = rpt.DataAdditional.find( e => e.Name === "currencyList" )?.Data ?? [];
-      this.selectedPaymentMethodCod = this.paymentMethodList[0]?.PaymentMethodCod ?? "";
+      this.selectedPaymentMethodCod = this.getSelectablePaymentMethodList()[0]?.PaymentMethodCod ?? "";
     }
   }
 
@@ -84,7 +84,7 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
     let paymentMethod : undefined | PaymentMethodEntity = this.paymentMethodList.find( e => e.PaymentMethodCod ===  PaymentMethodCodSelect );
     let Currency : undefined | CurrencyEntity = this.currencyList.find( e => e.CurrencyCod ===  CurrencyCodSelect );
 
-    let outstandingBalance : number = Number(this.TrxPaymentComponenRequest.InputOutstandingBalance);
+    let outstandingBalance : number = this.toMoney(this.TrxPaymentComponenRequest.InputOutstandingBalance);
 
     if(paymentMethod){
 
@@ -105,7 +105,7 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
       this.trxPayment.NumExchangevalue = Currency.NumExchangevalue;
     }
 
-    this.trxPayment.AmountPaid = Number(this.txtAmountPaid.nativeElement.value);
+    this.trxPayment.AmountPaid = this.toMoney(Number(this.txtAmountPaid.nativeElement.value));
     this.trxPayment.TypeMovement = 'I'; // Ingreso
 
     if (this.trxPayment.AmountPaid <= 0) {
@@ -124,7 +124,7 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
       }
 
       if(this.IsCash(paymentMethod) && this.trxPayment.AmountPaid > outstandingBalance){
-        this.trxPayment.AmountReturned = this.trxPayment.AmountPaid - outstandingBalance;
+        this.trxPayment.AmountReturned = this.toMoney(this.trxPayment.AmountPaid - outstandingBalance);
       }
 
     }
@@ -199,7 +199,7 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
 
     this.EmitResultForm(trxPaymentResult);
 
-    this.txtAmountPaid.nativeElement.value = String(this.getCurrentReversalAmount());
+    this.txtAmountPaid.nativeElement.value = this.formatMoneyInput(this.getCurrentReversalAmount());
 
     this.toastrService.success("Se realiza la reversion exitosamente");
   }
@@ -372,7 +372,9 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
     this.txtDocumentVisible = (PaymentMethodCodSelect === 'NC001');
     this.txtAmountPaidConfigHtml.ReadOnly = (PaymentMethodCodSelect === 'NC001');
     this.cboCurrencyCodConfigHtml.ReadOnly = (PaymentMethodCodSelect === 'NC001');
-    this.txtAmountPaid.nativeElement.value = (PaymentMethodCodSelect === 'NC001') ? "0" : String(this.TrxPaymentComponenRequest.InputOutstandingBalance);
+    this.txtAmountPaid.nativeElement.value = (PaymentMethodCodSelect === 'NC001')
+      ? "0.00"
+      : this.formatMoneyInput(this.TrxPaymentComponenRequest.InputOutstandingBalance);
   }
 
   selectPaymentMethod(paymentMethod: PaymentMethodEntity): void {
@@ -399,6 +401,12 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
     return this.getPaymentMethod(this.selectedPaymentMethodCod);
   }
 
+  getSelectablePaymentMethodList(): PaymentMethodEntity[] {
+    return this.paymentMethodList.filter(e =>
+      this.isReversalMode() || e.PaymentMethodCod !== "NC001"
+    );
+  }
+
   isReversalMode(): boolean {
     return this.TrxPaymentComponenRequest.InputTypeMovement === 'E';
   }
@@ -422,7 +430,22 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
   getInputAmount(): number {
     return this.isReversalMode()
       ? this.getTotalReversalAmount()
-      : Number(this.TrxPaymentComponenRequest.InputOutstandingBalance);
+      : this.toMoney(this.TrxPaymentComponenRequest.InputOutstandingBalance);
+  }
+
+  getInputAmountDisplayValue(): string {
+    return this.getInputAmount().toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  getCalculatedAmountValue(): string {
+    const amount: number = this.isReversalMode()
+      ? this.getCurrentReversalAmount()
+      : this.getInputAmount();
+
+    return this.formatMoneyInput(amount);
   }
 
   getPaymentsToReverse(): TrxPaymentEntity[] {
@@ -563,6 +586,10 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
     return Math.round(Number(value || 0) * 100) / 100;
   }
 
+  formatMoneyInput(value: number): string {
+    return this.toMoney(value).toFixed(2);
+  }
+
   async FindByDocumentCod(){
 
     let DocumentCod : string = this.txtDocumentCod.nativeElement.value;
@@ -573,7 +600,7 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
 
       this.creditNoteDetail = rpt.Data;
 
-      this.txtAmountPaid.nativeElement.value = String(this.creditNoteDetail.Headboard.NumTotalPrice);
+      this.txtAmountPaid.nativeElement.value = this.formatMoneyInput(this.creditNoteDetail.Headboard.NumTotalPrice);
       this.cboCurrencyCod.nativeElement.value = this.creditNoteDetail.Headboard.CurrencyCod;
       
     }

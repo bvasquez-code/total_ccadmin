@@ -1,5 +1,27 @@
 <div class="page-content container container-plus">
 
+  <div class="alert bgc-blue-l4 text-dark-m2 border-0 border-l-4 brc-blue-m1 radius-0 mt-3"
+    *ngIf="isProductExchangeMode">
+    <h4 class="text-blue-d2 mb-2">
+      <i class="fa fa-exchange-alt mr-1"></i>
+      Cambio de producto
+    </h4>
+    <div>
+      Nota de crédito <strong>{{ CreditNoteCod }}</strong>.
+      Debe seleccionar productos por un total igual o mayor a
+      <strong>
+        {{ CreditNoteDetail.Headboard.CurrencyCod }}
+        {{ creditNoteBalance | FormatoMonedaPeruana : false }}
+      </strong>.
+      El saldo se aplicará automáticamente y luego podrá pagar la diferencia.
+    </div>
+  </div>
+
+  <div class="alert alert-danger mt-3" *ngIf="productExchangeLoadError">
+    No se puede continuar con el cambio de producto porque la nota de crédito no está disponible,
+    no corresponde a un cambio de producto o ya no tiene saldo.
+  </div>
+
   <div class="row d-none" *ngIf="false">
     <div class="col-12 col-lg-12">
       <div class="d-lg-none my-2">
@@ -118,6 +140,22 @@
                         {{ ShoppingCart.Headboard.NumTotalPrice | currency: CurrencySystem.CurrencyCod + ' ' }}
                       </span>
                     </div>
+
+                    <ng-container *ngIf="isProductExchangeMode">
+                      <div class="my-2 border-t-1 brc-secondary-l2 pb-2"></div>
+                      <div class="d-flex align-items-center mb-2">
+                        <span class="text-secondary-d2 text-95 flex-grow-1">Saldo nota de crédito</span>
+                        <span class="text-success-d2 text-100 text-600">
+                          - {{ creditNoteBalance | currency: CreditNoteDetail.Headboard.CurrencyCod + ' ' }}
+                        </span>
+                      </div>
+                      <div class="d-flex align-items-center">
+                        <span class="text-dark-m3 text-105 flex-grow-1">Diferencia a pagar</span>
+                        <span class="text-primary-d2 text-120 text-600">
+                          {{ getProductExchangeDifference() | currency: CurrencySystem.CurrencyCod + ' ' }}
+                        </span>
+                      </div>
+                    </ng-container>
                   </div>
                 </div>
               </div>
@@ -261,7 +299,8 @@
           <div class="row">
             <div class="col-sm-2">
               <button type="button" class="btn btn-primary btn-bold px-4" type="button" data-toggle="modal"
-                data-target="#CommentSaleModal" (click)="InitSale()" style="width: 100%;">
+                data-target="#CommentSaleModal" (click)="InitSale()" style="width: 100%;"
+                [disabled]="!isProductExchangeTotalValid()">
                 Guardar
               </button>
             </div>
@@ -269,7 +308,8 @@
             <div class="col-sm-3">
               <button type="button" class="btn btn-lighter-default btn-h-outline-red btn-a-red px-45 btn-bold mb-1"
                 type="button" data-toggle="modal" data-target="#ClientModal" (click)="OpenClientModal()"
-                style="width: 100%;">
+                style="width: 100%;"
+                [disabled]="isProductExchangeMode && !!CreditNoteDetail.Headboard.ClientCod">
                 Agregar cliente
               </button>
             </div>
@@ -633,7 +673,8 @@
       </div>
 
       <div class="modal-footer bgc-default-l5">
-        <button type="button" class="btn btn-primary" (click)="save()">
+        <button type="button" class="btn btn-primary" (click)="save()"
+          [disabled]="!isProductExchangeTotalValid()">
           Confirmar
         </button>
       </div>

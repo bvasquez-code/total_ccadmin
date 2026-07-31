@@ -41,6 +41,7 @@ export class CreatecreditnoteComponent
   txtDocumentCodReadOnly = false;
   isLoading = false;
   isTotalMode = false;
+  isProductExchange = false;
   pendingConfirmCreditNoteHead: CreditNoteHeadEntity | null = null;
   isConfirmingAfterReturnPayments = false;
 
@@ -270,6 +271,7 @@ export class CreatecreditnoteComponent
       }
 
       this.isTotalMode = (head?.TypeCreditNote === 'T');
+      this.isProductExchange = (head?.IsProductExchange === 'S');
 
       // CLONAR head y detalles para no mutar el DTO de origen
       this.CreditNoteRegister.Headboard = { ...(head as any) };
@@ -289,6 +291,7 @@ export class CreatecreditnoteComponent
       Headboard.NumExchangevalue = Headboard.NumExchangevalue ?? this.SaleDetail.Headboard?.NumExchangevalue;
       Headboard.IsPaid = Headboard.IsPaid ?? this.SaleDetail.Headboard?.IsPaid;
       Headboard.TypeCreditNote = head?.TypeCreditNote ?? 'P';
+      Headboard.IsProductExchange = head?.IsProductExchange ?? 'N';
 
       this.recalcTotals();
     }
@@ -392,10 +395,11 @@ export class CreatecreditnoteComponent
     Headboard.CurrencyCod = this.SaleDetail.Headboard.CurrencyCod;
     Headboard.CurrencyCodSys = this.SaleDetail.Headboard.CurrencyCodSys;
     Headboard.NumExchangevalue = this.SaleDetail.Headboard.NumExchangevalue;
-    Headboard.IsPaid = this.SaleDetail.Headboard.IsPaid;
+    Headboard.IsPaid = this.isProductExchange ? 'N' : this.SaleDetail.Headboard.IsPaid;
     Headboard.CreditNoteStatus = 'P'; // pendiente
     Headboard.IsStockReturned = 'N'; // por defecto
     Headboard.TypeCreditNote = this.isTotalMode ? 'T' : 'P';
+    Headboard.IsProductExchange = this.isProductExchange ? 'S' : 'N';
 
     // detalles válidos
     this.CreditNoteRegister.DetailList = (this.CreditNoteRegister.DetailList ?? [])
@@ -416,9 +420,11 @@ export class CreatecreditnoteComponent
       if (rpt?.ErrorStatus) {
         this.toastrService.error(rpt.Message);
       } else {
-
-        this.openTrxPaymentReversalModal(Headboard);
-
+        if (Headboard.IsProductExchange === 'S') {
+          await this.Confirm(Headboard);
+        } else {
+          this.openTrxPaymentReversalModal(Headboard);
+        }
       }
     } finally {
       this.isLoading = false;
@@ -519,6 +525,12 @@ export class CreatecreditnoteComponent
       if (creditNoteDetail?.Headboard?.CreditNoteStatus === "C") {
         this.CreditNoteDetail = creditNoteDetail;
         this.toastrService.success("Nota de credito confirmada");
+        if (creditNoteDetail.Headboard.IsProductExchange === "S") {
+          window.location.assign(
+            `/enterprise/sale/pages/createpresale?CreditNoteCod=${creditNoteDetail.Headboard.CreditNoteCod}`
+          );
+          return;
+        }
         window.location.assign(`/enterprise/sale/pages/viewcreditnote?CreditNoteCod=${creditNoteDetail.Headboard.CreditNoteCod}&AutoPrint=Y`);
         return;
       }
@@ -547,6 +559,10 @@ export class CreatecreditnoteComponent
     } else {
       this.recalcTotals();
     }
+  }
+
+  OnToggleProductExchange(ev: Event): void {
+    this.isProductExchange = (ev.target as HTMLInputElement).checked;
   }
 
   /** Aplica cantidades completas para todos los ítems (NC total) */

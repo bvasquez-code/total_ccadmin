@@ -181,6 +181,17 @@ public class CreditNoteCreateService extends SessionService {
             throw new SaleException("Nota de crédito ya fue confirmada");
         }
 
+        if ("S".equals(creditNoteHead.IsProductExchange)) {
+            BigDecimal totalReturned = this.totalReturned(
+                    this.salePaymentSearchService.findBySaleCod(creditNoteHead.SaleCod)
+            );
+            if (totalReturned.signum() > 0) {
+                throw new SaleException(
+                        "La nota de cambio de producto no puede tener devoluciones de pago"
+                );
+            }
+        }
+
         creditNoteHead.CreditNoteStatus = SaleConstants.CONFIRMED;
         List<CreditNoteDetEntity> detailList = this.creditNoteDetRepository.findByCreditNoteCod(creditNoteHead.CreditNoteCod);
         WarehouseEntity warehouseDefault = this.warehouseShared.findByStore(creditNoteHead.StoreCod).get(0);
@@ -234,6 +245,12 @@ public class CreditNoteCreateService extends SessionService {
         CreditNoteHeadEntity creditNoteHead = this.creditNoteHeadRepository.findById(payment.CreditNoteCod).get();
         if(creditNoteHead.CreditNoteStatus.equals(SaleConstants.CONFIRMED)){
             throw new SaleException("Nota de credito ya fue confirmada");
+        }
+
+        if ("S".equals(creditNoteHead.IsProductExchange)) {
+            throw new SaleException(
+                    "El cambio de producto genera saldo a favor y no permite devolver pagos"
+            );
         }
 
         List<SalePaymentDto> salePaymentList = salePaymentSearchService.findBySaleCod(creditNoteHead.SaleCod);

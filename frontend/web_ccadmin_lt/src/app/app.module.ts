@@ -33,6 +33,8 @@ import { SpinnerInterceptor } from './interceptors/SpinnerInterceptor';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ToastrModule } from 'ngx-toastr';
 import { CreatesaleComponent } from './enterprise/sale/pages/createsale/createsale.component';
+import { ViewsaleComponent } from './enterprise/sale/pages/viewsale/viewsale.component';
+import { SalepaymentdetailComponent } from './enterprise/sale/component/salepaymentdetail/salepaymentdetail.component';
 import { ListclientComponent } from './enterprise/client/pages/listclient/listclient.component';
 import { CreateclientComponent } from './enterprise/client/pages/createclient/createclient.component';
 import { ModalalertComponent } from './enterprise/shared/component/modalalert/modalalert.component';
@@ -143,6 +145,8 @@ import { ViewBulkLoadComponent } from './enterprise/bulkload/pages/viewbulkload/
     CreateprofileComponent,
     SpinnerComponent,
     CreatesaleComponent,
+    ViewsaleComponent,
+    SalepaymentdetailComponent,
     ListclientComponent,
     CreateclientComponent,
     ModalalertComponent,
