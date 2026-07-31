@@ -7,8 +7,10 @@ import com.ccadmin.app.product.shared.ProductShared;
 import com.ccadmin.app.sale.model.dto.SaleDetailDto;
 import com.ccadmin.app.sale.model.entity.SaleDocumentEntity;
 import com.ccadmin.app.sale.model.entity.SaleDetTaxEntity;
+import com.ccadmin.app.sale.model.entity.SaleDetWarehouseEntity;
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
 import com.ccadmin.app.sale.repository.SaleDetRepository;
+import com.ccadmin.app.sale.repository.SaleDetWarehouseRepository;
 import com.ccadmin.app.sale.repository.SaleDetTaxRepository;
 import com.ccadmin.app.sale.repository.SaleDocumentRepository;
 import com.ccadmin.app.sale.repository.SaleHeadRepository;
@@ -38,6 +40,8 @@ public class SaleSearchService extends SessionService {
     private SaleHeadRepository saleHeadRepository;
     @Autowired
     private SaleDetRepository saleDetRepository;
+    @Autowired
+    private SaleDetWarehouseRepository saleDetWarehouseRepository;
     @Autowired
     private SaleDetTaxRepository saleDetTaxRepository;
     @Autowired
@@ -82,6 +86,10 @@ public class SaleSearchService extends SessionService {
 
         saleDetail.Headboard = this.saleHeadRepository.findById(SaleCod).get();
         saleDetail.DetailList = this.saleDetRepository.findBySaleCod(SaleCod);
+        Map<Integer, List<SaleDetWarehouseEntity>> warehouseDetailByItem =
+                this.saleDetWarehouseRepository.findBySaleCod(SaleCod)
+                        .stream()
+                        .collect(Collectors.groupingBy(item -> item.ItemNumber));
         Map<Integer, List<SaleDetTaxEntity>> taxDetailByItem = this.saleDetTaxRepository.findBySaleCod(SaleCod)
                 .stream()
                 .collect(Collectors.groupingBy(item -> item.ItemNumber));
@@ -98,6 +106,7 @@ public class SaleSearchService extends SessionService {
         {
             DetailSale.Product = this.productShared.findById(DetailSale.ProductCod);
             DetailSale.TaxDetailList = taxDetailByItem.getOrDefault(DetailSale.ItemNumber, List.of());
+            DetailSale.DetailWarehouse = warehouseDetailByItem.getOrDefault(DetailSale.ItemNumber, List.of());
         }
 
         for(var Payment : saleDetail.DetailPayment)

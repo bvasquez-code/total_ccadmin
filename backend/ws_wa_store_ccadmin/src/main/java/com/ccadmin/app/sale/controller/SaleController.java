@@ -3,9 +3,11 @@ package com.ccadmin.app.sale.controller;
 import com.ccadmin.app.sale.exception.SaleException;
 import com.ccadmin.app.sale.model.dto.SaleConfirmDto;
 import com.ccadmin.app.sale.model.dto.SalePaymentRegisterDto;
+import com.ccadmin.app.sale.model.dto.SalePickingConfirmDto;
 import com.ccadmin.app.sale.service.SaleCreateService;
 import com.ccadmin.app.sale.service.SalePaymentCreateService;
 import com.ccadmin.app.sale.service.SaleSearchService;
+import com.ccadmin.app.sale.service.SalePickingCreateService;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -25,6 +27,8 @@ public class SaleController {
     private SaleSearchService saleSearchService;
     @Autowired
     private SaleCreateService saleCreateService;
+    @Autowired
+    private SalePickingCreateService salePickingCreateService;
 
     @PostMapping("addPayment")
     public ResponseEntity<ResponseWsDto> addPayment(@RequestBody SalePaymentRegisterDto salePayment)
@@ -163,6 +167,20 @@ public class SaleController {
         {
             log.error("Error :{}",ex.getMessage(), ex);
             return new ResponseEntity<ResponseWsDto>(new ResponseWsDto(ex),HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("confirmPicking")
+    public ResponseEntity<ResponseWsDto> confirmPicking(@RequestBody SalePickingConfirmDto request)
+    {
+        try {
+            return new ResponseEntity<>(
+                    new ResponseWsDto(this.salePickingCreateService.confirm(request)),
+                    HttpStatus.OK
+            );
+        } catch (Exception ex) {
+            log.error("Error :{}", ex.getMessage(), ex);
+            return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
         }
     }
 

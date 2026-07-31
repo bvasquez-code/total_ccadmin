@@ -16,9 +16,11 @@ export class PresaleRegisterDto
 
     public ReBuild():void
     {
-        this.Headboard.NumPriceSubTotal = this.GetNumPriceSubTotal();
-        this.Headboard.NumDiscount = this.GetNumDiscount();
-        this.Headboard.NumTotalPrice = this.Headboard.NumPriceSubTotal - this.Headboard.NumDiscount;     
+        this.Headboard.NumPriceSubTotal = this.toMoney(this.GetNumPriceSubTotal());
+        this.Headboard.NumDiscount = this.toMoney(this.GetNumDiscount());
+        this.Headboard.NumTotalPrice = this.toMoney(
+            this.Headboard.NumPriceSubTotal - this.Headboard.NumDiscount
+        );
     }
 
     GetNumPriceSubTotal()
@@ -26,7 +28,9 @@ export class PresaleRegisterDto
         let NumPriceSubTotal : number = 0;
         for(let item of this.DetailList)
         {
-            NumPriceSubTotal = NumPriceSubTotal + item.NumUnit * item.NumUnitPrice;
+            NumPriceSubTotal = this.toMoney(
+                NumPriceSubTotal + this.toMoney(item.NumUnit * item.NumUnitPrice)
+            );
         }
         return NumPriceSubTotal;
     }
@@ -36,7 +40,9 @@ export class PresaleRegisterDto
         let NumDiscount : number = 0;
         for(let item of this.DetailList)
         {
-            NumDiscount = NumDiscount + item.NumUnit * item.NumDiscount
+            NumDiscount = this.toMoney(
+                NumDiscount + this.toMoney(item.NumUnit * item.NumDiscount)
+            );
         }
         return NumDiscount;
     }
@@ -52,5 +58,11 @@ export class PresaleRegisterDto
             PresaleDet.SetDataSession(Item);
             this.DetailList.push(PresaleDet);
         }
+        this.ReBuild();
+    }
+
+    private toMoney(value: number): number
+    {
+        return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
     }
 }

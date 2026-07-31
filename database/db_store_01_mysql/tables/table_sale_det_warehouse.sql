@@ -21,6 +21,7 @@ BEGIN
 CREATE TABLE `sale_det_warehouse` (
   `SaleCod` varchar(16) NOT NULL COMMENT 'codigo de venta',
   `ItemNumber` int NOT NULL COMMENT 'Número de ítem/secuencia dentro de la venta',
+  `AllocationNumber` int NOT NULL DEFAULT '1' COMMENT 'Secuencia de asignación por lote dentro del ítem de venta',
   `ProductCod` varchar(20) NOT NULL COMMENT 'codigo de producto',
   `Variant` varchar(4) NOT NULL DEFAULT (_utf8mb4'0000') COMMENT 'codigo de variante',
   `WarehouseCod` varchar(8) NOT NULL COMMENT 'codigo de almacen',
@@ -34,7 +35,7 @@ CREATE TABLE `sale_det_warehouse` (
   `ModifyUser` varchar(16) DEFAULT NULL,
   `ModifyDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `Status` char(1) NOT NULL DEFAULT 'A',
-  PRIMARY KEY (`SaleCod`,`ItemNumber`),
+  PRIMARY KEY (`SaleCod`,`ItemNumber`,`AllocationNumber`),
   KEY `idx_sale_det_warehouse_old_pk` (`SaleCod`,`ProductCod`,`Variant`,`WarehouseCod`),
   KEY `fk_sale_det_warehouse_warehouse` (`WarehouseCod`),
   KEY `fk_sale_det_warehouse_variant` (`ProductCod`,`Variant`),
@@ -81,6 +82,17 @@ CREATE TABLE `sale_det_warehouse` (
             SELECT 'Columna ItemNumber agregada exitosamente.' AS Mensaje;
         END IF;
 
+        -- AGREGANDO COLUMNA AllocationNumber PARA PERMITIR VARIOS LOTES POR ITEM
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sale_det_warehouse'
+            AND column_name = 'AllocationNumber'
+        ) THEN
+            ALTER TABLE `sale_det_warehouse`
+                ADD COLUMN `AllocationNumber` int NOT NULL DEFAULT 1
+                COMMENT 'Secuencia de asignación por lote dentro del ítem de venta' AFTER `ItemNumber`;
+            SELECT 'Columna AllocationNumber agregada exitosamente.' AS Mensaje;
+        END IF;
+
         -- AGREGANDO COLUMNA LotNumber
         IF NOT EXISTS (
             SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sale_det_warehouse'
@@ -122,9 +134,12 @@ CREATE TABLE `sale_det_warehouse` (
         ) OR NOT EXISTS (
             SELECT * FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'sale_det_warehouse'
             AND index_name = 'PRIMARY' AND column_name = 'ItemNumber' AND seq_in_index = 2
+        ) OR NOT EXISTS (
+            SELECT * FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'sale_det_warehouse'
+            AND index_name = 'PRIMARY' AND column_name = 'AllocationNumber' AND seq_in_index = 3
         ) OR EXISTS (
             SELECT * FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'sale_det_warehouse'
-            AND index_name = 'PRIMARY' AND seq_in_index > 2
+            AND index_name = 'PRIMARY' AND seq_in_index > 3
         ) THEN
             IF NOT EXISTS (
                 SELECT * FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'sale_det_warehouse'
@@ -141,7 +156,7 @@ CREATE TABLE `sale_det_warehouse` (
                 ALTER TABLE `sale_det_warehouse` DROP PRIMARY KEY;
             END IF;
 
-            ALTER TABLE `sale_det_warehouse` ADD PRIMARY KEY (`SaleCod`,`ItemNumber`);
+            ALTER TABLE `sale_det_warehouse` ADD PRIMARY KEY (`SaleCod`,`ItemNumber`,`AllocationNumber`);
             SELECT 'Primary key de sale_det_warehouse actualizada exitosamente.' AS Mensaje;
         END IF;
 

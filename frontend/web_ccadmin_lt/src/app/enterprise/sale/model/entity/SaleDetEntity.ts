@@ -1,6 +1,7 @@
 import { AuditTableEntity } from '../../../shared/model/entity/AuditTableEntity';
 import { ProductEntity } from '../../../product/model/entity/ProductEntity';
 import { SaleDetTaxEntity } from './SaleDetTaxEntity';
+import { SaleDetWarehouseEntity } from './SaleDetWarehouseEntity';
 export class SaleDetEntity extends AuditTableEntity
 {
     public SaleCod: string = "";
@@ -22,6 +23,7 @@ export class SaleDetEntity extends AuditTableEntity
 
 	public Product : ProductEntity = new ProductEntity();
 	public TaxDetailList: SaleDetTaxEntity[] = [];
+	public DetailWarehouse: SaleDetWarehouseEntity[] = [];
 
     public constructor()
     {

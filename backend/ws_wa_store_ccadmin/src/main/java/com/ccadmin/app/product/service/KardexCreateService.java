@@ -39,6 +39,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.Date;
 
@@ -106,9 +107,9 @@ public class KardexCreateService {
         if (saleHead.PresaleCod == null || saleHead.PresaleCod.isBlank()) {
             throw new SaleException("La venta no tiene una preventa reservada asociada");
         }
+        this.validatePresaleReservations(saleHead, detailList);
         List<KardexZoneEntity> result = new ArrayList<>();
         for (SaleDetWarehouseEntity detail : detailList) {
-            this.validatePresaleReservation(saleHead, detail);
             result.addAll(KardexZoneEntity.buildSaleConfirmation(
                     saleHead, detail, userCod
             ));
@@ -121,9 +122,12 @@ public class KardexCreateService {
             List<SaleDetWarehouseEntity> detailList,
             String userCod
     ) throws SaleException {
+        if (saleHead.PresaleCod == null || saleHead.PresaleCod.isBlank()) {
+            throw new SaleException("La venta no tiene una preventa reservada asociada");
+        }
+        this.validatePresaleReservations(saleHead, detailList);
         List<KardexZoneEntity> result = new ArrayList<>();
         for (SaleDetWarehouseEntity detail : detailList) {
-            this.validatePresaleReservation(saleHead, detail);
             result.addAll(KardexZoneEntity.buildSaleExpirationRelease(
                     saleHead, detail, userCod
             ));
@@ -584,6 +588,48 @@ public class KardexCreateService {
                     "No existe una reserva valida para el item " + detail.ItemNumber
                             + " de la venta " + saleHead.SaleCod
             );
+        }
+    }
+
+    private void validatePresaleReservations(
+            SaleHeadEntity saleHead,
+            List<SaleDetWarehouseEntity> detailList
+    ) throws SaleException {
+        Map<Integer, List<SaleDetWarehouseEntity>> detailByItem = detailList.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        item -> item.ItemNumber,
+                        LinkedHashMap::new,
+                        java.util.stream.Collectors.toList()
+                ));
+
+        for (Map.Entry<Integer, List<SaleDetWarehouseEntity>> entry : detailByItem.entrySet()) {
+            List<SaleDetWarehouseEntity> itemAllocationList = entry.getValue();
+            SaleDetWarehouseEntity firstAllocation = itemAllocationList.get(0);
+            int totalQuantity = 0;
+            for (SaleDetWarehouseEntity allocation : itemAllocationList) {
+                if (!Objects.equals(firstAllocation.ProductCod, allocation.ProductCod)
+                        || !Objects.equals(firstAllocation.Variant, allocation.Variant)
+                        || !Objects.equals(firstAllocation.WarehouseCod, allocation.WarehouseCod)) {
+                    throw new SaleException(
+                            "Las asignaciones del item " + entry.getKey()
+                                    + " deben pertenecer al mismo producto y almacen"
+                    );
+                }
+                try {
+                    totalQuantity = Math.addExact(totalQuantity, allocation.NumUnit);
+                } catch (ArithmeticException ex) {
+                    throw new SaleException("La cantidad del item " + entry.getKey() + " excede el limite permitido");
+                }
+            }
+
+            SaleDetWarehouseEntity aggregateDetail = new SaleDetWarehouseEntity();
+            aggregateDetail.SaleCod = firstAllocation.SaleCod;
+            aggregateDetail.ItemNumber = firstAllocation.ItemNumber;
+            aggregateDetail.ProductCod = firstAllocation.ProductCod;
+            aggregateDetail.Variant = firstAllocation.Variant;
+            aggregateDetail.WarehouseCod = firstAllocation.WarehouseCod;
+            aggregateDetail.NumUnit = totalQuantity;
+            this.validatePresaleReservation(saleHead, aggregateDetail);
         }
     }
 

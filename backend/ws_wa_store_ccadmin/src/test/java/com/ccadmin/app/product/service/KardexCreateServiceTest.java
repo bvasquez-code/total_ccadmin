@@ -101,6 +101,73 @@ class KardexCreateServiceTest {
         );
     }
 
+    @Test
+    void validatesPresaleReservationAgainstTheSumOfPickedLots() throws Exception {
+        SaleHeadEntity head = new SaleHeadEntity();
+        head.SaleCod = "V002";
+        head.PresaleCod = "P002";
+        head.StoreCod = "T001";
+
+        SaleDetWarehouseEntity firstLot = saleWarehouseAllocation(head.SaleCod, 1, 4, "L-01");
+        SaleDetWarehouseEntity secondLot = saleWarehouseAllocation(head.SaleCod, 2, 6, "L-02");
+        KardexZoneEntity physicalReservation = reservationMovement(
+                KardexZoneConstants.ZONE_PHYSICAL,
+                KardexZoneConstants.TYPE_OPERATION_SUBTRACT,
+                10
+        );
+        KardexZoneEntity reservedReservation = reservationMovement(
+                KardexZoneConstants.ZONE_RESERVED,
+                KardexZoneConstants.TYPE_OPERATION_ADD,
+                10
+        );
+
+        when(kardexZoneRepository.findByEvent(
+                "presale_head", head.PresaleCod, 1, "PRESALE_RESERVATION"
+        )).thenReturn(List.of(physicalReservation, reservedReservation));
+
+        List<KardexZoneEntity> movementList = kardexCreateService.buildZoneSaleConfirmation(
+                head, List.of(firstLot, secondLot), "ADMIN"
+        );
+
+        assertEquals(6, movementList.size());
+        assertEquals(4, movementList.get(0).NumStockMoved);
+        assertEquals("L-01", movementList.get(0).LotNumber);
+        assertEquals(6, movementList.get(3).NumStockMoved);
+        assertEquals("L-02", movementList.get(3).LotNumber);
+        verify(kardexZoneRepository, times(1)).findByEvent(
+                "presale_head", head.PresaleCod, 1, "PRESALE_RESERVATION"
+        );
+    }
+
+    private SaleDetWarehouseEntity saleWarehouseAllocation(
+            String saleCod,
+            int allocationNumber,
+            int quantity,
+            String lotNumber
+    ) {
+        SaleDetWarehouseEntity detail = new SaleDetWarehouseEntity();
+        detail.SaleCod = saleCod;
+        detail.ItemNumber = 1;
+        detail.AllocationNumber = allocationNumber;
+        detail.ProductCod = "PR001";
+        detail.Variant = "0000";
+        detail.WarehouseCod = "A001";
+        detail.NumUnit = quantity;
+        detail.LotNumber = lotNumber;
+        return detail;
+    }
+
+    private KardexZoneEntity reservationMovement(String zone, String operation, int quantity) {
+        KardexZoneEntity movement = new KardexZoneEntity();
+        movement.ProductCod = "PR001";
+        movement.Variant = "0000";
+        movement.WarehouseCod = "A001";
+        movement.ZoneStockMoved = zone;
+        movement.TypeOperation = operation;
+        movement.NumStockMoved = quantity;
+        return movement;
+    }
+
     private ProductInfoEntity productStock() {
         ProductInfoEntity stock = new ProductInfoEntity();
         stock.ProductCod = "PR001";

@@ -6,4 +6,5 @@ public class SaleDetWarehouseID implements Serializable {
 
     public String SaleCod;
     public int ItemNumber;
+    public int AllocationNumber;
 }

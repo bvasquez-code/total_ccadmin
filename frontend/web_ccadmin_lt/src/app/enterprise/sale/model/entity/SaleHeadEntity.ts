@@ -18,6 +18,7 @@ export class SaleHeadEntity extends AuditTableEntity {
 	public NumExchangevalue: number = 0;
 	public IsPaid: string = "";
 	public HasCreditNote: string = "N";
+	public IsPickingConfirmed: string = "N";
 
 	public Client: ClientEntity = new ClientEntity();
 

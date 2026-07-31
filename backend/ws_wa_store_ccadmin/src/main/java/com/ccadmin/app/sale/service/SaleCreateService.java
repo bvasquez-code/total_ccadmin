@@ -196,13 +196,15 @@ public class SaleCreateService extends SessionService {
         {
             if( item.DetailWarehouse != null && item.DetailWarehouse.size() >0 )
             {
-                List<SaleDetWarehouseEntity> detailSaleWarehouseSub = item.DetailWarehouse.stream()
-                        .map(  itemWarehouse -> new SaleDetWarehouseEntity()
-                                .build(itemWarehouse,saleHead.SaleCod)
-                                .session(getUserCod())
-                                .validate()
-                        )
-                        .toList();
+                List<SaleDetWarehouseEntity> detailSaleWarehouseSub = new ArrayList<>();
+                for (int index = 0; index < item.DetailWarehouse.size(); index++) {
+                    SaleDetWarehouseEntity detailWarehouse = new SaleDetWarehouseEntity()
+                            .build(item.DetailWarehouse.get(index), saleHead.SaleCod)
+                            .session(getUserCod())
+                            .validate();
+                    detailWarehouse.AllocationNumber = index + 1;
+                    detailSaleWarehouseSub.add(detailWarehouse);
+                }
 
                 detailSaleWarehouse.addAll(detailSaleWarehouseSub);
             }

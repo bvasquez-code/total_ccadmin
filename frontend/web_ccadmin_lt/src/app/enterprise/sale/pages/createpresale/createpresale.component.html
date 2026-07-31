@@ -11,7 +11,7 @@
       Debe seleccionar productos por un total igual o mayor a
       <strong>
         {{ CreditNoteDetail.Headboard.CurrencyCod }}
-        {{ creditNoteBalance | FormatoMonedaPeruana : false }}
+        {{ creditNoteBalance | number:'1.2-2' }}
       </strong>.
       El saldo se aplicará automáticamente y luego podrá pagar la diferencia.
     </div>
@@ -197,7 +197,8 @@
                   </td>
 
                   <td class="text-600 text-orange-d2">
-                    PEN {{ getVisibleUnitPrice(Product.NumUnitPrice, Product.ProductUnitFactor) }}
+                    {{ CurrencySystem.CurrencyCod }}
+                    {{ getVisibleUnitPrice(Product.NumUnitPrice, Product.ProductUnitFactor) | number:'1.2-2' }}
                   </td>
 
                   <td class="d-none d-sm-table-cell text-grey-d1">
@@ -212,13 +213,16 @@
                   </td>
 
                   <td class="text-600 text-orange-d2">
-                    PEN {{ Product.NumUnitPrice * Product.NumUnit }}
+                    {{ CurrencySystem.CurrencyCod }}
+                    {{ Product.NumUnitPrice * Product.NumUnit | number:'1.2-2' }}
                   </td>
                   <td class="text-600 text-orange-d2">
-                    PEN {{ Product.NumDiscount * Product.NumUnit }}
+                    {{ CurrencySystem.CurrencyCod }}
+                    {{ Product.NumDiscount * Product.NumUnit | number:'1.2-2' }}
                   </td>
                   <td class="text-600 text-orange-d2">
-                    PEN {{ Product.NumTotalPrice }}
+                    {{ CurrencySystem.CurrencyCod }}
+                    {{ Product.NumTotalPrice | number:'1.2-2' }}
                   </td>
                   <td>
                     <!-- action buttons -->

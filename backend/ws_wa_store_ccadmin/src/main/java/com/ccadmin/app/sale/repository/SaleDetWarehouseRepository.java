@@ -11,7 +11,17 @@ import java.util.List;
 public interface SaleDetWarehouseRepository extends JpaRepository<SaleDetWarehouseEntity, SaleDetWarehouseID> {
 
     @Query( value = """
-            select * from sale_det_warehouse s where s.SaleCod = :SaleCod and s.Status = 'A'
+            select * from sale_det_warehouse s
+            where s.SaleCod = :SaleCod and s.Status = 'A'
+            order by s.ItemNumber, s.AllocationNumber
             """, nativeQuery = true)
     public List<SaleDetWarehouseEntity> findBySaleCod(@Param("SaleCod") String SaleCod);
+
+    @Query(value = """
+            select * from sale_det_warehouse s
+            where s.SaleCod = :SaleCod and s.Status = 'A'
+            order by s.ItemNumber, s.AllocationNumber
+            for update
+            """, nativeQuery = true)
+    List<SaleDetWarehouseEntity> findBySaleCodForUpdate(@Param("SaleCod") String saleCod);
 }

@@ -16,6 +16,8 @@ import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitH
 import { SaleDetTaxEntity } from '../../model/entity/SaleDetTaxEntity';
 import { SaleDetEntity } from '../../model/entity/SaleDetEntity';
 import { PaymentMethodEntity } from 'src/app/enterprise/shared/model/entity/PaymentMethodEntity';
+import { SalePickingLineDto } from '../../model/dto/SalePickingLineDto';
+import { SalePickingConfirmDto } from '../../model/dto/SalePickingConfirmDto';
 
 @Component({
   selector: 'app-createsale',
@@ -26,6 +28,10 @@ export class CreatesaleComponent implements OnInit {
   @ViewChild('txtDocumentNum', { static: false }) txtDocumentNum!: ElementRef<HTMLInputElement>;
   @ViewChild('cboDocumentType', { static: false }) cboDocumentType!: ElementRef<HTMLSelectElement>;
   @ViewChild('btnOpenClientModal', { static: false }) btnOpenClientModal!: ElementRef<HTMLButtonElement>;
+  @ViewChild('txtPickingNumUnit', { static: false }) txtPickingNumUnit!: ElementRef<HTMLInputElement>;
+  @ViewChild('txtPickingLotNumber', { static: false }) txtPickingLotNumber!: ElementRef<HTMLInputElement>;
+  @ViewChild('txtPickingExpirationDate', { static: false }) txtPickingExpirationDate!: ElementRef<HTMLInputElement>;
+  @ViewChild('btnClosePickingModal', { static: false }) btnClosePickingModal!: ElementRef<HTMLButtonElement>;
 
   SaleCod: string = "";
   SaleDetail: SaleDetailDto = new SaleDetailDto();
@@ -44,6 +50,12 @@ export class CreatesaleComponent implements OnInit {
   ClientDocumentType: string = "";
   ClientDocumentNum: string = "";
   ClientSearchMode: string = "sale";
+  SelectedPickingDetail: SaleDetEntity = new SaleDetEntity();
+  PickingLineList: SalePickingLineDto[] = [];
+  PickingDraftByItem: { [itemNumber: number]: SalePickingLineDto[] } = {};
+  IsPickingDraftStarted: boolean = false;
+  IsConfirmingPicking: boolean = false;
+  readonly MaxLotNumberLength: number = 32;
 
   constructor(
     private saleservice: SaleService
@@ -78,6 +90,13 @@ export class CreatesaleComponent implements OnInit {
 
       this.TrxPaymentComponenRequest.InputOutstandingBalance = this.getOutstandingbalance();
       this.TrxPaymentComponenRequest.TrxPaymentList = this.getTrxPaymentList();
+      if (this.isPickingConfirmed()) {
+        this.PickingDraftByItem = {};
+        this.IsPickingDraftStarted = false;
+        sessionStorage.removeItem(this.getPickingStorageKey());
+      } else if (!this.IsPickingDraftStarted) {
+        this.restorePickingDraft();
+      }
       this.refreshPaymentAvailability();
     }
   }
@@ -105,6 +124,7 @@ export class CreatesaleComponent implements OnInit {
   }
 
   async AddPayment(TrxPayment: TrxPaymentEntity) {
+    if (!this.ensurePickingAllowsOtherActions()) return;
     if (!this.hasSelectedPaymentOption()) {
       this.toastrService.info("Seleccione boleta, factura o anticipo antes de pagar.", "Info");
       return;
@@ -137,6 +157,7 @@ export class CreatesaleComponent implements OnInit {
   }
 
   selectDocumentType(DocumentType: string) {
+    if (!this.ensurePickingAllowsOtherActions()) return;
     this.ClientSearchMode = "sale";
     this.SelectedPaymentOption = DocumentType;
     this.DocumentType = DocumentType;
@@ -151,6 +172,7 @@ export class CreatesaleComponent implements OnInit {
   }
 
   OpenAdvanceClientModal() {
+    if (!this.ensurePickingAllowsOtherActions()) return;
     this.SelectedPaymentOption = "advance";
     this.DocumentType = "03";
     this.refreshPaymentAvailability();
@@ -165,6 +187,7 @@ export class CreatesaleComponent implements OnInit {
 
 
   async OpenTrxPaymentModal() {
+    if (!this.ensurePickingAllowsOtherActions()) return;
     if (!this.hasSelectedPaymentOption()) {
       this.toastrService.info("Seleccione boleta, factura o anticipo antes de pagar.", "Info");
       return;
@@ -201,6 +224,7 @@ export class CreatesaleComponent implements OnInit {
   }
 
   async print() {
+    if (!this.ensurePickingAllowsOtherActions()) return;
 
     await this.findDataPrint(this.SaleCod);
 
@@ -223,6 +247,7 @@ export class CreatesaleComponent implements OnInit {
   }
 
   viewAlertSelectDocumentType() {
+    if (!this.ensurePickingAllowsOtherActions()) return;
     if (!this.hasSelectedPaymentOption()) {
       this.toastrService.info("Seleccione boleta, factura o anticipo antes de pagar.", "Info");
       return;
@@ -319,7 +344,8 @@ export class CreatesaleComponent implements OnInit {
   refreshPaymentAvailability(): void {
     const hasAllowedDocumentType = this.DocumentType === "01" || this.DocumentType === "03";
     const canUseAdvance = this.SelectedPaymentOption !== "advance" || !this.hasRegisteredPayment();
-    this.enableButtonPay = this.hasSelectedPaymentOption() && hasAllowedDocumentType && canUseAdvance && !this.requiresClientForSelectedDocument();
+    this.enableButtonPay = this.hasSelectedPaymentOption() && hasAllowedDocumentType && canUseAdvance
+      && !this.requiresClientForSelectedDocument() && !this.isPickingDraftBlocked();
   }
 
   hasSelectedPaymentOption(): boolean {
@@ -359,6 +385,7 @@ export class CreatesaleComponent implements OnInit {
   }
 
   async confirmSaleDocument(): Promise<void> {
+    if (!this.ensurePickingAllowsOtherActions()) return;
     if (!this.isFinalDocumentSelected()) {
       this.toastrService.info("Seleccione boleta o factura para emitir el documento final.", "Info");
       return;
@@ -386,6 +413,7 @@ export class CreatesaleComponent implements OnInit {
   }
 
   OpenClientModal(mode: string = "sale") {
+    if (!this.ensurePickingAllowsOtherActions()) return;
     this.ClientSearchMode = mode;
     this.ShowClient = false;
     this.ShowClientRegister = false;
@@ -428,6 +456,7 @@ export class CreatesaleComponent implements OnInit {
   }
 
   async SaveClientSale(client: ClientEntity): Promise<void> {
+    if (!this.ensurePickingAllowsOtherActions()) return;
     const rpt: ResponseWsDto = await this.saleservice.saveClientSale(this.SaleDetail.Headboard.SaleCod, client.ClientCod);
 
     if (!rpt.ErrorStatus) {
@@ -457,5 +486,234 @@ export class CreatesaleComponent implements OnInit {
     if (!person) return "";
     const name = person.BusinessName || person.CommercialName || `${person.Names} ${person.LastNames}`;
     return `${name}`;
+  }
+
+  openPickingModal(item: SaleDetEntity): void {
+    this.SelectedPickingDetail = item;
+    const sourceList = this.isPickingConfirmed()
+      ? (item.DetailWarehouse ?? []).map(detail => ({
+          ItemNumber: item.ItemNumber,
+          NumUnit: Number(detail.NumUnit || 0),
+          LotNumber: detail.LotNumber || "",
+          ExpirationDate: detail.ExpirationDate
+        } as SalePickingLineDto))
+      : (this.PickingDraftByItem[item.ItemNumber] ?? []);
+    this.PickingLineList = sourceList.map(line => ({ ...line } as SalePickingLineDto));
+    this.clearPickingForm();
+  }
+
+  addPickingLine(): void {
+    try {
+      const visibleQuantity = Number(this.txtPickingNumUnit.nativeElement.value);
+      const lotNumber = (this.txtPickingLotNumber.nativeElement.value || "").trim();
+      const expirationDate = this.txtPickingExpirationDate.nativeElement.value || null;
+      const internalQuantity = ProductUnitHelper.toInternalQuantity(
+        visibleQuantity,
+        this.SelectedPickingDetail.ProductUnitFactor
+      );
+
+      if (!visibleQuantity || visibleQuantity <= 0) {
+        throw new Error("Ingrese una cantidad valida.");
+      }
+      if (!Number.isInteger(internalQuantity)) {
+        throw new Error("La cantidad no es compatible con la unidad del producto.");
+      }
+      if (internalQuantity % ProductUnitHelper.normalizeFactor(this.SelectedPickingDetail.ProductUnitFactor) !== 0) {
+        throw new Error(`Ingrese cantidades completas en ${this.SelectedPickingDetail.ProductUnitName}.`);
+      }
+      if (!lotNumber) {
+        throw new Error("Ingrese el numero de lote.");
+      }
+      if (lotNumber.length > this.MaxLotNumberLength) {
+        throw new Error(`El lote no puede superar ${this.MaxLotNumberLength} caracteres.`);
+      }
+      if (expirationDate && expirationDate < this.getTodayDateInput()) {
+        throw new Error("La fecha de vencimiento no puede estar vencida.");
+      }
+      if (this.getPickingTotalInternal() + internalQuantity > this.SelectedPickingDetail.NumUnit) {
+        throw new Error("La cantidad pickeada no puede superar la cantidad vendida.");
+      }
+
+      const existingLine = this.PickingLineList.find(line =>
+        line.LotNumber.trim().toUpperCase() === lotNumber.toUpperCase()
+        && (line.ExpirationDate || null) === expirationDate
+      );
+      if (existingLine) {
+        existingLine.NumUnit += internalQuantity;
+      } else {
+        this.PickingLineList.push({
+          ItemNumber: this.SelectedPickingDetail.ItemNumber,
+          NumUnit: internalQuantity,
+          LotNumber: lotNumber,
+          ExpirationDate: expirationDate
+        } as SalePickingLineDto);
+      }
+      this.saveCurrentPickingDraft();
+      this.clearPickingForm();
+    } catch (error: any) {
+      this.toastrService.error(error.message);
+    }
+  }
+
+  removePickingLine(index: number): void {
+    if (this.isPickingConfirmed()) return;
+    this.PickingLineList.splice(index, 1);
+    this.saveCurrentPickingDraft();
+  }
+
+  confirmProductPicking(): void {
+    try {
+      if (this.PickingLineList.length === 0) {
+        throw new Error("Debe agregar al menos un lote.");
+      }
+      if (this.getPickingTotalInternal() !== Number(this.SelectedPickingDetail.NumUnit || 0)) {
+        throw new Error("La cantidad pickeada debe ser exactamente igual a la cantidad vendida.");
+      }
+      this.PickingDraftByItem[this.SelectedPickingDetail.ItemNumber] =
+        this.PickingLineList.map(line => ({ ...line } as SalePickingLineDto));
+      this.IsPickingDraftStarted = true;
+      this.persistPickingDraft();
+      this.refreshPaymentAvailability();
+      this.btnClosePickingModal.nativeElement.click();
+    } catch (error: any) {
+      this.toastrService.error(error.message);
+    }
+  }
+
+  async confirmAllPicking(): Promise<void> {
+    if (this.IsConfirmingPicking || this.isPickingConfirmed()) return;
+    if (!this.isCompletePickingDraft()) {
+      this.toastrService.error("Debe pickear la cantidad exacta de todos los productos.");
+      return;
+    }
+
+    const request = new SalePickingConfirmDto();
+    request.SaleCod = this.SaleDetail.Headboard.SaleCod;
+    request.DetailList = this.SaleDetail.DetailList.flatMap(item =>
+      (this.PickingDraftByItem[item.ItemNumber] ?? []).map(line => ({ ...line } as SalePickingLineDto))
+    );
+
+    this.IsConfirmingPicking = true;
+    try {
+      const response = await this.saleservice.confirmPicking(request);
+      if (!response.ErrorStatus) {
+        this.SaleDetail = response.Data;
+        this.PickingDraftByItem = {};
+        this.IsPickingDraftStarted = false;
+        sessionStorage.removeItem(this.getPickingStorageKey());
+        this.refreshPaymentAvailability();
+        this.toastrService.success("Pickeo confirmado correctamente.");
+      }
+    } finally {
+      this.IsConfirmingPicking = false;
+    }
+  }
+
+  getPickingTotalInternal(): number {
+    return this.PickingLineList.reduce((total, line) => total + Number(line.NumUnit || 0), 0);
+  }
+
+  getPickingTotalVisible(): number {
+    return this.getVisibleQuantity(
+      this.getPickingTotalInternal(),
+      this.SelectedPickingDetail.ProductUnitFactor
+    );
+  }
+
+  getPickingPendingVisible(): number {
+    return this.getVisibleQuantity(
+      Number(this.SelectedPickingDetail.NumUnit || 0) - this.getPickingTotalInternal(),
+      this.SelectedPickingDetail.ProductUnitFactor
+    );
+  }
+
+  getPickingLineVisibleQuantity(line: SalePickingLineDto): number {
+    return this.getVisibleQuantity(line.NumUnit, this.SelectedPickingDetail.ProductUnitFactor);
+  }
+
+  getPickedQuantityVisible(item: SaleDetEntity): number {
+    const sourceList = this.isPickingConfirmed()
+      ? (item.DetailWarehouse ?? [])
+      : (this.PickingDraftByItem[item.ItemNumber] ?? []);
+    const total = sourceList.reduce((sum, line) => sum + Number(line.NumUnit || 0), 0);
+    return this.getVisibleQuantity(total, item.ProductUnitFactor);
+  }
+
+  isProductPickingComplete(item: SaleDetEntity): boolean {
+    if (this.isPickingConfirmed()) return true;
+    const lineList = this.PickingDraftByItem[item.ItemNumber] ?? [];
+    return lineList.length > 0
+      && lineList.reduce((sum, line) => sum + Number(line.NumUnit || 0), 0) === Number(item.NumUnit || 0);
+  }
+
+  isCompletePickingDraft(): boolean {
+    return this.SaleDetail.DetailList.length > 0
+      && this.SaleDetail.DetailList.every(item => this.isProductPickingComplete(item));
+  }
+
+  isPickingConfirmed(): boolean {
+    return this.SaleDetail?.Headboard?.IsPickingConfirmed === "S";
+  }
+
+  isPickingDraftBlocked(): boolean {
+    return this.IsPickingDraftStarted && !this.isPickingConfirmed();
+  }
+
+  ensurePickingAllowsOtherActions(): boolean {
+    if (!this.isPickingDraftBlocked()) return true;
+    this.toastrService.warning("Debe confirmar todo el pickeo antes de realizar otra operacion.");
+    return false;
+  }
+
+  goBack(event: Event): void {
+    event.preventDefault();
+    if (!this.ensurePickingAllowsOtherActions()) return;
+    this.router.navigate(['/enterprise/sale/pages/listsale']);
+  }
+
+  getTodayDateInput(): string {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = `${today.getMonth() + 1}`.padStart(2, "0");
+    const day = `${today.getDate()}`.padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  private clearPickingForm(): void {
+    setTimeout(() => {
+      if (this.txtPickingNumUnit) this.txtPickingNumUnit.nativeElement.value = "";
+      if (this.txtPickingLotNumber) this.txtPickingLotNumber.nativeElement.value = "";
+      if (this.txtPickingExpirationDate) this.txtPickingExpirationDate.nativeElement.value = "";
+    });
+  }
+
+  private saveCurrentPickingDraft(): void {
+    this.PickingDraftByItem[this.SelectedPickingDetail.ItemNumber] =
+      this.PickingLineList.map(line => ({ ...line } as SalePickingLineDto));
+    this.IsPickingDraftStarted = true;
+    this.persistPickingDraft();
+    this.refreshPaymentAvailability();
+  }
+
+  private persistPickingDraft(): void {
+    sessionStorage.setItem(this.getPickingStorageKey(), JSON.stringify(this.PickingDraftByItem));
+  }
+
+  private restorePickingDraft(): void {
+    const savedDraft = sessionStorage.getItem(this.getPickingStorageKey());
+    if (!savedDraft) return;
+    try {
+      const parsedDraft = JSON.parse(savedDraft);
+      if (parsedDraft && typeof parsedDraft === "object") {
+        this.PickingDraftByItem = parsedDraft;
+        this.IsPickingDraftStarted = Object.keys(parsedDraft).length > 0;
+      }
+    } catch {
+      sessionStorage.removeItem(this.getPickingStorageKey());
+    }
+  }
+
+  private getPickingStorageKey(): string {
+    return `sale-picking-draft-${this.SaleCod}`;
   }
 }

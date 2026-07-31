@@ -19,7 +19,7 @@
                   <a class="btn bg-white btn-light mx-1px text-95 shadow-sm" 
                       href="#" 
                       data-title="Print"
-                      (click)="print()">
+                      (click)="print(); $event.preventDefault()">
                     <i class="mr-1 fa fa-print text-primary text-120 w-2"></i>
                     Print
                   </a>
@@ -65,7 +65,8 @@
                       </div>
                     </div>
                     <div class="mt-2" *ngIf="(SaleDetail.Headboard.SaleStatus !== 'C')">
-                      <button class="btn btn-sm btn-outline-primary" type="button" (click)="OpenClientModal()">
+                      <button class="btn btn-sm btn-outline-primary" type="button" (click)="OpenClientModal()"
+                        [disabled]="isPickingDraftBlocked()">
                         {{ hasClient() ? 'Cambiar cliente' : 'Agregar cliente' }}
                       </button>
                     </div>
@@ -150,6 +151,20 @@
 
                       <div class="col-7 col-sm-3">
                         ({{ item.Product.ProductCod }}) - {{ item.Product.ProductName }}
+                        <div class="mt-2" *ngIf="SaleDetail.Headboard.SaleStatus !== 'C'">
+                          <button type="button" class="btn btn-xs"
+                            [ngClass]="isProductPickingComplete(item) ? 'btn-success' : 'btn-outline-primary'"
+                            data-toggle="modal" data-target="#PickingModal"
+                            (click)="openPickingModal(item)">
+                            <i class="fa" [ngClass]="isPickingConfirmed() ? 'fa-eye' : 'fa-box-open'"></i>
+                            {{ isPickingConfirmed() ? 'Ver pickeo' : (isProductPickingComplete(item) ? 'Editar pickeo' : 'Pickear') }}
+                          </button>
+                          <span class="ml-2 text-85" [ngClass]="isProductPickingComplete(item) ? 'text-success' : 'text-grey'"
+                            *ngIf="IsPickingDraftStarted || isPickingConfirmed()">
+                            {{ getPickedQuantityVisible(item) }} / {{ getVisibleQuantity(item.NumUnit, item.ProductUnitFactor) }}
+                            {{ item.ProductUnitName }}
+                          </span>
+                        </div>
                       </div>
 
                       <div class="d-none d-sm-block col-1">
@@ -186,6 +201,28 @@
                   </div>
 
                   <div class="row border-b-2 brc-green-l1"></div>
+
+                  <div class="alert bgc-warning-l4 brc-warning-m3 border-1 mt-3 mb-2"
+                    *ngIf="isPickingDraftBlocked()">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between">
+                      <div class="mr-3 my-1">
+                        <i class="fa fa-exclamation-triangle text-warning-d2 mr-2"></i>
+                        El pickeo está en edición. Complete todos los productos y confirme todo el pickeo antes de cambiar cliente, documento o pagos.
+                      </div>
+                      <button type="button" class="btn btn-success btn-bold my-1"
+                        [disabled]="!isCompletePickingDraft() || IsConfirmingPicking"
+                        (click)="confirmAllPicking()">
+                        <i class="fa fa-check mr-1"></i>
+                        {{ IsConfirmingPicking ? 'Confirmando...' : 'Confirmar todo el pickeo' }}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="alert bgc-success-l4 brc-success-m3 border-1 mt-3 mb-2"
+                    *ngIf="isPickingConfirmed()">
+                    <i class="fa fa-check-circle text-success mr-2"></i>
+                    Pickeo por lotes confirmado. Los lotes serán usados al confirmar la venta.
+                  </div>
 
                   <div class="row mt-4">
                     <div class="col-12 col-sm-7 mt-2 mt-lg-0">
@@ -331,6 +368,7 @@
                         <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4" 
                             type="reset"
                             href="/enterprise/sale/pages/listsale"
+                            (click)="goBack($event)"
                         >
                             <i class="fa fa-undo mr-1"></i>
                             Volver
@@ -347,6 +385,102 @@
 
       </div>
     </div>
+</div>
+
+<div class="modal fade" id="PickingModal" tabindex="-1" role="dialog" aria-labelledby="PickingModalLabel"
+  aria-hidden="true" data-backdrop="static" data-keyboard="false">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-primary-d3" id="PickingModalLabel">
+          {{ isPickingConfirmed() ? 'Detalle de pickeo' : 'Pickear producto por lotes' }}
+        </h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close" #btnClosePickingModal>
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+      <div class="modal-body py-3">
+        <div class="mb-3">
+          <div class="text-600">
+            ({{ SelectedPickingDetail.ProductCod }}) - {{ SelectedPickingDetail.Product.ProductName }}
+          </div>
+          <div class="text-muted text-90">
+            Requerido: {{ getVisibleQuantity(SelectedPickingDetail.NumUnit, SelectedPickingDetail.ProductUnitFactor) }}
+            {{ SelectedPickingDetail.ProductUnitName }} |
+            Pickeado: {{ getPickingTotalVisible() }} {{ SelectedPickingDetail.ProductUnitName }} |
+            Pendiente: {{ getPickingPendingVisible() }} {{ SelectedPickingDetail.ProductUnitName }}
+          </div>
+        </div>
+
+        <div class="row" *ngIf="!isPickingConfirmed()">
+          <div class="col-md-3">
+            <label class="mb-1">Cantidad</label>
+            <input type="number" min="1" step="1" class="form-control" #txtPickingNumUnit>
+          </div>
+          <div class="col-md-4">
+            <label class="mb-1">Número de lote</label>
+            <input type="text" class="form-control" maxlength="32" #txtPickingLotNumber>
+          </div>
+          <div class="col-md-3">
+            <label class="mb-1">Vencimiento opcional</label>
+            <input type="date" class="form-control" [attr.min]="getTodayDateInput()" #txtPickingExpirationDate>
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <button type="button" class="btn btn-blue btn-bold w-100" (click)="addPickingLine()">
+              Agregar
+            </button>
+          </div>
+        </div>
+
+        <div class="alert alert-warning py-2 mt-2 mb-0"
+          *ngIf="!isPickingConfirmed() && PickingLineList.length > 0 && getPickingPendingVisible() > 0">
+          Falta distribuir {{ getPickingPendingVisible() }} {{ SelectedPickingDetail.ProductUnitName }}.
+        </div>
+
+        <div class="table-responsive mt-3" style="max-height: 260px; overflow-y: auto;">
+          <table class="table table-bordered table-hover mb-0">
+            <thead class="bgc-grey-l4 text-90">
+              <tr>
+                <th>Cantidad</th>
+                <th>Lote</th>
+                <th>Vencimiento</th>
+                <th style="width: 70px;" *ngIf="!isPickingConfirmed()"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let line of PickingLineList; let i = index">
+                <td>{{ getPickingLineVisibleQuantity(line) }} {{ SelectedPickingDetail.ProductUnitName }}</td>
+                <td>{{ line.LotNumber }}</td>
+                <td>{{ line.ExpirationDate ? (line.ExpirationDate | date:'dd/MM/yyyy') : 'Sin vencimiento' }}</td>
+                <td class="text-center" *ngIf="!isPickingConfirmed()">
+                  <button type="button" class="btn btn-xs btn-danger" (click)="removePickingLine(i)">
+                    <i class="fa fa-trash"></i>
+                  </button>
+                </td>
+              </tr>
+              <tr *ngIf="PickingLineList.length === 0">
+                <td [attr.colspan]="isPickingConfirmed() ? 3 : 4" class="text-center text-muted">
+                  Sin lotes registrados
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-secondary px-4" data-dismiss="modal">
+          Cerrar
+        </button>
+        <button type="button" class="btn btn-primary" *ngIf="!isPickingConfirmed()"
+          [disabled]="PickingLineList.length === 0 || getPickingPendingVisible() !== 0"
+          (click)="confirmProductPicking()">
+          Confirmar producto
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <button type="button" class="d-none" data-toggle="modal" data-target="#ClientModal" #btnOpenClientModal></button>

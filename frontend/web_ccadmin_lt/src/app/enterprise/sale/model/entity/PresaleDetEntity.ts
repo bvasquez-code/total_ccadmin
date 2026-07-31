@@ -29,10 +29,9 @@ export class PresaleDetEntity extends AuditTableEntity
         this.ProductCod = ProductInfo.Product.ProductCod;
         this.Variant = Variant;
         this.NumUnit = 0;
-        this.NumUnitPrice = ProductInfo.Config.NumPrice;
+        this.NumUnitPrice = this.toMoney(ProductInfo.Config.NumPrice);
         this.NumDiscount = 0;
-        this.NumUnitPriceSale = this.NumUnitPrice - this.NumDiscount;
-        this.NumTotalPrice = this.NumUnitPriceSale * this.NumUnit;
+        this.recalculateAmounts();
         this.ProductUnitName = ProductInfo.Config.ProductUnitName || "NIU";
         this.ProductUnitFactor = ProductInfo.Config.ProductUnitFactor > 0 ? ProductInfo.Config.ProductUnitFactor : 1;
         this.ProductInfo = ProductInfo;
@@ -42,8 +41,7 @@ export class PresaleDetEntity extends AuditTableEntity
     Update(NumUnit : number):void
     {
         this.NumUnit = NumUnit;
-        this.NumUnitPriceSale = this.NumUnitPrice - this.NumDiscount;
-        this.NumTotalPrice = this.NumUnitPriceSale * this.NumUnit;
+        this.recalculateAmounts();
     }
 
     getNameSummary() : string
@@ -61,16 +59,28 @@ export class PresaleDetEntity extends AuditTableEntity
         this.ProductCod = DataSession.ProductCod;
         this.Variant = DataSession.Variant;
         this.NumUnit = DataSession.NumUnit;
-        this.NumUnitPrice = DataSession.NumUnitPrice;
-        this.NumDiscount = DataSession.NumDiscount;
-        this.NumUnitPriceSale = DataSession.NumUnitPriceSale;
-        this.NumTotalPrice = DataSession.NumTotalPrice;
+        this.NumUnitPrice = this.toMoney(DataSession.NumUnitPrice);
+        this.NumDiscount = this.toMoney(DataSession.NumDiscount);
+        this.recalculateAmounts();
         this.ProductUnitName = DataSession.ProductUnitName ?? "NIU";
         this.ProductUnitFactor = DataSession.ProductUnitFactor > 0 ? DataSession.ProductUnitFactor : 1;
         this.LotNumber = DataSession.LotNumber ?? "";
         this.ExpirationDate = DataSession.ExpirationDate ?? null;
         this.ProductInfo.SetDataSession(DataSession.ProductInfo);
         this.addSession(DataSession);
+    }
+
+    private recalculateAmounts(): void
+    {
+        this.NumUnitPrice = this.toMoney(this.NumUnitPrice);
+        this.NumDiscount = this.toMoney(this.NumDiscount);
+        this.NumUnitPriceSale = this.toMoney(this.NumUnitPrice - this.NumDiscount);
+        this.NumTotalPrice = this.toMoney(this.NumUnitPriceSale * this.NumUnit);
+    }
+
+    private toMoney(value: number): number
+    {
+        return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
     }
 
 }

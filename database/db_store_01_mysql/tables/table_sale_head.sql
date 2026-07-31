@@ -34,6 +34,7 @@ BEGIN
           `NumExchangevalue` decimal(16,4) DEFAULT NULL COMMENT 'valor de cambio',
           `IsPaid` char(1) NOT NULL DEFAULT 'N',
           `HasCreditNote` char(1) NOT NULL DEFAULT 'N' COMMENT 'Tiene nota de credito (S/N)',
+          `IsPickingConfirmed` char(1) NOT NULL DEFAULT 'N' COMMENT 'Indica si el pickeo por lote fue confirmado (S/N)',
           `CreationUser` varchar(16) NOT NULL,
           `CreationDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
           `ModifyUser` varchar(16) DEFAULT NULL,
@@ -68,6 +69,16 @@ BEGIN
         ) THEN
             ALTER TABLE `sale_head` ADD COLUMN `HasCreditNote` CHAR(1) NOT NULL DEFAULT 'N' COMMENT 'Tiene nota de credito (S/N)';
             SELECT 'Columna HasCreditNote agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sale_head'
+            AND column_name = 'IsPickingConfirmed'
+        ) THEN
+            ALTER TABLE `sale_head`
+                ADD COLUMN `IsPickingConfirmed` CHAR(1) NOT NULL DEFAULT 'N'
+                COMMENT 'Indica si el pickeo por lote fue confirmado (S/N)' AFTER `HasCreditNote`;
+            SELECT 'Columna IsPickingConfirmed agregada exitosamente.' AS Mensaje;
         END IF;
 
         -- Aqui puedes agregar mas bloques IF NOT EXISTS para otros ALTER futuros...
