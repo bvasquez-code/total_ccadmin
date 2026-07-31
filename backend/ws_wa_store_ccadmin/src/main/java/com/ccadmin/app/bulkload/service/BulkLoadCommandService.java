@@ -91,6 +91,47 @@ public class BulkLoadCommandService extends SessionService {
         return new BulkLoadRegisterDto(head, destinationRepository.findByCode(head.BulkLoadCod));
     }
 
+    @Transactional(rollbackOn = Exception.class)
+    public BulkLoadRegisterDto retry(String code) {
+        BulkLoadHeadEntity head = headRepository.findForUpdate(clean(code));
+        if (head == null) throw new IllegalArgumentException("No existe la carga masiva");
+        if (!BulkLoadConstants.ERROR.equals(head.ProcessStatus)) {
+            throw new IllegalStateException("Solo se puede reintentar una carga con error");
+        }
+        if (head.QueueDate == null && head.StartDate == null) {
+            throw new IllegalStateException(
+                    "Los errores de validacion deben corregirse reemplazando el Excel"
+            );
+        }
+
+        String userCod = getUserCod();
+        Date now = new Date();
+        head.ProcessStatus = BulkLoadConstants.QUEUED;
+        head.QueueDate = now;
+        head.EndDate = null;
+        head.LastHeartbeatDate = now;
+        head.StatusMessage = "Reintento en cola para procesar los detalles pendientes";
+        head.addSessionModify(userCod);
+        headRepository.save(head);
+
+        for (BulkLoadDestinationEntity destination
+                : destinationRepository.findByCode(head.BulkLoadCod)) {
+            if (BulkLoadConstants.FINALIZED.equals(destination.ProcessStatus)) {
+                continue;
+            }
+            destination.ProcessStatus = BulkLoadConstants.QUEUED;
+            destination.EndDate = null;
+            destination.StatusMessage = "Reintento en cola";
+            destination.addSessionModify(userCod);
+            destinationRepository.save(destination);
+        }
+
+        enqueueAfterCommit(head.BulkLoadCod);
+        return new BulkLoadRegisterDto(
+                head, destinationRepository.findByCode(head.BulkLoadCod)
+        );
+    }
+
     private void enqueueAfterCommit(String code) {
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             queuedService.addQueued(new BulkLoadTaskService(processService, code));

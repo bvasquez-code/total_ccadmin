@@ -25,7 +25,7 @@
               <tr class="bgc-h-yellow-l4 d-style" *ngFor="let item of Data.DataTable.data.resultSearch">
 
                 <td *ngFor="let Headers of Data.Headers">
-                  <div *ngIf="(Headers.key && !Headers.IsDate && !Headers.IsStatus && !Headers.IsMoney)">
+                  <div *ngIf="(Headers.key && !Headers.IsDate && !Headers.IsStatus && !Headers.IsMoney && !Headers.IsProgress)">
                     {{ getValue(item,Headers.key,Headers.FunctionKey) }}
                   </div>
                   <div *ngIf="(Headers.key && Headers.IsDate === true)">
@@ -38,6 +38,22 @@
                     <span [ngClass]="Headers.IsStatus === true ? Headers.Html[getValue(item,Headers.key,Headers.FunctionKey)] : ''">
                       {{  (Headers.Mask) ? Headers.Mask[getValue(item,Headers.key,Headers.FunctionKey)] : getValue(item,Headers.key,Headers.FunctionKey) }}
                     </span>
+                  </div>
+                  <div *ngIf="(Headers.key && Headers.IsProgress === true)"
+                    style="min-width: 145px;">
+                    <div class="progress" style="height: .55rem;">
+                      <div class="progress-bar"
+                        role="progressbar"
+                        [ngClass]="getProgressClass(Headers, item)"
+                        [style.width.%]="getProgressValue(item, Headers.key, Headers.FunctionKey)"
+                        [attr.aria-valuenow]="getProgressValue(item, Headers.key, Headers.FunctionKey)"
+                        aria-valuemin="0"
+                        aria-valuemax="100">
+                      </div>
+                    </div>
+                    <small class="text-grey-d1">
+                      {{ getProgressText(Headers, item) }}
+                    </small>
                   </div>
                   <div *ngIf="(Headers.ColumnAction === true)">
 

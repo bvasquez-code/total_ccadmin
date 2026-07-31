@@ -1,6 +1,11 @@
 export class BulkLoadConstants {
   static readonly TYPE_PRODUCT_PRICE = 'PRODUCT_PRICE';
   static readonly TYPE_STOCK_ENTRY = 'STOCK_ENTRY';
+  static readonly TYPE_PRODUCT_CREATE = 'PRODUCT_CREATE';
+  static readonly TYPE_BRAND_CREATE = 'BRAND_CREATE';
+  static readonly TYPE_CATEGORY_CREATE = 'CATEGORY_CREATE';
+  static readonly USE_LEGACY_GENERATED_TEMPLATES = false;
+  static readonly TEMPLATE_ASSET_PATH = 'assets/document/excel/formats';
 
   static readonly DRAFT = 'D';
   static readonly VALIDATING = 'V';
@@ -13,9 +18,18 @@ export class BulkLoadConstants {
   static readonly CONFIRMED = 'C';
 
   static typeDescription(type: string): string {
-    return type === this.TYPE_PRODUCT_PRICE
-      ? 'Precios'
-      : type === this.TYPE_STOCK_ENTRY ? 'Stock' : type;
+    const descriptions: Record<string, string> = {
+      PRODUCT_PRICE: 'Precios',
+      STOCK_ENTRY: 'Stock',
+      PRODUCT_CREATE: 'Creación de productos',
+      BRAND_CREATE: 'Creación de marcas',
+      CATEGORY_CREATE: 'Creación de categorías'
+    };
+    return descriptions[type] ?? type;
+  }
+
+  static requiresDestinations(type: string): boolean {
+    return type === this.TYPE_PRODUCT_PRICE || type === this.TYPE_STOCK_ENTRY;
   }
 
   static statusDescription(status: string, numErrors: number = 0): string {
@@ -46,5 +60,26 @@ export class BulkLoadConstants {
       C: 'badge-success'
     };
     return classes[status] ?? 'badge-secondary';
+  }
+
+  static isCorrectableError(head: {
+    ProcessStatus: string;
+    NumProcessedDetails: number;
+    QueueDate?: string;
+    StartDate?: string;
+  }): boolean {
+    return head.ProcessStatus === this.ERROR
+      && Number(head.NumProcessedDetails ?? 0) === 0
+      && !head.QueueDate
+      && !head.StartDate;
+  }
+
+  static isEditable(head: {
+    ProcessStatus: string;
+    NumProcessedDetails: number;
+    QueueDate?: string;
+    StartDate?: string;
+  }): boolean {
+    return head.ProcessStatus === this.PENDING || head.ProcessStatus === this.ERROR;
   }
 }

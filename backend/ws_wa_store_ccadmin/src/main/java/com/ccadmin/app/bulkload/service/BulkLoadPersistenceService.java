@@ -38,11 +38,44 @@ public class BulkLoadPersistenceService extends SessionService {
     public BulkLoadRegisterDto savePrepared(String bulkLoadCod,
                                             BulkLoadParsedRequestDto request,
                                             BulkLoadPreparedDto prepared) {
-        if (prepared == null) {
-            throw new IllegalArgumentException("La preparacion de la carga es obligatoria");
-        }
+        validatePrepared(prepared);
         String userCod = getUserCod();
         BulkLoadHeadEntity head = buildHead(bulkLoadCod, request, userCod);
+        return persistPrepared(head, prepared, userCod);
+    }
+
+    @Transactional(rollbackOn = Exception.class)
+    public BulkLoadRegisterDto replacePrepared(String bulkLoadCod,
+                                               BulkLoadParsedRequestDto request,
+                                               BulkLoadPreparedDto prepared) {
+        validatePrepared(prepared);
+        BulkLoadHeadEntity head = headRepository.findForUpdate(clean(bulkLoadCod));
+        if (head == null) {
+            throw new IllegalArgumentException("No existe la carga masiva");
+        }
+        if (!isCorrectableValidationError(head)) {
+            throw new IllegalStateException(
+                    "Solo se puede reemplazar una carga con errores de validacion "
+                            + "que aun no haya iniciado su procesamiento"
+            );
+        }
+        if (!Objects.equals(head.BulkLoadType, request.BulkLoadType)) {
+            throw new IllegalArgumentException(
+                    "El tipo del archivo corregido debe coincidir con la carga original"
+            );
+        }
+
+        String userCod = getUserCod();
+        detRepository.deleteByCode(head.BulkLoadCod);
+        destinationRepository.deleteByCode(head.BulkLoadCod);
+        resetHeadForCorrection(head, request, userCod);
+        return persistPrepared(head, prepared, userCod);
+    }
+
+    private BulkLoadRegisterDto persistPrepared(BulkLoadHeadEntity head,
+                                                BulkLoadPreparedDto prepared,
+                                                String userCod) {
+        String bulkLoadCod = head.BulkLoadCod;
         headRepository.save(head);
 
         List<BulkLoadDestinationEntity> destinations = saveDestinations(
@@ -80,6 +113,12 @@ public class BulkLoadPersistenceService extends SessionService {
         return new BulkLoadRegisterDto(head, destinations, prepared.ErrorList);
     }
 
+    private void validatePrepared(BulkLoadPreparedDto prepared) {
+        if (prepared == null) {
+            throw new IllegalArgumentException("La preparacion de la carga es obligatoria");
+        }
+    }
+
     private BulkLoadHeadEntity buildHead(String bulkLoadCod,
                                          BulkLoadParsedRequestDto request,
                                          String userCod) {
@@ -104,6 +143,51 @@ public class BulkLoadPersistenceService extends SessionService {
         head.Status = StatusConst.ACTIVE;
         head.addSessionCreate(userCod);
         return head;
+    }
+
+    private void resetHeadForCorrection(BulkLoadHeadEntity head,
+                                        BulkLoadParsedRequestDto request,
+                                        String userCod) {
+        head.SchemaVersion = request.SchemaVersion == null ? 1 : request.SchemaVersion;
+        head.ProcessStatus = BulkLoadConstants.VALIDATING;
+        head.SourceFileCod = null;
+        head.ErrorFileCod = null;
+        head.OriginalFileName = trimToLength(request.OriginalFileName, 255);
+        head.FileHash = null;
+        head.NumSourceRows = request.RowList == null ? 0 : request.RowList.size();
+        head.NumDestinations = 0;
+        head.NumTotalDetails = 0;
+        head.NumProcessedDetails = 0;
+        head.NumSuccessDetails = 0;
+        head.NumErrorDetails = 0;
+        head.NumWarningDetails = 0;
+        head.ProgressPercent = BigDecimal.ZERO.setScale(2);
+        head.ValidationDate = null;
+        head.QueueDate = null;
+        head.StartDate = null;
+        head.EndDate = null;
+        head.LastHeartbeatDate = null;
+        head.StatusMessage = "Validando archivo corregido";
+        head.AttemptCount = 0;
+
+        Map<String, Object> parameters = head.Parameters == null
+                ? new LinkedHashMap<>() : new LinkedHashMap<>(head.Parameters);
+        parameters.put("sourceRead", "FRONTEND_XLSX");
+        parameters.put("commitSize", BulkLoadConstants.CHUNK_SIZE);
+        parameters.put(
+                "correctionCount",
+                integerValue(parameters.get("correctionCount")) + 1
+        );
+        head.Parameters = parameters;
+        head.Status = StatusConst.ACTIVE;
+        head.addSessionModify(userCod);
+    }
+
+    private boolean isCorrectableValidationError(BulkLoadHeadEntity head) {
+        return BulkLoadConstants.ERROR.equals(head.ProcessStatus)
+                && value(head.NumProcessedDetails) == 0
+                && head.QueueDate == null
+                && head.StartDate == null;
     }
 
     private List<BulkLoadDestinationEntity> saveDestinations(
@@ -204,5 +288,23 @@ public class BulkLoadPersistenceService extends SessionService {
         String cleanValue = value == null ? "" : value.trim();
         return cleanValue.length() <= length
                 ? cleanValue : cleanValue.substring(0, length);
+    }
+
+    private String clean(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private int value(Integer value) {
+        return value == null ? 0 : value;
+    }
+
+    private int integerValue(Object value) {
+        if (value instanceof Number number) return number.intValue();
+        if (value == null) return 0;
+        try {
+            return Integer.parseInt(String.valueOf(value));
+        } catch (NumberFormatException exception) {
+            return 0;
+        }
     }
 }

@@ -1,0 +1,40 @@
+.bulk-progress {
+  height: 0.85rem;
+}
+
+.destination-progress {
+  height: 0.55rem;
+}
+
+.metric-card {
+  min-height: 74px;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid #e3e6ea;
+  border-radius: 0.3rem;
+  background: #f8f9fb;
+}
+
+.metric-card small,
+.metric-card strong {
+  display: block;
+}
+
+.metric-card strong {
+  margin-top: 0.2rem;
+  font-size: 1.15rem;
+}
+
+.message-detail {
+  min-width: 260px;
+  max-width: 420px;
+  white-space: normal;
+}
+
+.result-detail {
+  min-width: 180px;
+  white-space: normal;
+}
+
+td {
+  vertical-align: middle;
+}

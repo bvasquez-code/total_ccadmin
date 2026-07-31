@@ -1,0 +1,505 @@
+<div role="main" class="main-content">
+  <div class="page-content container container-plus">
+    <div class="container px-0">
+      <div class="row mt-4">
+        <div class="col-12">
+          <div class="page-header border-0 mb-0">
+            <h1 class="page-title text-dark-l3 text-115">
+              Cargas masivas
+              <i class="fa fa-angle-right text-80 ml-1"></i>
+              <small class="page-info text-dark-m3">
+                Detalle de carga — {{current?.Head?.BulkLoadCod || bulkLoadCod}}
+              </small>
+            </h1>
+
+            <div class="page-tools">
+              <div class="action-buttons">
+                <button type="button"
+                  class="btn bg-white btn-light mx-1px text-95 shadow-sm"
+                  *ngIf="canEdit"
+                  (click)="goEdit()">
+                  <i class="mr-1 fa fa-edit text-warning text-120 w-2"></i>
+                  Editar carga
+                </button>
+                <button type="button"
+                  class="btn bg-white btn-light mx-1px text-95 shadow-sm"
+                  [disabled]="loading"
+                  (click)="refresh()">
+                  <i class="mr-1 fa fa-sync-alt text-success text-120 w-2"
+                    [ngClass]="loading ? 'fa-spin' : ''"></i>
+                  Refrescar progreso
+                </button>
+                <button type="button"
+                  class="btn bg-white btn-light mx-1px text-95 shadow-sm"
+                  (click)="goBack()">
+                  <i class="mr-1 fa fa-arrow-left text-primary text-120 w-2"></i>
+                  Volver
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card dcard mb-4" *ngIf="current as bulkLoad">
+            <div class="card-body px-4 px-lg-5">
+              <div class="row mt-4">
+                <div class="col-sm-6">
+                  <div class="text-100 text-grey-m1 align-middle mb-1">
+                    Archivo de origen
+                  </div>
+                  <div class="text-600 text-110 text-primary mt-1 mb-2 text-break">
+                    {{bulkLoad.Head.OriginalFileName || '—'}}
+                  </div>
+
+                  <div class="text-dark-l1">
+                    <div class="my-1">
+                      <i class="fa fa-layer-group text-purple mr-1"></i>
+                      <b class="text-600">Tipo:</b>
+                      {{constants.typeDescription(bulkLoad.Head.BulkLoadType)}}
+                    </div>
+                    <div class="my-1">
+                      <i class="fa fa-user text-info mr-1"></i>
+                      <b class="text-600">Creado por:</b>
+                      {{bulkLoad.Head.CreationUser || '—'}}
+                    </div>
+                    <div class="my-1">
+                      <i class="fa fa-comment text-orange mr-1"></i>
+                      <b class="text-600">Mensaje:</b>
+                      {{bulkLoad.Head.StatusMessage || 'Sin mensaje'}}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-sm-6 align-self-start d-sm-flex justify-content-end text-95">
+                  <hr class="d-sm-none">
+                  <div class="text-dark-l1">
+                    <div class="mt-1 mb-2 text-secondary-d1 text-600 text-125">
+                      Datos del proceso
+                    </div>
+                    <div class="my-2">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                      <span class="text-600 text-90">ID:</span>
+                      {{bulkLoad.Head.BulkLoadCod}}
+                    </div>
+                    <div class="my-2">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                      <span class="text-600 text-90">Versión:</span>
+                      {{bulkLoad.Head.SchemaVersion}}
+                    </div>
+                    <div class="my-2">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                      <span class="text-600 text-90">Estado:</span>
+                      <span [class]="statusClass(bulkLoad.Head.ProcessStatus)">
+                        {{constants.statusDescription(
+                          bulkLoad.Head.ProcessStatus,
+                          bulkLoad.Head.NumErrorDetails
+                        )}}
+                      </span>
+                    </div>
+                    <div class="my-2">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                      <span class="text-600 text-90">Creación:</span>
+                      {{bulkLoad.Head.CreationDate | date: 'dd/MM/yyyy HH:mm:ss'}}
+                    </div>
+                    <div class="my-2" *ngIf="bulkLoad.Head.StartDate">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                      <span class="text-600 text-90">Inicio:</span>
+                      {{bulkLoad.Head.StartDate | date: 'dd/MM/yyyy HH:mm:ss'}}
+                    </div>
+                    <div class="my-2" *ngIf="bulkLoad.Head.EndDate">
+                      <i class="fa fa-circle text-blue-m2 text-xs mr-1"></i>
+                      <span class="text-600 text-90">Fin:</span>
+                      {{bulkLoad.Head.EndDate | date: 'dd/MM/yyyy HH:mm:ss'}}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <div class="d-flex justify-content-between text-95 mb-1">
+                  <span class="text-600 text-secondary-d3">Progreso general</span>
+                  <span class="text-600">
+                    {{progress(bulkLoad.Head.ProgressPercent) | number: '1.0-2'}}%
+                    · {{bulkLoad.Head.NumProcessedDetails}} de
+                    {{bulkLoad.Head.NumTotalDetails}}
+                  </span>
+                </div>
+                <div class="progress bulk-progress">
+                  <div class="progress-bar"
+                    role="progressbar"
+                    [ngClass]="progressClass(bulkLoad.Head.ProcessStatus)"
+                    [style.width.%]="progress(bulkLoad.Head.ProgressPercent)"
+                    [attr.aria-valuenow]="progress(bulkLoad.Head.ProgressPercent)"
+                    aria-valuemin="0"
+                    aria-valuemax="100">
+                  </div>
+                </div>
+              </div>
+
+              <div class="row mt-4">
+                <div class="col-6 col-md-2 mb-3">
+                  <div class="metric-card">
+                    <small>Filas Excel</small>
+                    <strong>{{bulkLoad.Head.NumSourceRows}}</strong>
+                  </div>
+                </div>
+                <div class="col-6 col-md-2 mb-3"
+                  *ngIf="constants.requiresDestinations(bulkLoad.Head.BulkLoadType)">
+                  <div class="metric-card">
+                    <small>Locales</small>
+                    <strong>{{bulkLoad.Head.NumDestinations}}</strong>
+                  </div>
+                </div>
+                <div class="col-6 col-md-2 mb-3">
+                  <div class="metric-card">
+                    <small>Detalles</small>
+                    <strong>{{bulkLoad.Head.NumTotalDetails}}</strong>
+                  </div>
+                </div>
+                <div class="col-6 col-md-2 mb-3">
+                  <div class="metric-card text-success">
+                    <small>Correctos</small>
+                    <strong>{{bulkLoad.Head.NumSuccessDetails}}</strong>
+                  </div>
+                </div>
+                <div class="col-6 col-md-2 mb-3">
+                  <div class="metric-card text-danger">
+                    <small>Errores</small>
+                    <strong>{{bulkLoad.Head.NumErrorDetails}}</strong>
+                  </div>
+                </div>
+                <div class="col-6 col-md-2 mb-3">
+                  <div class="metric-card text-warning">
+                    <small>Advertencias</small>
+                    <strong>{{bulkLoad.Head.NumWarningDetails}}</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-4" *ngIf="bulkLoad.DestinationList?.length">
+                <hr class="brc-secondary-l3 border-t-2">
+                <h5 class="text-dark-m3 text-110 mb-3">
+                  <i class="fa fa-store mr-1 text-primary"></i>
+                  Locales de destino
+                </h5>
+                <div class="row">
+                  <div class="col-sm-6 col-lg-4 mb-3"
+                    *ngFor="let destination of pagedDestinationList">
+                    <div class="card border-1 brc-secondary-l3 radius-1 p-3 h-100">
+                      <div class="d-flex justify-content-between align-items-start">
+                        <div class="text-600 text-105">{{destination.StoreCod}}</div>
+                        <span [class]="statusClass(destination.ProcessStatus)">
+                          {{constants.statusDescription(
+                            destination.ProcessStatus,
+                            destination.NumErrorDetails
+                          )}}
+                        </span>
+                      </div>
+                      <div class="progress destination-progress mt-3">
+                        <div class="progress-bar"
+                          [ngClass]="progressClass(destination.ProcessStatus)"
+                          [style.width.%]="progress(
+                            destination.NumTotalDetails > 0
+                              ? destination.NumProcessedDetails * 100
+                                / destination.NumTotalDetails
+                              : 0
+                          )">
+                        </div>
+                      </div>
+                      <div class="text-dark-l1 text-95 mt-2">
+                        {{destination.NumProcessedDetails}} /
+                        {{destination.NumTotalDetails}} procesados
+                        · {{destination.NumErrorDetails}} errores
+                      </div>
+                      <small class="text-grey-d1 mt-1">
+                        {{destination.StatusMessage || 'Sin mensaje'}}
+                      </small>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="d-flex pl-2 pr-2 pt-3 border-t-1 brc-secondary-l3
+                  flex-column flex-sm-row">
+                  <div class="text-nowrap align-self-center align-self-sm-start">
+                    <span class="d-inline-block text-grey-d2">
+                      Mostrando {{destinationStartResult}} -
+                      {{destinationEndResult}} de
+                      {{filteredDestinationList.length}}
+                    </span>
+                  </div>
+                  <div class="btn-group ml-sm-auto mt-3 mt-sm-0">
+                    <button class="btn btn-sm btn-light-secondary mr-1"
+                      type="button"
+                      [disabled]="destinationPage <= 1"
+                      (click)="setDestinationPage(destinationPage - 1)">
+                      ‹ Anterior
+                    </button>
+                    <span class="btn btn-sm btn-light">
+                      Página {{destinationPage}} de {{destinationTotalPages}}
+                    </span>
+                    <button class="btn btn-sm btn-light-secondary ml-1"
+                      type="button"
+                      [disabled]="destinationPage >= destinationTotalPages"
+                      (click)="setDestinationPage(destinationPage + 1)">
+                      Siguiente ›
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <hr class="brc-secondary-l3 border-t-2">
+                <div class="d-flex flex-column flex-md-row justify-content-between mb-3">
+                  <h5 class="text-dark-m3 text-110 mb-3 mb-md-0">
+                    <i class="fa fa-list mr-1 text-primary"></i>
+                    Detalle procesado
+                  </h5>
+                  <div class="d-flex flex-column flex-sm-row">
+                    <select *ngIf="bulkLoad.DestinationList.length > 0"
+                      class="form-control form-control-sm mr-sm-2 mb-2 mb-sm-0"
+                      [(ngModel)]="storeCod"
+                      (ngModelChange)="onStoreFilterChange()">
+                      <option value="">Todos los locales</option>
+                      <option *ngFor="let destination of bulkLoad.DestinationList"
+                        [value]="destination.StoreCod">
+                        {{destination.StoreCod}}
+                      </option>
+                    </select>
+                    <select class="form-control form-control-sm mr-sm-2 mb-2 mb-sm-0"
+                      [(ngModel)]="processStatus">
+                      <option *ngFor="let status of detailStatusList"
+                        [value]="status.Code">
+                        {{status.Name}}
+                      </option>
+                    </select>
+                    <button class="btn btn-sm btn-primary px-3"
+                      type="button"
+                      [disabled]="loadingDetails"
+                      (click)="loadDetails(1)">
+                      Filtrar
+                    </button>
+                  </div>
+                </div>
+
+                <div class="table-responsive">
+                  <table class="mb-0 table table-borderless table-bordered-x
+                    brc-secondary-l3 text-dark-m2 radius-1 overflow-hidden">
+                    <thead class="text-dark-tp3 bgc-grey-l4 text-90 border-b-1
+                      brc-transparent">
+                      <tr>
+                        <th>Ítem / fila</th>
+                        <th *ngIf="constants.requiresDestinations(
+                          bulkLoad.Head.BulkLoadType)">Local</th>
+                        <th *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_PRODUCT_PRICE
+                          || bulkLoad.Head.BulkLoadType === constants.TYPE_STOCK_ENTRY
+                          || bulkLoad.Head.BulkLoadType === constants.TYPE_PRODUCT_CREATE">
+                          Producto
+                        </th>
+                        <th *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_PRODUCT_PRICE">
+                          Precio
+                        </th>
+                        <th *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_STOCK_ENTRY">
+                          Cantidad
+                        </th>
+                        <th *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_STOCK_ENTRY">
+                          Almacén
+                        </th>
+                        <th *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_PRODUCT_CREATE">
+                          Nombre
+                        </th>
+                        <th *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_PRODUCT_CREATE">
+                          Marca
+                        </th>
+                        <th *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_PRODUCT_CREATE">
+                          Categoría
+                        </th>
+                        <th *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_PRODUCT_CREATE">
+                          Precio
+                        </th>
+                        <th *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_PRODUCT_CREATE">
+                          Stock máximo
+                        </th>
+                        <th *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_PRODUCT_CREATE">
+                          Stock mínimo
+                        </th>
+                        <th *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_BRAND_CREATE">
+                          Marca
+                        </th>
+                        <th *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_BRAND_CREATE">
+                          Nombre
+                        </th>
+                        <th *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_CATEGORY_CREATE">
+                          Categoría
+                        </th>
+                        <th *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_CATEGORY_CREATE">
+                          Nombre
+                        </th>
+                        <th *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_CATEGORY_CREATE">
+                          Categoría padre
+                        </th>
+                        <th *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_CATEGORY_CREATE">
+                          Digital
+                        </th>
+                        <th *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_CATEGORY_CREATE">
+                          Es padre
+                        </th>
+                        <th>Estado</th>
+                        <th>Resultado</th>
+                        <th>Observaciones</th>
+                      </tr>
+                    </thead>
+                    <tbody class="mt-1">
+                      <tr class="bgc-h-yellow-l4"
+                        *ngFor="let detail of details.resultSearch">
+                        <td>
+                          <span class="text-600">{{detail.ItemNumber}}</span>
+                          <small class="d-block text-grey-d1">
+                            Fila {{detail.SourceRowNumber}}
+                          </small>
+                        </td>
+                        <td *ngIf="constants.requiresDestinations(
+                          bulkLoad.Head.BulkLoadType)">
+                          {{detail.StoreCod || '—'}}
+                        </td>
+                        <td *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_PRODUCT_PRICE
+                          || bulkLoad.Head.BulkLoadType === constants.TYPE_STOCK_ENTRY
+                          || bulkLoad.Head.BulkLoadType === constants.TYPE_PRODUCT_CREATE">
+                          <span class="text-600">
+                            {{detailValue(detail, 'ProductCod')}}
+                          </span>
+                          <small class="d-block text-grey-d1">
+                            {{detail.BusinessKey || ''}}
+                          </small>
+                        </td>
+                        <td *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_PRODUCT_PRICE">
+                          {{detailValue(detail, 'NumPrice')}}
+                        </td>
+                        <td *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_STOCK_ENTRY">
+                          {{detailValue(detail, 'NumPhysicalStock')}}
+                        </td>
+                        <td *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_STOCK_ENTRY">
+                          {{detailValue(detail, 'WarehouseCod')}}
+                        </td>
+                        <td *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_PRODUCT_CREATE">
+                          {{detailValue(detail, 'ProductName')}}
+                        </td>
+                        <td *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_PRODUCT_CREATE">
+                          {{detailValue(detail, 'BrandCod')}}
+                        </td>
+                        <td *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_PRODUCT_CREATE">
+                          {{detailValue(detail, 'CategoryCod')}}
+                        </td>
+                        <td *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_PRODUCT_CREATE">
+                          {{detailValue(detail, 'NumPrice')}}
+                        </td>
+                        <td *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_PRODUCT_CREATE">
+                          {{detailValue(detail, 'NumMaxStock')}}
+                        </td>
+                        <td *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_PRODUCT_CREATE">
+                          {{detailValue(detail, 'NumMinStock')}}
+                        </td>
+                        <td *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_BRAND_CREATE">
+                          {{detailValue(detail, 'BrandCod')}}
+                        </td>
+                        <td *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_BRAND_CREATE">
+                          {{detailValue(detail, 'BrandName')}}
+                        </td>
+                        <td *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_CATEGORY_CREATE">
+                          {{detailValue(detail, 'CategoryCod')}}
+                        </td>
+                        <td *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_CATEGORY_CREATE">
+                          {{detailValue(detail, 'CategoryName')}}
+                        </td>
+                        <td *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_CATEGORY_CREATE">
+                          {{detailValue(detail, 'CategoryDadCod')}}
+                        </td>
+                        <td *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_CATEGORY_CREATE">
+                          {{detailValue(detail, 'IsDigital')}}
+                        </td>
+                        <td *ngIf="bulkLoad.Head.BulkLoadType === constants.TYPE_CATEGORY_CREATE">
+                          {{detailValue(detail, 'IsCategoryDad')}}
+                        </td>
+                        <td>
+                          <span [class]="statusClass(detail.ProcessStatus)">
+                            {{constants.statusDescription(detail.ProcessStatus)}}
+                          </span>
+                        </td>
+                        <td class="result-detail">
+                          {{resultDescription(detail)}}
+                        </td>
+                        <td class="message-detail">
+                          <div class="text-danger" *ngIf="errorMessages(detail)">
+                            <i class="fa fa-times-circle mr-1"></i>
+                            {{errorMessages(detail)}}
+                          </div>
+                          <div class="text-warning" *ngIf="warningMessages(detail)">
+                            <i class="fa fa-exclamation-triangle mr-1"></i>
+                            {{warningMessages(detail)}}
+                          </div>
+                          <span class="text-grey-d1"
+                            *ngIf="!errorMessages(detail) && !warningMessages(detail)">
+                            —
+                          </span>
+                        </td>
+                      </tr>
+                      <tr *ngIf="!loadingDetails && details.resultSearch.length === 0">
+                        <td class="text-center text-grey-d1 py-4"
+                          [attr.colspan]="15">
+                          No existen detalles para los filtros seleccionados.
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="d-flex pl-2 pr-2 pt-35 border-t-1 brc-secondary-l3
+                  flex-column flex-sm-row">
+                  <div class="text-nowrap align-self-center align-self-sm-start">
+                    <span class="d-inline-block text-grey-d2">
+                      Mostrando {{details.StarResult}} - {{details.EndResult}}
+                      de {{details.TotalResult}}
+                    </span>
+                  </div>
+                  <div class="btn-group ml-sm-auto mt-3 mt-sm-0">
+                    <button class="btn btn-sm btn-light-secondary mr-1"
+                      [disabled]="details.Page <= 1 || loadingDetails"
+                      (click)="loadDetails(details.Page - 1)">
+                      ‹ Anterior
+                    </button>
+                    <span class="btn btn-sm btn-light">
+                      Página {{details.Page}} de {{details.TotalPages || 1}}
+                    </span>
+                    <button class="btn btn-sm btn-light-secondary ml-1"
+                      [disabled]="details.Page >= details.TotalPages || loadingDetails"
+                      (click)="loadDetails(details.Page + 1)">
+                      Siguiente ›
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2
+                py-35 mx-n25">
+                <div class="offset-md-5 col-md-9 text-nowrap">
+                  <button class="btn btn-outline-lightgrey btn-bgc-white btn-bold
+                    ml-2 px-4"
+                    type="button"
+                    (click)="goBack()">
+                    <i class="fa fa-undo mr-1"></i>
+                    Volver
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card dcard mb-4" *ngIf="loading && !current">
+            <div class="card-body text-center py-5">
+              <i class="fa fa-spinner fa-spin fa-2x text-primary"></i>
+              <div class="mt-2 text-grey-d1">Cargando detalle...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

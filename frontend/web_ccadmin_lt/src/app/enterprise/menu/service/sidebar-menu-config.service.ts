@@ -42,6 +42,7 @@ export class SidebarMenuConfigService {
                 { permission: "AT000011", label: "Ver retiro de stock", url: "enterprise/inventory/pages/viewstockexit", urlShade: "enterprise/inventory/pages/liststockexit", isVisible: false },
                 { permission: "AT000012", label: "Resolver retiro de stock", url: "enterprise/inventory/pages/resolvestockexit", urlShade: "enterprise/inventory/pages/liststockexit", isVisible: false },
                 { permission: "AT000013", label: "Cargas masivas", url: "enterprise/bulkload/pages/listbulkload" },
+                { permission: "AT000013", label: "Ver carga masiva", url: "enterprise/bulkload/pages/viewbulkload", urlShade: "enterprise/bulkload/pages/listbulkload", isVisible: false },
                 { permission: "AT000014", label: "Nueva carga masiva", url: "enterprise/bulkload/pages/createbulkload", urlShade: "enterprise/bulkload/pages/listbulkload", isVisible: false }
             ]
         }),

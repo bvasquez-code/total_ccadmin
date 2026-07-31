@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import * as XLSX from 'xlsx';
+import { AlertService } from 'src/app/enterprise/shared/service/AlertService';
 import { BulkLoadConstants } from '../../model/BulkLoadConstants';
 import {
   BulkLoadDetail,
@@ -19,7 +20,10 @@ interface FormatDefinition {
   headers: string[];
   types: string[];
   labels: string[];
-  valueField: string;
+  valueField?: string;
+  templateFileName: string;
+  requiresDestinations: boolean;
+  useFirstSheet?: boolean;
 }
 
 @Component({
@@ -30,6 +34,9 @@ interface FormatDefinition {
 export class CreateBulkLoadComponent implements OnInit {
   readonly constants = BulkLoadConstants;
   type = BulkLoadConstants.TYPE_PRODUCT_PRICE;
+  typeLocked = false;
+  returnUrl = '/enterprise/bulkload/pages/listbulkload';
+  isEditMode = false;
   current: BulkLoadRegister | null = null;
   details: PageResponse<BulkLoadDetail> = this.emptyPage();
   localErrors: BulkLoadError[] = [];
@@ -37,23 +44,49 @@ export class CreateBulkLoadComponent implements OnInit {
   loading = false;
   loadingDetails = false;
   selectedFileName = '';
+  detailFilter = {
+    Query: '',
+    StoreCod: '',
+    ProcessStatus: ''
+  };
+  readonly detailStatusList = [
+    { Code: '', Name: 'Todos los estados' },
+    { Code: BulkLoadConstants.ERROR, Name: 'Sólo errores' },
+    { Code: BulkLoadConstants.PENDING, Name: 'Pendiente' },
+    { Code: BulkLoadConstants.WORKING, Name: 'Procesando' },
+    { Code: BulkLoadConstants.CONFIRMED, Name: 'Confirmado' },
+    { Code: BulkLoadConstants.CANCELLED, Name: 'Anulado' }
+  ];
   private sourceWorkbook: XLSX.WorkBook | null = null;
   private readonly storeSheet = 'LOCALES';
 
   constructor(
     private service: BulkLoadService,
     private toastr: ToastrService,
+    private alertService: AlertService,
     private route: ActivatedRoute,
     private router: Router
   ) {}
 
   ngOnInit(): void {
-    const code = this.route.snapshot.queryParamMap.get('code');
-    if (code) void this.loadExisting(code);
-  }
+    const routeType = this.route.snapshot.data['BulkLoadType'] as string | undefined;
+    const routeReturnUrl = this.route.snapshot.data['ReturnUrl'] as string | undefined;
+    if (routeType) {
+      this.type = routeType;
+      this.typeLocked = true;
+    }
+    if (routeReturnUrl) {
+      this.returnUrl = routeReturnUrl.startsWith('/')
+        ? routeReturnUrl : `/${routeReturnUrl}`;
+    }
 
-  get readOnly(): boolean {
-    return this.current !== null;
+    const bulkLoadCod = this.route.snapshot.queryParamMap.get('BulkLoadCod')
+      ?? this.route.snapshot.queryParamMap.get('code')
+      ?? '';
+    if (!bulkLoadCod) return;
+
+    this.isEditMode = true;
+    void this.loadExisting(bulkLoadCod);
   }
 
   get errors(): BulkLoadError[] {
@@ -65,7 +98,37 @@ export class CreateBulkLoadComponent implements OnInit {
       && (this.current.Head.NumErrorDetails ?? 0) === 0;
   }
 
+  get canCorrect(): boolean {
+    return this.current !== null
+      && this.isEditMode
+      && BulkLoadConstants.isCorrectableError(this.current.Head);
+  }
+
+  get canRetry(): boolean {
+    return this.current?.Head.ProcessStatus === BulkLoadConstants.ERROR
+      && !this.canCorrect;
+  }
+
   downloadTemplate(): void {
+    if (BulkLoadConstants.USE_LEGACY_GENERATED_TEMPLATES) {
+      this.downloadGeneratedTemplate();
+      return;
+    }
+
+    const fileName = this.templateFileName();
+    const link = document.createElement('a');
+    link.href = `${BulkLoadConstants.TEMPLATE_ASSET_PATH}/${fileName}`;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  private templateFileName(): string {
+    return this.definition().templateFileName;
+  }
+
+  private downloadGeneratedTemplate(): void {
     const definition = this.definition();
     const workbook = XLSX.utils.book_new();
     const productSheet = XLSX.utils.aoa_to_sheet([
@@ -74,18 +137,17 @@ export class CreateBulkLoadComponent implements OnInit {
       definition.labels
     ]);
     productSheet['!cols'] = [{ wch: 24 }, { wch: 24 }];
-    const stores = XLSX.utils.aoa_to_sheet([
-      ['StoreCod'],
-      ['TEXTO(4)'],
-      ['CODIGO DE TIENDA']
-    ]);
-    stores['!cols'] = [{ wch: 24 }];
     XLSX.utils.book_append_sheet(workbook, productSheet, definition.productSheet);
-    XLSX.utils.book_append_sheet(workbook, stores, this.storeSheet);
-    const fileName = this.type === BulkLoadConstants.TYPE_PRODUCT_PRICE
-      ? 'FORMATO_CARGA_DE_PRECIOS.xlsx'
-      : 'FORMATO_CARGA_DE_STOCK.xlsx';
-    XLSX.writeFile(workbook, fileName);
+    if (definition.requiresDestinations) {
+      const stores = XLSX.utils.aoa_to_sheet([
+        ['StoreCod'],
+        ['TEXTO(4)'],
+        ['CODIGO DE TIENDA']
+      ]);
+      stores['!cols'] = [{ wch: 24 }];
+      XLSX.utils.book_append_sheet(workbook, stores, this.storeSheet);
+    }
+    XLSX.writeFile(workbook, this.templateFileName());
   }
 
   async onFileSelected(event: Event): Promise<void> {
@@ -98,7 +160,10 @@ export class CreateBulkLoadComponent implements OnInit {
       return;
     }
 
-    this.resetResult();
+    const correctionCode = this.canCorrect
+      ? this.current?.Head.BulkLoadCod ?? ''
+      : '';
+    this.resetResult(Boolean(correctionCode));
     this.selectedFileName = file.name;
     this.loading = true;
     try {
@@ -112,7 +177,9 @@ export class CreateBulkLoadComponent implements OnInit {
         );
         return;
       }
-      const response = await this.service.saveParsed(request);
+      const response = correctionCode
+        ? await this.service.correctParsed(correctionCode, request)
+        : await this.service.saveParsed(request);
       if (response.ErrorStatus) {
         this.toastr.error(response.Message);
         return;
@@ -120,6 +187,7 @@ export class CreateBulkLoadComponent implements OnInit {
       this.current = response.Data as BulkLoadRegister;
       this.backendErrors = this.current.ErrorList ?? [];
       this.type = this.current.Head.BulkLoadType;
+      this.resetDetailFilterForCurrent();
       await this.loadDetails(1);
       if (this.backendErrors.length > 0) {
         this.toastr.warning(
@@ -141,8 +209,9 @@ export class CreateBulkLoadComponent implements OnInit {
     try {
       const response = await this.service.findDetails({
         BulkLoadCod: this.current.Head.BulkLoadCod,
-        StoreCod: '',
-        ProcessStatus: '',
+        Query: this.detailFilter.Query,
+        StoreCod: this.detailFilter.StoreCod,
+        ProcessStatus: this.detailFilter.ProcessStatus,
         Page: page
       });
       if (response.ErrorStatus) {
@@ -155,11 +224,28 @@ export class CreateBulkLoadComponent implements OnInit {
     }
   }
 
+  filterDetails(): void {
+    void this.loadDetails(1);
+  }
+
+  clearDetailFilters(): void {
+    this.detailFilter = {
+      Query: '',
+      StoreCod: '',
+      ProcessStatus: ''
+    };
+    void this.loadDetails(1);
+  }
+
   async confirm(): Promise<void> {
     if (!this.current || !this.canConfirm) return;
-    if (!window.confirm(
-      `Se procesarán ${this.current.Head.NumTotalDetails} registros en segundo plano. ¿Desea continuar?`
-    )) return;
+    const confirmation = await this.alertService.waring(
+      `Se procesarán ${this.current.Head.NumTotalDetails} registros en segundo plano. `
+        + 'Podrá revisar el avance desde la bandeja de cargas masivas.',
+      'Confirmar carga masiva'
+    );
+    if (!confirmation.isConfirmed) return;
+
     this.loading = true;
     try {
       const response = await this.service.confirm(this.current.Head.BulkLoadCod);
@@ -176,8 +262,13 @@ export class CreateBulkLoadComponent implements OnInit {
 
   async cancel(): Promise<void> {
     if (!this.current
-      || this.current.Head.ProcessStatus !== BulkLoadConstants.PENDING
-      || !window.confirm('¿Desea anular esta carga pendiente?')) return;
+      || this.current.Head.ProcessStatus !== BulkLoadConstants.PENDING) return;
+    const confirmation = await this.alertService.waring(
+      'La carga pendiente será anulada y ya no podrá enviarse a procesamiento.',
+      'Anular carga masiva'
+    );
+    if (!confirmation.isConfirmed) return;
+
     this.loading = true;
     try {
       const response = await this.service.cancel(this.current.Head.BulkLoadCod);
@@ -187,6 +278,30 @@ export class CreateBulkLoadComponent implements OnInit {
       }
       this.current = response.Data as BulkLoadRegister;
       this.toastr.success('Carga anulada');
+      await this.router.navigate(['/enterprise/bulkload/pages/listbulkload']);
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  async retry(): Promise<void> {
+    if (!this.current || !this.canRetry) return;
+    const confirmation = await this.alertService.waring(
+      'Se volverán a procesar únicamente los detalles pendientes. '
+        + 'Los bloques ya confirmados no se repetirán.',
+      'Reintentar carga masiva'
+    );
+    if (!confirmation.isConfirmed) return;
+
+    this.loading = true;
+    try {
+      const response = await this.service.retry(this.current.Head.BulkLoadCod);
+      if (response.ErrorStatus) {
+        this.toastr.error(response.Message);
+        return;
+      }
+      this.toastr.success('Reintento enviado a la cola de procesamiento');
+      await this.router.navigate(['/enterprise/bulkload/pages/listbulkload']);
     } finally {
       this.loading = false;
     }
@@ -239,18 +354,33 @@ export class CreateBulkLoadComponent implements OnInit {
       .join(' | ');
   }
 
-  private async loadExisting(code: string): Promise<void> {
+  private async loadExisting(bulkLoadCod: string): Promise<void> {
     this.loading = true;
     try {
-      const response = await this.service.findById(code);
+      const response = await this.service.findById(bulkLoadCod);
       if (response.ErrorStatus) {
         this.toastr.error(response.Message);
         await this.router.navigate(['/enterprise/bulkload/pages/listbulkload']);
         return;
       }
-      this.current = response.Data as BulkLoadRegister;
-      this.type = this.current.Head.BulkLoadType;
-      this.selectedFileName = this.current.Head.OriginalFileName;
+
+      const register = response.Data as BulkLoadRegister;
+      if (!BulkLoadConstants.isEditable(register.Head)) {
+        this.toastr.warning(
+          'Sólo se pueden editar cargas pendientes o con errores de validación'
+        );
+        await this.router.navigate(
+          ['/enterprise/bulkload/pages/viewbulkload'],
+          { queryParams: { BulkLoadCod: register.Head.BulkLoadCod } }
+        );
+        return;
+      }
+
+      this.current = register;
+      this.type = register.Head.BulkLoadType;
+      this.selectedFileName = register.Head.OriginalFileName;
+      this.backendErrors = register.ErrorList ?? [];
+      this.resetDetailFilterForCurrent();
       await this.loadDetails(1);
     } finally {
       this.loading = false;
@@ -262,31 +392,53 @@ export class CreateBulkLoadComponent implements OnInit {
     originalFileName: string
   ): BulkLoadParsedRequest | null {
     const definition = this.definition();
-    const productRows = this.readRequiredSheet(workbook, definition.productSheet);
-    const storeRows = this.readRequiredSheet(workbook, this.storeSheet);
-    if (productRows === null || storeRows === null) return null;
+    const sourceSheet = definition.useFirstSheet
+      ? workbook.SheetNames[0] ?? definition.productSheet
+      : definition.productSheet;
+    const productRows = this.readRequiredSheet(workbook, sourceSheet);
+    if (productRows === null) return null;
 
-    this.validateMetadata(
-      productRows, definition.productSheet,
-      definition.headers, definition.types, definition.labels
-    );
-    this.validateMetadata(
-      storeRows, this.storeSheet,
-      ['StoreCod'], ['TEXTO(4)'], ['CODIGO DE TIENDA']
-    );
-    if (this.localErrors.length > 0) return null;
-
-    const rows = this.parseProductRows(productRows, definition);
-    const stores = this.parseStoreRows(storeRows);
-    this.validateDuplicates(rows, stores);
-    this.validateStoreRules(stores);
-    if (rows.length === 0) {
-      this.addLocalError(definition.productSheet, 0, '', 'ProductCod', '',
-        'ROW_REQUIRED', 'Debe registrar al menos un producto');
+    let rows: BulkLoadSourceRow[];
+    if (definition.requiresDestinations) {
+      const storeRows = this.readRequiredSheet(workbook, this.storeSheet);
+      if (storeRows === null) return null;
+      this.validateMetadata(
+        productRows, sourceSheet,
+        definition.headers, definition.types, definition.labels
+      );
+      this.validateMetadata(
+        storeRows, this.storeSheet,
+        ['StoreCod'], ['TEXTO(4)'], ['CODIGO DE TIENDA']
+      );
+      if (this.localErrors.length > 0) return null;
+      rows = this.parseProductRows(productRows, definition);
+      const stores = this.parseStoreRows(storeRows);
+      this.validateDuplicates(rows, stores);
+      this.validateStoreRules(stores);
+      if (stores.length === 0) {
+        this.addLocalError(this.storeSheet, 0, '', 'StoreCod', '',
+          'STORE_REQUIRED', 'Debe registrar al menos un local');
+      }
+      if (rows.length === 0) {
+        this.addLocalError(sourceSheet, 0, '', 'ProductCod', '',
+          'ROW_REQUIRED', 'Debe registrar al menos un producto');
+      }
+      if (this.localErrors.length > 0) return null;
+      return {
+        BulkLoadType: this.type,
+        SchemaVersion: 1,
+        OriginalFileName: originalFileName,
+        RowList: rows,
+        StoreList: stores
+      };
     }
-    if (stores.length === 0) {
-      this.addLocalError(this.storeSheet, 0, '', 'StoreCod', '',
-        'STORE_REQUIRED', 'Debe registrar al menos un local');
+
+    this.validateFlexibleMetadata(productRows, sourceSheet, definition);
+    if (this.localErrors.length > 0) return null;
+    rows = this.parseGenericRows(productRows, sourceSheet, definition);
+    if (rows.length === 0) {
+      this.addLocalError(sourceSheet, 0, '', 'Row', '',
+        'ROW_REQUIRED', 'Debe registrar al menos una fila');
     }
     if (this.localErrors.length > 0) return null;
 
@@ -295,7 +447,7 @@ export class CreateBulkLoadComponent implements OnInit {
       SchemaVersion: 1,
       OriginalFileName: originalFileName,
       RowList: rows,
-      StoreList: stores
+      StoreList: []
     };
   }
 
@@ -338,6 +490,165 @@ export class CreateBulkLoadComponent implements OnInit {
     });
   }
 
+  private validateFlexibleMetadata(
+    rows: unknown[][],
+    sheetName: string,
+    definition: FormatDefinition
+  ): void {
+    if (rows.length < 3) {
+      this.addLocalError(sheetName, 0, '', '', '', 'FORMAT_METADATA',
+        'El formato debe contener las filas de columnas, tipos y etiquetas');
+      return;
+    }
+    const actualHeaders = (rows[0] ?? []).map(value => this.text(value));
+    const repeatedHeaders = actualHeaders.filter(
+      (header, index) => header !== '' && actualHeaders.indexOf(header) !== index
+    );
+    repeatedHeaders.forEach(header => this.addLocalError(
+      sheetName, 1, '', header, header, 'FORMAT_HEADER_DUPLICATED',
+      `La columna "${header}" está repetida`
+    ));
+
+    definition.headers.forEach(header => {
+      const columnIndex = actualHeaders.indexOf(header);
+      if (columnIndex < 0) {
+        this.addLocalError(sheetName, 1, '', header, '',
+          'FORMAT_HEADER_REQUIRED', `Falta la columna "${header}"`);
+        return;
+      }
+      const typeRule = this.text(rows[1]?.[columnIndex]).toUpperCase();
+      if (!/^TEXTO(?:\(\d+\))?$/.test(typeRule)
+        && !/^NUMERO(?:\(\d+(?:,\d+)?\))?$/.test(typeRule)) {
+        this.addLocalError(sheetName, 2, '', header, typeRule,
+          'FORMAT_TYPE_INVALID',
+          `El tipo de la columna "${header}" no está soportado`);
+      }
+      if (this.text(rows[2]?.[columnIndex]) === '') {
+        this.addLocalError(sheetName, 3, '', header, '',
+          'FORMAT_LABEL_REQUIRED',
+          `Falta la etiqueta de la columna "${header}"`);
+      }
+    });
+  }
+
+  private parseGenericRows(
+    rows: unknown[][],
+    sheetName: string,
+    definition: FormatDefinition
+  ): BulkLoadSourceRow[] {
+    const result: BulkLoadSourceRow[] = [];
+    const headers = (rows[0] ?? []).map(value => this.text(value));
+    const types = (rows[1] ?? []).map(value => this.text(value).toUpperCase());
+    const keyField = this.type === BulkLoadConstants.TYPE_BRAND_CREATE
+      ? 'BrandCod'
+      : this.type === BulkLoadConstants.TYPE_CATEGORY_CREATE
+        ? 'CategoryCod' : 'ProductCod';
+    const seenKeys = new Set<string>();
+
+    rows.slice(3).forEach((row, index) => {
+      const rowNumber = index + 4;
+      const hasData = definition.headers.some(header => {
+        const columnIndex = headers.indexOf(header);
+        return columnIndex >= 0 && this.text(row[columnIndex]) !== '';
+      });
+      if (!hasData) return;
+
+      const payload: Record<string, unknown> = {};
+      definition.headers.forEach(header => {
+        const columnIndex = headers.indexOf(header);
+        const rawValue = columnIndex < 0 ? '' : row[columnIndex];
+        const typeRule = columnIndex < 0 ? '' : types[columnIndex];
+        let parsedValue: unknown = this.text(rawValue);
+        const textMatch = typeRule.match(/^TEXTO(?:\((\d+)\))?$/);
+        const numberMatch = typeRule.match(/^NUMERO(?:\((\d+)(?:,(\d+))?\))?$/);
+
+        if (textMatch) {
+          const maxLength = Number(textMatch[1] ?? 0);
+          if (maxLength > 0 && this.text(rawValue).length > maxLength) {
+            this.addLocalError(
+              sheetName, rowNumber, '', header, this.text(rawValue),
+              'TEXT_LENGTH',
+              `${header} admite hasta ${maxLength} caracteres`
+            );
+          }
+        } else if (numberMatch) {
+          if (this.text(rawValue) === '') {
+            parsedValue = 0;
+          } else {
+            const numericValue = this.numeric(rawValue);
+            if (numericValue === null) {
+              this.addLocalError(
+                sheetName, rowNumber, '', header, this.text(rawValue),
+                'NUMBER_FORMAT', `${header} debe ser numérico`
+              );
+            } else {
+              parsedValue = numericValue;
+              const scale = Number(numberMatch[2] ?? 0);
+              if (numberMatch[2] && this.decimalPlaces(rawValue) > scale) {
+                this.addLocalError(
+                  sheetName, rowNumber, '', header, this.text(rawValue),
+                  'NUMBER_SCALE',
+                  `${header} admite hasta ${scale} decimales`
+                );
+              }
+            }
+          }
+        }
+        payload[header] = parsedValue;
+      });
+
+      this.validateGenericRequiredFields(payload, sheetName, rowNumber);
+      const businessKey = this.text(payload[keyField]);
+      const normalizedKey = businessKey.toUpperCase();
+      if (normalizedKey !== '' && seenKeys.has(normalizedKey)) {
+        this.addLocalError(
+          sheetName, rowNumber, '', keyField, businessKey,
+          'BUSINESS_KEY_DUPLICATED',
+          `El código "${businessKey}" está repetido en el archivo`
+        );
+      }
+      seenKeys.add(normalizedKey);
+      result.push({
+        RowNumber: rowNumber,
+        BusinessKey: businessKey,
+        Payload: payload,
+        ProductCod: keyField === 'ProductCod' ? businessKey : undefined
+      });
+    });
+    return result;
+  }
+
+  private validateGenericRequiredFields(
+    payload: Record<string, unknown>,
+    sheetName: string,
+    rowNumber: number
+  ): void {
+    const requiredFields = this.type === BulkLoadConstants.TYPE_PRODUCT_CREATE
+      ? ['ProductCod', 'ProductName', 'BrandCod', 'CategoryCod']
+      : this.type === BulkLoadConstants.TYPE_BRAND_CREATE
+        ? ['BrandCod', 'BrandName']
+        : ['CategoryCod', 'CategoryName'];
+    requiredFields.forEach(field => {
+      if (this.text(payload[field]) === '') {
+        this.addLocalError(
+          sheetName, rowNumber, '', field, '', 'FIELD_REQUIRED',
+          `${field} es obligatorio`
+        );
+      }
+    });
+    if (this.type === BulkLoadConstants.TYPE_CATEGORY_CREATE) {
+      ['IsDigital', 'IsCategoryDad'].forEach(field => {
+        const value = this.text(payload[field]).toUpperCase();
+        if (value !== '' && value !== 'S' && value !== 'N') {
+          this.addLocalError(
+            sheetName, rowNumber, '', field, value, 'FLAG_FORMAT',
+            `${field} solo admite S o N`
+          );
+        }
+      });
+    }
+  }
+
   private parseProductRows(
     rows: unknown[][],
     definition: FormatDefinition
@@ -360,24 +671,30 @@ export class CreateBulkLoadComponent implements OnInit {
       const numeric = this.numeric(rawValue);
       if (numeric === null) {
         this.addLocalError(definition.productSheet, rowNumber, '',
-          definition.valueField, this.text(rawValue), 'NUMBER_FORMAT',
+          definition.valueField ?? 'Value', this.text(rawValue), 'NUMBER_FORMAT',
           'El valor debe ser numérico');
       } else if (this.type === BulkLoadConstants.TYPE_PRODUCT_PRICE) {
         const decimalPlaces = this.decimalPlaces(rawValue);
         if (numeric <= 0 || numeric > 99999999999999.99 || decimalPlaces > 2) {
           this.addLocalError(definition.productSheet, rowNumber, '',
-            definition.valueField, this.text(rawValue), 'PRICE_FORMAT',
+            definition.valueField ?? 'Value', this.text(rawValue), 'PRICE_FORMAT',
             'El precio debe cumplir NUMERO(16,2) y ser mayor a cero');
         }
       } else if (!Number.isInteger(numeric) || numeric < 1 || numeric > 9999999) {
         this.addLocalError(definition.productSheet, rowNumber, '',
-          definition.valueField, this.text(rawValue), 'STOCK_FORMAT',
+          definition.valueField ?? 'Value', this.text(rawValue), 'STOCK_FORMAT',
           'La cantidad debe cumplir NUMERO(7): entero entre 1 y 9999999');
       }
       result.push({
         RowNumber: rowNumber,
         ProductCod: productCod,
-        Value: numeric === null ? this.text(rawValue) : String(numeric)
+        Value: numeric === null ? this.text(rawValue) : String(numeric),
+        BusinessKey: productCod,
+        Payload: {
+          ProductCod: productCod,
+          [definition.valueField ?? 'Value']:
+            numeric === null ? this.text(rawValue) : numeric
+        }
       });
     });
     return result;
@@ -405,12 +722,13 @@ export class CreateBulkLoadComponent implements OnInit {
   ): void {
     const products = new Set<string>();
     rows.forEach(row => {
-      if (products.has(row.ProductCod)) {
+      const productCod = row.ProductCod ?? '';
+      if (products.has(productCod)) {
         this.addLocalError(this.definition().productSheet, row.RowNumber, '',
-          'ProductCod', row.ProductCod, 'PRODUCT_DUPLICATED',
+          'ProductCod', productCod, 'PRODUCT_DUPLICATED',
           'El producto está repetido');
       }
-      products.add(row.ProductCod);
+      products.add(productCod);
     });
     const storeCodes = new Set<string>();
     stores.forEach(store => {
@@ -452,7 +770,60 @@ export class CreateBulkLoadComponent implements OnInit {
         headers: ['ProductCod', 'NumPhysicalStock'],
         types: ['TEXTO(20)', 'NUMERO(7)'],
         labels: ['CODIGO DE PRODUCTO', 'STOCK'],
-        valueField: 'NumPhysicalStock'
+        valueField: 'NumPhysicalStock',
+        templateFileName: 'FORMATO_CARGA_DE_STOCK.xlsx',
+        requiresDestinations: true
+      };
+    }
+    if (this.type === BulkLoadConstants.TYPE_PRODUCT_CREATE) {
+      return {
+        productSheet: 'PRODUCTOS',
+        headers: [
+          'ProductCod', 'ProductName', 'ProductDesc', 'BrandCod',
+          'CategoryCod', 'BarCode', 'NumPrice', 'NumMaxStock', 'NumMinStock'
+        ],
+        types: [
+          'TEXTO(20)', 'TEXTO(128)', 'TEXTO(256)', 'TEXTO(128)',
+          'TEXTO(128)', 'TEXTO(20)', 'NUMERO(16,2)', 'NUMERO', 'NUMERO'
+        ],
+        labels: [
+          'CÓDIGO', 'NOMBRE', 'DESCRIPCIÓN', 'MARCA',
+          'CATEGORÍA', 'CÓDIGO DE BARRAS', 'PRECIO',
+          'STOCK MÁXIMO', 'STOCK MÍNIMO'
+        ],
+        templateFileName: 'FORMATO_CARGA_PRODUCTOS.xlsx',
+        requiresDestinations: false,
+        useFirstSheet: true
+      };
+    }
+    if (this.type === BulkLoadConstants.TYPE_BRAND_CREATE) {
+      return {
+        productSheet: 'MARCAS',
+        headers: ['BrandCod', 'BrandName'],
+        types: ['TEXTO(15)', 'TEXTO(100)'],
+        labels: ['Código', 'Nombre'],
+        templateFileName: 'FORMATO_CARGA_MARCAS.xlsx',
+        requiresDestinations: false,
+        useFirstSheet: true
+      };
+    }
+    if (this.type === BulkLoadConstants.TYPE_CATEGORY_CREATE) {
+      return {
+        productSheet: 'CATEGORIAS',
+        headers: [
+          'CategoryCod', 'CategoryName', 'CategoryDadName',
+          'IsDigital', 'IsCategoryDad'
+        ],
+        types: [
+          'TEXTO(15)', 'TEXTO(150)', 'TEXTO(150)', 'TEXTO(1)', 'TEXTO(1)'
+        ],
+        labels: [
+          'Código', 'Nombre', 'Categoría Padre',
+          'Es Digital (S/N)', 'Es Categoría Padre (S/N)'
+        ],
+        templateFileName: 'FORMATO_CARGA_CATEGORIAS.xlsx',
+        requiresDestinations: false,
+        useFirstSheet: true
       };
     }
     return {
@@ -460,7 +831,9 @@ export class CreateBulkLoadComponent implements OnInit {
       headers: ['ProductCod', 'NumPrice'],
       types: ['TEXTO(20)', 'NUMERO(16,2)'],
       labels: ['CODIGO DE PRODUCTO', 'PRECIO DE PRODUCTO'],
-      valueField: 'NumPrice'
+      valueField: 'NumPrice',
+      templateFileName: 'FORMATO_CARGA_DE_PRECIOS.xlsx',
+      requiresDestinations: true
     };
   }
 
@@ -502,12 +875,30 @@ export class CreateBulkLoadComponent implements OnInit {
     });
   }
 
-  private resetResult(): void {
-    this.current = null;
-    this.details = this.emptyPage();
+  private resetResult(preserveCurrent: boolean = false): void {
+    if (!preserveCurrent) {
+      this.current = null;
+      this.details = this.emptyPage();
+      this.detailFilter = {
+        Query: '',
+        StoreCod: '',
+        ProcessStatus: ''
+      };
+    }
     this.localErrors = [];
     this.backendErrors = [];
     this.sourceWorkbook = null;
+  }
+
+  private resetDetailFilterForCurrent(): void {
+    this.detailFilter = {
+      Query: '',
+      StoreCod: '',
+      ProcessStatus: this.current
+        && BulkLoadConstants.isCorrectableError(this.current.Head)
+        ? BulkLoadConstants.ERROR
+        : ''
+    };
   }
 
   private text(value: unknown): string {

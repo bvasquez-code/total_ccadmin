@@ -10,14 +10,34 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface BulkLoadDetRepository extends JpaRepository<BulkLoadDetEntity, BulkLoadDetId> {
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = """
+        delete from bulk_load_det
+        where BulkLoadCod=:code
+        """, nativeQuery = true)
+    int deleteByCode(@Param("code") String code);
+
     @Query(value = """
         select count(1)
         from bulk_load_det
         where BulkLoadCod=:code and Status='A'
+          and (:query='' or BusinessKey like concat('%',:query,'%')
+               or json_unquote(json_extract(Payload, '$.ProductCod'))
+                    like concat('%',:query,'%')
+               or json_unquote(json_extract(Payload, '$.ProductName'))
+                    like concat('%',:query,'%')
+               or json_unquote(json_extract(Payload, '$.BrandName'))
+                    like concat('%',:query,'%')
+               or json_unquote(json_extract(Payload, '$.CategoryName'))
+                    like concat('%',:query,'%')
+               or cast(ItemNumber as char)=:query
+               or cast(SourceRowNumber as char)=:query
+               or cast(ErrorDetail as char) like concat('%',:query,'%'))
           and (:storeCod='' or StoreCod=:storeCod)
           and (:processStatus='' or ProcessStatus=:processStatus)
         """, nativeQuery = true)
     int countSearch(@Param("code") String code,
+                    @Param("query") String query,
                     @Param("storeCod") String storeCod,
                     @Param("processStatus") String processStatus);
 
@@ -25,12 +45,25 @@ public interface BulkLoadDetRepository extends JpaRepository<BulkLoadDetEntity, 
         select *
         from bulk_load_det
         where BulkLoadCod=:code and Status='A'
+          and (:query='' or BusinessKey like concat('%',:query,'%')
+               or json_unquote(json_extract(Payload, '$.ProductCod'))
+                    like concat('%',:query,'%')
+               or json_unquote(json_extract(Payload, '$.ProductName'))
+                    like concat('%',:query,'%')
+               or json_unquote(json_extract(Payload, '$.BrandName'))
+                    like concat('%',:query,'%')
+               or json_unquote(json_extract(Payload, '$.CategoryName'))
+                    like concat('%',:query,'%')
+               or cast(ItemNumber as char)=:query
+               or cast(SourceRowNumber as char)=:query
+               or cast(ErrorDetail as char) like concat('%',:query,'%'))
           and (:storeCod='' or StoreCod=:storeCod)
           and (:processStatus='' or ProcessStatus=:processStatus)
         order by ItemNumber
         limit :init,:limit
         """, nativeQuery = true)
     List<BulkLoadDetEntity> search(@Param("code") String code,
+                                   @Param("query") String query,
                                    @Param("storeCod") String storeCod,
                                    @Param("processStatus") String processStatus,
                                    @Param("init") int init,

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface BrandRepository extends JpaRepository<BrandEntity,String>, CcAdminRepository<BrandEntity,String> {
 
@@ -14,6 +15,18 @@ public interface BrandRepository extends JpaRepository<BrandEntity,String>, CcAd
             select * from brand b where b.Status = 'A'
             """,nativeQuery = true)
     public List<BrandEntity> findAllActive();
+
+    @Query(value = """
+            select *
+            from brand b
+            where b.Status = 'A'
+              and lower(trim(b.BrandName)) = lower(trim(:brandName))
+            order by b.BrandCod
+            limit 1
+            """, nativeQuery = true)
+    Optional<BrandEntity> findFirstActiveByName(
+            @Param("brandName") String brandName
+    );
 
     @Override
     @Query(value = """

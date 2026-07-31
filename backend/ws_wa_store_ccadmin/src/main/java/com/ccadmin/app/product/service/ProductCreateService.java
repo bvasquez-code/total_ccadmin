@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.ArrayList;
 
 @Service
 @Slf4j
@@ -144,7 +145,7 @@ public class ProductCreateService extends SessionService {
 
         for (var productRegister : productRegisterMassive.productList) {
             try {
-                productRegister.product.session(getUserCod()).validate();
+                productRegister.product.validate();
 
                 if (this.productRepository.existsById(productRegister.product.ProductCod)) {
                     registerMassiveExists.productList.add(productRegister);
@@ -157,45 +158,109 @@ public class ProductCreateService extends SessionService {
             }
         }
 
-        List<String> productCodList = registerMassiveOk.productList
-                .stream()
-                .map(productRegister -> productRegister.product.ProductCod)
-                .toList();
-
-        List<ProductEntity> productList = registerMassiveOk.productList
-                .stream()
-                .map(productRegister -> productRegister.product)
-                .toList();
-
-        List<ProductConfigEntity> configList = registerMassiveOk.productList
-                .stream()
-                .flatMap(productRegister -> {
-                    productRegister.config.session(getUserCod());
-                    productRegister.config.ProductCod = productRegister.product.ProductCod;
-                    this.productOperationConfigShared.normalize(productRegister.config);
-                    return this.buildConfigForAllStores(productRegister.config).stream();
-                })
-                .toList();
-
-        List<ProductVariantEntity> variantList = registerMassiveOk.productList
-                .stream()
-                .map(productRegister -> new ProductVariantEntity()
-                        .buildNew(productRegister.product.ProductCod)
-                        .session(getUserCod()))
-                .toList();
-
-        this.productRepository.saveAll(productList);
-        this.productConfigRepository.saveAll(configList);
-        configList.forEach(config -> this.productTaxConfigCreateService.ensureDefaultMainTax(config.ProductCod, config.StoreCod));
-        this.productVariantRepository.saveAll(variantList);
-        this.productInfoRepository.saveAllInfo(productCodList);
-        this.productInfoWarehouseRepository.saveAllInfo(productCodList);
-
-        generateSearchQueued(productCodList);
+        if (!registerMassiveOk.productList.isEmpty()) {
+            createBulk(registerMassiveOk, getUserCod(), true);
+        }
 
         rpt.AddResponseAdditional("registerMassiveFail", registerMassiveFail);
         rpt.AddResponseAdditional("registerMassiveExists", registerMassiveExists);
         return rpt;
+    }
+
+    /**
+     * Crea un bloque ya validado y genera product_search dentro del mismo
+     * procesamiento en segundo plano de BulkLoad.
+     */
+    @Transactional
+    public List<String> createBulk(ProductRegisterMassiveDto productRegisterMassive,
+                                   String userCod) {
+        return createBulk(productRegisterMassive, userCod, false);
+    }
+
+    private List<String> createBulk(
+            ProductRegisterMassiveDto productRegisterMassive,
+            String userCod,
+            boolean queueProductSearch
+    ) {
+        if (productRegisterMassive == null
+                || productRegisterMassive.productList == null
+                || productRegisterMassive.productList.isEmpty()) {
+            throw new IllegalArgumentException(
+                    "El bloque de productos no tiene detalles"
+            );
+        }
+        String auditUser = StringUtil.isBlank(userCod)
+                ? "SISTEMA" : userCod.trim();
+        List<ProductEntity> productList = new ArrayList<>();
+        List<ProductConfigEntity> configList = new ArrayList<>();
+        List<ProductVariantEntity> variantList = new ArrayList<>();
+        List<ProductBarcodeEntity> barcodeList = new ArrayList<>();
+        List<String> productCodList = new ArrayList<>();
+
+        for (ProductRegisterDto productRegister : productRegisterMassive.productList) {
+            if (productRegister == null || productRegister.product == null
+                    || productRegister.config == null) {
+                throw new IllegalArgumentException(
+                        "El detalle de producto esta incompleto"
+                );
+            }
+            productRegister.product.session(auditUser).validate();
+            String productCod = productRegister.product.ProductCod;
+            if (productRepository.existsById(productCod)) {
+                throw new ProductBuildException(
+                        "Codigo de producto ya existe: " + productCod
+                );
+            }
+
+            productRegister.config.ProductCod = productCod;
+            productRegister.config.session(auditUser);
+            productOperationConfigShared.normalize(productRegister.config);
+            productList.add(productRegister.product);
+            configList.addAll(buildConfigForAllStores(
+                    productRegister.config, auditUser
+            ));
+            variantList.add(new ProductVariantEntity()
+                    .buildNew(productCod)
+                    .session(auditUser));
+            productCodList.add(productCod);
+
+            ProductBarcodeEntity barcode = productRegister.productBarcode;
+            if (barcode != null && !StringUtil.isBlank(barcode.BarCode)) {
+                Optional<ProductBarcodeEntity> existingBarcode =
+                        productBarcodeRepository.findById(barcode.BarCode);
+                if (existingBarcode.isPresent()) {
+                    throw new ProductBuildException(
+                            "Codigo de barras ya registrado: " + barcode.BarCode
+                    );
+                }
+                barcode.ProductCod = productCod;
+                barcode.addSessionCreate(auditUser);
+                barcodeList.add(barcode);
+            }
+        }
+
+        productRepository.saveAll(productList);
+        productConfigRepository.saveAll(configList);
+        configList.forEach(config ->
+                productTaxConfigCreateService.ensureDefaultMainTax(
+                        config.ProductCod, config.StoreCod
+                )
+        );
+        productVariantRepository.saveAll(variantList);
+        productInfoRepository.saveAllInfo(productCodList);
+        productInfoWarehouseRepository.saveAllInfo(productCodList);
+        if (!barcodeList.isEmpty()) {
+            productBarcodeRepository.saveAll(barcodeList);
+        }
+
+        if (queueProductSearch) {
+            generateSearchQueued(productCodList);
+        } else {
+            productCodList.forEach(productCod ->
+                    productFindCreateService.generateSearch(productCod, auditUser)
+            );
+        }
+        return productCodList;
     }
 
     @Transactional
@@ -218,13 +283,30 @@ public class ProductCreateService extends SessionService {
     }
 
     private List<ProductConfigEntity> buildConfigForAllStores(ProductConfigEntity source) {
+        return buildConfigForAllStores(source, getUserCod());
+    }
+
+    private List<ProductConfigEntity> buildConfigForAllStores(
+            ProductConfigEntity source,
+            String userCod
+    ) {
         return this.storeShared.findAll()
                 .stream()
-                .map(store -> this.buildConfigForStore(source, store.StoreCod))
+                .map(store -> this.buildConfigForStore(
+                        source, store.StoreCod, userCod
+                ))
                 .toList();
     }
 
     private ProductConfigEntity buildConfigForStore(ProductConfigEntity source, String storeCod) {
+        return buildConfigForStore(source, storeCod, getUserCod());
+    }
+
+    private ProductConfigEntity buildConfigForStore(
+            ProductConfigEntity source,
+            String storeCod,
+            String userCod
+    ) {
         ProductConfigEntity config = new ProductConfigEntity();
         config.ProductCod = source.ProductCod;
         config.StoreCod = storeCod;
@@ -237,7 +319,7 @@ public class ProductCreateService extends SessionService {
         config.ProductUnitName = source.ProductUnitName;
         config.ProductUnitFactor = source.ProductUnitFactor;
         config.Version = source.Version;
-        config.session(getUserCod());
+        config.session(userCod);
         this.productOperationConfigShared.normalize(config);
         return config;
     }

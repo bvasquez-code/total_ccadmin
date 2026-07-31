@@ -64,9 +64,6 @@ import { ReceivetransferComponent } from './enterprise/transfer/pages/receivetra
 import { ListtransferdispatchComponent } from './enterprise/transfer/pages/listtransferdispatch/listtransferdispatch.component';
 import { DispatchtransferComponent } from './enterprise/transfer/pages/dispatchtransfer/dispatchtransfer.component';
 import { DirecttransferComponent } from './enterprise/transfer/pages/directtransfer/directtransfer.component';
-import { CreateproductmassiveComponent } from './enterprise/product/pages/createproductmassive/createproductmassive.component';
-import { CreatecategorymassiveComponent } from './enterprise/product/pages/createcategorymassive/createcategorymassive.component';
-import { CreatebrandmassiveComponent } from './enterprise/product/pages/createbrandmassive/createbrandmassive.component';
 import { ViewpucharseComponent } from './enterprise/pucharse/pages/viewpucharse/viewpucharse.component';
 import { ListstoreComponent } from './enterprise/store/pages/liststore/liststore.component';
 import { CreatestoreComponent } from './enterprise/store/pages/createstore/createstore.component';
@@ -86,6 +83,7 @@ import { ViewStockExitComponent } from './enterprise/inventory/pages/viewstockex
 import { ResolveStockExitComponent } from './enterprise/inventory/pages/resolvestockexit/resolvestockexit.component';
 import { ListBulkLoadComponent } from './enterprise/bulkload/pages/listbulkload/listbulkload.component';
 import { CreateBulkLoadComponent } from './enterprise/bulkload/pages/createbulkload/createbulkload.component';
+import { ViewBulkLoadComponent } from './enterprise/bulkload/pages/viewbulkload/viewbulkload.component';
 
 const routes: Routes = [
   {
@@ -165,7 +163,8 @@ const routes: Routes = [
       { path: 'enterprise/inventory/pages/viewstockexit', component: ViewStockExitComponent },
       { path: 'enterprise/inventory/pages/resolvestockexit', component: ResolveStockExitComponent },
       { path: 'enterprise/bulkload/pages/listbulkload', component: ListBulkLoadComponent },
-      { path: 'enterprise/bulkload/pages/createbulkload', component: CreateBulkLoadComponent }
+      { path: 'enterprise/bulkload/pages/createbulkload', component: CreateBulkLoadComponent },
+      { path: 'enterprise/bulkload/pages/viewbulkload', component: ViewBulkLoadComponent }
     ]
   },
   {
@@ -290,15 +289,27 @@ const routes: Routes = [
       },
       {
         path: 'enterprise/product/pages/createproductmassive',
-        component: CreateproductmassiveComponent
+        component: CreateBulkLoadComponent,
+        data: {
+          BulkLoadType: 'PRODUCT_CREATE',
+          ReturnUrl: 'enterprise/product/pages/listProduct'
+        }
       },
       {
         path: 'enterprise/product/pages/createcategorymassive',
-        component: CreatecategorymassiveComponent
+        component: CreateBulkLoadComponent,
+        data: {
+          BulkLoadType: 'CATEGORY_CREATE',
+          ReturnUrl: 'enterprise/product/pages/listCategory'
+        }
       },
       {
         path: 'enterprise/product/pages/createbrandmassive',
-        component: CreatebrandmassiveComponent
+        component: CreateBulkLoadComponent,
+        data: {
+          BulkLoadType: 'BRAND_CREATE',
+          ReturnUrl: 'enterprise/product/pages/listBrand'
+        }
       }
     ]
   },

@@ -26,11 +26,25 @@ export class BulkLoadService {
     return this.apiService.ExecutePostService(`${this.baseUrl}/saveParsed`, request);
   }
 
+  correctParsed(
+    code: string,
+    request: BulkLoadParsedRequest
+  ): Promise<ResponseWsDto> {
+    return this.apiService.ExecutePostService(`${this.baseUrl}/correctParsed`, {
+      ...request,
+      BulkLoadCod: code
+    });
+  }
+
   confirm(code: string): Promise<ResponseWsDto> {
     return this.apiService.ExecutePostService(`${this.baseUrl}/confirm`, { Code: code });
   }
 
   cancel(code: string): Promise<ResponseWsDto> {
     return this.apiService.ExecutePostService(`${this.baseUrl}/cancel`, { Code: code });
+  }
+
+  retry(code: string): Promise<ResponseWsDto> {
+    return this.apiService.ExecutePostService(`${this.baseUrl}/retry`, { Code: code });
   }
 }

@@ -3,10 +3,10 @@ package com.ccadmin.app.bulkload.service;
 import com.ccadmin.app.bulkload.model.dto.BulkLoadParsedRequestDto;
 import com.ccadmin.app.bulkload.model.dto.BulkLoadPreparedDto;
 import com.ccadmin.app.bulkload.model.dto.BulkLoadRegisterDto;
+import com.ccadmin.app.bulkload.model.dto.BulkLoadCorrectionRequestDto;
 import com.ccadmin.app.bulkload.model.constants.BulkLoadConstants;
 import com.ccadmin.app.bulkload.repository.BulkLoadHeadRepository;
-import com.ccadmin.app.inventory.service.StockEntryCreateService;
-import com.ccadmin.app.product.service.ProductConfigCreateService;
+import com.ccadmin.app.bulkload.service.handler.BulkLoadTypeHandlerRegistry;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -20,30 +20,19 @@ import java.util.Locale;
 public class BulkLoadCreateService {
     private final BulkLoadHeadRepository headRepository;
     private final BulkLoadPersistenceService persistenceService;
-    private final ProductConfigCreateService productConfigCreateService;
-    private final StockEntryCreateService stockEntryCreateService;
+    private final BulkLoadTypeHandlerRegistry handlerRegistry;
 
     public BulkLoadCreateService(BulkLoadHeadRepository headRepository,
                                  BulkLoadPersistenceService persistenceService,
-                                 ProductConfigCreateService productConfigCreateService,
-                                 StockEntryCreateService stockEntryCreateService) {
+                                 BulkLoadTypeHandlerRegistry handlerRegistry) {
         this.headRepository = headRepository;
         this.persistenceService = persistenceService;
-        this.productConfigCreateService = productConfigCreateService;
-        this.stockEntryCreateService = stockEntryCreateService;
+        this.handlerRegistry = handlerRegistry;
     }
 
     public BulkLoadRegisterDto saveParsed(BulkLoadParsedRequestDto request) {
         normalizeRequest(request);
-        BulkLoadPreparedDto prepared = switch (request.BulkLoadType) {
-            case BulkLoadConstants.TYPE_PRODUCT_PRICE ->
-                    productConfigCreateService.prepareBulkPriceLoad(request);
-            case BulkLoadConstants.TYPE_STOCK_ENTRY ->
-                    stockEntryCreateService.prepareBulkStockLoad(request);
-            default -> throw new IllegalArgumentException(
-                    "Tipo de carga no soportado: " + request.BulkLoadType
-            );
-        };
+        BulkLoadPreparedDto prepared = prepare(request);
         String code = headRepository.createCode();
         if (code == null || code.isBlank()) {
             throw new IllegalStateException(
@@ -51,6 +40,23 @@ public class BulkLoadCreateService {
             );
         }
         return persistenceService.savePrepared(code, request, prepared);
+    }
+
+    public BulkLoadRegisterDto correctParsed(BulkLoadCorrectionRequestDto request) {
+        if (request == null || request.BulkLoadCod == null
+                || request.BulkLoadCod.isBlank()) {
+            throw new IllegalArgumentException("Codigo de carga masiva requerido");
+        }
+        normalizeRequest(request);
+        BulkLoadPreparedDto prepared = prepare(request);
+        return persistenceService.replacePrepared(
+                request.BulkLoadCod.trim(), request, prepared
+        );
+    }
+
+    private BulkLoadPreparedDto prepare(BulkLoadParsedRequestDto request) {
+        return handlerRegistry.getRequired(request.BulkLoadType)
+                .prepare(request);
     }
 
     private void normalizeRequest(BulkLoadParsedRequestDto request) {

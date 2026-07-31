@@ -2,147 +2,94 @@
   <div class="page-content container container-plus">
     <div class="card-header">
       <h3 class="card-title text-125 text-primary-d2">
-        <i class="fa fa-layer-group text-dark-l3 mr-1"></i>
+        <i class="far fa-edit text-dark-l3 mr-1"></i>
         Cargas masivas
       </h3>
     </div>
 
-    <div class="card dcard">
-      <div class="card-body px-2 px-md-3">
-        <div class="d-flex justify-content-between flex-column flex-sm-row mb-3">
-          <a class="btn px-4 btn-primary mb-2"
-             href="enterprise/bulkload/pages/createbulkload">
-            <i class="fa fa-plus mr-1"></i>Nueva carga
-          </a>
-          <button class="btn px-4 btn-light-secondary mb-2"
-                  type="button" [disabled]="loading"
-                  (click)="findAll(filter.Page)">
-            <i class="fa fa-sync-alt mr-1"></i>Refrescar progreso
-          </button>
-        </div>
-
-        <div class="row mb-3">
-          <div class="col-md-3 mb-2">
-            <input class="form-control" type="text"
-                   placeholder="Código, archivo o usuario"
-                   [(ngModel)]="filter.Query"
-                   (keyup.enter)="findAll(1)">
-          </div>
-          <div class="col-md-2 mb-2">
-            <select class="form-control" [(ngModel)]="filter.BulkLoadType">
-              <option value="">Todos los tipos</option>
-              <option value="PRODUCT_PRICE">Precios</option>
-              <option value="STOCK_ENTRY">Stock</option>
-            </select>
-          </div>
-          <div class="col-md-3 mb-2">
-            <select class="form-control" [(ngModel)]="filter.ProcessStatus">
-              <option value="">Todos los estados</option>
-              <option value="P">Pendiente de confirmación</option>
-              <option value="Q">En cola</option>
-              <option value="W">Procesando</option>
-              <option value="F">Finalizado</option>
-              <option value="E">Error</option>
-              <option value="X">Anulado</option>
-            </select>
-          </div>
-          <div class="col-md-2 mb-2">
-            <input class="form-control" type="date" [(ngModel)]="filter.DateStart">
-          </div>
-          <div class="col-md-2 mb-2">
-            <input class="form-control" type="date" [(ngModel)]="filter.DateEnd">
-          </div>
-        </div>
-        <button class="btn px-4 btn-primary mb-3" type="button"
-                [disabled]="loading" (click)="findAll(1)">
-          Buscar
-        </button>
-
-        <div class="table-responsive">
-          <table class="table table-bordered table-hover table-sm">
-            <thead class="bg-light">
-              <tr>
-                <th>Código</th>
-                <th>Tipo</th>
-                <th>Archivo</th>
-                <th class="text-center">Locales</th>
-                <th class="text-center">Total</th>
-                <th class="text-center">Correctos</th>
-                <th class="text-center">Errores</th>
-                <th class="progress-column">Progreso</th>
-                <th>Estado</th>
-                <th>Creación</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let item of response.resultSearch">
-                <td>{{item.BulkLoadCod}}</td>
-                <td>{{constants.typeDescription(item.BulkLoadType)}}</td>
-                <td>{{item.OriginalFileName || '-'}}</td>
-                <td class="text-center">{{item.NumDestinations}}</td>
-                <td class="text-center">{{item.NumTotalDetails}}</td>
-                <td class="text-center text-success">{{item.NumSuccessDetails}}</td>
-                <td class="text-center text-danger">{{item.NumErrorDetails}}</td>
-                <td>
-                  <div class="progress progress-sm">
-                    <div class="progress-bar"
-                         role="progressbar"
-                         [style.width.%]="progress(item.ProgressPercent)"
-                         [attr.aria-valuenow]="progress(item.ProgressPercent)"
-                         aria-valuemin="0" aria-valuemax="100">
-                    </div>
-                  </div>
-                  <small>{{progress(item.ProgressPercent) | number:'1.0-2'}}%
-                    ({{item.NumProcessedDetails}}/{{item.NumTotalDetails}})
-                  </small>
-                </td>
-                <td>
-                  <span class="badge"
-                        [ngClass]="constants.statusClass(item.ProcessStatus)">
-                    {{constants.statusDescription(item.ProcessStatus, item.NumErrorDetails)}}
-                  </span>
-                </td>
-                <td>
-                  {{item.CreationDate | date:'dd/MM/yyyy HH:mm'}}
-                  <small class="d-block text-muted">{{item.CreationUser}}</small>
-                </td>
-                <td>
-                  <a class="btn btn-sm btn-light-primary"
-                     [href]="'enterprise/bulkload/pages/createbulkload?code=' + item.BulkLoadCod"
-                     title="Ver carga">
-                    <i class="fa fa-eye"></i>
+    <div class="row">
+      <div class="col-12">
+        <div class="card dcard">
+          <div class="card-body px-1 px-md-3">
+            <div autocomplete="off">
+              <div class="d-flex justify-content-between flex-column flex-sm-row mb-3 px-2 px-sm-0">
+                <div class="mb-2 mb-sm-0">
+                  <a class="btn px-4 btn-primary mb-1"
+                    href="enterprise/bulkload/pages/createbulkload">
+                    Nueva carga
                   </a>
-                </td>
-              </tr>
-              <tr *ngIf="!loading && response.resultSearch.length === 0">
-                <td colspan="11" class="text-center text-muted py-4">
-                  No se encontraron cargas masivas.
-                </td>
-              </tr>
-              <tr *ngIf="loading">
-                <td colspan="11" class="text-center py-4">
-                  <i class="fa fa-spinner fa-spin mr-1"></i>Cargando...
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+                </div>
+                <div>
+                  <button class="btn px-4 btn-light-secondary mb-1"
+                    type="button"
+                    [disabled]="loading"
+                    (click)="findAll(search.Page)">
+                    <i class="fa fa-sync-alt mr-1"
+                      [ngClass]="loading ? 'fa-spin' : ''"></i>
+                    Refrescar progreso
+                  </button>
+                </div>
+              </div>
 
-        <nav *ngIf="response.TotalPages > 1" aria-label="Paginación">
-          <ul class="pagination pagination-sm justify-content-end">
-            <li class="page-item" [class.disabled]="response.Page <= 1">
-              <button class="page-link" (click)="findAll(response.Page - 1)">Anterior</button>
-            </li>
-            <li class="page-item" *ngFor="let page of pages()"
-                [class.active]="page === response.Page">
-              <button class="page-link" (click)="findAll(page)">{{page}}</button>
-            </li>
-            <li class="page-item" [class.disabled]="response.Page >= response.TotalPages">
-              <button class="page-link" (click)="findAll(response.Page + 1)">Siguiente</button>
-            </li>
-          </ul>
-        </nav>
+              <div class="row mb-3">
+                <div class="col-md-3 mb-2">
+                  <input class="form-control"
+                    type="text"
+                    placeholder="Código, archivo o usuario"
+                    [(ngModel)]="search.Query"
+                    (keyup.enter)="findAll(1)">
+                </div>
+                <div class="col-md-2 mb-2">
+                  <select class="form-control" [(ngModel)]="search.BulkLoadType">
+                    <option value="">Todos los tipos</option>
+                    <option value="PRODUCT_PRICE">Precios</option>
+                    <option value="STOCK_ENTRY">Stock</option>
+                    <option value="PRODUCT_CREATE">Creación de productos</option>
+                    <option value="BRAND_CREATE">Creación de marcas</option>
+                    <option value="CATEGORY_CREATE">Creación de categorías</option>
+                  </select>
+                </div>
+                <div class="col-md-3 mb-2">
+                  <select class="form-control" [(ngModel)]="search.ProcessStatus">
+                    <option value="">Todos los estados</option>
+                    <option value="P">Pendiente de confirmación</option>
+                    <option value="Q">En cola</option>
+                    <option value="W">Procesando</option>
+                    <option value="F">Finalizado</option>
+                    <option value="E">Error</option>
+                    <option value="X">Anulado</option>
+                  </select>
+                </div>
+                <div class="col-md-2 mb-2">
+                  <input class="form-control"
+                    type="date"
+                    title="Fecha inicial"
+                    [(ngModel)]="search.DateStart">
+                </div>
+                <div class="col-md-2 mb-2">
+                  <input class="form-control"
+                    type="date"
+                    title="Fecha final"
+                    [(ngModel)]="search.DateEnd">
+                </div>
+              </div>
+
+              <div class="mb-3">
+                <button class="btn px-4 btn-primary"
+                  type="button"
+                  [disabled]="loading"
+                  (click)="findAll(1)">
+                  Buscar
+                </button>
+              </div>
+
+              <app-table
+                [data]="dataTablaGenetic"
+                [action]="this">
+              </app-table>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

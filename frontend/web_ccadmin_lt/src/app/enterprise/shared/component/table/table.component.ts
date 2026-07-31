@@ -179,6 +179,29 @@ export class TableComponent<T> implements OnInit{
     return "";
   }
 
+  public getProgressValue(
+    item: any,
+    key: string,
+    FunctionKey?: (...args: any[]) => any
+  ): number {
+    const value = Number(this.getValue(item, key, FunctionKey));
+    if (!Number.isFinite(value)) return 0;
+    return Math.min(100, Math.max(0, value));
+  }
+
+  public getProgressText(Headers: HeaderTableGenericDto, item: any): string {
+    if (Headers.ProgressTextFunction) {
+      return Headers.ProgressTextFunction(item);
+    }
+    return `${this.getProgressValue(item, Headers.key ?? '', Headers.FunctionKey)}%`;
+  }
+
+  public getProgressClass(Headers: HeaderTableGenericDto, item: any): string {
+    return Headers.ProgressClassFunction
+      ? Headers.ProgressClassFunction(item)
+      : 'bgc-primary';
+  }
+
   generateUrl(optionTableGeneric? : OptionTableGenericDto, item? : any, Headers? :HeaderTableGenericDto):string | any
   {
 

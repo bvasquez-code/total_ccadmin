@@ -58,11 +58,14 @@ public class BulkLoadSearchService {
             throw new IllegalArgumentException("No existe la carga masiva");
         }
         int page = Math.max(1, request.Page);
+        String query = clean(request.Query);
         String storeCod = clean(request.StoreCod);
         String processStatus = clean(request.ProcessStatus);
-        int total = detRepository.countSearch(request.BulkLoadCod, storeCod, processStatus);
+        int total = detRepository.countSearch(
+                request.BulkLoadCod, query, storeCod, processStatus
+        );
         List<BulkLoadDetEntity> result = detRepository.search(
-                request.BulkLoadCod, storeCod, processStatus,
+                request.BulkLoadCod, query, storeCod, processStatus,
                 (page - 1) * BulkLoadConstants.DETAIL_PAGE_SIZE,
                 BulkLoadConstants.DETAIL_PAGE_SIZE
         );

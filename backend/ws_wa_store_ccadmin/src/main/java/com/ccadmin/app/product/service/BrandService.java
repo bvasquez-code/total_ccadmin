@@ -19,6 +19,8 @@ public class BrandService extends SessionService {
 
     @Autowired
     private BrandRepository brandRepository;
+    @Autowired
+    private BrandCreateService brandCreateService;
     private SearchService searchService;
 
     public BrandEntity findById(String brandCod) {
@@ -57,8 +59,6 @@ public class BrandService extends SessionService {
 
         for (BrandEntity brand : brandRegisterMassive.brandList) {
             try {
-                brand.addSession(getUserCod(), !this.brandRepository.existsById(brand.BrandCod));
-
                 if (this.brandRepository.existsById(brand.BrandCod)) {
                     registerMassiveExists.brandList.add(brand);
                 } else {
@@ -70,7 +70,11 @@ public class BrandService extends SessionService {
             }
         }
 
-        this.brandRepository.saveAll(registerMassiveOk.brandList);
+        if (!registerMassiveOk.brandList.isEmpty()) {
+            this.brandCreateService.createBulk(
+                    registerMassiveOk.brandList, getUserCod()
+            );
+        }
 
         rpt.AddResponseAdditional("registerMassiveFail", registerMassiveFail);
         rpt.AddResponseAdditional("registerMassiveExists", registerMassiveExists);

@@ -3,6 +3,7 @@ package com.ccadmin.app.bulkload.repository;
 import com.ccadmin.app.bulkload.model.entity.BulkLoadDestinationEntity;
 import com.ccadmin.app.bulkload.model.entity.id.BulkLoadDestinationId;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -18,4 +19,11 @@ public interface BulkLoadDestinationRepository
         order by StoreCod
         """, nativeQuery = true)
     List<BulkLoadDestinationEntity> findByCode(@Param("code") String code);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = """
+        delete from bulk_load_destination
+        where BulkLoadCod=:code
+        """, nativeQuery = true)
+    int deleteByCode(@Param("code") String code);
 }

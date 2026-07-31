@@ -7,40 +7,31 @@ import com.ccadmin.app.bulkload.model.entity.BulkLoadHeadEntity;
 import com.ccadmin.app.bulkload.repository.BulkLoadDestinationRepository;
 import com.ccadmin.app.bulkload.repository.BulkLoadDetRepository;
 import com.ccadmin.app.bulkload.repository.BulkLoadHeadRepository;
-import com.ccadmin.app.inventory.model.dto.StockEntryBulkCreateDto;
-import com.ccadmin.app.inventory.model.dto.StockEntryBulkLineDto;
-import com.ccadmin.app.inventory.model.dto.StockEntryBulkResultDto;
-import com.ccadmin.app.inventory.service.StockEntryCreateService;
-import com.ccadmin.app.product.model.dto.ProductConfigBulkPriceLineDto;
-import com.ccadmin.app.product.model.dto.ProductConfigBulkPriceResultDto;
-import com.ccadmin.app.product.model.dto.ProductConfigBulkPriceUpdateDto;
-import com.ccadmin.app.product.service.ProductConfigCreateService;
+import com.ccadmin.app.bulkload.service.handler.BulkLoadTypeHandlerRegistry;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.*;
+import java.util.Date;
+import java.util.List;
 
 @Service
 public class BulkLoadChunkService {
     private final BulkLoadHeadRepository headRepository;
     private final BulkLoadDestinationRepository destinationRepository;
-    private final BulkLoadDetRepository detRepository;
-    private final ProductConfigCreateService productConfigCreateService;
-    private final StockEntryCreateService stockEntryCreateService;
+    private final BulkLoadDetRepository bulkLoadDetRepository;
+    private final BulkLoadTypeHandlerRegistry handlerRegistry;
 
     public BulkLoadChunkService(BulkLoadHeadRepository headRepository,
                                 BulkLoadDestinationRepository destinationRepository,
-                                BulkLoadDetRepository detRepository,
-                                ProductConfigCreateService productConfigCreateService,
-                                StockEntryCreateService stockEntryCreateService) {
+                                BulkLoadDetRepository bulkLoadDetRepository,
+                                BulkLoadTypeHandlerRegistry handlerRegistry) {
         this.headRepository = headRepository;
         this.destinationRepository = destinationRepository;
-        this.detRepository = detRepository;
-        this.productConfigCreateService = productConfigCreateService;
-        this.stockEntryCreateService = stockEntryCreateService;
+        this.bulkLoadDetRepository = bulkLoadDetRepository;
+        this.handlerRegistry = handlerRegistry;
     }
 
     /**
@@ -49,12 +40,9 @@ public class BulkLoadChunkService {
      */
     public String prepareNextChunk(String code) {
         BulkLoadHeadEntity head = headRepository.findById(code).orElse(null);
-        if (head == null || !BulkLoadConstants.TYPE_STOCK_ENTRY.equals(head.BulkLoadType)) {
-            return null;
-        }
-        String storeCod = detRepository.findNextPendingStore(code);
-        return storeCod == null || storeCod.isBlank()
-                ? null : stockEntryCreateService.createCode(storeCod);
+        return head == null ? null : handlerRegistry
+                .getRequired(head.BulkLoadType)
+                .prepareResource(code);
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
@@ -70,6 +58,9 @@ public class BulkLoadChunkService {
         head.addSessionModify(processUser(head));
         headRepository.save(head);
         for (BulkLoadDestinationEntity destination : destinationRepository.findByCode(code)) {
+            if (BulkLoadConstants.FINALIZED.equals(destination.ProcessStatus)) {
+                continue;
+            }
             destination.ProcessStatus = BulkLoadConstants.WORKING;
             destination.StartDate = destination.StartDate == null ? now : destination.StartDate;
             destination.StatusMessage = "Procesando";
@@ -83,7 +74,7 @@ public class BulkLoadChunkService {
     public int processNextChunk(String code, String stockEntryCod) {
         BulkLoadHeadEntity head = headRepository.findForUpdate(code);
         if (head == null || !BulkLoadConstants.WORKING.equals(head.ProcessStatus)) return 0;
-        List<BulkLoadDetEntity> detailList = detRepository.findNextPendingForUpdate(code);
+        List<BulkLoadDetEntity> detailList = bulkLoadDetRepository.findNextPendingForUpdate(code);
         if (detailList.isEmpty()) return 0;
         String userCod = processUser(head);
         Date now = new Date();
@@ -93,20 +84,11 @@ public class BulkLoadChunkService {
             detail.AttemptCount = value(detail.AttemptCount) + 1;
             detail.addSessionModify(userCod);
         });
-        detRepository.saveAll(detailList);
+        bulkLoadDetRepository.saveAll(detailList);
 
-        if (BulkLoadConstants.TYPE_PRODUCT_PRICE.equals(head.BulkLoadType)) {
-            processPrice(detailList, userCod);
-        } else if (BulkLoadConstants.TYPE_STOCK_ENTRY.equals(head.BulkLoadType)) {
-            if (stockEntryCod == null || stockEntryCod.isBlank()) {
-                throw new IllegalStateException(
-                        "No se genero el codigo de entrada para el bloque de stock"
-                );
-            }
-            processStock(head, detailList, userCod, stockEntryCod);
-        } else {
-            throw new IllegalStateException("Tipo de carga no soportado");
-        }
+        handlerRegistry.getRequired(head.BulkLoadType).execute(
+                head, detailList, userCod, stockEntryCod
+        );
 
         Date end = new Date();
         detailList.forEach(detail -> {
@@ -114,74 +96,10 @@ public class BulkLoadChunkService {
             detail.EndDate = end;
             detail.addSessionModify(userCod);
         });
-        detRepository.saveAll(detailList);
-        detRepository.flush();
+        bulkLoadDetRepository.saveAll(detailList);
+        bulkLoadDetRepository.flush();
         updateCounters(head, userCod, false);
         return detailList.size();
-    }
-
-    private void processPrice(List<BulkLoadDetEntity> detailList, String userCod) {
-        ProductConfigBulkPriceUpdateDto request = new ProductConfigBulkPriceUpdateDto();
-        for (BulkLoadDetEntity detail : detailList) {
-            ProductConfigBulkPriceLineDto line = new ProductConfigBulkPriceLineDto();
-            line.ReferenceItemNumber = detail.ItemNumber;
-            line.ProductCod = text(detail.Payload.get("ProductCod"));
-            line.StoreCod = text(detail.Payload.get("StoreCod"));
-            line.NumPrice = decimal(detail.Payload.get("NumPrice")).setScale(2);
-            request.DetailList.add(line);
-        }
-        List<ProductConfigBulkPriceResultDto> resultList =
-                productConfigCreateService.saveBulkPrices(request, userCod);
-        Map<Integer, ProductConfigBulkPriceResultDto> resultMap = new HashMap<>();
-        resultList.forEach(result -> resultMap.put(result.ReferenceItemNumber, result));
-        for (BulkLoadDetEntity detail : detailList) {
-            ProductConfigBulkPriceResultDto businessResult = resultMap.get(detail.ItemNumber);
-            if (businessResult == null) {
-                throw new IllegalStateException(
-                        "No se obtuvo resultado para el item " + detail.ItemNumber
-                );
-            }
-            Map<String, Object> result = new LinkedHashMap<>();
-            result.put("OldPrice", businessResult.OldPrice);
-            result.put("NewPrice", businessResult.NewPrice);
-            result.put("Changed", businessResult.Changed);
-            detail.ResultData = result;
-        }
-    }
-
-    private void processStock(BulkLoadHeadEntity head, List<BulkLoadDetEntity> detailList,
-                              String userCod, String stockEntryCod) {
-        String storeCod = detailList.getFirst().StoreCod;
-        if (detailList.stream().anyMatch(item -> !Objects.equals(storeCod, item.StoreCod))) {
-            throw new IllegalStateException("Un bloque de stock no puede mezclar locales");
-        }
-        StockEntryBulkCreateDto request = new StockEntryBulkCreateDto();
-        request.StockEntryCod = stockEntryCod;
-        request.StoreCod = storeCod;
-        request.BulkLoadCod = head.BulkLoadCod;
-        for (BulkLoadDetEntity detail : detailList) {
-            StockEntryBulkLineDto line = new StockEntryBulkLineDto();
-            line.ReferenceItemNumber = detail.ItemNumber;
-            line.SourceRowNumber = detail.SourceRowNumber;
-            line.ProductCod = text(detail.Payload.get("ProductCod"));
-            line.Variant = text(detail.Payload.get("Variant"));
-            line.WarehouseCod = text(detail.Payload.get("WarehouseCod"));
-            line.ProductUnitName = defaultText(
-                    detail.Payload.get("ProductUnitName"), "NIU"
-            );
-            line.ProductUnitFactor = integer(detail.Payload.get("ProductUnitFactor"));
-            line.NumUnit = integer(detail.Payload.get("NumPhysicalStock"));
-            request.DetailList.add(line);
-        }
-        StockEntryBulkResultDto businessResult =
-                stockEntryCreateService.createAndConfirmBulk(request, userCod);
-        for (BulkLoadDetEntity detail : detailList) {
-            Map<String, Object> result = new LinkedHashMap<>();
-            result.put("StockEntryCod", businessResult.StockEntryCod);
-            result.put("ItemNumber",
-                    businessResult.ItemNumberByReference.get(detail.ItemNumber));
-            detail.ResultData = result;
-        }
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
@@ -239,10 +157,10 @@ public class BulkLoadChunkService {
     }
 
     private void updateCounters(BulkLoadHeadEntity head, String userCod, boolean finish) {
-        int success = detRepository.countByProcessStatus(
+        int success = bulkLoadDetRepository.countByProcessStatus(
                 head.BulkLoadCod, BulkLoadConstants.CONFIRMED
         );
-        int errors = detRepository.countByProcessStatus(
+        int errors = bulkLoadDetRepository.countByProcessStatus(
                 head.BulkLoadCod, BulkLoadConstants.ERROR
         );
         int processed = success + errors;
@@ -260,10 +178,10 @@ public class BulkLoadChunkService {
 
         for (BulkLoadDestinationEntity destination
                 : destinationRepository.findByCode(head.BulkLoadCod)) {
-            int storeSuccess = detRepository.countByStoreAndProcessStatus(
+            int storeSuccess = bulkLoadDetRepository.countByStoreAndProcessStatus(
                     head.BulkLoadCod, destination.StoreCod, BulkLoadConstants.CONFIRMED
             );
-            int storeErrors = detRepository.countByStoreAndProcessStatus(
+            int storeErrors = bulkLoadDetRepository.countByStoreAndProcessStatus(
                     head.BulkLoadCod, destination.StoreCod, BulkLoadConstants.ERROR
             );
             destination.NumSuccessDetails = storeSuccess;
@@ -303,25 +221,6 @@ public class BulkLoadChunkService {
 
     private int value(Integer value) {
         return value == null ? 0 : value;
-    }
-
-    private String text(Object value) {
-        return value == null ? "" : value.toString().trim();
-    }
-
-    private String defaultText(Object value, String defaultValue) {
-        String text = text(value);
-        return text.isBlank() ? defaultValue : text;
-    }
-
-    private int integer(Object value) {
-        return decimal(value).intValueExact();
-    }
-
-    private BigDecimal decimal(Object value) {
-        if (value instanceof BigDecimal decimal) return decimal;
-        if (value instanceof Number number) return new BigDecimal(number.toString());
-        return new BigDecimal(text(value));
     }
 
     private String trimMessage(String message) {

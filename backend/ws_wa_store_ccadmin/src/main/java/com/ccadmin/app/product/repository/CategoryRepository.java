@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface CategoryRepository extends JpaRepository<CategoryEntity,String>, CcAdminRepository<CategoryEntity,String> {
 
@@ -19,6 +20,44 @@ public interface CategoryRepository extends JpaRepository<CategoryEntity,String>
             select c.* from category c where c.IsCategoryDad = 'S' and c.Status = 'A'
             """,nativeQuery = true)
     public List<CategoryEntity> findAllActiveDad();
+
+    @Query(value = """
+            select *
+            from category c
+            where c.Status = 'A'
+              and lower(trim(c.CategoryName)) = lower(trim(:categoryName))
+            order by c.CategoryCod
+            limit 1
+            """, nativeQuery = true)
+    Optional<CategoryEntity> findFirstActiveByName(
+            @Param("categoryName") String categoryName
+    );
+
+    @Query(value = """
+            select *
+            from category c
+            where c.Status = 'A'
+              and c.IsCategoryDad = 'N'
+              and lower(trim(c.CategoryName)) = lower(trim(:categoryName))
+            order by c.CategoryCod
+            limit 1
+            """, nativeQuery = true)
+    Optional<CategoryEntity> findFirstActiveNoDadByName(
+            @Param("categoryName") String categoryName
+    );
+
+    @Query(value = """
+            select *
+            from category c
+            where c.Status = 'A'
+              and c.IsCategoryDad = 'S'
+              and lower(trim(c.CategoryName)) = lower(trim(:categoryName))
+            order by c.CategoryCod
+            limit 1
+            """, nativeQuery = true)
+    Optional<CategoryEntity> findFirstActiveDadByName(
+            @Param("categoryName") String categoryName
+    );
 
     @Override
     @Query(value = """

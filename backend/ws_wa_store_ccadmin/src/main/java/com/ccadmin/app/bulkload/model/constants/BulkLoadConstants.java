@@ -3,6 +3,9 @@ package com.ccadmin.app.bulkload.model.constants;
 public final class BulkLoadConstants {
     public static final String TYPE_PRODUCT_PRICE = "PRODUCT_PRICE";
     public static final String TYPE_STOCK_ENTRY = "STOCK_ENTRY";
+    public static final String TYPE_PRODUCT_CREATE = "PRODUCT_CREATE";
+    public static final String TYPE_BRAND_CREATE = "BRAND_CREATE";
+    public static final String TYPE_CATEGORY_CREATE = "CATEGORY_CREATE";
 
     public static final String DRAFT = "D";
     public static final String VALIDATING = "V";
@@ -25,6 +28,10 @@ public final class BulkLoadConstants {
     }
 
     public static boolean isSupportedType(String type) {
-        return TYPE_PRODUCT_PRICE.equals(type) || TYPE_STOCK_ENTRY.equals(type);
+        return TYPE_PRODUCT_PRICE.equals(type)
+                || TYPE_STOCK_ENTRY.equals(type)
+                || TYPE_PRODUCT_CREATE.equals(type)
+                || TYPE_BRAND_CREATE.equals(type)
+                || TYPE_CATEGORY_CREATE.equals(type);
     }
 }

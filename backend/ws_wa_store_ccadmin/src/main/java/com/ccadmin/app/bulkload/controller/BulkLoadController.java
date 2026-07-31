@@ -48,6 +48,13 @@ public class BulkLoadController {
         return execute(() -> createService.saveParsed(request));
     }
 
+    @PostMapping("correctParsed")
+    public ResponseEntity<ResponseWsDto> correctParsed(
+            @RequestBody BulkLoadCorrectionRequestDto request
+    ) {
+        return execute(() -> createService.correctParsed(request));
+    }
+
     @PostMapping("confirm")
     public ResponseEntity<ResponseWsDto> confirm(@RequestBody BulkLoadActionDto request) {
         return execute(() -> commandService.confirm(request.Code));
@@ -56,6 +63,11 @@ public class BulkLoadController {
     @PostMapping("cancel")
     public ResponseEntity<ResponseWsDto> cancel(@RequestBody BulkLoadActionDto request) {
         return execute(() -> commandService.cancel(request.Code));
+    }
+
+    @PostMapping("retry")
+    public ResponseEntity<ResponseWsDto> retry(@RequestBody BulkLoadActionDto request) {
+        return execute(() -> commandService.retry(request.Code));
     }
 
     private ResponseEntity<ResponseWsDto> execute(Action action) {

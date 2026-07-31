@@ -19,6 +19,10 @@ export interface BulkLoadHead {
   QueueDate?: string;
   StartDate?: string;
   EndDate?: string;
+  LastHeartbeatDate?: string;
+  AttemptCount?: number;
+  ModifyUser?: string;
+  ModifyDate?: string;
 }
 
 export interface BulkLoadDestination {
@@ -30,6 +34,8 @@ export interface BulkLoadDestination {
   NumSuccessDetails: number;
   NumErrorDetails: number;
   StatusMessage: string;
+  StartDate?: string;
+  EndDate?: string;
 }
 
 export interface BulkLoadDetail {
@@ -43,6 +49,9 @@ export interface BulkLoadDetail {
   ErrorDetail?: BulkLoadError[];
   WarningDetail?: BulkLoadError[];
   ResultData?: Record<string, unknown>;
+  AttemptCount?: number;
+  StartDate?: string;
+  EndDate?: string;
 }
 
 export interface BulkLoadError {
@@ -64,8 +73,10 @@ export interface BulkLoadRegister {
 
 export interface BulkLoadSourceRow {
   RowNumber: number;
-  ProductCod: string;
-  Value: string;
+  BusinessKey?: string;
+  Payload: Record<string, unknown>;
+  ProductCod?: string;
+  Value?: string;
 }
 
 export interface BulkLoadStoreRow {

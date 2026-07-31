@@ -18,6 +18,8 @@ import org.springframework.stereotype.Service;
 public class CategoryService extends SessionService {
     @Autowired
     private CategoryRepository categoryRepository;
+    @Autowired
+    private CategoryCreateService categoryCreateService;
     private SearchService searchService;
 
     public ResponsePageSearch findAll(String Query, int Page) {
@@ -54,8 +56,6 @@ public class CategoryService extends SessionService {
 
         for (CategoryEntity category : categoryRegisterMassive.categoryList) {
             try {
-                category.addSession(getUserCod(), !this.categoryRepository.existsById(category.CategoryCod));
-
                 if (this.categoryRepository.existsById(category.CategoryCod)) {
                     registerMassiveExists.categoryList.add(category);
                 } else {
@@ -67,7 +67,11 @@ public class CategoryService extends SessionService {
             }
         }
 
-        this.categoryRepository.saveAll(registerMassiveOk.categoryList);
+        if (!registerMassiveOk.categoryList.isEmpty()) {
+            this.categoryCreateService.createBulk(
+                    registerMassiveOk.categoryList, getUserCod()
+            );
+        }
 
         rpt.AddResponseAdditional("registerMassiveFail", registerMassiveFail);
         rpt.AddResponseAdditional("registerMassiveExists", registerMassiveExists);

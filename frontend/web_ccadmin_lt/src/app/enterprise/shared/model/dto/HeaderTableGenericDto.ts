@@ -8,11 +8,14 @@ export class HeaderTableGenericDto
     public Id? : string[] = [];
     public IsStatus? : boolean = false;
     public IsDate? : boolean = false;
+    public IsProgress? : boolean = false;
     public Options? :OptionTableGenericDto[] = [];
     public Html? : any;
     public Mask? : any = "";
     public IsMoney? : boolean = false;
     public FunctionKey?: (...args: any[]) => any;
+    public ProgressTextFunction?: (...args: any[]) => string;
+    public ProgressClassFunction?: (...args: any[]) => string;
 
     public constructor()
     {

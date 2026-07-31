@@ -90,9 +90,6 @@ import { ReceivetransferComponent } from './enterprise/transfer/pages/receivetra
 import { ListtransferdispatchComponent } from './enterprise/transfer/pages/listtransferdispatch/listtransferdispatch.component';
 import { DispatchtransferComponent } from './enterprise/transfer/pages/dispatchtransfer/dispatchtransfer.component';
 import { DirecttransferComponent } from './enterprise/transfer/pages/directtransfer/directtransfer.component';
-import { CreateproductmassiveComponent } from './enterprise/product/pages/createproductmassive/createproductmassive.component';
-import { CreatecategorymassiveComponent } from './enterprise/product/pages/createcategorymassive/createcategorymassive.component';
-import { CreatebrandmassiveComponent } from './enterprise/product/pages/createbrandmassive/createbrandmassive.component';
 import { ViewpucharseComponent } from './enterprise/pucharse/pages/viewpucharse/viewpucharse.component';
 import { ListstoreComponent } from './enterprise/store/pages/liststore/liststore.component';
 import { CreatestoreComponent } from './enterprise/store/pages/createstore/createstore.component';
@@ -118,6 +115,7 @@ import { StockResolutionEditorComponent } from './enterprise/inventory/component
 import { StockMovementViewComponent } from './enterprise/inventory/components/stock-movement-view/stock-movement-view.component';
 import { ListBulkLoadComponent } from './enterprise/bulkload/pages/listbulkload/listbulkload.component';
 import { CreateBulkLoadComponent } from './enterprise/bulkload/pages/createbulkload/createbulkload.component';
+import { ViewBulkLoadComponent } from './enterprise/bulkload/pages/viewbulkload/viewbulkload.component';
 
 @NgModule({
   declarations: [
@@ -202,9 +200,6 @@ import { CreateBulkLoadComponent } from './enterprise/bulkload/pages/createbulkl
     ListtransferdispatchComponent,
     DispatchtransferComponent,
     DirecttransferComponent,
-    CreateproductmassiveComponent,
-    CreatecategorymassiveComponent,
-    CreatebrandmassiveComponent,
     ViewpucharseComponent,
     ListstoreComponent,
     CreatestoreComponent,
@@ -229,6 +224,7 @@ import { CreateBulkLoadComponent } from './enterprise/bulkload/pages/createbulkl
     StockMovementViewComponent,
     ListBulkLoadComponent,
     CreateBulkLoadComponent,
+    ViewBulkLoadComponent,
   ],
   imports: [
     BrowserModule,
