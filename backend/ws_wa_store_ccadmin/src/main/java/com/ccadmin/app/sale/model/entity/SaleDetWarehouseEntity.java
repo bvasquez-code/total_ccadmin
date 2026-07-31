@@ -19,8 +19,6 @@ public class SaleDetWarehouseEntity extends AuditTableEntity implements Serializ
     public String SaleCod;
     @Id
     public int ItemNumber;
-    @Id
-    public int AllocationNumber = 1;
     public String ProductCod;
     public String Variant;
     public String WarehouseCod;
@@ -39,7 +37,6 @@ public class SaleDetWarehouseEntity extends AuditTableEntity implements Serializ
     {
         this.SaleCod = SaleCod;
         this.ItemNumber = detWarehouse.ItemNumber;
-        this.AllocationNumber = 1;
         this.ProductCod = detWarehouse.ProductCod;
         this.Variant = detWarehouse.Variant;
         this.WarehouseCod = detWarehouse.WarehouseCod;
@@ -54,7 +51,6 @@ public class SaleDetWarehouseEntity extends AuditTableEntity implements Serializ
     {
         this.SaleCod = SaleCod;
         this.ItemNumber = detWarehouse.ItemNumber;
-        this.AllocationNumber = 1;
         this.ProductCod = detWarehouse.ProductCod;
         this.Variant = detWarehouse.Variant;
         this.WarehouseCod = detWarehouse.WarehouseCod;
@@ -71,9 +67,6 @@ public class SaleDetWarehouseEntity extends AuditTableEntity implements Serializ
         }
         if(this.NumUnit <= 0){
             throw new SaleBuildException("Número de unidades del productos debe ser mayor a cero");
-        }
-        if(this.AllocationNumber <= 0){
-            throw new SaleBuildException("El numero de asignacion debe ser mayor a cero");
         }
         return this;
     }

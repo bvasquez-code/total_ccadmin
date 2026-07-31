@@ -121,8 +121,8 @@ class KardexCreateServiceTest {
                 10
         );
 
-        when(kardexZoneRepository.findByEvent(
-                "presale_head", head.PresaleCod, 1, "PRESALE_RESERVATION"
+        when(kardexZoneRepository.findByOperationEvent(
+                "presale_head", head.PresaleCod, "PRESALE_RESERVATION"
         )).thenReturn(List.of(physicalReservation, reservedReservation));
 
         List<KardexZoneEntity> movementList = kardexCreateService.buildZoneSaleConfirmation(
@@ -134,21 +134,20 @@ class KardexCreateServiceTest {
         assertEquals("L-01", movementList.get(0).LotNumber);
         assertEquals(6, movementList.get(3).NumStockMoved);
         assertEquals("L-02", movementList.get(3).LotNumber);
-        verify(kardexZoneRepository, times(1)).findByEvent(
-                "presale_head", head.PresaleCod, 1, "PRESALE_RESERVATION"
+        verify(kardexZoneRepository, times(1)).findByOperationEvent(
+                "presale_head", head.PresaleCod, "PRESALE_RESERVATION"
         );
     }
 
     private SaleDetWarehouseEntity saleWarehouseAllocation(
             String saleCod,
-            int allocationNumber,
+            int itemNumber,
             int quantity,
             String lotNumber
     ) {
         SaleDetWarehouseEntity detail = new SaleDetWarehouseEntity();
         detail.SaleCod = saleCod;
-        detail.ItemNumber = 1;
-        detail.AllocationNumber = allocationNumber;
+        detail.ItemNumber = itemNumber;
         detail.ProductCod = "PR001";
         detail.Variant = "0000";
         detail.WarehouseCod = "A001";
@@ -161,6 +160,7 @@ class KardexCreateServiceTest {
         KardexZoneEntity movement = new KardexZoneEntity();
         movement.ProductCod = "PR001";
         movement.Variant = "0000";
+        movement.StoreCod = "T001";
         movement.WarehouseCod = "A001";
         movement.ZoneStockMoved = zone;
         movement.TypeOperation = operation;

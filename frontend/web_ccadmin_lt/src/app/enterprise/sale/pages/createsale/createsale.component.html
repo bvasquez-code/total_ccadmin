@@ -387,9 +387,9 @@
     </div>
 </div>
 
-<div class="modal fade" id="PickingModal" tabindex="-1" role="dialog" aria-labelledby="PickingModalLabel"
+<div class="modal fade modal-lg" id="PickingModal" tabindex="-1" role="dialog" aria-labelledby="PickingModalLabel"
   aria-hidden="true" data-backdrop="static" data-keyboard="false">
-  <div class="modal-dialog modal-lg" role="document">
+  <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title text-primary-d3" id="PickingModalLabel">
@@ -413,13 +413,17 @@
           </div>
         </div>
 
+        <div class="alert bgc-info-l4 brc-info-m3 border-1 py-2" *ngIf="!isPickingConfirmed()">
+          El lote y el vencimiento son datos informativos y opcionales. El stock se controla por producto y almacén.
+        </div>
+
         <div class="row" *ngIf="!isPickingConfirmed()">
           <div class="col-md-3">
             <label class="mb-1">Cantidad</label>
             <input type="number" min="1" step="1" class="form-control" #txtPickingNumUnit>
           </div>
           <div class="col-md-4">
-            <label class="mb-1">Número de lote</label>
+            <label class="mb-1">Lote opcional</label>
             <input type="text" class="form-control" maxlength="32" #txtPickingLotNumber>
           </div>
           <div class="col-md-3">
@@ -451,7 +455,7 @@
             <tbody>
               <tr *ngFor="let line of PickingLineList; let i = index">
                 <td>{{ getPickingLineVisibleQuantity(line) }} {{ SelectedPickingDetail.ProductUnitName }}</td>
-                <td>{{ line.LotNumber }}</td>
+                <td>{{ line.LotNumber || 'Sin lote' }}</td>
                 <td>{{ line.ExpirationDate ? (line.ExpirationDate | date:'dd/MM/yyyy') : 'Sin vencimiento' }}</td>
                 <td class="text-center" *ngIf="!isPickingConfirmed()">
                   <button type="button" class="btn btn-xs btn-danger" (click)="removePickingLine(i)">

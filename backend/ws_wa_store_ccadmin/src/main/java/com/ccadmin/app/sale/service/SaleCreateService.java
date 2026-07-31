@@ -196,17 +196,16 @@ public class SaleCreateService extends SessionService {
         {
             if( item.DetailWarehouse != null && item.DetailWarehouse.size() >0 )
             {
-                List<SaleDetWarehouseEntity> detailSaleWarehouseSub = new ArrayList<>();
-                for (int index = 0; index < item.DetailWarehouse.size(); index++) {
-                    SaleDetWarehouseEntity detailWarehouse = new SaleDetWarehouseEntity()
-                            .build(item.DetailWarehouse.get(index), saleHead.SaleCod)
-                            .session(getUserCod())
-                            .validate();
-                    detailWarehouse.AllocationNumber = index + 1;
-                    detailSaleWarehouseSub.add(detailWarehouse);
+                if (item.DetailWarehouse.size() != 1) {
+                    throw new SaleBuildException(
+                            "Cada item de preventa debe tener una unica asignacion de almacen"
+                    );
                 }
-
-                detailSaleWarehouse.addAll(detailSaleWarehouseSub);
+                SaleDetWarehouseEntity detailWarehouse = new SaleDetWarehouseEntity()
+                        .build(item.DetailWarehouse.get(0), saleHead.SaleCod)
+                        .session(getUserCod())
+                        .validate();
+                detailSaleWarehouse.add(detailWarehouse);
             }
         }
         return detailSaleWarehouse;

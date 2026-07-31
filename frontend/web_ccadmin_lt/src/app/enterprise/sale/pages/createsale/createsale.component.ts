@@ -521,9 +521,6 @@ export class CreatesaleComponent implements OnInit {
       if (internalQuantity % ProductUnitHelper.normalizeFactor(this.SelectedPickingDetail.ProductUnitFactor) !== 0) {
         throw new Error(`Ingrese cantidades completas en ${this.SelectedPickingDetail.ProductUnitName}.`);
       }
-      if (!lotNumber) {
-        throw new Error("Ingrese el numero de lote.");
-      }
       if (lotNumber.length > this.MaxLotNumberLength) {
         throw new Error(`El lote no puede superar ${this.MaxLotNumberLength} caracteres.`);
       }
@@ -535,7 +532,7 @@ export class CreatesaleComponent implements OnInit {
       }
 
       const existingLine = this.PickingLineList.find(line =>
-        line.LotNumber.trim().toUpperCase() === lotNumber.toUpperCase()
+        (line.LotNumber || "").trim().toUpperCase() === lotNumber.toUpperCase()
         && (line.ExpirationDate || null) === expirationDate
       );
       if (existingLine) {

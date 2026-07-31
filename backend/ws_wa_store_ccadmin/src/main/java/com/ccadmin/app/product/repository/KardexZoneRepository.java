@@ -152,4 +152,18 @@ public interface KardexZoneRepository extends JpaRepository<KardexZoneEntity, Lo
             @Param("ItemNumber") int itemNumber,
             @Param("MovementEvent") String movementEvent
     );
+
+    @Query(value = """
+            select * from kardex_zone
+            where SourceTable = :SourceTable
+              and OperationCod = :OperationCod
+              and MovementEvent = :MovementEvent
+              and Status = 'A'
+            order by KardexZoneID
+            """, nativeQuery = true)
+    List<KardexZoneEntity> findByOperationEvent(
+            @Param("SourceTable") String sourceTable,
+            @Param("OperationCod") String operationCod,
+            @Param("MovementEvent") String movementEvent
+    );
 }

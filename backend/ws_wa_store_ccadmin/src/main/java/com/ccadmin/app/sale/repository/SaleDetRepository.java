@@ -11,7 +11,9 @@ import java.util.List;
 public interface SaleDetRepository extends JpaRepository<SaleDetEntity, SaleDetID> {
 
     @Query( value = """
-            select sd.* from sale_det sd where sd.SaleCod = :SaleCod and sd.Status = 'A'
+            select sd.* from sale_det sd
+            where sd.SaleCod = :SaleCod and sd.Status = 'A'
+            order by sd.ItemNumber
             """, nativeQuery = true)
     public List<SaleDetEntity> findBySaleCod(@Param("SaleCod")String SaleCod);
 }

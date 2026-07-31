@@ -7,9 +7,11 @@ import com.ccadmin.app.sale.model.dto.SaleDetailDto;
 import com.ccadmin.app.sale.model.dto.SalePickingConfirmDto;
 import com.ccadmin.app.sale.model.dto.SalePickingLineDto;
 import com.ccadmin.app.sale.model.entity.SaleDetEntity;
+import com.ccadmin.app.sale.model.entity.SaleDetTaxEntity;
 import com.ccadmin.app.sale.model.entity.SaleDetWarehouseEntity;
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
 import com.ccadmin.app.sale.repository.SaleDetRepository;
+import com.ccadmin.app.sale.repository.SaleDetTaxRepository;
 import com.ccadmin.app.sale.repository.SaleDetWarehouseRepository;
 import com.ccadmin.app.sale.repository.SaleHeadRepository;
 import org.junit.jupiter.api.Test;
@@ -19,10 +21,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
@@ -36,6 +40,8 @@ class SalePickingCreateServiceTest {
     private SaleHeadRepository saleHeadRepository;
     @Mock
     private SaleDetRepository saleDetRepository;
+    @Mock
+    private SaleDetTaxRepository saleDetTaxRepository;
     @Mock
     private SaleDetWarehouseRepository saleDetWarehouseRepository;
     @Mock
@@ -55,6 +61,7 @@ class SalePickingCreateServiceTest {
 
         when(saleHeadRepository.findByIdForUpdate(saleHead.SaleCod)).thenReturn(Optional.of(saleHead));
         when(saleDetRepository.findBySaleCod(saleHead.SaleCod)).thenReturn(List.of(saleDetail));
+        when(saleDetTaxRepository.findBySaleCod(saleHead.SaleCod)).thenReturn(List.of(saleDetailTax()));
         when(saleDetWarehouseRepository.findBySaleCodForUpdate(saleHead.SaleCod))
                 .thenReturn(List.of(currentWarehouse));
         when(saleSearchService.findById(saleHead.SaleCod)).thenReturn(expected);
@@ -64,16 +71,40 @@ class SalePickingCreateServiceTest {
         assertEquals(expected, result);
         assertEquals("S", saleHead.IsPickingConfirmed);
         @SuppressWarnings("unchecked")
-        ArgumentCaptor<List<SaleDetWarehouseEntity>> allocationCaptor = ArgumentCaptor.forClass(List.class);
-        verify(saleDetWarehouseRepository).saveAll(allocationCaptor.capture());
-        List<SaleDetWarehouseEntity> allocationList = allocationCaptor.getValue();
-        assertEquals(2, allocationList.size());
-        assertEquals(1, allocationList.get(0).AllocationNumber);
-        assertEquals(4, allocationList.get(0).NumUnit);
-        assertEquals("L-01", allocationList.get(0).LotNumber);
-        assertEquals(2, allocationList.get(1).AllocationNumber);
-        assertEquals(6, allocationList.get(1).NumUnit);
-        assertEquals("L-02", allocationList.get(1).LotNumber);
+        ArgumentCaptor<List<SaleDetEntity>> detailCaptor = ArgumentCaptor.forClass(List.class);
+        verify(saleDetRepository).saveAll(detailCaptor.capture());
+        List<SaleDetEntity> splitDetailList = detailCaptor.getValue();
+        assertEquals(2, splitDetailList.size());
+        assertEquals(1, splitDetailList.get(0).ItemNumber);
+        assertEquals(4, splitDetailList.get(0).NumUnit);
+        assertEquals(new BigDecimal("40.00"), splitDetailList.get(0).NumTotalPrice);
+        assertEquals(new BigDecimal("32.00"), splitDetailList.get(0).NumPriceSubTotal);
+        assertEquals(new BigDecimal("8.00"), splitDetailList.get(0).NumTotalTax);
+        assertEquals("L-01", splitDetailList.get(0).LotNumber);
+        assertEquals(2, splitDetailList.get(1).ItemNumber);
+        assertEquals(6, splitDetailList.get(1).NumUnit);
+        assertEquals(new BigDecimal("60.00"), splitDetailList.get(1).NumTotalPrice);
+        assertEquals("L-02", splitDetailList.get(1).LotNumber);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<SaleDetWarehouseEntity>> warehouseCaptor = ArgumentCaptor.forClass(List.class);
+        verify(saleDetWarehouseRepository).saveAll(warehouseCaptor.capture());
+        List<SaleDetWarehouseEntity> warehouseList = warehouseCaptor.getValue();
+        assertEquals(2, warehouseList.size());
+        assertEquals(1, warehouseList.get(0).ItemNumber);
+        assertEquals(4, warehouseList.get(0).NumUnit);
+        assertEquals(2, warehouseList.get(1).ItemNumber);
+        assertEquals(6, warehouseList.get(1).NumUnit);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<SaleDetTaxEntity>> taxCaptor = ArgumentCaptor.forClass(List.class);
+        verify(saleDetTaxRepository).saveAll(taxCaptor.capture());
+        List<SaleDetTaxEntity> taxList = taxCaptor.getValue();
+        assertEquals(2, taxList.size());
+        assertEquals(1, taxList.get(0).ItemNumber);
+        assertEquals(new BigDecimal("8.00"), taxList.get(0).TaxAmount);
+        assertEquals(2, taxList.get(1).ItemNumber);
+        assertEquals(new BigDecimal("12.00"), taxList.get(1).TaxAmount);
         verify(saleHeadRepository).save(saleHead);
     }
 
@@ -96,6 +127,27 @@ class SalePickingCreateServiceTest {
         assertEquals("El item 1 requiere 10 unidades y se pickearon 9", exception.getMessage());
         verify(saleDetWarehouseRepository, never()).saveAll(anyList());
         verify(saleHeadRepository, never()).save(saleHead);
+    }
+
+    @Test
+    void confirmsPickingWithoutLotOrExpirationMetadata() throws Exception {
+        SaleHeadEntity saleHead = pendingSale();
+        SaleDetEntity saleDetail = saleDetail(10);
+        SalePickingConfirmDto request = request(line(10, null));
+
+        when(saleHeadRepository.findByIdForUpdate(saleHead.SaleCod)).thenReturn(Optional.of(saleHead));
+        when(saleDetRepository.findBySaleCod(saleHead.SaleCod)).thenReturn(List.of(saleDetail));
+        when(saleDetWarehouseRepository.findBySaleCodForUpdate(saleHead.SaleCod))
+                .thenReturn(List.of(currentWarehouse(10)));
+        when(saleSearchService.findById(saleHead.SaleCod)).thenReturn(new SaleDetailDto());
+
+        salePickingCreateService.confirm(request);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<SaleDetWarehouseEntity>> allocationCaptor = ArgumentCaptor.forClass(List.class);
+        verify(saleDetWarehouseRepository).saveAll(allocationCaptor.capture());
+        assertNull(allocationCaptor.getValue().get(0).LotNumber);
+        assertNull(allocationCaptor.getValue().get(0).ExpirationDate);
     }
 
     @Test
@@ -128,6 +180,12 @@ class SalePickingCreateServiceTest {
         detail.ProductCod = "P001";
         detail.Variant = "0000";
         detail.NumUnit = quantity;
+        detail.NumUnitPrice = new BigDecimal("10.00");
+        detail.NumDiscount = BigDecimal.ZERO.setScale(2);
+        detail.NumUnitPriceSale = new BigDecimal("10.00");
+        detail.NumTotalPrice = new BigDecimal("100.00");
+        detail.NumPriceSubTotal = new BigDecimal("80.00");
+        detail.NumTotalTax = new BigDecimal("20.00");
         detail.ProductUnitName = "NIU";
         detail.ProductUnitFactor = 1;
         return detail;
@@ -137,12 +195,29 @@ class SalePickingCreateServiceTest {
         SaleDetWarehouseEntity detail = new SaleDetWarehouseEntity();
         detail.SaleCod = "ST001";
         detail.ItemNumber = 1;
-        detail.AllocationNumber = 1;
         detail.ProductCod = "P001";
         detail.Variant = "0000";
         detail.WarehouseCod = "W001";
         detail.NumUnit = quantity;
         return detail;
+    }
+
+    private SaleDetTaxEntity saleDetailTax() {
+        SaleDetTaxEntity tax = new SaleDetTaxEntity();
+        tax.SaleCod = "ST001";
+        tax.ItemNumber = 1;
+        tax.TaxLineNumber = 1;
+        tax.TaxCod = "IGV";
+        tax.TaxName = "IGV";
+        tax.TaxCalculationType = "PERCENTAGE";
+        tax.IsInformative = "N";
+        tax.TaxRateValue = new BigDecimal("18.00");
+        tax.FixedUnitAmount = BigDecimal.ZERO.setScale(4);
+        tax.TaxBaseAmount = new BigDecimal("80.00");
+        tax.TaxQuantity = new BigDecimal("10.0000");
+        tax.TaxAmount = new BigDecimal("20.00");
+        tax.CalculationOrder = 1;
+        return tax;
     }
 
     private SalePickingLineDto line(int quantity, String lotNumber) {

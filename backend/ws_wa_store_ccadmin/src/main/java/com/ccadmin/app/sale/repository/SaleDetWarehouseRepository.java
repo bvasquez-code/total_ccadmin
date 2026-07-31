@@ -13,14 +13,14 @@ public interface SaleDetWarehouseRepository extends JpaRepository<SaleDetWarehou
     @Query( value = """
             select * from sale_det_warehouse s
             where s.SaleCod = :SaleCod and s.Status = 'A'
-            order by s.ItemNumber, s.AllocationNumber
+            order by s.ItemNumber
             """, nativeQuery = true)
     public List<SaleDetWarehouseEntity> findBySaleCod(@Param("SaleCod") String SaleCod);
 
     @Query(value = """
             select * from sale_det_warehouse s
             where s.SaleCod = :SaleCod and s.Status = 'A'
-            order by s.ItemNumber, s.AllocationNumber
+            order by s.ItemNumber
             for update
             """, nativeQuery = true)
     List<SaleDetWarehouseEntity> findBySaleCodForUpdate(@Param("SaleCod") String saleCod);

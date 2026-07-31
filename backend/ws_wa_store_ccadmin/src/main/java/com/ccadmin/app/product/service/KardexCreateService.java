@@ -39,7 +39,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.Date;
 
@@ -573,63 +572,64 @@ public class KardexCreateService {
         }
     }
 
-    private void validatePresaleReservation(
-            SaleHeadEntity saleHead,
-            SaleDetWarehouseEntity detail
-    ) throws SaleException {
-        List<KardexZoneEntity> reservationList = this.kardexZoneRepository.findByEvent(
-                SaleConstants.KARDEX_ZONE_SOURCE_PRESALE,
-                saleHead.PresaleCod,
-                detail.ItemNumber,
-                SaleConstants.KARDEX_ZONE_EVENT_RESERVATION
-        );
-        if (!KardexZoneEntity.isValidPresaleReservation(reservationList, detail)) {
-            throw new SaleException(
-                    "No existe una reserva valida para el item " + detail.ItemNumber
-                            + " de la venta " + saleHead.SaleCod
-            );
-        }
-    }
-
     private void validatePresaleReservations(
             SaleHeadEntity saleHead,
             List<SaleDetWarehouseEntity> detailList
     ) throws SaleException {
-        Map<Integer, List<SaleDetWarehouseEntity>> detailByItem = detailList.stream()
-                .collect(java.util.stream.Collectors.groupingBy(
-                        item -> item.ItemNumber,
-                        LinkedHashMap::new,
-                        java.util.stream.Collectors.toList()
-                ));
-
-        for (Map.Entry<Integer, List<SaleDetWarehouseEntity>> entry : detailByItem.entrySet()) {
-            List<SaleDetWarehouseEntity> itemAllocationList = entry.getValue();
-            SaleDetWarehouseEntity firstAllocation = itemAllocationList.get(0);
-            int totalQuantity = 0;
-            for (SaleDetWarehouseEntity allocation : itemAllocationList) {
-                if (!Objects.equals(firstAllocation.ProductCod, allocation.ProductCod)
-                        || !Objects.equals(firstAllocation.Variant, allocation.Variant)
-                        || !Objects.equals(firstAllocation.WarehouseCod, allocation.WarehouseCod)) {
-                    throw new SaleException(
-                            "Las asignaciones del item " + entry.getKey()
-                                    + " deben pertenecer al mismo producto y almacen"
-                    );
-                }
-                try {
-                    totalQuantity = Math.addExact(totalQuantity, allocation.NumUnit);
-                } catch (ArithmeticException ex) {
-                    throw new SaleException("La cantidad del item " + entry.getKey() + " excede el limite permitido");
-                }
+        Map<StockKey, Integer> pickedQuantityByStock = new LinkedHashMap<>();
+        for (SaleDetWarehouseEntity detail : detailList) {
+            if (detail.NumUnit <= 0) {
+                throw new SaleException("La cantidad de venta debe ser mayor que cero");
             }
+            StockKey key = new StockKey(
+                    detail.ProductCod, detail.Variant, saleHead.StoreCod, detail.WarehouseCod
+            );
+            this.mergeQuantity(pickedQuantityByStock, key, detail.NumUnit, "pickeo de venta");
+        }
 
-            SaleDetWarehouseEntity aggregateDetail = new SaleDetWarehouseEntity();
-            aggregateDetail.SaleCod = firstAllocation.SaleCod;
-            aggregateDetail.ItemNumber = firstAllocation.ItemNumber;
-            aggregateDetail.ProductCod = firstAllocation.ProductCod;
-            aggregateDetail.Variant = firstAllocation.Variant;
-            aggregateDetail.WarehouseCod = firstAllocation.WarehouseCod;
-            aggregateDetail.NumUnit = totalQuantity;
-            this.validatePresaleReservation(saleHead, aggregateDetail);
+        List<KardexZoneEntity> reservationList = this.kardexZoneRepository.findByOperationEvent(
+                SaleConstants.KARDEX_ZONE_SOURCE_PRESALE,
+                saleHead.PresaleCod,
+                SaleConstants.KARDEX_ZONE_EVENT_RESERVATION
+        );
+        Map<StockKey, Integer> physicalReservationByStock = new LinkedHashMap<>();
+        Map<StockKey, Integer> reservedReservationByStock = new LinkedHashMap<>();
+        for (KardexZoneEntity reservation : reservationList) {
+            StockKey key = StockKey.from(reservation);
+            if (KardexZoneConstants.ZONE_PHYSICAL.equals(reservation.ZoneStockMoved)
+                    && KardexZoneConstants.TYPE_OPERATION_SUBTRACT.equals(reservation.TypeOperation)) {
+                this.mergeQuantity(
+                        physicalReservationByStock, key, reservation.NumStockMoved, "reserva fisica"
+                );
+            } else if (KardexZoneConstants.ZONE_RESERVED.equals(reservation.ZoneStockMoved)
+                    && KardexZoneConstants.TYPE_OPERATION_ADD.equals(reservation.TypeOperation)) {
+                this.mergeQuantity(
+                        reservedReservationByStock, key, reservation.NumStockMoved, "reserva comprometida"
+                );
+            } else {
+                throw new SaleException("La preventa tiene un movimiento de reserva no valido");
+            }
+        }
+
+        if (!pickedQuantityByStock.equals(physicalReservationByStock)
+                || !pickedQuantityByStock.equals(reservedReservationByStock)) {
+            throw new SaleException(
+                    "La cantidad pickeada de la venta " + saleHead.SaleCod
+                            + " no coincide con la reserva de la preventa"
+            );
+        }
+    }
+
+    private <T> void mergeQuantity(
+            Map<T, Integer> quantityByKey,
+            T key,
+            int quantity,
+            String operationName
+    ) throws SaleException {
+        try {
+            quantityByKey.merge(key, quantity, Math::addExact);
+        } catch (ArithmeticException ex) {
+            throw new SaleException("La cantidad de " + operationName + " excede el limite permitido");
         }
     }
 
