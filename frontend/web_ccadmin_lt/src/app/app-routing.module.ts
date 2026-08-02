@@ -34,6 +34,7 @@ import { ListtrxpaymentComponent } from './enterprise/trxpayment/pages/listtrxpa
 import { ViewtrxpaymentComponent } from './enterprise/trxpayment/pages/viewtrxpayment/viewtrxpayment.component';
 import { ListsaleComponent } from './enterprise/sale/pages/listsale/listsale.component';
 import { ListkardexComponent } from './enterprise/product/pages/listkardex/listkardex.component';
+import { ListproductstockComponent } from './enterprise/product/pages/listproductstock/listproductstock.component';
 import { AppfileComponent } from './enterprise/system/pages/appfile/appfile.component';
 import { CreatecurrencyComponent } from './enterprise/system/pages/createcurrency/createcurrency.component';
 import { CreatepaymentmethodComponent } from './enterprise/system/pages/createpaymentmethod/createpaymentmethod.component';
@@ -291,6 +292,10 @@ const routes: Routes = [
       {
         path: 'enterprise/product/pages/listkardex',
         component: ListkardexComponent
+      },
+      {
+        path: 'enterprise/product/pages/listproductstock',
+        component: ListproductstockComponent
       },
       {
         path: 'enterprise/product/pages/createproductmassive',

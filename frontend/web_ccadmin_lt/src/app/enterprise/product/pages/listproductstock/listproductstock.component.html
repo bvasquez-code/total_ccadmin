@@ -1,0 +1,60 @@
+<div role="main" class="main-content">
+  <div class="page-content container container-plus">
+    <div class="card-header">
+      <h3 class="card-title text-125 text-primary-d2">
+        <i class="fa fa-layer-group text-dark-l3 mr-1"></i>
+        Stock por zona
+      </h3>
+    </div>
+
+    <div class="row">
+      <div class="col-12">
+        <div class="card dcard">
+          <div class="card-body px-1 px-md-3">
+            <div class="alert bgc-blue-l4 brc-blue-m3 text-dark-m2 mb-3">
+              <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center">
+                <span>
+                  Consulta el stock físico, reservado, no disponible y total registrado en
+                  <strong>product_info</strong>.
+                </span>
+                <span class="badge bgc-blue-d1 text-white mt-2 mt-md-0">
+                  {{ selectedStoreLabel() }}
+                </span>
+              </div>
+            </div>
+
+            <div class="row align-items-end mb-3">
+              <div class="col-12 col-md-6 col-lg-5 mb-2 mb-lg-0">
+                <label class="text-90 text-grey-m1 mb-1">Buscar producto</label>
+                <div class="pos-rel">
+                  <i class="fa fa-search position-lc ml-25 text-primary-m1"></i>
+                  <input type="text"
+                         class="form-control w-100 pl-45 radius-1 brc-primary-m4"
+                         placeholder="Código, nombre o variante"
+                         #txtSearch
+                         (keyup.enter)="filter(1)">
+                </div>
+              </div>
+              <div class="col-12 col-md-6 col-lg-4 mb-2 mb-lg-0">
+                <label class="text-90 text-grey-m1 mb-1">Local</label>
+                <select class="form-control" [(ngModel)]="selectedStoreCod" (change)="filter(1)">
+                  <option value="">Todos los locales</option>
+                  <option *ngFor="let store of storeList" [value]="store.StoreCod">
+                    {{ store.StoreCod }} - {{ store.Name }}
+                  </option>
+                </select>
+              </div>
+              <div class="col-12 col-lg-3">
+                <button type="button" class="btn btn-primary btn-block" (click)="filter(1)">
+                  <i class="fa fa-search mr-1"></i>Buscar
+                </button>
+              </div>
+            </div>
+
+            <app-table [data]="dataTable" [action]="this"></app-table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
