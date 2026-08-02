@@ -45,9 +45,11 @@ public class BrandService extends SessionService {
     }
 
     public BrandEntity save(BrandEntity brand) {
-        brand.addSession(getUserCod(), !this.brandRepository.existsById(brand.BrandCod));
+        return this.brandCreateService.save(brand, getUserCod());
+    }
 
-        return this.brandRepository.save(brand);
+    public String generateBrandCode() {
+        return this.brandCreateService.generateBrandCode();
     }
 
     @Transactional

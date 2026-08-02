@@ -30,6 +30,8 @@ import { TransferRequestHeadEntity } from '../../model/entity/TransferRequestHea
 import { TransferRequestDetSaveDto } from '../../model/dto/TransferRequestDetSaveDto';
 import { TransferRequestDetService } from '../../service/TransferRequestDetService';
 import { TransferDetRegisterMassiveDto } from '../../model/dto/TransferDetRegisterMassiveDto';
+import { AlertService } from 'src/app/enterprise/shared/service/AlertService';
+import { TransferStockAvailabilityService } from '../../service/TransferStockAvailabilityService';
 
 @Component({
   selector: 'app-directtransfer',
@@ -69,6 +71,7 @@ export class DirecttransferComponent implements OnInit {
   conversionValidationMessage: string = '';
   isSavingDetail: boolean = false;
   hasTransferDraft: boolean = false;
+  selectedVisibleQuantity: number = 0;
   private readonly maxLotNumberLength: number = 32;
 
   transportModeList = [
@@ -92,7 +95,9 @@ export class DirecttransferComponent implements OnInit {
     private router: Router,
     private toastrService: ToastrService,
     private carrierService: CarrierService,
-    private transferRequestDetService: TransferRequestDetService
+    private transferRequestDetService: TransferRequestDetService,
+    private alertService: AlertService,
+    private transferStockAvailabilityService: TransferStockAvailabilityService
   ) { }
 
   ngOnInit(): void {
@@ -411,6 +416,7 @@ export class DirecttransferComponent implements OnInit {
   async selectProduct(product: ProductSearchEntity) {
     this.clearConversionValidationMessage();
     this.productSelect = product;
+    this.selectedVisibleQuantity = 0;
 
     if (this.isTransferWithLots) {
       const transferDet = await this.buildTransferDetail(product, 0);
@@ -424,7 +430,8 @@ export class DirecttransferComponent implements OnInit {
     this.txtNumUnit.nativeElement.value = '';
     const existing = this.transferRequestRegister.transferDetList.find(e => e.ProductCod === product.ProductCod && !e.LotNumber);
     if (existing) {
-      this.txtNumUnit.nativeElement.value = String(this.toVisibleQuantity(existing.NumUnit, existing.ProductUnitFactor));
+      this.selectedVisibleQuantity = this.toVisibleQuantity(existing.NumUnit, existing.ProductUnitFactor);
+      this.txtNumUnit.nativeElement.value = String(this.selectedVisibleQuantity);
     }
 
     setTimeout(() => {
@@ -444,6 +451,9 @@ export class DirecttransferComponent implements OnInit {
     const numUnit = Number(this.txtNumUnit.nativeElement.value);
     if (!numUnit || numUnit <= 0) {
       this.toastrService.error('Ingrese una cantidad válida');
+      return;
+    }
+    if (!await this.confirmInsufficientStockSelection(numUnit, product.ProductUnitName)) {
       return;
     }
 
@@ -487,6 +497,7 @@ export class DirecttransferComponent implements OnInit {
     }
 
     this.txtNumUnit.nativeElement.value = '';
+    this.selectedVisibleQuantity = 0;
     this.closeModal();
   }
 
@@ -532,10 +543,49 @@ export class DirecttransferComponent implements OnInit {
     await this.deleteDetail(product);
   }
 
+  editDetail(detail: TransferRequestDetEntity): void {
+    this.clearConversionValidationMessage();
+    const listedProduct = this.productList.find(product => product.ProductCod === detail.ProductCod);
+    if (listedProduct) {
+      this.productSelect = listedProduct;
+    } else if (this.productSelect.ProductCod !== detail.ProductCod) {
+      this.productSelect = new ProductSearchEntity();
+      this.productSelect.ProductCod = detail.ProductCod;
+      this.productSelect.ProductName = detail.Product?.ProductName || detail.ProductCod;
+      this.productSelect.ProductUnitName = detail.ProductUnitName;
+      this.productSelect.ProductUnitFactor = detail.ProductUnitFactor;
+    }
+    void this.refreshSelectedProductStock(detail.ProductCod);
+
+    if (this.isTransferWithLots) {
+      this.openLotDispatchModal(detail);
+      return;
+    }
+
+    this.selectedVisibleQuantity = this.toVisibleQuantity(detail.NumUnit, detail.ProductUnitFactor);
+    this.txtNumUnit.nativeElement.value = String(this.selectedVisibleQuantity);
+  }
+
+  private async refreshSelectedProductStock(productCod: string): Promise<void> {
+    const currentStock = await this.transferStockAvailabilityService.findCurrentPhysicalStock(
+      productCod,
+      this.getCurrentStoreCod()
+    );
+    if (currentStock !== null && this.productSelect.ProductCod === productCod) {
+      this.productSelect.NumPhysicalStock = currentStock;
+    }
+  }
+
   openLotDispatchModal(det: TransferRequestDetEntity) {
     this.clearConversionValidationMessage();
     this.selectedDetail = det;
-    this.lotDispatchList = [];
+    this.lotDispatchList = det.LotNumber
+      ? [new TransferLotDispatchDto({
+        NumUnit: det.NumUnit,
+        LotNumber: det.LotNumber,
+        ExpirationDate: det.ExpirationDate || ''
+      })]
+      : [];
     this.clearLotDispatchForm();
   }
 
@@ -599,6 +649,22 @@ export class DirecttransferComponent implements OnInit {
       if (this.isSavingDetail) return;
       if (this.lotDispatchList.length === 0) {
         throw new Error('Debe agregar al menos un lote');
+      }
+
+      const otherProductQuantity = this.transferRequestRegister.transferDetList
+        .filter(detail => detail !== this.selectedDetail && detail.ProductCod === this.selectedDetail.ProductCod)
+        .reduce((total, detail) => total + Number(detail.NumUnit || 0), 0);
+      const proposedInternalQuantity = otherProductQuantity + this.getLotDispatchTotal();
+      const proposedVisibleQuantity = this.toVisibleQuantity(
+        proposedInternalQuantity,
+        this.selectedDetail.ProductUnitFactor
+      );
+      if (!await this.confirmInsufficientStockSelection(
+        proposedVisibleQuantity,
+        this.selectedDetail.ProductUnitName,
+        this.selectedDetail.ProductUnitFactor
+      )) {
+        return;
       }
 
       if (this.selectedDetail.NumUnit > 0 && this.getLotDispatchTotal() < this.selectedDetail.NumUnit) {
@@ -743,6 +809,19 @@ export class DirecttransferComponent implements OnInit {
       const rpt: ResponseWsDto = await this.transferService.Save(transferRegister);
 
       if (!rpt.ErrorStatus) {
+        const stockShortages = await this.transferStockAvailabilityService.findShortages(
+          this.transferRequestRegister.transferDetList,
+          this.getCurrentStoreCod()
+        );
+        if (stockShortages.length > 0) {
+          const shortageSummary = this.transferStockAvailabilityService.formatShortageSummary(stockShortages);
+          await this.alertService.warning(
+            `La operación permanece guardada como pendiente, pero todavía no puede cerrarse porque no existe stock suficiente. ${shortageSummary}. Podrá confirmarla cuando ingrese el stock faltante.`,
+            'Stock todavía insuficiente'
+          );
+          return;
+        }
+
         const rptDispatch: ResponseWsDto = await this.dispatchDirectTransfer(transferRegister);
         if (rptDispatch.ErrorStatus) {
           this.toastrService.error(rptDispatch.Message || 'La transferencia se registro, pero no se pudo despachar');
@@ -829,6 +908,12 @@ export class DirecttransferComponent implements OnInit {
     return productInfoDto;
   }
 
+  isProductSelected(product: ProductSearchEntity): boolean {
+    return this.transferRequestRegister.transferDetList.some(
+      detail => detail.ProductCod === product.ProductCod
+    );
+  }
+
   async createRequestCode(StoreCod: string) {
     const rpt: ResponseWsDto = await this.transferService.CreateCode(StoreCod);
     if (rpt?.ErrorStatus) {
@@ -841,6 +926,64 @@ export class DirecttransferComponent implements OnInit {
   toVisibleQuantity(internalQuantity: number, ProductUnitFactor: number): number {
     const factor = ProductUnitFactor > 0 ? ProductUnitFactor : 1;
     return internalQuantity / factor;
+  }
+
+  onSelectedQuantityChange(value: string): void {
+    this.clearConversionValidationMessage();
+    const quantity = Number(value);
+    this.selectedVisibleQuantity = Number.isFinite(quantity) && quantity > 0 ? quantity : 0;
+  }
+
+  getCurrentVisibleStock(productCod: string = this.productSelect?.ProductCod, productUnitFactor?: number): number {
+    const product = this.productSelect?.ProductCod === productCod
+      ? this.productSelect
+      : this.productList.find(item => item.ProductCod === productCod);
+    const factor = productUnitFactor || product?.ProductUnitFactor || 1;
+
+    return ProductUnitHelper.toVisibleQuantity(product?.NumPhysicalStock || 0, factor);
+  }
+
+  getProjectedVisibleStock(): number {
+    return ProductUnitHelper.getVisibleStockAfterMovement(
+      this.productSelect?.NumPhysicalStock || 0,
+      this.selectedVisibleQuantity,
+      this.productSelect?.ProductUnitFactor || 1
+    );
+  }
+
+  private async confirmInsufficientStockSelection(
+    requestedVisibleQuantity: number,
+    productUnitName: string,
+    productUnitFactor: number = this.productSelect?.ProductUnitFactor || 1
+  ): Promise<boolean> {
+    const currentVisibleStock = ProductUnitHelper.toVisibleQuantity(
+      this.productSelect?.NumPhysicalStock || 0,
+      productUnitFactor
+    );
+    if (requestedVisibleQuantity <= currentVisibleStock) {
+      return true;
+    }
+
+    const confirmation = await this.alertService.waring(
+      `La cantidad indicada (${ProductUnitHelper.formatQuantity(requestedVisibleQuantity)} ${productUnitName || 'NIU'}) supera el stock actual (${ProductUnitHelper.formatQuantity(currentVisibleStock)} ${productUnitName || 'NIU'}). Puede registrarla anticipadamente, pero la operación no podrá cerrarse hasta que exista stock suficiente.`,
+      'Stock insuficiente'
+    );
+    return confirmation.isConfirmed;
+  }
+
+  getLotProjectedVisibleStock(): number {
+    const currentStock = this.getCurrentVisibleStock(
+      this.selectedDetail?.ProductCod,
+      this.selectedDetail?.ProductUnitFactor
+    );
+    const assignedQuantity = this.toVisibleQuantity(
+      this.getLotDispatchTotal(),
+      this.selectedDetail?.ProductUnitFactor
+    );
+    const pendingInput = Number(this.txtLotNumUnit?.nativeElement.value || 0);
+    const validPendingInput = Number.isFinite(pendingInput) && pendingInput > 0 ? pendingInput : 0;
+
+    return currentStock - assignedQuantity - validPendingInput;
   }
 
   async validateConvertProductBetweenStores(transferDet: TransferRequestDetEntity){

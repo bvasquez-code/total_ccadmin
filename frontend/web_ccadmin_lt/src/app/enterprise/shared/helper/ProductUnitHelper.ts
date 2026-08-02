@@ -12,6 +12,15 @@ export class ProductUnitHelper {
         return Number(visibleQuantity || 0) * this.normalizeFactor(productUnitFactor);
     }
 
+    static getVisibleStockAfterMovement(
+        currentInternalStock: number,
+        visibleMovementQuantity: number,
+        productUnitFactor: number
+    ): number {
+        return this.toVisibleQuantity(currentInternalStock, productUnitFactor)
+            - Number(visibleMovementQuantity || 0);
+    }
+
     static toVisibleUnitPrice(internalUnitPrice: number, productUnitFactor: number): number {
         return Number(internalUnitPrice || 0) * this.normalizeFactor(productUnitFactor);
     }
@@ -23,5 +32,9 @@ export class ProductUnitHelper {
     static formatVisibleQuantity(internalQuantity: number, productUnitFactor: number, productUnitName: string): string {
         const unitName = productUnitName || 'NIU';
         return `${this.toVisibleQuantity(internalQuantity, productUnitFactor)} ${unitName}`;
+    }
+
+    static formatQuantity(quantity: number, maxDecimals: number = 2): string {
+        return Number(Number(quantity || 0).toFixed(maxDecimals)).toString();
     }
 }

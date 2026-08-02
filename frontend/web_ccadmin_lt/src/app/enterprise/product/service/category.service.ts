@@ -41,6 +41,15 @@ export class CategoryService {
         return RespuestaWS;
     }
 
+    async GenerateCategoryCode() {
+        let url: string = `${AppSetting.API}/api/v1/category/generateCategoryCode`;
+        let RespuestaWS: ResponseWsDto;
+
+        RespuestaWS = await this.apiService.ExecuteGetService(url, {});
+
+        return RespuestaWS;
+    }
+
     async SaveAll(Category: CategoryRegisterMassiveDto) {
         let url: string = `${AppSetting.API}/api/v1/category/saveAll`;
         let RespuestaWS: ResponseWsDto;

@@ -56,6 +56,17 @@ public class BrandController {
         }
     }
 
+    @GetMapping("generateBrandCode")
+    public ResponseEntity<ResponseWsDto> generateBrandCode() {
+        try {
+            ResponseWsDto response = new ResponseWsDto();
+            return new ResponseEntity<ResponseWsDto>(
+                    response.okResponse(this.brandService.generateBrandCode()), HttpStatus.OK);
+        } catch (Exception ex) {
+            return new ResponseEntity<ResponseWsDto>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+
     @PostMapping("saveAll")
     public ResponseEntity<ResponseWsDto> saveAll(@RequestBody BrandRegisterMassiveDto brandRegisterMassive) {
         try {

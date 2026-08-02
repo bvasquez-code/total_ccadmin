@@ -37,4 +37,15 @@ export class AlertService
         });
     }
 
+    warning(text: string, title: string = "Advertencia"): Promise<SweetAlertResult<any>>
+    {
+        return Swal.fire({
+            title: title,
+            text: text,
+            icon: 'warning',
+            confirmButtonColor: '#3085d6',
+            confirmButtonText: 'Aceptar'
+        });
+    }
+
 }

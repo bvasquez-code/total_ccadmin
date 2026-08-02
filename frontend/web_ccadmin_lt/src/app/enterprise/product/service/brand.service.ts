@@ -41,6 +41,15 @@ export class BrandService {
         return RespuestaWS;
     }
 
+    async GenerateBrandCode() {
+        let url: string = `${AppSetting.API}/api/v1/brand/generateBrandCode`;
+        let RespuestaWS: ResponseWsDto;
+
+        RespuestaWS = await this.apiService.ExecuteGetService(url, {});
+
+        return RespuestaWS;
+    }
+
     async SaveAll(Brand: BrandRegisterMassiveDto) {
         let url: string = `${AppSetting.API}/api/v1/brand/saveAll`;
         let RespuestaWS: ResponseWsDto;

@@ -15,7 +15,7 @@
                     <div class="form-group row">
                         <div class="col-sm-3 col-form-label text-sm-right pr-0">
                             <label for="id-form-field-1" class="mb-0">
-                                Codigo
+                                Código <span class="text-grey-m1 text-85">(opcional)</span>
                             </label>
                         </div>
 
@@ -23,21 +23,26 @@
                             <div class="input-group col-sm-8 col-md-6 px-0">
                                 <input type="text"
                                     [maxLength]="20"
-                                    [readonly]="txtProductCodreadonly"
+                                    [readonly]="txtProductCodreadonly || isGeneratingProductCod || isSavingProduct"
+                                    aria-describedby="productCodeHelp"
                                     (keypress)="validateKeypress($event,'txtProductCod')"
                                     id="txtProductCod"
                                     class="form-control"
                                     #txtProductCod>
                                 <div class="input-group-append" *ngIf="!IsEditMode">
                                     <button class="btn btn-info" type="button"
-                                        [disabled]="isGeneratingProductCod"
-                                        title="Generar codigo"
+                                        [disabled]="isGeneratingProductCod || isSavingProduct"
+                                        title="Generar código"
                                         (click)="generateProductCod()">
-                                        <i class="fa fa-sync-alt mr-1"></i>
-                                        Generar
+                                        <i class="fa mr-1"
+                                            [ngClass]="isGeneratingProductCod ? 'fa-spinner fa-spin' : 'fa-sync-alt'"></i>
+                                        {{ isGeneratingProductCod ? 'Generando...' : 'Generar' }}
                                     </button>
                                 </div>
                             </div>
+                            <small id="productCodeHelp" class="form-text text-grey-m1" *ngIf="!IsEditMode">
+                                El código es opcional. Puedes personalizarlo o dejarlo vacío; al guardar, el sistema generará uno automáticamente.
+                            </small>
                         </div>
                     </div>
 
@@ -81,10 +86,17 @@
                         </div>
 
                         <div class="col-sm-9">
-                            <input type="text"
+                            <textarea
                                 id="txtProductDesc"
-                                class="form-control col-sm-8 col-md-6" 
-                                #txtProductDesc>
+                                class="form-control col-sm-8 col-md-6"
+                                rows="3"
+                                maxlength="256"
+                                placeholder="Descripción del producto"
+                                style="resize: vertical;"
+                                #txtProductDesc></textarea>
+                            <small class="form-text text-grey-m1 col-sm-8 col-md-6 px-0 text-right">
+                                {{ txtProductDesc.value.length }}/256
+                            </small>
                         </div>
                     </div>
 
@@ -96,8 +108,9 @@
                         </div>
 
                         <div class="col-sm-9">
-                            <div class="position-relative">
-                                <input type="text" class="form-control col-sm-8 col-md-6"
+                            <div class="d-flex align-items-start">
+                              <div class="position-relative col-sm-8 col-md-6 px-0">
+                                <input type="text" class="form-control w-100"
                                     placeholder="[--SELECCIONAR MARCA--]"
                                     [(ngModel)]="searchBrandTerm"
                                     (ngModelChange)="showBrandDropdown = true"
@@ -105,12 +118,20 @@
                                     (blur)="onBrandBlur()"
                                     [ngModelOptions]="{standalone: true}">
                                 <input type="hidden" id="cboBrandCod" #cboBrandCod>
-                                <div class="dropdown-menu" [class.show]="showBrandDropdown" style="width: 100%; max-width: 50%; max-height: 200px; overflow-y: auto; position: absolute; top: 100%; left: 0; z-index: 1000;">
+                                <div class="dropdown-menu" [class.show]="showBrandDropdown" style="width: 100%; max-height: 200px; overflow-y: auto; position: absolute; top: 100%; left: 0; z-index: 1000;">
                                     <a class="dropdown-item" style="cursor: pointer;" (mousedown)="selectBrand(null)">[--SELECCIONAR MARCA--]</a>
                                     <a class="dropdown-item" style="cursor: pointer;" *ngFor="let item of filteredBrands" (mousedown)="selectBrand(item)">
                                         {{ item.BrandName }}
                                     </a>
                                 </div>
+                              </div>
+                              <button type="button" class="btn btn-outline-primary ml-2"
+                                  *ngIf="CanCreateBrand"
+                                  data-toggle="modal" data-target="#modalCreateBrand"
+                                  title="Crear una nueva marca"
+                                  (click)="openCreateBrandModal()">
+                                  <i class="fa fa-plus mr-1"></i>Nueva
+                              </button>
                             </div>
                         </div>
                     </div>
@@ -123,8 +144,9 @@
                         </div>
 
                         <div class="col-sm-9">
-                            <div class="position-relative">
-                                <input type="text" class="form-control col-sm-8 col-md-6"
+                            <div class="d-flex align-items-start">
+                              <div class="position-relative col-sm-8 col-md-6 px-0">
+                                <input type="text" class="form-control w-100"
                                     placeholder="[--SELECCIONAR CATEGORIA--]"
                                     [(ngModel)]="searchCategoryTerm"
                                     (ngModelChange)="showCategoryDropdown = true"
@@ -132,47 +154,25 @@
                                     (blur)="onCategoryBlur()"
                                     [ngModelOptions]="{standalone: true}">
                                 <input type="hidden" id="cboCategoryCod" #cboCategoryCod>
-                                <div class="dropdown-menu" [class.show]="showCategoryDropdown" style="width: 100%; max-width: 50%; max-height: 200px; overflow-y: auto; position: absolute; top: 100%; left: 0; z-index: 1000;">
+                                <div class="dropdown-menu" [class.show]="showCategoryDropdown" style="width: 100%; max-height: 200px; overflow-y: auto; position: absolute; top: 100%; left: 0; z-index: 1000;">
                                     <a class="dropdown-item" style="cursor: pointer;" (mousedown)="selectCategory(null)">[--SELECCIONAR CATEGORIA--]</a>
                                     <a class="dropdown-item" style="cursor: pointer;" *ngFor="let item of filteredCategories" (mousedown)="selectCategory(item)">
                                         {{ item.CategoryName }}
                                     </a>
                                 </div>
+                              </div>
+                              <button type="button" class="btn btn-outline-primary ml-2"
+                                  *ngIf="CanCreateCategory"
+                                  data-toggle="modal" data-target="#modalCreateCategory"
+                                  title="Crear una nueva categoría"
+                                  (click)="openCreateCategoryModal()">
+                                  <i class="fa fa-plus mr-1"></i>Nueva
+                              </button>
                             </div>
                         </div>
                     </div>
 
                     <ng-container *ngIf="!IsEditMode">
-                        <div class="form-group row">
-                            <div class="col-sm-3 col-form-label text-sm-right pr-0">
-                                <label for="id-form-field-1" class="mb-0">
-                                    Stock maximo
-                                </label>
-                            </div>
-
-                            <div class="col-sm-9">
-                                <input type="number"
-                                    id="txtNumMaxStock"
-                                    class="form-control col-sm-8 col-md-6" 
-                                    #txtNumMaxStock>
-                            </div>
-                        </div>
-
-                        <div class="form-group row">
-                            <div class="col-sm-3 col-form-label text-sm-right pr-0">
-                                <label for="id-form-field-1" class="mb-0">
-                                    Stock minimo
-                                </label>
-                            </div>
-
-                            <div class="col-sm-9">
-                                <input type="number"
-                                    id="txtNumMinStock"
-                                    class="form-control col-sm-8 col-md-6" 
-                                    #txtNumMinStock>
-                            </div>
-                        </div>
-
                         <div class="form-group row">
                             <div class="col-sm-3 col-form-label text-sm-right pr-0">
                                 <label class="mb-0">
@@ -181,13 +181,33 @@
                             </div>
 
                             <div class="col-sm-9">
-                                <input type="text"
-                                    id="txtProductUnitName"
-                                    class="form-control col-sm-8 col-md-6"
-                                    placeholder="NIU, CAJA, BOLSA"
-                                    (input)="onUnitConfigChange()"
-                                    (blur)="onUnitConfigChange()"
-                                    #txtProductUnitName>
+                                <div class="position-relative col-sm-8 col-md-6 px-0">
+                                    <input type="text"
+                                        class="form-control w-100"
+                                        placeholder="Buscar o escribir una unidad"
+                                        maxlength="32"
+                                        [(ngModel)]="searchProductUnitTerm"
+                                        (ngModelChange)="onProductUnitSearchChange($event)"
+                                        (focus)="showProductUnitDropdown = true"
+                                        (blur)="onProductUnitBlur()"
+                                        [ngModelOptions]="{standalone: true}">
+                                    <input type="hidden" id="txtProductUnitName" #txtProductUnitName>
+                                    <div class="dropdown-menu" [class.show]="showProductUnitDropdown"
+                                        style="width: 100%; max-height: 220px; overflow-y: auto; position: absolute; top: 100%; left: 0; z-index: 1000;">
+                                        <a class="dropdown-item" style="cursor: pointer;"
+                                            *ngFor="let item of filteredProductUnits"
+                                            (mousedown)="selectProductUnit(item)">
+                                            <strong>{{ item.Code }}</strong> - {{ item.Name }}
+                                        </a>
+                                        <div class="dropdown-item text-grey-m1 text-85"
+                                            *ngIf="filteredProductUnits.length === 0">
+                                            Se guardará como unidad manual: {{ searchProductUnitTerm }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <small class="form-text text-muted col-sm-8 col-md-6 pl-0">
+                                    Selecciona una unidad de la lista o escribe una personalizada.
+                                </small>
                             </div>
                         </div>
 
@@ -312,10 +332,13 @@
 
                     <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
                         <div class="offset-md-3 col-md-9 text-nowrap">
-                            <a class="btn btn-info btn-bold px-4" type="button" (click)="save()">
-                                <i class="fa fa-check mr-1"></i>
-                                Guardar
-                            </a>
+                            <button class="btn btn-info btn-bold px-4" type="button"
+                                [disabled]="isSavingProduct || isGeneratingProductCod"
+                                (click)="save()">
+                                <i class="fa mr-1"
+                                    [ngClass]="isSavingProduct ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+                                {{ isGeneratingProductCod ? 'Generando código...' : (isSavingProduct ? 'Guardando...' : 'Guardar') }}
+                            </button>
 
                             <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4" type="reset"
                                 (click)="cancel()">
@@ -328,6 +351,50 @@
             </div>
         </div>
 
+    </div>
+</div>
+
+<div class="modal fade" id="modalCreateBrand" tabindex="-1" role="dialog"
+    aria-labelledby="modalCreateBrandTitle" aria-hidden="true" *ngIf="CanCreateBrand">
+    <div class="modal-dialog modal-dialog-centered" role="document"
+        style="width: calc(100% - 2rem); max-width: 680px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-primary-d3" id="modalCreateBrandTitle">Crear nueva marca</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar"
+                    #btnCloseModalCreateBrand (click)="showCreateBrand = false">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-0">
+                <app-createbrand *ngIf="showCreateBrand" [isModal]="true"
+                    (BrandCreated)="handleBrandCreated($event)"
+                    (CancelModal)="handleCancelCreateBrand()">
+                </app-createbrand>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalCreateCategory" tabindex="-1" role="dialog"
+    aria-labelledby="modalCreateCategoryTitle" aria-hidden="true" *ngIf="CanCreateCategory">
+    <div class="modal-dialog modal-dialog-centered" role="document"
+        style="width: calc(100% - 2rem); max-width: 760px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-primary-d3" id="modalCreateCategoryTitle">Crear nueva categoría</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar"
+                    #btnCloseModalCreateCategory (click)="showCreateCategory = false">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-0">
+                <app-createcategory *ngIf="showCreateCategory" [isModal]="true" [productSelectionMode]="true"
+                    (CategoryCreated)="handleCategoryCreated($event)"
+                    (CancelModal)="handleCancelCreateCategory()">
+                </app-createcategory>
+            </div>
+        </div>
     </div>
 </div>
 

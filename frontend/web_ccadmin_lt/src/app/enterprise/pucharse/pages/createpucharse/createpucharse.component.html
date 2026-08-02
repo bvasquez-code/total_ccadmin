@@ -77,8 +77,12 @@
                       <tr *ngFor="let product of productList">
                         <td>{{ product.ProductCod }}</td>
                         <td>
-                          {{ product.ProductName }}
-                          <i class="fa fa-check text-success ml-2" *ngIf="isProductSelected(product)"></i>
+                          <div>{{ product.ProductName }}</div>
+                          <div class="mt-1" *ngIf="isProductSelected(product)">
+                            <span class="badge bgc-green-d2 text-white text-xs align-middle">
+                              <i class="fa fa-check mr-1"></i>Seleccionado
+                            </span>
+                          </div>
                         </td>
                         <td class="text-center">
                           <a class="btn btn-sm btn-outline-primary" (click)="selectProduct(product)" data-toggle="modal"

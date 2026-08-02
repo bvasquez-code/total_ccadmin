@@ -41,10 +41,11 @@ public class CategoryService extends SessionService {
     }
 
     public CategoryEntity save(CategoryEntity category) {
+        return this.categoryCreateService.save(category, getUserCod());
+    }
 
-        category.addSession(getUserCod(), !this.categoryRepository.existsById(category.CategoryCod));
-
-        return this.categoryRepository.save(category);
+    public String generateCategoryCode() {
+        return this.categoryCreateService.generateCategoryCode();
     }
 
     @Transactional

@@ -2,6 +2,7 @@ package com.ccadmin.app.product.service;
 
 import com.ccadmin.app.product.model.entity.CategoryEntity;
 import com.ccadmin.app.product.repository.CategoryRepository;
+import com.ccadmin.app.system.shared.TableSequenceShared;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -13,10 +14,33 @@ import java.util.List;
  */
 @Service
 public class CategoryCreateService {
-    private final CategoryRepository categoryRepository;
+    private static final String CATEGORY_SEQUENCE_TYPE = "category";
 
-    public CategoryCreateService(CategoryRepository categoryRepository) {
+    private final CategoryRepository categoryRepository;
+    private final TableSequenceShared tableSequenceShared;
+
+    public CategoryCreateService(CategoryRepository categoryRepository,
+                                 TableSequenceShared tableSequenceShared) {
         this.categoryRepository = categoryRepository;
+        this.tableSequenceShared = tableSequenceShared;
+    }
+
+    public CategoryEntity save(CategoryEntity category, String userCod) {
+        if (category == null) {
+            throw new IllegalArgumentException("Debe ingresar una categoria");
+        }
+        if (clean(category.CategoryCod).isEmpty()) {
+            category.CategoryCod = generateCategoryCode();
+        }
+        boolean isNewCategory = !categoryRepository.existsById(category.CategoryCod);
+        category.addSession(auditUser(userCod), isNewCategory);
+        return categoryRepository.save(category);
+    }
+
+    public String generateCategoryCode() {
+        return tableSequenceShared.getNextAvailableCode(
+                CATEGORY_SEQUENCE_TYPE, categoryRepository::existsById
+        );
     }
 
     @Transactional

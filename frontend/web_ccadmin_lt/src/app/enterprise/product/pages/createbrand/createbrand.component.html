@@ -1,8 +1,8 @@
-<div role="main" class="main-content">
+<div role="main" [class.main-content]="!isModal">
 
-    <div class="page-content container container-plus">
-        <div class="card acard mt-2 mt-lg-3">
-            <div class="card-header">
+    <div [ngClass]="isModal ? '' : 'page-content container container-plus'">
+        <div [ngClass]="isModal ? 'card border-0 shadow-none mb-0' : 'card acard mt-2 mt-lg-3'">
+            <div class="card-header" *ngIf="!isModal">
                 <h3 class="card-title text-125 text-primary-d2">
                     <i class="far fa-edit text-dark-l3 mr-1"></i>
                     Registrar Marca
@@ -15,18 +15,33 @@
                     <div class="form-group row">
                         <div class="col-sm-3 col-form-label text-sm-right pr-0">
                             <label for="id-form-field-1" class="mb-0">
-                                Codigo
+                                Código <span class="text-grey-m1 text-85">(opcional)</span>
                             </label>
                         </div>
 
                         <div class="col-sm-9">
-                            <input type="text"
-                                [readonly]="txtBrandCodreadonly"
-                                [maxLength]="10"
-                                (keypress)="validateKeypress($event,'txtBrandCod')"
-                                id="txtBrandCod"
-                                class="form-control col-sm-8 col-md-6" 
-                                #txtBrandCod>
+                            <div [ngClass]="isModal ? 'input-group' : 'input-group col-sm-8 col-md-6 px-0'">
+                                <input type="text"
+                                    [readonly]="txtBrandCodreadonly || isGeneratingBrandCod || isSavingBrand"
+                                    [maxLength]="10"
+                                    (keypress)="validateKeypress($event,'txtBrandCod')"
+                                    id="txtBrandCod"
+                                    class="form-control"
+                                    aria-describedby="brandCodeHelp"
+                                    #txtBrandCod>
+                                <div class="input-group-append" *ngIf="!IsEditMode">
+                                    <button class="btn btn-info" type="button"
+                                        [disabled]="isGeneratingBrandCod || isSavingBrand"
+                                        (click)="generateBrandCod()">
+                                        <i class="fa mr-1"
+                                            [ngClass]="isGeneratingBrandCod ? 'fa-spinner fa-spin' : 'fa-sync-alt'"></i>
+                                        {{ isGeneratingBrandCod ? 'Generando...' : 'Generar' }}
+                                    </button>
+                                </div>
+                            </div>
+                            <small id="brandCodeHelp" class="form-text text-grey-m1" *ngIf="!IsEditMode">
+                                Puedes personalizar el código o dejarlo vacío para que el sistema lo genere al guardar.
+                            </small>
                         </div>
                     </div>
 
@@ -38,28 +53,28 @@
                         </div>
 
                         <div class="col-sm-9">
-                            <input type="text" class="form-control col-sm-8 col-md-6" #txtBrandName>
+                            <input type="text"
+                                [ngClass]="isModal ? 'form-control' : 'form-control col-sm-8 col-md-6'"
+                                #txtBrandName>
                         </div>
                     </div>
 
                     <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
                         <div class="offset-md-3 col-md-9 text-nowrap">
-                            <a 
-                                class="btn btn-info btn-bold px-4" 
-                                type="button"
-                                (click)="Save()"
-                            >
-                                <i class="fa fa-check mr-1"></i>
-                                Guardar
-                            </a>
+                            <button class="btn btn-info btn-bold px-4" type="button"
+                                [disabled]="isSavingBrand || isGeneratingBrandCod"
+                                (click)="Save()">
+                                <i class="fa mr-1"
+                                    [ngClass]="isSavingBrand ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+                                {{ isGeneratingBrandCod ? 'Generando código...' : (isSavingBrand ? 'Guardando...' : 'Guardar') }}
+                            </button>
 
-                            <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4" 
-                                type="reset"
-                                href="/enterprise/product/pages/listBrand"
-                            >
+                            <button class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4"
+                                type="button"
+                                (click)="cancel()">
                                 <i class="fa fa-undo mr-1"></i>
-                                Volver
-                            </a>
+                                {{ isModal ? 'Cancelar' : 'Volver' }}
+                            </button>
                         </div>
                     </div>
                 </form>

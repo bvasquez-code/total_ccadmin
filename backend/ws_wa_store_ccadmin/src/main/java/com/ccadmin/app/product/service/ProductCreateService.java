@@ -114,11 +114,9 @@ public class ProductCreateService extends SessionService {
     }
 
     public String generateProductCode() {
-        String productCod = this.tableSequenceShared.getNextCode(PRODUCT_SEQUENCE_TYPE);
-        while (StringUtil.isBlank(productCod) || this.productRepository.existsById(productCod)) {
-            productCod = this.tableSequenceShared.getNextCode(PRODUCT_SEQUENCE_TYPE);
-        }
-        return productCod;
+        return this.tableSequenceShared.getNextAvailableCode(
+                PRODUCT_SEQUENCE_TYPE, this.productRepository::existsById
+        );
     }
 
     private void ensureProductCode(ProductRegisterDto productRegister) {

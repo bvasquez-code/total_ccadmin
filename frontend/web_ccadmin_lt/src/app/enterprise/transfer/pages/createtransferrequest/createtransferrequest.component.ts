@@ -26,6 +26,7 @@ import { TransferRequestDetSaveDto } from '../../model/dto/TransferRequestDetSav
 import { TransferRequestDetService } from '../../service/TransferRequestDetService';
 import { TransferReceiveDto } from '../../model/dto/TransferReceiveDto';
 import { AlertService } from 'src/app/enterprise/shared/service/AlertService';
+import { TransferStockAvailabilityService } from '../../service/TransferStockAvailabilityService';
 
 @Component({
   selector: 'app-createtransferrequest',
@@ -49,6 +50,7 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
   storeList: StoreEntity[] = [];
   conversionValidationMessage: string = '';
   isSavingDetail: boolean = false;
+  selectedVisibleQuantity: number = 0;
 
   constructor(
     private transferService: TransferService,
@@ -59,7 +61,8 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
     private router: Router,
     private toastrService: ToastrService,
     private transferRequestDetService: TransferRequestDetService,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private transferStockAvailabilityService: TransferStockAvailabilityService
   ) {
 
   }
@@ -261,10 +264,18 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
         throw new Error('La cantidad debe ser mayor a cero');
       }
 
-      const confirmation = await this.alertService.waring(
-        'Estás a punto de enviar tu solicitud. Ya no podrás editarla.',
-        'Enviar solicitud'
+      const stockShortages = await this.transferStockAvailabilityService.findShortages(
+        this.transferRequestRegister.transferDetList,
+        this.getStoredCodOrigin()
       );
+      const shortageSummary = this.transferStockAvailabilityService.formatShortageSummary(stockShortages);
+      const confirmationText = stockShortages.length > 0
+        ? `El stock solicitado todavía no está disponible. ${shortageSummary}. La solicitud podrá enviarse ahora, pero la transferencia no podrá completarse hasta que exista stock suficiente. Ya no podrás editarla después de enviarla.`
+        : 'Estás a punto de enviar tu solicitud. Ya no podrás editarla.';
+      const confirmationTitle = stockShortages.length > 0
+        ? 'Solicitud con stock pendiente'
+        : 'Enviar solicitud';
+      const confirmation = await this.alertService.waring(confirmationText, confirmationTitle);
       if (!confirmation.isConfirmed) return;
 
       if (!this.transferRequestRegister.transferHead.TransferReqCod) {
@@ -357,10 +368,12 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
     this.clearConversionValidationMessage();
     this.txtNumUnit.nativeElement.value = '';
     this.productSelect = product;
+    this.selectedVisibleQuantity = 0;
 
     const existing = this.transferRequestRegister.transferDetList.find(e => e.ProductCod === product.ProductCod);
     if (existing) {
-      this.txtNumUnit.nativeElement.value = String(this.toVisibleQuantity(existing.NumUnit, existing.ProductUnitFactor));
+      this.selectedVisibleQuantity = this.toVisibleQuantity(existing.NumUnit, existing.ProductUnitFactor);
+      this.txtNumUnit.nativeElement.value = String(this.selectedVisibleQuantity);
     }
   }
 
@@ -388,6 +401,9 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
     const numUnit = Number(this.txtNumUnit.nativeElement.value);
     if (!numUnit || numUnit <= 0) {
       this.toastrService.error('Ingrese una cantidad válida');
+      return;
+    }
+    if (!await this.confirmInsufficientStockSelection(numUnit)) {
       return;
     }
 
@@ -425,6 +441,7 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
     }
 
     this.txtNumUnit.nativeElement.value = '';
+    this.selectedVisibleQuantity = 0;
     this.closeModal();
   }
 
@@ -473,16 +490,70 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
   }
 
   editDetail(detail: TransferRequestDetEntity) {
-    this.productSelect = new ProductSearchEntity();
-    this.productSelect.ProductCod = detail.ProductCod;
-    this.productSelect.ProductName = detail.Product.ProductName;
+    const listedProduct = this.productList.find(product => product.ProductCod === detail.ProductCod);
+    if (listedProduct) {
+      this.productSelect = listedProduct;
+    } else if (this.productSelect.ProductCod !== detail.ProductCod) {
+      this.productSelect = new ProductSearchEntity();
+      this.productSelect.ProductCod = detail.ProductCod;
+      this.productSelect.ProductName = detail.Product.ProductName;
+      this.productSelect.ProductUnitName = detail.ProductUnitName;
+      this.productSelect.ProductUnitFactor = detail.ProductUnitFactor;
+    }
+    void this.refreshSelectedProductStock(detail.ProductCod);
 
-    this.txtNumUnit.nativeElement.value = String(this.toVisibleQuantity(detail.NumUnit, detail.ProductUnitFactor));
+    this.selectedVisibleQuantity = this.toVisibleQuantity(detail.NumUnit, detail.ProductUnitFactor);
+    this.txtNumUnit.nativeElement.value = String(this.selectedVisibleQuantity);
+  }
+
+  private async refreshSelectedProductStock(productCod: string): Promise<void> {
+    const currentStock = await this.transferStockAvailabilityService.findCurrentPhysicalStock(
+      productCod,
+      this.getStoredCodOrigin()
+    );
+    if (currentStock !== null && this.productSelect.ProductCod === productCod) {
+      this.productSelect.NumPhysicalStock = currentStock;
+    }
   }
 
   toVisibleQuantity(internalQuantity: number, ProductUnitFactor: number): number {
     const factor = ProductUnitFactor > 0 ? ProductUnitFactor : 1;
     return internalQuantity / factor;
+  }
+
+  onSelectedQuantityChange(value: string): void {
+    this.clearConversionValidationMessage();
+    const quantity = Number(value);
+    this.selectedVisibleQuantity = Number.isFinite(quantity) && quantity > 0 ? quantity : 0;
+  }
+
+  getCurrentVisibleStock(): number {
+    return ProductUnitHelper.toVisibleQuantity(
+      this.productSelect?.NumPhysicalStock || 0,
+      this.productSelect?.ProductUnitFactor || 1
+    );
+  }
+
+  getProjectedVisibleStock(): number {
+    return ProductUnitHelper.getVisibleStockAfterMovement(
+      this.productSelect?.NumPhysicalStock || 0,
+      this.selectedVisibleQuantity,
+      this.productSelect?.ProductUnitFactor || 1
+    );
+  }
+
+  private async confirmInsufficientStockSelection(requestedVisibleQuantity: number): Promise<boolean> {
+    const currentVisibleStock = this.getCurrentVisibleStock();
+    if (requestedVisibleQuantity <= currentVisibleStock) {
+      return true;
+    }
+
+    const productUnitName = this.productSelect.ProductUnitName || 'NIU';
+    const confirmation = await this.alertService.waring(
+      `La cantidad solicitada (${ProductUnitHelper.formatQuantity(requestedVisibleQuantity)} ${productUnitName}) supera el stock actual (${ProductUnitHelper.formatQuantity(currentVisibleStock)} ${productUnitName}). Puede registrarla anticipadamente, pero la transferencia no podrá completarse hasta que exista stock suficiente.`,
+      'Stock insuficiente'
+    );
+    return confirmation.isConfirmed;
   }
 
   isProductSelected(product: ProductSearchEntity): boolean {

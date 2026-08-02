@@ -46,6 +46,17 @@ public class CategoryController {
         }
     }
 
+    @GetMapping("generateCategoryCode")
+    public ResponseEntity<ResponseWsDto> generateCategoryCode() {
+        try {
+            ResponseWsDto response = new ResponseWsDto();
+            return new ResponseEntity<ResponseWsDto>(
+                    response.okResponse(this.categoryService.generateCategoryCode()), HttpStatus.OK);
+        } catch (Exception ex) {
+            return new ResponseEntity<ResponseWsDto>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+
     @PostMapping("saveAll")
     public ResponseEntity<ResponseWsDto> saveAll(@RequestBody CategoryRegisterMassiveDto categoryRegisterMassive) {
         try {

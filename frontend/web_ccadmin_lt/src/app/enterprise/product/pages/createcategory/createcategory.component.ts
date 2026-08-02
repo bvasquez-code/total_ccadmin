@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
 import { IRegisterForm } from 'src/app/enterprise/shared/interface/IRegisterForm';
 import { CategoryEntity } from '../../model/entity/CategoryEntity';
 import { Router } from '@angular/router';
@@ -10,13 +10,20 @@ import { ValidationHelper } from 'src/app/enterprise/shared/helper/ValidationHel
   selector: 'app-createcategory',
   templateUrl: './createcategory.component.html'
 })
-export class CreatecategoryComponent implements OnInit, IRegisterForm<CategoryEntity, string> {
+export class CreatecategoryComponent implements OnInit, AfterViewInit, IRegisterForm<CategoryEntity, string> {
+
+  @Input() isModal: boolean = false;
+  @Input() productSelectionMode: boolean = false;
+  @Output() CategoryCreated = new EventEmitter<CategoryEntity>();
+  @Output() CancelModal = new EventEmitter<void>();
 
   CategoryCod: string = "";
   Category: CategoryEntity = new CategoryEntity();
   CategoryDadList: CategoryEntity[] = [];
   txtCategoryCodReadOnly: boolean = false;
   cboCategoryDadCodvisibility: boolean = false;
+  isGeneratingCategoryCod: boolean = false;
+  isSavingCategory: boolean = false;
 
   @ViewChild('txtCategoryCod') txtCategoryCod!: ElementRef<HTMLInputElement>;
   @ViewChild('txtCategoryName') txtCategoryName!: ElementRef<HTMLInputElement>;
@@ -58,27 +65,86 @@ export class CreatecategoryComponent implements OnInit, IRegisterForm<CategoryEn
     this.cboIsCategoryDad.nativeElement.value = Category.IsCategoryDad;
     this.IsCategoryDad();
   }
+
+  get IsEditMode(): boolean {
+    return Boolean(this.CategoryCod);
+  }
+
   async Save(): Promise<void> {
+    if (this.isSavingCategory || this.isGeneratingCategoryCod) return;
 
-    if (!this.Category) this.Category = new CategoryEntity();
+    this.isSavingCategory = true;
+    try {
+      if (!this.Category) this.Category = new CategoryEntity();
+      if (!this.IsEditMode && !this.txtCategoryCod.nativeElement.value.trim()) {
+        const generated = await this.generateCategoryCod();
+        if (!generated) return;
+      }
 
-    this.Category.CategoryCod = this.txtCategoryCod.nativeElement.value;
-    this.Category.CategoryName = this.txtCategoryName.nativeElement.value;
-    this.Category.CategoryDadCod = this.cboCategoryDadCod.nativeElement.value;
-    this.Category.IsDigital = this.cboIsDigital.nativeElement.value;
-    this.Category.IsCategoryDad = this.cboIsCategoryDad.nativeElement.value;
+      this.Category.CategoryCod = this.txtCategoryCod.nativeElement.value.trim();
+      this.Category.CategoryName = this.txtCategoryName.nativeElement.value;
+      this.Category.CategoryDadCod = this.cboCategoryDadCod.nativeElement.value;
+      this.Category.IsDigital = this.cboIsDigital.nativeElement.value;
+      this.Category.IsCategoryDad = this.cboIsCategoryDad.nativeElement.value;
 
-    if (!this.validate(this.Category)) return;
+      if (!this.validate(this.Category)) return;
 
-    const rpt = await this.categoryService.Save(this.Category);
-    if (!rpt.ErrorStatus) {
-      this.toastrService.success("Operación realizada con exito.");
+      const rpt = await this.categoryService.Save(this.Category);
+      if (!rpt.ErrorStatus) {
+        this.Category = rpt.Data || this.Category;
+        this.toastrService.success("Operación realizada con exito.");
 
-      this.router.navigate(['/enterprise/product/pages/listCategory']);
+        if (this.isModal) {
+          this.CategoryCreated.emit(this.Category);
+        } else {
+          this.router.navigate(['/enterprise/product/pages/listCategory']);
+        }
+      } else {
+        this.toastrService.error(rpt.Message);
+      }
+    } finally {
+      this.isSavingCategory = false;
     }
   }
+
+  async generateCategoryCod(): Promise<boolean> {
+    if (this.IsEditMode || this.isGeneratingCategoryCod) return false;
+
+    this.isGeneratingCategoryCod = true;
+    try {
+      const rpt = await this.categoryService.GenerateCategoryCode();
+      if (rpt.ErrorStatus) {
+        this.toastrService.error(rpt.Message);
+        return false;
+      }
+      const generatedCategoryCod = String(rpt.Data || '').trim();
+      if (!generatedCategoryCod) {
+        this.toastrService.error('No se pudo generar el código de la categoría.');
+        return false;
+      }
+      this.txtCategoryCod.nativeElement.value = generatedCategoryCod;
+      return true;
+    } finally {
+      this.isGeneratingCategoryCod = false;
+    }
+  }
+
   ngOnInit(): void {
-    throw new Error('Method not implemented.');
+  }
+
+  ngAfterViewInit(): void {
+    if (!this.IsEditMode && this.productSelectionMode) {
+      this.cboIsCategoryDad.nativeElement.value = 'N';
+      this.IsCategoryDad();
+    }
+  }
+
+  cancel(): void {
+    if (this.isModal) {
+      this.CancelModal.emit();
+    } else {
+      this.router.navigate(['/enterprise/product/pages/listCategory']);
+    }
   }
 
   IsCategoryDad() {

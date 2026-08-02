@@ -2,6 +2,7 @@ package com.ccadmin.app.product.service;
 
 import com.ccadmin.app.product.model.entity.BrandEntity;
 import com.ccadmin.app.product.repository.BrandRepository;
+import com.ccadmin.app.system.shared.TableSequenceShared;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -13,10 +14,33 @@ import java.util.List;
  */
 @Service
 public class BrandCreateService {
-    private final BrandRepository brandRepository;
+    private static final String BRAND_SEQUENCE_TYPE = "brand";
 
-    public BrandCreateService(BrandRepository brandRepository) {
+    private final BrandRepository brandRepository;
+    private final TableSequenceShared tableSequenceShared;
+
+    public BrandCreateService(BrandRepository brandRepository,
+                              TableSequenceShared tableSequenceShared) {
         this.brandRepository = brandRepository;
+        this.tableSequenceShared = tableSequenceShared;
+    }
+
+    public BrandEntity save(BrandEntity brand, String userCod) {
+        if (brand == null) {
+            throw new IllegalArgumentException("Debe ingresar una marca");
+        }
+        if (clean(brand.BrandCod).isEmpty()) {
+            brand.BrandCod = generateBrandCode();
+        }
+        boolean isNewBrand = !brandRepository.existsById(brand.BrandCod);
+        brand.addSession(auditUser(userCod), isNewBrand);
+        return brandRepository.save(brand);
+    }
+
+    public String generateBrandCode() {
+        return tableSequenceShared.getNextAvailableCode(
+                BRAND_SEQUENCE_TYPE, brandRepository::existsById
+        );
     }
 
     @Transactional

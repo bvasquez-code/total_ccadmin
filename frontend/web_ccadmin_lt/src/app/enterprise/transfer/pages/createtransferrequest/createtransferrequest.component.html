@@ -61,8 +61,12 @@
                       <tr *ngFor="let product of productList">
                         <td>{{ product.ProductCod }}</td>
                         <td>
-                          {{ product.ProductName }}
-                          <i class="fa fa-check text-success ml-2" *ngIf="isProductSelected(product)"></i>
+                          <div>{{ product.ProductName }}</div>
+                          <div class="mt-1" *ngIf="isProductSelected(product)">
+                            <span class="badge bgc-green-d2 text-white text-xs align-middle">
+                              <i class="fa fa-check mr-1"></i>Seleccionado
+                            </span>
+                          </div>
                         </td>
                         <td class="text-center">{{ toVisibleQuantity(product.NumPhysicalStock, product.ProductUnitFactor) }} {{ product.ProductUnitName }}</td>
                         <td class="text-center">
@@ -98,13 +102,13 @@
                       <tr *ngFor="let detail of transferRequestRegister.transferDetList">
                         <td>{{ detail.Product.ProductName }}</td>
                         <td class="text-center">{{ toVisibleQuantity(detail.NumUnit, detail.ProductUnitFactor) }} {{ detail.ProductUnitName }}</td>
-                        <td class="text-center">
+                        <td class="text-center text-nowrap">
                           <button type="button" class="btn btn-sm btn-info mr-1" (click)="editDetail(detail)"
-                            data-toggle="modal" data-target="#modalProduct" [disabled]="isSavingDetail">
+                            data-toggle="modal" data-target="#modalProduct" [disabled]="isSavingDetail" title="Editar">
                             <i class="fa fa-edit"></i>
                           </button>
                           <button type="button" class="btn btn-sm btn-danger" (click)="removeProduct(detail)"
-                            [disabled]="isSavingDetail">
+                            [disabled]="isSavingDetail" title="Eliminar">
                             <i class="fa fa-trash"></i>
                           </button>
                         </td>
@@ -155,7 +159,27 @@
         </div>
         <div class="form-group">
           <label>Cantidad:</label>
-          <input type="number" class="form-control" #txtNumUnit (input)="clearConversionValidationMessage()" (keyup.enter)="AddProduct()">
+          <input type="number" class="form-control" #txtNumUnit (input)="onSelectedQuantityChange(txtNumUnit.value)" (keyup.enter)="AddProduct()">
+        </div>
+
+        <div class="row">
+          <div class="col-sm-6 mb-2 mb-sm-0">
+            <div class="border rounded bgc-blue-l4 px-3 py-2 h-100">
+              <div class="text-muted text-90">Stock actual</div>
+              <div class="text-primary-d2 text-600">
+                {{ getCurrentVisibleStock() | number:'1.0-2' }} {{ productSelect.ProductUnitName || 'NIU' }}
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="border rounded px-3 py-2 h-100"
+              [ngClass]="getProjectedVisibleStock() < 0 ? 'bgc-red-l4 text-danger' : 'bgc-green-l4 text-success'">
+              <div class="text-muted text-90">Stock después de transferir</div>
+              <div class="text-600">
+                {{ getProjectedVisibleStock() | number:'1.0-2' }} {{ productSelect.ProductUnitName || 'NIU' }}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -13,6 +13,12 @@ import { ValidationHelper } from 'src/app/enterprise/shared/helper/ValidationHel
 import Swal from 'sweetalert2';
 import { ProductBarcodeEntity } from '../../model/entity/ProductBarcodeEntity';
 import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
+import { DataSesionService } from 'src/app/enterprise/compartido/service/datasesion.service';
+
+interface ProductUnitOption {
+  Code: string;
+  Name: string;
+}
 
 @Component({
   selector: 'app-createproduct',
@@ -28,35 +34,64 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
   ProductRegister: ProductRegisterDto = new ProductRegisterDto();
   BrandList: BrandEntity[] = [];
   CategoryList: CategoryEntity[] = [];
+  readonly ProductUnitList: ProductUnitOption[] = [
+    { Code: 'NIU', Name: 'Unidad' },
+    { Code: 'KGM', Name: 'Kilogramo' },
+    { Code: 'GRM', Name: 'Gramo' },
+    { Code: 'LTR', Name: 'Litro' },
+    { Code: 'MLT', Name: 'Mililitro' },
+    { Code: 'MTR', Name: 'Metro' },
+    { Code: 'MTK', Name: 'Metro cuadrado' },
+    { Code: 'MTQ', Name: 'Metro cúbico' },
+    { Code: 'BX', Name: 'Caja' },
+    { Code: 'PK', Name: 'Paquete' },
+    { Code: 'BG', Name: 'Bolsa' },
+    { Code: 'BO', Name: 'Botella' },
+    { Code: 'CA', Name: 'Lata' },
+    { Code: 'DZN', Name: 'Docena' },
+    { Code: 'SET', Name: 'Juego' },
+    { Code: 'PR', Name: 'Par' },
+    { Code: 'TNE', Name: 'Tonelada' },
+    { Code: 'ZZ', Name: 'Servicio' }
+  ];
 
   searchBrandTerm: string = '';
   searchCategoryTerm: string = '';
+  searchProductUnitTerm: string = 'NIU - Unidad';
   showBrandDropdown: boolean = false;
   showCategoryDropdown: boolean = false;
+  showProductUnitDropdown: boolean = false;
+  showCreateBrand: boolean = false;
+  showCreateCategory: boolean = false;
 
   lastKeypressTime: number = 0;
   inputBuffer: string = '';
 
   txtProductCodreadonly: boolean = false;
   isGeneratingProductCod: boolean = false;
+  isSavingProduct: boolean = false;
+
+  private readonly defaultMinStock: number = 50;
+  private readonly defaultMaxStock: number = 100;
 
   @ViewChild('txtBarCode') txtBarCode!: ElementRef<HTMLInputElement>;
   @ViewChild('txtProductCod') txtProductCod!: ElementRef<HTMLInputElement>;
   @ViewChild('txtProductName') txtProductName!: ElementRef<HTMLInputElement>;
-  @ViewChild('txtProductDesc') txtProductDesc!: ElementRef<HTMLInputElement>;
+  @ViewChild('txtProductDesc') txtProductDesc!: ElementRef<HTMLTextAreaElement>;
   @ViewChild('cboCategoryCod') cboCategoryCod!: ElementRef<HTMLInputElement>;
   @ViewChild('cboBrandCod') cboBrandCod!: ElementRef<HTMLInputElement>;
   @ViewChild('txtNumPrice') txtNumPrice!: ElementRef<HTMLInputElement>;
   @ViewChild('txtVisibleUnitPrice') txtVisibleUnitPrice!: ElementRef<HTMLInputElement>;
-  @ViewChild('txtNumMaxStock') txtNumMaxStock!: ElementRef<HTMLInputElement>;
-  @ViewChild('txtNumMinStock') txtNumMinStock!: ElementRef<HTMLInputElement>;
   @ViewChild('txtProductUnitName') txtProductUnitName!: ElementRef<HTMLInputElement>;
   @ViewChild('txtProductUnitFactor') txtProductUnitFactor!: ElementRef<HTMLInputElement>;
+  @ViewChild('btnCloseModalCreateBrand') btnCloseModalCreateBrand!: ElementRef<HTMLButtonElement>;
+  @ViewChild('btnCloseModalCreateCategory') btnCloseModalCreateCategory!: ElementRef<HTMLButtonElement>;
 
   constructor(
     private productService: ProductService,
     private router: Router,
-    private toastrService: ToastrService
+    private toastrService: ToastrService,
+    private dataSesionService: DataSesionService
   ) {
     let urlTree: any = this.router.parseUrl(this.router.url);
     this.ProductCod = (urlTree.queryParams['ProductCod']) ? urlTree.queryParams['ProductCod'] : "";
@@ -72,6 +107,14 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
 
   get IsEditMode(): boolean {
     return Boolean(this.ProductCod);
+  }
+
+  get CanCreateBrand(): boolean {
+    return this.dataSesionService.PermissionExists('PR000006');
+  }
+
+  get CanCreateCategory(): boolean {
+    return this.dataSesionService.PermissionExists('PR000007');
   }
 
   async FindDataForm(ProductCod: string) {
@@ -109,9 +152,10 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
     this.ProductRegister.config.ProductCod = this.txtProductCod.nativeElement.value;
 
     if (!this.IsEditMode) {
-      this.txtNumMaxStock.nativeElement.value = String(this.ProductRegister.config.NumMaxStock);
-      this.txtNumMinStock.nativeElement.value = String(this.ProductRegister.config.NumMinStock);
+      this.ProductRegister.config.NumMinStock = this.defaultMinStock;
+      this.ProductRegister.config.NumMaxStock = this.defaultMaxStock;
       this.txtProductUnitName.nativeElement.value = this.ProductRegister.config.ProductUnitName || "NIU";
+      this.searchProductUnitTerm = this.productUnitVisibleLabel(this.txtProductUnitName.nativeElement.value);
       this.txtProductUnitFactor.nativeElement.value = String(this.ProductRegister.config.ProductUnitFactor || 1);
       this.txtNumPrice.nativeElement.value = String(this.ProductRegister.config.NumPrice || 0);
       this.syncVisiblePriceFromInternal();
@@ -125,69 +169,85 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
   }
 
   async save() {
-    if (!this.ProductRegister) {
-      this.ProductRegister = new ProductRegisterDto();
-    }
-    if (!this.IsEditMode && !this.txtProductCod.nativeElement.value) {
-      await this.generateProductCod();
-    }
-    this.ProductRegister.product.ProductCod = this.txtProductCod.nativeElement.value;
-    this.ProductRegister.product.ProductName = this.txtProductName.nativeElement.value;
-    this.ProductRegister.product.ProductDesc = this.txtProductDesc.nativeElement.value;
-    this.ProductRegister.product.BrandCod = this.cboBrandCod.nativeElement.value;
-    this.ProductRegister.product.CategoryCod = this.cboCategoryCod.nativeElement.value;
+    if (this.isSavingProduct || this.isGeneratingProductCod) return;
 
-    this.ProductRegister.config.ProductCod = this.txtProductCod.nativeElement.value;
-
-    if (!this.IsEditMode) {
-      this.ProductRegister.config.NumPrice = Number(this.txtNumPrice.nativeElement.value);
-      this.ProductRegister.config.NumMaxStock = Number(this.txtNumMaxStock.nativeElement.value);
-      this.ProductRegister.config.NumMinStock = Number(this.txtNumMinStock.nativeElement.value);
-      this.ProductRegister.config.ProductUnitName = this.txtProductUnitName.nativeElement.value || "NIU";
-      this.ProductRegister.config.ProductUnitFactor = Number(this.txtProductUnitFactor.nativeElement.value || 1);
-    }
-
-    this.ProductRegister.config.IsDiscontable = "N";
-    this.ProductRegister.config.DiscountType = "-";
-    this.ProductRegister.config.NumDiscountMax = 0;
-    this.ProductRegister.config.Version = "V.1";
-
-    if (!this.ProductRegister.productBarcode) {
-      this.ProductRegister.productBarcode = new ProductBarcodeEntity();
-    }
-
-    this.ProductRegister.productBarcode.ProductCod = this.txtProductCod.nativeElement.value;
-    this.ProductRegister.productBarcode.BarCode = this.txtBarCode.nativeElement.value;
-    this.ProductRegister.IsEditMode = this.IsEditMode;
-
-    if (!this.validate(this.ProductRegister)) return;
-
-    const rpt: ResponseWsDto = await this.productService.Save(this.ProductRegister);
-
-    if (!rpt.ErrorStatus) {
-      this.toastrService.success("Operación realizada con exito.");
-
-      if (this.isModal) {
-        this.ProductCreated.emit(this.ProductRegister);
-      } else {
-        this.router.navigate(['/enterprise/product/pages/listProduct']);
+    this.isSavingProduct = true;
+    try {
+      if (!this.ProductRegister) {
+        this.ProductRegister = new ProductRegisterDto();
       }
-    } else {
-      this.toastrService.error(rpt.Message);
+      if (!this.IsEditMode && !this.txtProductCod.nativeElement.value.trim()) {
+        const generated = await this.generateProductCod();
+        if (!generated) return;
+      }
+
+      this.ProductRegister.product.ProductCod = this.txtProductCod.nativeElement.value.trim();
+      this.ProductRegister.product.ProductName = this.txtProductName.nativeElement.value;
+      this.ProductRegister.product.ProductDesc = this.txtProductDesc.nativeElement.value;
+      this.ProductRegister.product.BrandCod = this.cboBrandCod.nativeElement.value;
+      this.ProductRegister.product.CategoryCod = this.cboCategoryCod.nativeElement.value;
+
+      this.ProductRegister.config.ProductCod = this.ProductRegister.product.ProductCod;
+
+      if (!this.IsEditMode) {
+        this.ProductRegister.config.NumPrice = Number(this.txtNumPrice.nativeElement.value);
+        this.ProductRegister.config.NumMinStock = this.defaultMinStock;
+        this.ProductRegister.config.NumMaxStock = this.defaultMaxStock;
+        this.ProductRegister.config.ProductUnitName = this.txtProductUnitName.nativeElement.value || "NIU";
+        this.ProductRegister.config.ProductUnitFactor = Number(this.txtProductUnitFactor.nativeElement.value || 1);
+      }
+
+      this.ProductRegister.config.IsDiscontable = "N";
+      this.ProductRegister.config.DiscountType = "-";
+      this.ProductRegister.config.NumDiscountMax = 0;
+      this.ProductRegister.config.Version = "V.1";
+
+      if (!this.ProductRegister.productBarcode) {
+        this.ProductRegister.productBarcode = new ProductBarcodeEntity();
+      }
+
+      this.ProductRegister.productBarcode.ProductCod = this.ProductRegister.product.ProductCod;
+      this.ProductRegister.productBarcode.BarCode = this.txtBarCode.nativeElement.value;
+      this.ProductRegister.IsEditMode = this.IsEditMode;
+
+      if (!this.validate(this.ProductRegister)) return;
+
+      const rpt: ResponseWsDto = await this.productService.Save(this.ProductRegister);
+
+      if (!rpt.ErrorStatus) {
+        this.toastrService.success("Operación realizada con exito.");
+
+        if (this.isModal) {
+          this.ProductCreated.emit(this.ProductRegister);
+        } else {
+          this.router.navigate(['/enterprise/product/pages/listProduct']);
+        }
+      } else {
+        this.toastrService.error(rpt.Message);
+      }
+    } finally {
+      this.isSavingProduct = false;
     }
   }
 
-  async generateProductCod() {
-    if (this.IsEditMode || this.isGeneratingProductCod) return;
+  async generateProductCod(): Promise<boolean> {
+    if (this.IsEditMode || this.isGeneratingProductCod) return false;
 
     this.isGeneratingProductCod = true;
     try {
       const rpt: ResponseWsDto = await this.productService.GenerateProductCode();
 
       if (!rpt.ErrorStatus) {
-        this.txtProductCod.nativeElement.value = rpt.Data;
+        const generatedProductCod = String(rpt.Data || '').trim();
+        if (!generatedProductCod) {
+          this.toastrService.error('No se pudo generar el código del producto.');
+          return false;
+        }
+        this.txtProductCod.nativeElement.value = generatedProductCod;
+        return true;
       } else {
         this.toastrService.error(rpt.Message);
+        return false;
       }
     } finally {
       this.isGeneratingProductCod = false;
@@ -280,6 +340,7 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
       ValidationHelper.validateIsNotEmpty(productRegister.config.NumPrice, "Debe ingresar un precio para el producto");
       ValidationHelper.validNumber(productRegister.config.NumPrice, null, 0, "Precio no valido");
       ValidationHelper.validateIsNotEmpty(productRegister.config.ProductUnitName, "Debe ingresar la unidad de venta");
+      ValidationHelper.validLengthString(productRegister.config.ProductUnitName, 32, "La unidad de venta solo puede tener 32 caracteres");
       ValidationHelper.validNumber(productRegister.config.ProductUnitFactor, null, 1, "Factor de operacion no valido");
 
       return true;
@@ -292,6 +353,9 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
   ensureUnitDefaults(): void {
     if (this.txtProductUnitName && !this.txtProductUnitName.nativeElement.value) {
       this.txtProductUnitName.nativeElement.value = "NIU";
+    }
+    if (this.txtProductUnitName) {
+      this.searchProductUnitTerm = this.productUnitVisibleLabel(this.txtProductUnitName.nativeElement.value);
     }
     if (this.txtProductUnitFactor && !Number(this.txtProductUnitFactor.nativeElement.value || 0)) {
       this.txtProductUnitFactor.nativeElement.value = "1";
@@ -319,6 +383,65 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
       this.txtProductUnitName.nativeElement.value = "NIU";
     }
     this.syncVisiblePriceFromInternal();
+  }
+
+  get filteredProductUnits(): ProductUnitOption[] {
+    const query = this.searchProductUnitTerm.trim().toLowerCase();
+    if (!query) return this.ProductUnitList;
+    return this.ProductUnitList.filter(item =>
+      item.Code.toLowerCase().includes(query)
+      || item.Name.toLowerCase().includes(query)
+      || this.productUnitOptionLabel(item).toLowerCase().includes(query)
+    );
+  }
+
+  onProductUnitSearchChange(value: string): void {
+    this.showProductUnitDropdown = true;
+    const option = this.findProductUnitOption(value);
+    this.txtProductUnitName.nativeElement.value = option
+      ? option.Code
+      : value.trim().toUpperCase();
+  }
+
+  selectProductUnit(option: ProductUnitOption): void {
+    this.searchProductUnitTerm = this.productUnitOptionLabel(option);
+    this.txtProductUnitName.nativeElement.value = option.Code;
+    this.showProductUnitDropdown = false;
+    this.onUnitConfigChange();
+  }
+
+  onProductUnitBlur(): void {
+    setTimeout(() => {
+      const option = this.findProductUnitOption(this.searchProductUnitTerm);
+      if (option) {
+        this.selectProductUnit(option);
+        return;
+      }
+
+      const manualUnit = this.searchProductUnitTerm.trim().toUpperCase();
+      this.txtProductUnitName.nativeElement.value = manualUnit || 'NIU';
+      this.searchProductUnitTerm = manualUnit || this.productUnitVisibleLabel('NIU');
+      this.showProductUnitDropdown = false;
+      this.onUnitConfigChange();
+    }, 200);
+  }
+
+  private findProductUnitOption(value: string): ProductUnitOption | undefined {
+    const normalizedValue = (value || '').trim().toLowerCase();
+    return this.ProductUnitList.find(item =>
+      item.Code.toLowerCase() === normalizedValue
+      || item.Name.toLowerCase() === normalizedValue
+      || this.productUnitOptionLabel(item).toLowerCase() === normalizedValue
+    );
+  }
+
+  private productUnitVisibleLabel(codeOrName: string): string {
+    const option = this.findProductUnitOption(codeOrName);
+    return option ? this.productUnitOptionLabel(option) : codeOrName;
+  }
+
+  private productUnitOptionLabel(option: ProductUnitOption): string {
+    return `${option.Code} - ${option.Name}`;
   }
 
   syncVisiblePriceFromInternal(): void {
@@ -371,6 +494,60 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
 
   isBarcodeScannerInput(): boolean {
     return this.inputBuffer.length > 5;
+  }
+
+  openCreateBrandModal(): void {
+    if (!this.CanCreateBrand) return;
+    this.showBrandDropdown = false;
+    this.showCreateBrand = false;
+    setTimeout(() => this.showCreateBrand = true, 0);
+  }
+
+  async handleBrandCreated(brand: BrandEntity): Promise<void> {
+    this.btnCloseModalCreateBrand.nativeElement.click();
+    this.showCreateBrand = false;
+    await this.refreshProductLookups();
+    const refreshedBrand = this.BrandList.find(item => item.BrandCod === brand.BrandCod) || brand;
+    if (!this.BrandList.some(item => item.BrandCod === refreshedBrand.BrandCod)) {
+      this.BrandList = [...this.BrandList, refreshedBrand];
+    }
+    this.selectBrand(refreshedBrand);
+  }
+
+  handleCancelCreateBrand(): void {
+    this.btnCloseModalCreateBrand.nativeElement.click();
+    this.showCreateBrand = false;
+  }
+
+  openCreateCategoryModal(): void {
+    if (!this.CanCreateCategory) return;
+    this.showCategoryDropdown = false;
+    this.showCreateCategory = false;
+    setTimeout(() => this.showCreateCategory = true, 0);
+  }
+
+  async handleCategoryCreated(category: CategoryEntity): Promise<void> {
+    this.btnCloseModalCreateCategory.nativeElement.click();
+    this.showCreateCategory = false;
+    await this.refreshProductLookups();
+    const refreshedCategory = this.CategoryList.find(item => item.CategoryCod === category.CategoryCod) || category;
+    if (!this.CategoryList.some(item => item.CategoryCod === refreshedCategory.CategoryCod)) {
+      this.CategoryList = [...this.CategoryList, refreshedCategory];
+    }
+    this.selectCategory(refreshedCategory);
+  }
+
+  handleCancelCreateCategory(): void {
+    this.btnCloseModalCreateCategory.nativeElement.click();
+    this.showCreateCategory = false;
+  }
+
+  private async refreshProductLookups(): Promise<void> {
+    const rpt: ResponseWsDto = await this.productService.FindDataForm('');
+    if (rpt.ErrorStatus) return;
+
+    this.BrandList = rpt.DataAdditional.find(e => e.Name === 'brandList')?.Data || this.BrandList;
+    this.CategoryList = rpt.DataAdditional.find(e => e.Name === 'categoryList')?.Data || this.CategoryList;
   }
 
   get filteredBrands() {

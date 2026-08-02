@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
 import { BrandService } from '../../service/brand.service';
 import { IRegisterForm } from 'src/app/enterprise/shared/interface/IRegisterForm';
 import { BrandEntity } from '../../model/entity/BrandEntity';
@@ -12,9 +12,15 @@ import { ValidationHelper } from 'src/app/enterprise/shared/helper/ValidationHel
 })
 export class CreatebrandComponent implements OnInit, IRegisterForm<BrandEntity, string> {
 
+  @Input() isModal: boolean = false;
+  @Output() BrandCreated = new EventEmitter<BrandEntity>();
+  @Output() CancelModal = new EventEmitter<void>();
+
   BrandCod: string = "";
   Brand: BrandEntity = new BrandEntity();
   txtBrandCodreadonly: boolean = false;
+  isGeneratingBrandCod: boolean = false;
+  isSavingBrand: boolean = false;
 
   @ViewChild('txtBrandCod') txtBrandCod!: ElementRef<HTMLInputElement>;
   @ViewChild('txtBrandName') txtBrandName!: ElementRef<HTMLInputElement>;
@@ -49,19 +55,72 @@ export class CreatebrandComponent implements OnInit, IRegisterForm<BrandEntity, 
     this.txtBrandName.nativeElement.value = Brand.BrandName;
 
   }
+
+  get IsEditMode(): boolean {
+    return Boolean(this.BrandCod);
+  }
+
   async Save(): Promise<void> {
-    if (!this.Brand) this.Brand = new BrandEntity();
+    if (this.isSavingBrand || this.isGeneratingBrandCod) return;
 
-    this.Brand.BrandCod = this.txtBrandCod.nativeElement.value;
-    this.Brand.BrandName = this.txtBrandName.nativeElement.value;
+    this.isSavingBrand = true;
+    try {
+      if (!this.Brand) this.Brand = new BrandEntity();
+      if (!this.IsEditMode && !this.txtBrandCod.nativeElement.value.trim()) {
+        const generated = await this.generateBrandCod();
+        if (!generated) return;
+      }
 
-    if (!this.validate(this.Brand)) return;
+      this.Brand.BrandCod = this.txtBrandCod.nativeElement.value.trim();
+      this.Brand.BrandName = this.txtBrandName.nativeElement.value;
 
-    const rpt = await this.brandService.Save(this.Brand);
+      if (!this.validate(this.Brand)) return;
 
-    if (!rpt.ErrorStatus) {
-      this.toastrService.success("Operación realizada con exito.");
+      const rpt = await this.brandService.Save(this.Brand);
 
+      if (!rpt.ErrorStatus) {
+        this.Brand = rpt.Data || this.Brand;
+        this.toastrService.success("Operación realizada con exito.");
+
+        if (this.isModal) {
+          this.BrandCreated.emit(this.Brand);
+        } else {
+          this.router.navigate(['/enterprise/product/pages/listBrand']);
+        }
+      } else {
+        this.toastrService.error(rpt.Message);
+      }
+    } finally {
+      this.isSavingBrand = false;
+    }
+  }
+
+  async generateBrandCod(): Promise<boolean> {
+    if (this.IsEditMode || this.isGeneratingBrandCod) return false;
+
+    this.isGeneratingBrandCod = true;
+    try {
+      const rpt = await this.brandService.GenerateBrandCode();
+      if (rpt.ErrorStatus) {
+        this.toastrService.error(rpt.Message);
+        return false;
+      }
+      const generatedBrandCod = String(rpt.Data || '').trim();
+      if (!generatedBrandCod) {
+        this.toastrService.error('No se pudo generar el código de la marca.');
+        return false;
+      }
+      this.txtBrandCod.nativeElement.value = generatedBrandCod;
+      return true;
+    } finally {
+      this.isGeneratingBrandCod = false;
+    }
+  }
+
+  cancel(): void {
+    if (this.isModal) {
+      this.CancelModal.emit();
+    } else {
       this.router.navigate(['/enterprise/product/pages/listBrand']);
     }
   }
