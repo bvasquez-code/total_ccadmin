@@ -202,6 +202,12 @@ export class TableComponent<T> implements OnInit{
       : 'bgc-primary';
   }
 
+  public getCellClass(Headers: HeaderTableGenericDto, item: any): string {
+    return Headers.CellClassFunction
+      ? Headers.CellClassFunction(item)
+      : '';
+  }
+
   generateUrl(optionTableGeneric? : OptionTableGenericDto, item? : any, Headers? :HeaderTableGenericDto):string | any
   {
 

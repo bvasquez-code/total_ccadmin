@@ -550,9 +550,8 @@ export class CreatecreditnoteComponent
     }
   }
 
-  OnToggleTotalMode(ev: Event): void {
-    const checked = (ev.target as HTMLInputElement).checked;
-    this.isTotalMode = checked;
+  OnCreditNoteTypeChange(ev: Event): void {
+    this.isTotalMode = (ev.target as HTMLSelectElement).value === 'T';
 
     if (this.isTotalMode) {
       this.applyTotalQuantities();
@@ -561,8 +560,8 @@ export class CreatecreditnoteComponent
     }
   }
 
-  OnToggleProductExchange(ev: Event): void {
-    this.isProductExchange = (ev.target as HTMLInputElement).checked;
+  OnCreditNoteDestinationChange(ev: Event): void {
+    this.isProductExchange = (ev.target as HTMLSelectElement).value === 'S';
   }
 
   /** Aplica cantidades completas para todos los ítems (NC total) */

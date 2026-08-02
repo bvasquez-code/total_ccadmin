@@ -109,19 +109,15 @@
         <div class="col-sm-3 col-form-label text-sm-right pr-0">
             <label class="mb-0">Tipo de nota</label>
         </div>
-        <div class="col-sm-9 d-flex align-items-center">
-            <div class="custom-control custom-switch">
-            <input
-                type="checkbox"
-                class="custom-control-input"
-                id="switchTotalNC"
-                [checked]="isTotalMode"
-                (change)="OnToggleTotalMode($event)"
-            />
-            <label class="custom-control-label" for="switchTotalNC">
-                {{ isTotalMode ? 'Nota de crédito total' : 'Nota de crédito parcial' }}
-            </label>
-            </div>
+        <div class="col-sm-9">
+            <select
+              class="form-control col-sm-8 col-md-6"
+              [value]="isTotalMode ? 'T' : 'P'"
+              (change)="OnCreditNoteTypeChange($event)"
+            >
+              <option value="P">Nota de crédito parcial</option>
+              <option value="T">Nota de crédito total</option>
+            </select>
         </div>
         </div>
 
@@ -129,19 +125,15 @@
           <div class="col-sm-3 col-form-label text-sm-right pr-0">
             <label class="mb-0">Destino de la nota</label>
           </div>
-          <div class="col-sm-9 d-flex align-items-center">
-            <div class="custom-control custom-switch">
-              <input
-                type="checkbox"
-                class="custom-control-input"
-                id="switchProductExchange"
-                [checked]="isProductExchange"
-                (change)="OnToggleProductExchange($event)"
-              />
-              <label class="custom-control-label" for="switchProductExchange">
-                {{ isProductExchange ? 'Cambio de producto: generar saldo a favor' : 'Devolución: revertir pagos' }}
-              </label>
-            </div>
+          <div class="col-sm-9">
+            <select
+              class="form-control col-sm-8 col-md-6"
+              [value]="isProductExchange ? 'S' : 'N'"
+              (change)="OnCreditNoteDestinationChange($event)"
+            >
+              <option value="N">Devolución: revertir pagos</option>
+              <option value="S">Cambio de producto: generar saldo a favor</option>
+            </select>
           </div>
         </div>
 

@@ -4,7 +4,11 @@ import com.ccadmin.app.product.model.entity.ProductTaxConfigEntity;
 import com.ccadmin.app.product.repository.ProductTaxConfigRepository;
 import com.ccadmin.app.sale.exception.SaleBuildException;
 import com.ccadmin.app.sale.model.constants.SaleTaxConstants;
+import com.ccadmin.app.sale.model.dto.CreditNoteTaxCalculationResultDto;
+import com.ccadmin.app.sale.model.dto.SaleDetailSplitLineDto;
 import com.ccadmin.app.sale.model.dto.SaleTaxCalculationResultDto;
+import com.ccadmin.app.sale.model.entity.CreditNoteDetEntity;
+import com.ccadmin.app.sale.model.entity.CreditNoteDetTaxEntity;
 import com.ccadmin.app.sale.model.entity.PresaleDetEntity;
 import com.ccadmin.app.sale.model.entity.SaleDetEntity;
 import com.ccadmin.app.sale.model.entity.SaleDetTaxEntity;
@@ -61,6 +65,271 @@ public class SaleTaxCalculationService {
 
         result.recalculateTotals();
         return result;
+    }
+
+    public SaleTaxCalculationResultDto splitExistingSaleDetail(
+            SaleDetEntity originDetail,
+            List<SaleDetTaxEntity> originTaxList,
+            List<SaleDetailSplitLineDto> splitLineList,
+            String userCod
+    ) {
+        this.validateSplit(originDetail, splitLineList);
+
+        int originQuantity = originDetail.NumUnit;
+        BigDecimal unitDiscount = originDetail.NumDiscount;
+        List<BigDecimal> totalPriceList = this.distributeExact(
+                originDetail.NumTotalPrice, splitLineList, originQuantity, 2
+        );
+        List<BigDecimal> subtotalList = this.distributeExact(
+                originDetail.NumPriceSubTotal, splitLineList, originQuantity, 2
+        );
+        List<BigDecimal> totalTaxList = this.distributeExact(
+                originDetail.NumTotalTax, splitLineList, originQuantity, 2
+        );
+
+        List<List<SaleDetTaxEntity>> taxListBySplit = new ArrayList<>();
+        for (int index = 0; index < splitLineList.size(); index++) {
+            taxListBySplit.add(new ArrayList<>());
+        }
+
+        List<SaleDetTaxEntity> safeOriginTaxList = originTaxList == null ? List.of() : originTaxList;
+        for (SaleDetTaxEntity originTax : safeOriginTaxList) {
+            List<BigDecimal> baseAmountList = this.distributeExact(
+                    originTax.TaxBaseAmount, splitLineList, originQuantity, 2
+            );
+            List<BigDecimal> taxQuantityList = this.distributeExact(
+                    originTax.TaxQuantity, splitLineList, originQuantity, 4
+            );
+            List<BigDecimal> taxAmountList = this.distributeExact(
+                    originTax.TaxAmount, splitLineList, originQuantity, 2
+            );
+            for (int index = 0; index < splitLineList.size(); index++) {
+                SaleDetailSplitLineDto splitLine = splitLineList.get(index);
+                SaleDetTaxEntity splitTax = index == 0
+                        ? originTax
+                        : this.copySaleDetailTax(originTax, splitLine.ItemNumber);
+                splitTax.ItemNumber = splitLine.ItemNumber;
+                splitTax.TaxBaseAmount = baseAmountList.get(index);
+                splitTax.TaxQuantity = taxQuantityList.get(index);
+                splitTax.TaxAmount = taxAmountList.get(index);
+                splitTax.session(userCod).validate();
+                taxListBySplit.get(index).add(splitTax);
+            }
+        }
+
+        SaleTaxCalculationResultDto result = new SaleTaxCalculationResultDto();
+        for (int index = 0; index < splitLineList.size(); index++) {
+            SaleDetailSplitLineDto splitLine = splitLineList.get(index);
+            SaleDetEntity splitDetail = index == 0
+                    ? originDetail
+                    : this.copySaleDetail(originDetail, splitLine.ItemNumber);
+            splitDetail.ItemNumber = splitLine.ItemNumber;
+            splitDetail.NumUnit = splitLine.NumUnit;
+            splitDetail.NumDiscount = unitDiscount;
+            splitDetail.NumTotalPrice = totalPriceList.get(index);
+            splitDetail.NumPriceSubTotal = subtotalList.get(index);
+            splitDetail.NumTotalTax = totalTaxList.get(index);
+            splitDetail.LotNumber = splitLine.LotNumber;
+            splitDetail.ExpirationDate = splitLine.ExpirationDate;
+            splitDetail.session(userCod).validate();
+            result.addLine(splitDetail, taxListBySplit.get(index));
+        }
+        result.recalculateTotals();
+        return result;
+    }
+
+    public CreditNoteTaxCalculationResultDto buildCreditNoteTaxResult(
+            String creditNoteCod,
+            CreditNoteDetEntity creditNoteDetail,
+            SaleDetEntity originDetail,
+            List<SaleDetTaxEntity> originTaxList,
+            String userCod
+    ) {
+        CreditNoteTaxCalculationResultDto result = new CreditNoteTaxCalculationResultDto();
+        result.TaxDetailList = this.buildCreditNoteTaxLines(
+                creditNoteCod, creditNoteDetail, originDetail, originTaxList, userCod
+        );
+        result.NumTotalTax = result.TaxDetailList.isEmpty()
+                ? this.prorateAmount(originDetail.NumTotalTax, creditNoteDetail.NumUnit, originDetail.NumUnit)
+                : result.TaxDetailList.stream()
+                        .map(tax -> amount(tax.TaxAmount))
+                        .reduce(BigDecimal.ZERO, BigDecimal::add)
+                        .setScale(2, RoundingMode.HALF_UP);
+        result.NumPriceSubTotal = amount(creditNoteDetail.NumTotalPrice)
+                .subtract(result.NumTotalTax)
+                .setScale(2, RoundingMode.HALF_UP);
+        result.IsAppliedTax = result.NumTotalTax.compareTo(BigDecimal.ZERO) > 0
+                ? SaleTaxConstants.YES
+                : SaleTaxConstants.NO;
+        return result;
+    }
+
+    private List<CreditNoteDetTaxEntity> buildCreditNoteTaxLines(
+            String creditNoteCod,
+            CreditNoteDetEntity creditNoteDetail,
+            SaleDetEntity originDetail,
+            List<SaleDetTaxEntity> originTaxList,
+            String userCod
+    ) {
+        if (originTaxList == null || originTaxList.isEmpty()) {
+            return List.of();
+        }
+        List<CreditNoteDetTaxEntity> taxList = originTaxList.stream()
+                .map(originTax -> this.buildCreditNoteTaxLine(
+                        creditNoteCod, creditNoteDetail, originDetail, originTax
+                ))
+                .sorted(Comparator
+                        .comparingInt((CreditNoteDetTaxEntity tax) -> tax.CalculationOrder)
+                        .thenComparing(tax -> tax.TaxCod))
+                .toList();
+        for (int index = 0; index < taxList.size(); index++) {
+            taxList.get(index).TaxLineNumber = index + 1;
+            taxList.get(index).session(userCod).validate();
+        }
+        return taxList;
+    }
+
+    private BigDecimal prorateAmount(BigDecimal value, Integer units, Integer originUnits) {
+        return amount(value)
+                .multiply(this.ratio(units, originUnits))
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal prorateQuantity(BigDecimal value, Integer units, Integer originUnits) {
+        return valueOrZero(value)
+                .multiply(this.ratio(units, originUnits))
+                .setScale(4, RoundingMode.HALF_UP);
+    }
+
+    private void validateSplit(
+            SaleDetEntity originDetail,
+            List<SaleDetailSplitLineDto> splitLineList
+    ) {
+        if (originDetail == null || originDetail.NumUnit <= 0) {
+            throw new SaleBuildException("El detalle de venta de origen no es valido");
+        }
+        if (splitLineList == null || splitLineList.isEmpty()) {
+            throw new SaleBuildException("Debe existir al menos una linea para dividir el detalle de venta");
+        }
+        if (splitLineList.get(0).ItemNumber != originDetail.ItemNumber) {
+            throw new SaleBuildException("La primera linea dividida debe conservar el item original");
+        }
+
+        int splitQuantity = 0;
+        Set<Integer> itemNumberSet = new HashSet<>();
+        for (SaleDetailSplitLineDto splitLine : splitLineList) {
+            if (splitLine == null || splitLine.ItemNumber <= 0 || splitLine.NumUnit <= 0) {
+                throw new SaleBuildException("Las lineas divididas deben tener item y cantidad validos");
+            }
+            if (!itemNumberSet.add(splitLine.ItemNumber)) {
+                throw new SaleBuildException("No se puede repetir el item de una linea dividida");
+            }
+            try {
+                splitQuantity = Math.addExact(splitQuantity, splitLine.NumUnit);
+            } catch (ArithmeticException ex) {
+                throw new SaleBuildException("La cantidad dividida excede el limite permitido");
+            }
+        }
+        if (splitQuantity != originDetail.NumUnit) {
+            throw new SaleBuildException("La cantidad dividida no coincide con el detalle de venta original");
+        }
+    }
+
+    private List<BigDecimal> distributeExact(
+            BigDecimal originalValue,
+            List<SaleDetailSplitLineDto> splitLineList,
+            int originQuantity,
+            int scale
+    ) {
+        BigDecimal totalValue = valueOrZero(originalValue).setScale(scale, RoundingMode.HALF_UP);
+        BigDecimal assignedValue = BigDecimal.ZERO.setScale(scale, RoundingMode.HALF_UP);
+        List<BigDecimal> result = new ArrayList<>();
+        for (int index = 0; index < splitLineList.size(); index++) {
+            BigDecimal splitValue;
+            if (index == splitLineList.size() - 1) {
+                splitValue = totalValue.subtract(assignedValue).setScale(scale, RoundingMode.HALF_UP);
+            } else {
+                splitValue = totalValue
+                        .multiply(BigDecimal.valueOf(splitLineList.get(index).NumUnit))
+                        .divide(BigDecimal.valueOf(originQuantity), scale, RoundingMode.HALF_UP);
+                assignedValue = assignedValue.add(splitValue).setScale(scale, RoundingMode.HALF_UP);
+            }
+            result.add(splitValue);
+        }
+        return result;
+    }
+
+    private BigDecimal ratio(Integer units, Integer originUnits) {
+        if (units == null || originUnits == null || originUnits <= 0) {
+            return BigDecimal.ZERO;
+        }
+        return BigDecimal.valueOf(units)
+                .divide(BigDecimal.valueOf(originUnits), 8, RoundingMode.HALF_UP);
+    }
+
+    private SaleDetEntity copySaleDetail(SaleDetEntity source, int itemNumber) {
+        SaleDetEntity target = new SaleDetEntity();
+        target.SaleCod = source.SaleCod;
+        target.ItemNumber = itemNumber;
+        target.ProductCod = source.ProductCod;
+        target.Variant = source.Variant;
+        target.NumUnitPrice = source.NumUnitPrice;
+        target.NumDiscount = source.NumDiscount;
+        target.NumUnitPriceSale = source.NumUnitPriceSale;
+        target.ProductUnitName = source.ProductUnitName;
+        target.ProductUnitFactor = source.ProductUnitFactor;
+        target.IsAppliedTax = source.IsAppliedTax;
+        return target;
+    }
+
+    private SaleDetTaxEntity copySaleDetailTax(SaleDetTaxEntity source, int itemNumber) {
+        SaleDetTaxEntity target = new SaleDetTaxEntity();
+        target.SaleCod = source.SaleCod;
+        target.ItemNumber = itemNumber;
+        target.TaxLineNumber = source.TaxLineNumber;
+        target.TaxCod = source.TaxCod;
+        target.SunatTaxCod = source.SunatTaxCod;
+        target.TaxName = source.TaxName;
+        target.TaxAffectationCod = source.TaxAffectationCod;
+        target.TaxAffectationName = source.TaxAffectationName;
+        target.TaxCalculationType = source.TaxCalculationType;
+        target.IsInformative = source.IsInformative;
+        target.TaxRateValue = source.TaxRateValue;
+        target.FixedUnitAmount = source.FixedUnitAmount;
+        target.CalculationOrder = source.CalculationOrder;
+        return target;
+    }
+
+    private CreditNoteDetTaxEntity buildCreditNoteTaxLine(
+            String creditNoteCod,
+            CreditNoteDetEntity creditNoteDetail,
+            SaleDetEntity originDetail,
+            SaleDetTaxEntity originTax
+    ) {
+        CreditNoteDetTaxEntity tax = new CreditNoteDetTaxEntity();
+        tax.CreditNoteCod = creditNoteCod;
+        tax.ItemNumber = creditNoteDetail.ItemNumber;
+        tax.TaxLineNumber = originTax.TaxLineNumber;
+        tax.TaxCod = originTax.TaxCod;
+        tax.SunatTaxCod = originTax.SunatTaxCod;
+        tax.TaxName = originTax.TaxName;
+        tax.TaxAffectationCod = originTax.TaxAffectationCod;
+        tax.TaxAffectationName = originTax.TaxAffectationName;
+        tax.TaxCalculationType = originTax.TaxCalculationType;
+        tax.IsInformative = originTax.IsInformative;
+        tax.TaxRateValue = originTax.TaxRateValue;
+        tax.FixedUnitAmount = originTax.FixedUnitAmount;
+        tax.TaxBaseAmount = this.prorateAmount(
+                originTax.TaxBaseAmount, creditNoteDetail.NumUnit, originDetail.NumUnit
+        );
+        tax.TaxQuantity = this.prorateQuantity(
+                originTax.TaxQuantity, creditNoteDetail.NumUnit, originDetail.NumUnit
+        );
+        tax.TaxAmount = this.prorateAmount(
+                originTax.TaxAmount, creditNoteDetail.NumUnit, originDetail.NumUnit
+        );
+        tax.CalculationOrder = originTax.CalculationOrder;
+        return tax;
     }
 
     private List<ProductTaxConfigEntity> findProductTaxConfigList(PresaleDetEntity presaleDet, String storeCod) {

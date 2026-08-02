@@ -123,9 +123,10 @@
               <!-- Detalle -->
               <div class="mt-4">
                 <div class="row text-600 text-95 text-secondary-d3 brc-green-l1 py-25 border-y-2">
-                  <div class="d-none d-sm-block col-sm-4">Producto</div>
+                  <div class="d-none d-sm-block col-sm-3">Producto</div>
                   <div class="d-none d-sm-block col-sm-2">Unid</div>
-                  <div class="d-none d-sm-block col-sm-3">Precio unitario</div>
+                  <div class="d-none d-sm-block col-sm-2">Stock retornado</div>
+                  <div class="d-none d-sm-block col-sm-2">Precio unitario</div>
                   <div class="d-none d-sm-block col-sm-3">Total</div>
                 </div>
 
@@ -134,7 +135,7 @@
                        *ngFor="let item of Detail.DetailList; let i = index; trackBy: trackByDet"
                        [ngClass]="(i + 1) % 2 === 0 ? 'bgc-green-l4' : ''">
 
-                    <div class="col-7 col-sm-4">
+                    <div class="col-7 col-sm-3">
                       ({{ item.CreditNoteDet.ProductCod }})
                       - {{ item.Product.ProductName }}
                     </div>
@@ -143,7 +144,11 @@
                       {{ getVisibleQuantity(item.CreditNoteDet.NumUnit, item.CreditNoteDet.ProductUnitFactor) }} {{ getProductUnitName(item.CreditNoteDet) }}
                     </div>
 
-                    <div class="d-none d-sm-block col-sm-3 text-95">
+                    <div class="d-none d-sm-block col-sm-2">
+                      {{ getVisibleQuantity(item.CreditNoteDet.NumUnitStockReturned, item.CreditNoteDet.ProductUnitFactor) }} {{ getProductUnitName(item.CreditNoteDet) }}
+                    </div>
+
+                    <div class="d-none d-sm-block col-sm-2 text-95">
                       {{ Detail.Headboard.CurrencyCod }}
                       {{ getVisibleUnitPrice(item.CreditNoteDet.NumUnitPriceSale, item.CreditNoteDet.ProductUnitFactor) | FormatoMonedaPeruana:false }}
                     </div>

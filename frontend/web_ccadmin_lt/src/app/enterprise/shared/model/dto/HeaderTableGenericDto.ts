@@ -14,6 +14,7 @@ export class HeaderTableGenericDto
     public Mask? : any = "";
     public IsMoney? : boolean = false;
     public FunctionKey?: (...args: any[]) => any;
+    public CellClassFunction?: (...args: any[]) => string;
     public ProgressTextFunction?: (...args: any[]) => string;
     public ProgressClassFunction?: (...args: any[]) => string;
 

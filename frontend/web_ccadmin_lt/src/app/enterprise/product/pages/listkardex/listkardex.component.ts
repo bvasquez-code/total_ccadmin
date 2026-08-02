@@ -98,7 +98,12 @@ export class ListkardexComponent implements OnInit, ActionTableService<any>, Act
         { Name: 'Id', key: 'id', FunctionKey: (item: KardexDto) => item.kardex.kardexID },
         { Name: 'Producto', key: 'product', FunctionKey: (item: KardexDto) => this.productLabel(item) },
         { Name: 'Stock anterior', key: 'before', FunctionKey: (item: KardexDto) => item.kardex.NumStockBefore },
-        { Name: 'Movimiento', key: 'movement', FunctionKey: (item: KardexDto) => this.signedMovement(item.kardex.TypeOperation, item.kardex.NumStockMoved) },
+        {
+          Name: 'Movimiento',
+          key: 'movement',
+          FunctionKey: (item: KardexDto) => this.signedMovement(item.kardex.TypeOperation, item.kardex.NumStockMoved),
+          CellClassFunction: (item: KardexDto) => this.movementClass(item.kardex.TypeOperation)
+        },
         { Name: 'Stock resultante', key: 'after', FunctionKey: (item: KardexDto) => item.kardex.NumStockAfter },
         { Name: 'Lote', key: 'lot', FunctionKey: (item: KardexDto) => this.lotLabel(item.kardex.LotNumber) },
         { Name: 'Fecha venc.', key: 'expiration', FunctionKey: (item: KardexDto) => this.formatDateOnly(item.kardex.ExpirationDate) },
@@ -123,7 +128,12 @@ export class ListkardexComponent implements OnInit, ActionTableService<any>, Act
         { Name: 'Almacén', key: 'warehouse', FunctionKey: (item: KardexZoneDto) => item.kardexZone.WarehouseCod },
         { Name: 'Zona', key: 'zone', FunctionKey: (item: KardexZoneDto) => this.zoneLabel(item.kardexZone.ZoneStockMoved) },
         { Name: 'Saldo anterior', key: 'before', FunctionKey: (item: KardexZoneDto) => item.kardexZone.NumZoneStockBefore },
-        { Name: 'Movimiento', key: 'movement', FunctionKey: (item: KardexZoneDto) => this.signedMovement(item.kardexZone.TypeOperation, item.kardexZone.NumStockMoved) },
+        {
+          Name: 'Movimiento',
+          key: 'movement',
+          FunctionKey: (item: KardexZoneDto) => this.signedMovement(item.kardexZone.TypeOperation, item.kardexZone.NumStockMoved),
+          CellClassFunction: (item: KardexZoneDto) => this.movementClass(item.kardexZone.TypeOperation)
+        },
         { Name: 'Saldo resultante', key: 'after', FunctionKey: (item: KardexZoneDto) => item.kardexZone.NumZoneStockAfter },
         { Name: 'Evento', key: 'event', FunctionKey: (item: KardexZoneDto) => item.kardexZone.MovementEvent },
         { Name: 'Documento origen', key: 'source', FunctionKey: (item: KardexZoneDto) => `${item.kardexZone.SourceTable} / ${item.kardexZone.OperationCod}` },
@@ -155,6 +165,16 @@ export class ListkardexComponent implements OnInit, ActionTableService<any>, Act
 
   private signedMovement(typeOperation: string, quantity: number): string {
     return `${typeOperation === 'R' ? '-' : '+'}${quantity}`;
+  }
+
+  private movementClass(typeOperation: string): string {
+    if (typeOperation === 'S') {
+      return 'badge badge-sm bgc-green-d1 text-white pb-1 px-25';
+    }
+    if (typeOperation === 'R') {
+      return 'badge badge-sm bgc-red-d1 text-white pb-1 px-25';
+    }
+    return 'badge badge-sm bgc-secondary-l2 text-dark pb-1 px-25';
   }
 
   private zoneLabel(zone: string): string {

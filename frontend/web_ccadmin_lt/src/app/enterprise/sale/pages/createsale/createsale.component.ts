@@ -403,13 +403,42 @@ export class CreatesaleComponent implements OnInit {
       this.refreshPaymentAvailability();
 
       if(this.SaleDetail.Headboard.SaleStatus === "C"){
-        await this.print();
+        await this.closePaymentModalBeforeNavigation();
         await this.router.navigate(
           ['/enterprise/sale/pages/viewsale'],
-          { queryParams: { SaleCod: this.SaleDetail.Headboard.SaleCod } }
+          {
+            queryParams: {
+              SaleCod: this.SaleDetail.Headboard.SaleCod,
+              AutoPrint: 'Y'
+            }
+          }
         );
       }
     }
+  }
+
+  private async closePaymentModalBeforeNavigation(): Promise<void> {
+    const jquery = (window as any).$;
+    const paymentModal = jquery?.('#TrxPaymentModal');
+
+    if (paymentModal?.length && paymentModal.hasClass('show')) {
+      await new Promise<void>(resolve => {
+        let completed = false;
+        const complete = () => {
+          if (completed) return;
+          completed = true;
+          resolve();
+        };
+
+        paymentModal.one('hidden.bs.modal', complete);
+        paymentModal.modal('hide');
+        window.setTimeout(complete, 500);
+      });
+    }
+
+    document.body.classList.remove('modal-open');
+    document.body.style.removeProperty('padding-right');
+    document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.remove());
   }
 
   OpenClientModal(mode: string = "sale") {

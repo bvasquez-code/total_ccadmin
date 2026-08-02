@@ -25,7 +25,8 @@
               <tr class="bgc-h-yellow-l4 d-style" *ngFor="let item of Data.DataTable.data.resultSearch">
 
                 <td *ngFor="let Headers of Data.Headers">
-                  <div *ngIf="(Headers.key && !Headers.IsDate && !Headers.IsStatus && !Headers.IsMoney && !Headers.IsProgress)">
+                  <div *ngIf="(Headers.key && !Headers.IsDate && !Headers.IsStatus && !Headers.IsMoney && !Headers.IsProgress)"
+                    [ngClass]="getCellClass(Headers, item)">
                     {{ getValue(item,Headers.key,Headers.FunctionKey) }}
                   </div>
                   <div *ngIf="(Headers.key && Headers.IsDate === true)">

@@ -189,12 +189,7 @@ CREATE TABLE `sale_det_warehouse` (
             DROP TEMPORARY TABLE IF EXISTS `tmp_sale_picking_detail`;
             CREATE TEMPORARY TABLE `tmp_sale_picking_detail` AS
             SELECT shares.*,
-                   CASE WHEN shares.AllocationOrder = shares.AllocationCount
-                        THEN shares.OriginalDiscount - SUM(
-                            CASE WHEN shares.AllocationOrder < shares.AllocationCount
-                                 THEN shares.DiscountShare ELSE 0 END
-                        ) OVER (PARTITION BY shares.SaleCod, shares.OriginalItemNumber)
-                        ELSE shares.DiscountShare END AS NewDiscount,
+                   shares.OriginalDiscount AS NewDiscount,
                    CASE WHEN shares.AllocationOrder = shares.AllocationCount
                         THEN shares.OriginalTotalPrice - SUM(
                             CASE WHEN shares.AllocationOrder < shares.AllocationCount
@@ -219,8 +214,6 @@ CREATE TABLE `sale_det_warehouse` (
                        COALESCE(sd.`NumTotalPrice`, 0.00) AS OriginalTotalPrice,
                        COALESCE(sd.`NumPriceSubTotal`, 0.00) AS OriginalSubtotal,
                        COALESCE(sd.`NumTotalTax`, 0.00) AS OriginalTax,
-                       ROUND(COALESCE(sd.`NumDiscount`, 0.00) * allocation.NumUnit / allocation.TotalNumUnit, 2)
-                           AS DiscountShare,
                        ROUND(COALESCE(sd.`NumTotalPrice`, 0.00) * allocation.NumUnit / allocation.TotalNumUnit, 2)
                            AS TotalPriceShare,
                        ROUND(COALESCE(sd.`NumPriceSubTotal`, 0.00) * allocation.NumUnit / allocation.TotalNumUnit, 2)

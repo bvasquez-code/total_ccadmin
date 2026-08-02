@@ -18,6 +18,7 @@ import { TicketSunatService } from '../../service/TicketSunatService';
 export class ViewsaleComponent implements OnInit {
 
   SaleCod: string = '';
+  AutoPrint: boolean = false;
   SaleDetail: SaleDetailDto = new SaleDetailDto();
   PaymentMethodList: PaymentMethodEntity[] = [];
   loading: boolean = false;
@@ -30,13 +31,14 @@ export class ViewsaleComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.route.queryParamMap.subscribe(params => {
+    this.route.queryParamMap.subscribe(async params => {
       this.SaleCod = params.get('SaleCod') || '';
+      this.AutoPrint = params.get('AutoPrint') === 'Y';
       if (!this.SaleCod) {
         this.toastrService.error('Debe indicar la venta que desea visualizar.');
         return;
       }
-      this.findDataForm(this.SaleCod);
+      await this.findDataForm(this.SaleCod);
     });
   }
 
@@ -53,6 +55,11 @@ export class ViewsaleComponent implements OnInit {
         ?? new SaleDetailDto();
       this.PaymentMethodList = response.DataAdditional.find(item => item.Name === 'PaymentMethodList')?.Data
         ?? [];
+
+      if (this.AutoPrint) {
+        this.AutoPrint = false;
+        await this.print();
+      }
     } finally {
       this.loading = false;
     }

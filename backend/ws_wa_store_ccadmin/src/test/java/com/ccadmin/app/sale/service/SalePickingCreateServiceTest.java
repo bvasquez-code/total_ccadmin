@@ -19,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
@@ -48,6 +49,8 @@ class SalePickingCreateServiceTest {
     private SaleSearchService saleSearchService;
     @Mock
     private ProductOperationConfigShared productOperationConfigShared;
+    @Spy
+    private SaleTaxCalculationService saleTaxCalculationService = new SaleTaxCalculationService();
     @InjectMocks
     private SalePickingCreateService salePickingCreateService;
 
@@ -209,7 +212,7 @@ class SalePickingCreateServiceTest {
         tax.TaxLineNumber = 1;
         tax.TaxCod = "IGV";
         tax.TaxName = "IGV";
-        tax.TaxCalculationType = "PERCENTAGE";
+        tax.TaxCalculationType = "P";
         tax.IsInformative = "N";
         tax.TaxRateValue = new BigDecimal("18.00");
         tax.FixedUnitAmount = BigDecimal.ZERO.setScale(4);

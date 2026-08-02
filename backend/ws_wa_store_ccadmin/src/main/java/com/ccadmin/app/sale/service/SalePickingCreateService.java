@@ -4,8 +4,10 @@ import com.ccadmin.app.product.shared.ProductOperationConfigShared;
 import com.ccadmin.app.sale.exception.SaleException;
 import com.ccadmin.app.sale.model.constants.SaleConstants;
 import com.ccadmin.app.sale.model.dto.SaleDetailDto;
+import com.ccadmin.app.sale.model.dto.SaleDetailSplitLineDto;
 import com.ccadmin.app.sale.model.dto.SalePickingConfirmDto;
 import com.ccadmin.app.sale.model.dto.SalePickingLineDto;
+import com.ccadmin.app.sale.model.dto.SaleTaxCalculationResultDto;
 import com.ccadmin.app.sale.model.entity.SaleDetEntity;
 import com.ccadmin.app.sale.model.entity.SaleDetTaxEntity;
 import com.ccadmin.app.sale.model.entity.SaleDetWarehouseEntity;
@@ -20,8 +22,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.sql.Date;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -47,6 +47,8 @@ public class SalePickingCreateService extends SessionService {
     private SaleDetWarehouseRepository saleDetWarehouseRepository;
     @Autowired
     private SaleSearchService saleSearchService;
+    @Autowired
+    private SaleTaxCalculationService saleTaxCalculationService;
     @Autowired
     private ProductOperationConfigShared productOperationConfigShared;
 
@@ -137,79 +139,45 @@ public class SalePickingCreateService extends SessionService {
             }
 
             this.validatePickingLines(saleDetail, pickingLineList);
-            int originalQuantity = saleDetail.NumUnit;
             SaleDetWarehouseEntity baseWarehouse = currentItemWarehouseList.get(0);
-            List<Integer> itemNumberList = new ArrayList<>();
-            List<BigDecimal> discountList = this.splitAmount(
-                    saleDetail.NumDiscount, pickingLineList, originalQuantity, 2
-            );
-            List<BigDecimal> totalPriceList = this.splitAmount(
-                    saleDetail.NumTotalPrice, pickingLineList, originalQuantity, 2
-            );
-            List<BigDecimal> subtotalList = this.splitAmount(
-                    saleDetail.NumPriceSubTotal, pickingLineList, originalQuantity, 2
-            );
-            List<BigDecimal> totalTaxList = this.splitAmount(
-                    saleDetail.NumTotalTax, pickingLineList, originalQuantity, 2
-            );
-
+            List<SaleDetailSplitLineDto> splitLineList = new ArrayList<>();
             for (int index = 0; index < pickingLineList.size(); index++) {
                 SalePickingLineDto pickingLine = pickingLineList.get(index);
                 int itemNumber = index == 0 ? saleDetail.ItemNumber : nextItemNumber++;
-                itemNumberList.add(itemNumber);
+                splitLineList.add(new SaleDetailSplitLineDto(
+                        itemNumber,
+                        pickingLine.NumUnit,
+                        this.normalizeLotNumber(pickingLine.LotNumber),
+                        pickingLine.ExpirationDate
+                ));
+            }
+            SaleTaxCalculationResultDto splitResult = this.saleTaxCalculationService.splitExistingSaleDetail(
+                    saleDetail,
+                    taxByItem.getOrDefault(saleDetail.ItemNumber, List.of()),
+                    splitLineList,
+                    getUserCod()
+            );
+            pickedDetailList.addAll(splitResult.DetailList);
+            pickedTaxList.addAll(splitResult.TaxDetailList);
 
-                SaleDetEntity pickedDetail = index == 0
-                        ? saleDetail
-                        : this.copySaleDetail(saleDetail, itemNumber);
-                pickedDetail.ItemNumber = itemNumber;
-                pickedDetail.NumUnit = pickingLine.NumUnit;
-                pickedDetail.NumDiscount = discountList.get(index);
-                pickedDetail.NumTotalPrice = totalPriceList.get(index);
-                pickedDetail.NumPriceSubTotal = subtotalList.get(index);
-                pickedDetail.NumTotalTax = totalTaxList.get(index);
-                pickedDetail.LotNumber = this.normalizeLotNumber(pickingLine.LotNumber);
-                pickedDetail.ExpirationDate = pickingLine.ExpirationDate;
-                pickedDetail.session(getUserCod()).validate();
-                pickedDetailList.add(pickedDetail);
-
+            for (int index = 0; index < splitLineList.size(); index++) {
+                SaleDetailSplitLineDto splitLine = splitLineList.get(index);
+                SaleDetEntity pickedDetail = splitResult.DetailList.get(index);
                 SaleDetWarehouseEntity pickedWarehouse = index == 0
                         ? baseWarehouse
-                        : this.copyWarehouse(baseWarehouse, itemNumber);
+                        : this.copyWarehouse(baseWarehouse, splitLine.ItemNumber);
                 pickedWarehouse.SaleCod = saleDetail.SaleCod;
-                pickedWarehouse.ItemNumber = itemNumber;
-                pickedWarehouse.ProductCod = saleDetail.ProductCod;
-                pickedWarehouse.Variant = saleDetail.Variant;
+                pickedWarehouse.ItemNumber = splitLine.ItemNumber;
+                pickedWarehouse.ProductCod = pickedDetail.ProductCod;
+                pickedWarehouse.Variant = pickedDetail.Variant;
                 pickedWarehouse.WarehouseCod = baseWarehouse.WarehouseCod;
-                pickedWarehouse.NumUnit = pickingLine.NumUnit;
-                pickedWarehouse.ProductUnitName = saleDetail.ProductUnitName;
-                pickedWarehouse.ProductUnitFactor = saleDetail.ProductUnitFactor;
-                pickedWarehouse.LotNumber = this.normalizeLotNumber(pickingLine.LotNumber);
-                pickedWarehouse.ExpirationDate = pickingLine.ExpirationDate;
+                pickedWarehouse.NumUnit = splitLine.NumUnit;
+                pickedWarehouse.ProductUnitName = pickedDetail.ProductUnitName;
+                pickedWarehouse.ProductUnitFactor = pickedDetail.ProductUnitFactor;
+                pickedWarehouse.LotNumber = splitLine.LotNumber;
+                pickedWarehouse.ExpirationDate = splitLine.ExpirationDate;
                 pickedWarehouse.session(getUserCod()).validate();
                 pickedWarehouseList.add(pickedWarehouse);
-            }
-
-            for (SaleDetTaxEntity saleDetailTax : taxByItem.getOrDefault(saleDetail.ItemNumber, List.of())) {
-                List<BigDecimal> baseAmountList = this.splitAmount(
-                        saleDetailTax.TaxBaseAmount, pickingLineList, originalQuantity, 2
-                );
-                List<BigDecimal> taxQuantityList = this.splitAmount(
-                        saleDetailTax.TaxQuantity, pickingLineList, originalQuantity, 4
-                );
-                List<BigDecimal> taxAmountList = this.splitAmount(
-                        saleDetailTax.TaxAmount, pickingLineList, originalQuantity, 2
-                );
-                for (int index = 0; index < pickingLineList.size(); index++) {
-                    SaleDetTaxEntity pickedTax = index == 0
-                            ? saleDetailTax
-                            : this.copySaleDetailTax(saleDetailTax, itemNumberList.get(index));
-                    pickedTax.ItemNumber = itemNumberList.get(index);
-                    pickedTax.TaxBaseAmount = baseAmountList.get(index);
-                    pickedTax.TaxQuantity = taxQuantityList.get(index);
-                    pickedTax.TaxAmount = taxAmountList.get(index);
-                    pickedTax.session(getUserCod()).validate();
-                    pickedTaxList.add(pickedTax);
-                }
             }
         }
         return new PickingResult(
@@ -217,44 +185,6 @@ public class SalePickingCreateService extends SessionService {
                 List.copyOf(pickedWarehouseList),
                 List.copyOf(pickedTaxList)
         );
-    }
-
-    private List<BigDecimal> splitAmount(
-            BigDecimal originalAmount,
-            List<SalePickingLineDto> pickingLineList,
-            int originalQuantity,
-            int scale
-    ) {
-        BigDecimal totalAmount = this.amount(originalAmount).setScale(scale, RoundingMode.HALF_UP);
-        BigDecimal assignedAmount = BigDecimal.ZERO.setScale(scale, RoundingMode.HALF_UP);
-        List<BigDecimal> result = new ArrayList<>();
-        for (int index = 0; index < pickingLineList.size(); index++) {
-            BigDecimal lineAmount;
-            if (index == pickingLineList.size() - 1) {
-                lineAmount = totalAmount.subtract(assignedAmount).setScale(scale, RoundingMode.HALF_UP);
-            } else {
-                lineAmount = totalAmount
-                        .multiply(BigDecimal.valueOf(pickingLineList.get(index).NumUnit))
-                        .divide(BigDecimal.valueOf(originalQuantity), scale, RoundingMode.HALF_UP);
-                assignedAmount = assignedAmount.add(lineAmount).setScale(scale, RoundingMode.HALF_UP);
-            }
-            result.add(lineAmount);
-        }
-        return result;
-    }
-
-    private SaleDetEntity copySaleDetail(SaleDetEntity source, int itemNumber) {
-        SaleDetEntity target = new SaleDetEntity();
-        target.SaleCod = source.SaleCod;
-        target.ItemNumber = itemNumber;
-        target.ProductCod = source.ProductCod;
-        target.Variant = source.Variant;
-        target.NumUnitPrice = source.NumUnitPrice;
-        target.NumUnitPriceSale = source.NumUnitPriceSale;
-        target.ProductUnitName = source.ProductUnitName;
-        target.ProductUnitFactor = source.ProductUnitFactor;
-        target.IsAppliedTax = source.IsAppliedTax;
-        return target;
     }
 
     private SaleDetWarehouseEntity copyWarehouse(SaleDetWarehouseEntity source, int itemNumber) {
@@ -267,28 +197,6 @@ public class SalePickingCreateService extends SessionService {
         target.ProductUnitName = source.ProductUnitName;
         target.ProductUnitFactor = source.ProductUnitFactor;
         return target;
-    }
-
-    private SaleDetTaxEntity copySaleDetailTax(SaleDetTaxEntity source, int itemNumber) {
-        SaleDetTaxEntity target = new SaleDetTaxEntity();
-        target.SaleCod = source.SaleCod;
-        target.ItemNumber = itemNumber;
-        target.TaxLineNumber = source.TaxLineNumber;
-        target.TaxCod = source.TaxCod;
-        target.SunatTaxCod = source.SunatTaxCod;
-        target.TaxName = source.TaxName;
-        target.TaxAffectationCod = source.TaxAffectationCod;
-        target.TaxAffectationName = source.TaxAffectationName;
-        target.TaxCalculationType = source.TaxCalculationType;
-        target.IsInformative = source.IsInformative;
-        target.TaxRateValue = source.TaxRateValue;
-        target.FixedUnitAmount = source.FixedUnitAmount;
-        target.CalculationOrder = source.CalculationOrder;
-        return target;
-    }
-
-    private BigDecimal amount(BigDecimal value) {
-        return value == null ? BigDecimal.ZERO : value;
     }
 
     private void validatePickingLines(

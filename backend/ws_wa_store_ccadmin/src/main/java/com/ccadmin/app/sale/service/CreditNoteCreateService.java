@@ -12,6 +12,7 @@ import com.ccadmin.app.sale.model.constants.SaleConstants;
 import com.ccadmin.app.sale.model.dto.CreditNoteDetailDto;
 import com.ccadmin.app.sale.model.dto.CreditNoteRegisterDto;
 import com.ccadmin.app.sale.model.dto.CreditNoteReturnPaymentRegisterDto;
+import com.ccadmin.app.sale.model.dto.CreditNoteTaxCalculationResultDto;
 import com.ccadmin.app.sale.model.dto.SalePaymentDto;
 import com.ccadmin.app.sale.model.entity.*;
 import com.ccadmin.app.sale.repository.*;
@@ -30,7 +31,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -75,6 +75,8 @@ public class CreditNoteCreateService extends SessionService {
     private GenericQueuedService genericQueuedService;
     @Autowired
     private CreditNoteSunatEmissionService creditNoteSunatEmissionService;
+    @Autowired
+    private SaleTaxCalculationService saleTaxCalculationService;
 
     public String createCode(){
         String PresaleCod = creditNoteHeadRepository.getCreditNoteCod(getStoreCod());
@@ -110,22 +112,17 @@ public class CreditNoteCreateService extends SessionService {
             product.ProductUnitName = originDetail.ProductUnitName;
             product.ProductUnitFactor = originDetail.ProductUnitFactor;
             product.NumTotalPrice = product.NumUnitPriceSale.multiply(BigDecimal.valueOf(product.NumUnit));
-            List<CreditNoteDetTaxEntity> productTaxList = this.createCreditNoteDetTaxList(
+            CreditNoteTaxCalculationResultDto productTaxResult = this.saleTaxCalculationService.buildCreditNoteTaxResult(
                     creditNoteRegister.Headboard.CreditNoteCod,
                     product,
                     originDetail,
-                    saleTaxByItem.getOrDefault(originDetail.ItemNumber, List.of())
+                    saleTaxByItem.getOrDefault(originDetail.ItemNumber, List.of()),
+                    getUserCod()
             );
-            product.NumTotalTax = productTaxList.stream()
-                    .map(tax -> amount(tax.TaxAmount))
-                    .reduce(BigDecimal.ZERO, BigDecimal::add)
-                    .setScale(2, RoundingMode.HALF_UP);
-            if (productTaxList.isEmpty()) {
-                product.NumTotalTax = prorateAmount(originDetail.NumTotalTax, product.NumUnit, originDetail.NumUnit);
-            }
-            product.NumPriceSubTotal = amount(product.NumTotalPrice).subtract(product.NumTotalTax).setScale(2, RoundingMode.HALF_UP);
-            product.IsAppliedTax = product.NumTotalTax.compareTo(BigDecimal.ZERO) > 0 ? "S" : "N";
-            creditNoteDetTaxList.addAll(productTaxList);
+            product.NumTotalTax = productTaxResult.NumTotalTax;
+            product.NumPriceSubTotal = productTaxResult.NumPriceSubTotal;
+            product.IsAppliedTax = productTaxResult.IsAppliedTax;
+            creditNoteDetTaxList.addAll(productTaxResult.TaxDetailList);
             product.validate().session(getUserCod());
             itemNumber++;
         }
@@ -340,73 +337,6 @@ public class CreditNoteCreateService extends SessionService {
         this.kardexShared.saveAll(kardexList, kardexZoneList);
 
         return this.creditNoteSearchService.findById(creditNoteRegister.Headboard.CreditNoteCod);
-    }
-
-    private List<CreditNoteDetTaxEntity> createCreditNoteDetTaxList(
-            String creditNoteCod,
-            CreditNoteDetEntity creditNoteDet,
-            SaleDetEntity originDetail,
-            List<SaleDetTaxEntity> originTaxList
-    ) {
-        if (originTaxList == null || originTaxList.isEmpty()) {
-            return List.of();
-        }
-        List<CreditNoteDetTaxEntity> taxList = originTaxList.stream()
-                .map(originTax -> buildCreditNoteTaxLine(creditNoteCod, creditNoteDet, originDetail, originTax))
-                .sorted(Comparator
-                        .comparingInt((CreditNoteDetTaxEntity tax) -> tax.CalculationOrder)
-                        .thenComparing(tax -> tax.TaxCod))
-                .toList();
-        for (int i = 0; i < taxList.size(); i++) {
-            taxList.get(i).TaxLineNumber = i + 1;
-            taxList.get(i).session(getUserCod()).validate();
-        }
-        return taxList;
-    }
-
-    private CreditNoteDetTaxEntity buildCreditNoteTaxLine(
-            String creditNoteCod,
-            CreditNoteDetEntity creditNoteDet,
-            SaleDetEntity originDetail,
-            SaleDetTaxEntity originTax
-    ) {
-        CreditNoteDetTaxEntity tax = new CreditNoteDetTaxEntity();
-        tax.CreditNoteCod = creditNoteCod;
-        tax.ItemNumber = creditNoteDet.ItemNumber;
-        tax.TaxLineNumber = originTax.TaxLineNumber;
-        tax.TaxCod = originTax.TaxCod;
-        tax.SunatTaxCod = originTax.SunatTaxCod;
-        tax.TaxName = originTax.TaxName;
-        tax.TaxAffectationCod = originTax.TaxAffectationCod;
-        tax.TaxAffectationName = originTax.TaxAffectationName;
-        tax.TaxCalculationType = originTax.TaxCalculationType;
-        tax.IsInformative = originTax.IsInformative;
-        tax.TaxRateValue = originTax.TaxRateValue;
-        tax.FixedUnitAmount = originTax.FixedUnitAmount;
-        tax.TaxBaseAmount = prorateAmount(originTax.TaxBaseAmount, creditNoteDet.NumUnit, originDetail.NumUnit);
-        tax.TaxQuantity = prorateQuantity(originTax.TaxQuantity, creditNoteDet.NumUnit, originDetail.NumUnit);
-        tax.TaxAmount = prorateAmount(originTax.TaxAmount, creditNoteDet.NumUnit, originDetail.NumUnit);
-        tax.CalculationOrder = originTax.CalculationOrder;
-        return tax;
-    }
-
-    private BigDecimal prorateAmount(BigDecimal value, Integer units, Integer originUnits) {
-        return amount(value)
-                .multiply(ratio(units, originUnits))
-                .setScale(2, RoundingMode.HALF_UP);
-    }
-
-    private BigDecimal prorateQuantity(BigDecimal value, Integer units, Integer originUnits) {
-        return valueOrZero(value)
-                .multiply(ratio(units, originUnits))
-                .setScale(4, RoundingMode.HALF_UP);
-    }
-
-    private BigDecimal ratio(Integer units, Integer originUnits) {
-        if (units == null || originUnits == null || originUnits <= 0) {
-            return BigDecimal.ZERO;
-        }
-        return BigDecimal.valueOf(units).divide(BigDecimal.valueOf(originUnits), 8, RoundingMode.HALF_UP);
     }
 
     private BigDecimal amount(BigDecimal value) {
