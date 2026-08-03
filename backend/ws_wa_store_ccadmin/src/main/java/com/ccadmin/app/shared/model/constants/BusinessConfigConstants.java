@@ -12,6 +12,7 @@ public final class BusinessConfigConstants {
 
     public static class ConfigCod {
         public static final String IND_PROFORMA_SALES = "IND_PROFORMA_SALES";
+        public static final String IND_ADVANCE_PAYMENT = "IND_ADVANCE_PAYMENT";
     }
 
 }

@@ -38,6 +38,7 @@ export class CreatesaleComponent implements OnInit {
   SaleDetail: SaleDetailDto = new SaleDetailDto();
   PaymentMethodList: PaymentMethodEntity[] = [];
   IndProformaSales: IndicatorDto = new IndicatorDto();
+  IndAdvancePayment: IndicatorDto = new IndicatorDto();
   TrxPaymentList: TrxPaymentEntity[] = [];
   ItemCount: number = 0;
   SaleDetailPrintData: ResponseWsDto = new ResponseWsDto();
@@ -82,8 +83,13 @@ export class CreatesaleComponent implements OnInit {
       this.SaleDetail = rpt.DataAdditional.find(e => e.Name == "SaleDetail")?.Data;
       this.PaymentMethodList = rpt.DataAdditional.find(e => e.Name == "PaymentMethodList")?.Data ?? [];
       this.IndProformaSales = rpt.DataAdditional.find(e => e.Name === "IndProformaSales")?.Data ?? new IndicatorDto();
+      this.IndAdvancePayment = rpt.DataAdditional.find(e => e.Name === "IndAdvancePayment")?.Data ?? new IndicatorDto();
 
       if (!this.isProformaSalesEnabled && this.SelectedPaymentOption === "99") {
+        this.SelectedPaymentOption = "";
+        this.DocumentType = "";
+      }
+      if (!this.isAdvancePaymentEnabled && this.SelectedPaymentOption === "advance") {
         this.SelectedPaymentOption = "";
         this.DocumentType = "";
       }
@@ -185,6 +191,10 @@ export class CreatesaleComponent implements OnInit {
 
   OpenAdvanceClientModal() {
     if (!this.ensurePickingAllowsOtherActions()) return;
+    if (!this.isAdvancePaymentEnabled) {
+      this.toastrService.warning("El registro de anticipos no esta habilitado para esta empresa.");
+      return;
+    }
     this.SelectedPaymentOption = "advance";
     this.DocumentType = "03";
     this.refreshPaymentAvailability();
@@ -364,7 +374,7 @@ export class CreatesaleComponent implements OnInit {
   hasSelectedPaymentOption(): boolean {
     return this.SelectedPaymentOption === "01" || this.SelectedPaymentOption === "03"
       || (this.SelectedPaymentOption === "99" && this.isProformaSalesEnabled)
-      || this.SelectedPaymentOption === "advance";
+      || (this.SelectedPaymentOption === "advance" && this.isAdvancePaymentEnabled);
   }
 
   isFinalDocumentSelected(): boolean {
@@ -375,6 +385,11 @@ export class CreatesaleComponent implements OnInit {
   get isProformaSalesEnabled(): boolean {
     return this.IndProformaSales?.Indicator === "IND_PROFORMA_SALES"
       && (this.IndProformaSales?.Value || "N").trim().toUpperCase() === "S";
+  }
+
+  get isAdvancePaymentEnabled(): boolean {
+    return this.IndAdvancePayment?.Indicator === "IND_ADVANCE_PAYMENT"
+      && (this.IndAdvancePayment?.Value || "N").trim().toUpperCase() === "S";
   }
 
   hasRegisteredPayment(): boolean {

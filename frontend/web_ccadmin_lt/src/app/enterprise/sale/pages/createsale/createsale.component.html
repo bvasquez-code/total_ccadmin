@@ -258,7 +258,7 @@
                               PROFORMA
                             </div>
 
-                            <div role="button" (click)="OpenAdvanceClientModal()"
+                            <div *ngIf="isAdvancePaymentEnabled" role="button" (click)="OpenAdvanceClientModal()"
                               class="mr-1 p-3 border-2 btn btn-brc-tp shadow-sm btn-text-orange btn-light btn-h-lighter-orange btn-a-light-orange bgc-white"
                               [ngClass]="{'active': SelectedPaymentOption === 'advance'}">
                               <input type="radio" name="place" id="place3" value="1">
