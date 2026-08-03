@@ -3,6 +3,7 @@ package com.ccadmin.app.shared.shared;
 import java.util.List;
 
 import com.ccadmin.app.shared.model.constants.BusinessConfigConstants;
+import com.ccadmin.app.shared.model.dto.ConfigAutomaticProcessThreads;
 import com.ccadmin.app.system.model.dto.IndicatorDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -34,7 +35,17 @@ public class CatalogSearchShared {
     }
 
     public IndicatorDto findIndicatorSystem(String configCod){
-        return this.catalogSearchService.findIndicator(BusinessConfigConstants.GroupCod.SYSTEM_FUNCTIONALITY_ACTIVATOR,configCod);
+        return this.catalogSearchService.findIndicator(
+                BusinessConfigConstants.GroupCod.SYSTEM_FUNCTIONALITY_ACTIVATOR,
+                configCod
+        );
+    }
+
+    public IndicatorDto findConfigSystem(String configCod){
+        return this.catalogSearchService.findIndicator(
+                BusinessConfigConstants.GroupCod.SYSTEM_FUNCTIONALITY_CONFIG,
+                configCod
+        );
     }
 
     public boolean isIndicatorSystemEnabled(String configCod) {
@@ -42,5 +53,9 @@ public class CatalogSearchShared {
         return indicator != null
                 && indicator.Value != null
                 && "S".equalsIgnoreCase(indicator.Value.trim());
+    }
+
+    public ConfigAutomaticProcessThreads findConfigAutomaticProcessThreads(String configCod){
+        return this.catalogSearchService.findConfigAutomaticProcessThreads(configCod);
     }
 }

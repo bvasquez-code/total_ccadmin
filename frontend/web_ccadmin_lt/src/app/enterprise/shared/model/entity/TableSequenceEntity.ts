@@ -5,7 +5,6 @@ export class TableSequenceEntity {
     public SequenceTableType: string;
     public length: number;
     public UsePrefix: string;
-    public OriginalSequenceTrx: number | null;
 
     constructor() {
         this.SequenceTrx = 0;
@@ -13,6 +12,5 @@ export class TableSequenceEntity {
         this.SequenceTableType = "";
         this.length = 8;
         this.UsePrefix = "S";
-        this.OriginalSequenceTrx = null;
     }
 }

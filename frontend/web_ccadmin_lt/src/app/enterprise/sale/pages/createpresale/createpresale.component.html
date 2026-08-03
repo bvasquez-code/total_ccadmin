@@ -448,8 +448,8 @@
                   #{{product.ProductCod}}
                   <!-- <span class="badge bgc-pink text-white text-xs align-middle">PROMOCION</span> -->
                   <span class="badge bgc-blue-d1 text-white text-xs align-middle"
-                    *ngIf="(product.IsDiscontable === 'S')">
-                    PROMOCION !
+                    *ngIf="isSearchProductDiscountable(product)">
+                    DESCUENTO
                   </span>
                 </span>
 
@@ -583,7 +583,7 @@
               <div class="mb-2">
                 <div class="text-grey-m2 text-75 text-uppercase">Total</div>
                 <div class="text-success-d3 text-115">
-                  {{ productInfoDtoSelect.Config.NumPrice * getTotalProduct(productInfoDtoSelect.Product.ProductCod) |
+                  {{ getProductTotalAfterDiscount(productInfoDtoSelect.Product.ProductCod) |
                   currency: CurrencySystem.CurrencyCod + ' ' }}
                 </div>
               </div>
@@ -591,20 +591,64 @@
 
             <hr class="my-3" *ngIf="(productInfoDtoSelect.VariantList.length == 1)">
 
-            <div class="mt-2" *ngIf="(productInfoDtoSelect.VariantList.length == 1)">
+            <div class="row mt-2" *ngIf="(productInfoDtoSelect.VariantList.length == 1)">
+              <div class="col-12 col-md-5 mb-3">
                 <div class="text-grey-m2 text-75 text-uppercase mb-1">Cantidad ({{ getProductUnitName() }})</div>
-              <div class="btn-group" role="group" aria-label="Basic mixed styles example">
-                <button type="button" class="btn btn-danger"
-                  (click)="subtractUnit(productInfoDtoSelect,productInfoDtoSelect.VariantList[0])">-</button>
+                <div class="btn-group" role="group" aria-label="Cantidad del producto">
+                  <button type="button" class="btn btn-danger"
+                    (click)="subtractUnit(productInfoDtoSelect,productInfoDtoSelect.VariantList[0])">-</button>
 
-                <input type="text" #txt_NumUnit
-                  (change)="HandbookUnit(productInfoDtoSelect,productInfoDtoSelect.VariantList[0])" class="form-control"
-                  style="width: 80px; text-align: center;"
-                  [value]="getTotalProductVisible(productInfoDtoSelect.Product.ProductCod)">
+                  <input type="text" #txt_NumUnit
+                    (change)="HandbookUnit(productInfoDtoSelect,productInfoDtoSelect.VariantList[0])" class="form-control"
+                    style="width: 80px; text-align: center;"
+                    [value]="getTotalProductVisible(productInfoDtoSelect.Product.ProductCod)">
 
-                <button type="button" class="btn btn-success"
-                  (click)="addUnit(productInfoDtoSelect,productInfoDtoSelect.VariantList[0])">+</button>
+                  <button type="button" class="btn btn-success"
+                    (click)="addUnit(productInfoDtoSelect,productInfoDtoSelect.VariantList[0])">+</button>
+                </div>
               </div>
+
+              <div class="col-12 col-md-7 mb-3" *ngIf="canApplyManualDiscount(productInfoDtoSelect)">
+                <div class="text-grey-m2 text-75 text-uppercase mb-1">
+                  Descuento manual por {{ getProductUnitName() }}
+                </div>
+                <div class="input-group">
+                  <div class="input-group-prepend" *ngIf="!isPercentageManualDiscount(productInfoDtoSelect)">
+                    <span class="input-group-text">{{ CurrencySystem.CurrencyCod }}</span>
+                  </div>
+                  <input type="number" class="form-control" min="0" step="0.01"
+                    [max]="getManualDiscountMaximum(productInfoDtoSelect)"
+                    [disabled]="!isVariantInCart(productInfoDtoSelect, productInfoDtoSelect.VariantList[0])"
+                    [value]="getManualDiscountInput(productInfoDtoSelect, productInfoDtoSelect.VariantList[0])"
+                    (input)="enforceManualDiscountMaximum(productInfoDtoSelect, $event)"
+                    (change)="applyManualDiscount(productInfoDtoSelect, productInfoDtoSelect.VariantList[0], $event)">
+                  <div class="input-group-append" *ngIf="isPercentageManualDiscount(productInfoDtoSelect)">
+                    <span class="input-group-text">%</span>
+                  </div>
+                </div>
+                <small class="text-muted d-block mt-1">
+                  Maximo:
+                  <ng-container *ngIf="isPercentageManualDiscount(productInfoDtoSelect); else fixedSingleLimit">
+                    {{ getManualDiscountMaximum(productInfoDtoSelect) | number:'1.0-2' }}%
+                  </ng-container>
+                  <ng-template #fixedSingleLimit>
+                    {{ CurrencySystem.CurrencyCod }} {{ getManualDiscountMaximum(productInfoDtoSelect) | number:'1.2-2' }}
+                  </ng-template>
+                  | Precio final: {{ getVisiblePriceAfterDiscount(productInfoDtoSelect, productInfoDtoSelect.VariantList[0]) |
+                    currency: CurrencySystem.CurrencyCod + ' ' }}
+                </small>
+              </div>
+            </div>
+
+            <div class="alert alert-info py-2 mb-0"
+              *ngIf="isManualDiscountEnabled && !isProductConfiguredDiscountable(productInfoDtoSelect)">
+              Este producto no permite descuentos manuales.
+            </div>
+
+            <div class="alert alert-warning py-2 mb-0"
+              *ngIf="isManualDiscountEnabled && isProductConfiguredDiscountable(productInfoDtoSelect)
+                && !canApplyManualDiscount(productInfoDtoSelect)">
+              La configuracion del tipo o limite de descuento del producto esta incompleta.
             </div>
 
           </div>
@@ -637,6 +681,37 @@
                     <button type="button" class="btn btn-success"
                       (click)="addUnit(productInfoDtoSelect,VariaProduct)">+</button>
                   </div>
+                </div>
+
+                <div class="mt-3" *ngIf="canApplyManualDiscount(productInfoDtoSelect)">
+                  <div class="text-grey-m2 text-75 text-uppercase mb-1">
+                    Descuento manual por {{ getProductUnitName() }}
+                  </div>
+                  <div class="input-group">
+                    <div class="input-group-prepend" *ngIf="!isPercentageManualDiscount(productInfoDtoSelect)">
+                      <span class="input-group-text">{{ CurrencySystem.CurrencyCod }}</span>
+                    </div>
+                    <input type="number" class="form-control" min="0" step="0.01"
+                      [max]="getManualDiscountMaximum(productInfoDtoSelect)"
+                      [disabled]="!isVariantInCart(productInfoDtoSelect, VariaProduct)"
+                      [value]="getManualDiscountInput(productInfoDtoSelect, VariaProduct)"
+                      (input)="enforceManualDiscountMaximum(productInfoDtoSelect, $event)"
+                      (change)="applyManualDiscount(productInfoDtoSelect, VariaProduct, $event)">
+                    <div class="input-group-append" *ngIf="isPercentageManualDiscount(productInfoDtoSelect)">
+                      <span class="input-group-text">%</span>
+                    </div>
+                  </div>
+                  <small class="text-muted d-block mt-1">
+                    Maximo:
+                    <ng-container *ngIf="isPercentageManualDiscount(productInfoDtoSelect); else fixedVariantLimit">
+                      {{ getManualDiscountMaximum(productInfoDtoSelect) | number:'1.0-2' }}%
+                    </ng-container>
+                    <ng-template #fixedVariantLimit>
+                      {{ CurrencySystem.CurrencyCod }} {{ getManualDiscountMaximum(productInfoDtoSelect) | number:'1.2-2' }}
+                    </ng-template>
+                    | Precio final: {{ getVisiblePriceAfterDiscount(productInfoDtoSelect, VariaProduct) |
+                      currency: CurrencySystem.CurrencyCod + ' ' }}
+                  </small>
                 </div>
               </div>
             </div>

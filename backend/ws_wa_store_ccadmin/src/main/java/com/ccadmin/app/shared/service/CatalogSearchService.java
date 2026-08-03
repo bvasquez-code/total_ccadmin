@@ -2,6 +2,8 @@ package com.ccadmin.app.shared.service;
 
 import java.util.List;
 
+import com.ccadmin.app.shared.model.constants.BusinessConfigConstants;
+import com.ccadmin.app.shared.model.dto.ConfigAutomaticProcessThreads;
 import com.ccadmin.app.shared.model.entity.BusinessConfigEntity;
 import com.ccadmin.app.shared.model.myconst.StatusConst;
 import com.ccadmin.app.system.model.dto.IndicatorDto;
@@ -46,5 +48,23 @@ public class CatalogSearchService {
             return new IndicatorDto(configCod, "N");
         }
         return new IndicatorDto(businessConfig.ConfigCod,businessConfig.ConfigVal);
+    }
+
+    public ConfigAutomaticProcessThreads findConfigAutomaticProcessThreads(String configCod){
+        BusinessConfigEntity businessConfig = this.businessConfigSearchService.findByConfigCod(
+                BusinessConfigConstants.GroupCod.CONFIG_AUTOMATIC_PROCESS_THREADS,
+                configCod
+        );
+        if (businessConfig == null || !StatusConst.ACTIVE.equals(businessConfig.Status)) {
+            return null;
+        }
+        return new ConfigAutomaticProcessThreads(
+                businessConfig.ConfigCod,
+                businessConfig.ConfigDesc,
+                Long.parseLong(businessConfig.Num1Config.toString()),
+                Long.parseLong(businessConfig.Num2Config.toString()),
+                businessConfig.Num3Config,
+                businessConfig.Num4Config
+        );
     }
 }

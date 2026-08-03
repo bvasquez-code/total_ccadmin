@@ -8,8 +8,8 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
-public interface TableSequenceRepository extends JpaRepository<TableSequenceEntity, Long>,
-        CcAdminRepository<TableSequenceEntity, Long> {
+public interface TableSequenceRepository extends JpaRepository<TableSequenceEntity, String>,
+        CcAdminRepository<TableSequenceEntity, String> {
 
     @Query(value = "call db_store_01.get_cod_seq(:type)", nativeQuery = true)
     String getNextCode(@Param("type") String sequenceTableType);
@@ -20,6 +20,16 @@ public interface TableSequenceRepository extends JpaRepository<TableSequenceEnti
             order by ts.SequenceTableType
             """, nativeQuery = true)
     List<String> findSequenceTableTypes();
+
+    @Query(value = """
+            select ts.*
+            from table_sequence ts
+            where ts.SequenceTableType = :SequenceTableType
+            limit 1
+            """, nativeQuery = true)
+    TableSequenceEntity findBySequenceTableType(
+            @Param("SequenceTableType") String sequenceTableType
+    );
 
     @Override
     @Query(value = """

@@ -105,9 +105,7 @@ public class SaleTaxCalculationService {
             );
             for (int index = 0; index < splitLineList.size(); index++) {
                 SaleDetailSplitLineDto splitLine = splitLineList.get(index);
-                SaleDetTaxEntity splitTax = index == 0
-                        ? originTax
-                        : this.copySaleDetailTax(originTax, splitLine.ItemNumber);
+                SaleDetTaxEntity splitTax = this.copySaleDetailTax(originTax, splitLine.ItemNumber);
                 splitTax.ItemNumber = splitLine.ItemNumber;
                 splitTax.TaxBaseAmount = baseAmountList.get(index);
                 splitTax.TaxQuantity = taxQuantityList.get(index);
@@ -120,9 +118,7 @@ public class SaleTaxCalculationService {
         SaleTaxCalculationResultDto result = new SaleTaxCalculationResultDto();
         for (int index = 0; index < splitLineList.size(); index++) {
             SaleDetailSplitLineDto splitLine = splitLineList.get(index);
-            SaleDetEntity splitDetail = index == 0
-                    ? originDetail
-                    : this.copySaleDetail(originDetail, splitLine.ItemNumber);
+            SaleDetEntity splitDetail = this.copySaleDetail(originDetail, splitLine.ItemNumber);
             splitDetail.ItemNumber = splitLine.ItemNumber;
             splitDetail.NumUnit = splitLine.NumUnit;
             splitDetail.NumDiscount = unitDiscount;
@@ -211,10 +207,6 @@ public class SaleTaxCalculationService {
         if (splitLineList == null || splitLineList.isEmpty()) {
             throw new SaleBuildException("Debe existir al menos una linea para dividir el detalle de venta");
         }
-        if (splitLineList.get(0).ItemNumber != originDetail.ItemNumber) {
-            throw new SaleBuildException("La primera linea dividida debe conservar el item original");
-        }
-
         int splitQuantity = 0;
         Set<Integer> itemNumberSet = new HashSet<>();
         for (SaleDetailSplitLineDto splitLine : splitLineList) {
@@ -279,6 +271,11 @@ public class SaleTaxCalculationService {
         target.ProductUnitName = source.ProductUnitName;
         target.ProductUnitFactor = source.ProductUnitFactor;
         target.IsAppliedTax = source.IsAppliedTax;
+        target.CreationUser = source.CreationUser;
+        target.CreationDate = source.CreationDate;
+        target.ModifyUser = source.ModifyUser;
+        target.ModifyDate = source.ModifyDate;
+        target.Status = source.Status;
         return target;
     }
 
@@ -297,6 +294,11 @@ public class SaleTaxCalculationService {
         target.TaxRateValue = source.TaxRateValue;
         target.FixedUnitAmount = source.FixedUnitAmount;
         target.CalculationOrder = source.CalculationOrder;
+        target.CreationUser = source.CreationUser;
+        target.CreationDate = source.CreationDate;
+        target.ModifyUser = source.ModifyUser;
+        target.ModifyDate = source.ModifyDate;
+        target.Status = source.Status;
         return target;
     }
 

@@ -20,12 +20,12 @@ export class TableSequenceService {
         return RespuestaWS;
     }
 
-    async findDataForm(SequenceTrx: number | null = null): Promise<ResponseWsDto> {
+    async findDataForm(SequenceTableType: string = ""): Promise<ResponseWsDto> {
         let url: string = `${AppSetting.API}/api/v1/tableSequence/findDataForm`;
         let RespuestaWS: ResponseWsDto;
         const request: any = {};
 
-        if (SequenceTrx !== null) request.SequenceTrx = SequenceTrx;
+        if (SequenceTableType) request.SequenceTableType = SequenceTableType;
 
         RespuestaWS = await this.apiService.ExecuteGetService(url, request);
 

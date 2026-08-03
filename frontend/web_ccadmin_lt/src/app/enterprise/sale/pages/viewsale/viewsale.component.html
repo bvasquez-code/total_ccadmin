@@ -116,8 +116,8 @@
                   <div class="d-none d-sm-block col-sm-3">Producto</div>
                   <div class="d-none d-sm-block col-sm-1">Unid.</div>
                   <div class="d-none d-sm-block col-sm-2">Precio unitario</div>
+                  <div class="d-none d-sm-block col-sm-2">Precio venta</div>
                   <div class="d-none d-sm-block col-sm-2">Subtotal</div>
-                  <div class="d-none d-sm-block col-sm-2">Descuento</div>
                   <div class="d-none d-sm-block col-sm-2">Total</div>
                 </div>
 
@@ -132,26 +132,41 @@
                       {{ getVisibleQuantity(item.NumUnit, item.ProductUnitFactor) }} {{ item.ProductUnitName }}
                     </div>
                     <div class="d-none d-sm-block col-sm-2">
+                      <div>
+                        {{ SaleDetail.Headboard.CurrencyCod }}
+                        {{ getVisibleUnitPrice(item.NumUnitPrice, item.ProductUnitFactor) | FormatoMonedaPeruana:false }}
+                      </div>
+                      <div class="text-danger" *ngIf="item.NumDiscount > 0">
+                        - {{ SaleDetail.Headboard.CurrencyCod }}
+                        {{ getVisibleUnitPrice(item.NumDiscount, item.ProductUnitFactor) | FormatoMonedaPeruana:false }}
+                      </div>
+                    </div>
+                    <div class="d-none d-sm-block col-sm-2">
                       {{ SaleDetail.Headboard.CurrencyCod }}
                       {{ getVisibleUnitPrice(item.NumUnitPriceSale, item.ProductUnitFactor) | FormatoMonedaPeruana:false }}
                     </div>
                     <div class="d-none d-sm-block col-sm-2">
                       {{ SaleDetail.Headboard.CurrencyCod }} {{ item.NumPriceSubTotal | FormatoMonedaPeruana:false }}
                     </div>
-                    <div class="d-none d-sm-block col-sm-2">
-                      {{ SaleDetail.Headboard.CurrencyCod }} {{ item.NumDiscount | FormatoMonedaPeruana:false }}
-                    </div>
                     <div class="col-5 col-sm-2 text-secondary-d3 text-600">
                       {{ SaleDetail.Headboard.CurrencyCod }} {{ item.NumTotalPrice | FormatoMonedaPeruana:false }}
                     </div>
-                    <div class="col-12 mt-1 text-90 text-grey-d2" *ngIf="hasTaxDetail(item)">
-                      <span class="mr-3">
+                    <div class="col-12 mt-1 text-90 text-grey-d2"
+                      *ngIf="hasTaxDetail(item) || item.LotNumber || item.ExpirationDate">
+                      <span class="mr-3" *ngIf="hasTaxDetail(item)">
                         Impuesto: {{ SaleDetail.Headboard.CurrencyCod }} {{ item.NumTotalTax | FormatoMonedaPeruana:false }}
                       </span>
                       <span class="badge badge-sm bgc-secondary-l3 text-dark-m2 mr-1"
                         *ngFor="let tax of getTaxDetailList(item)">
                         {{ getTaxLineLabel(tax) }}: {{ SaleDetail.Headboard.CurrencyCod }}
                         {{ tax.TaxAmount | FormatoMonedaPeruana:false }}
+                      </span>
+                      <span class="ml-2 text-dark-m2" *ngIf="item.LotNumber || item.ExpirationDate">
+                        <span *ngIf="item.LotNumber">Lote: <b>{{ item.LotNumber }}</b></span>
+                        <span class="mx-1" *ngIf="item.LotNumber && item.ExpirationDate">|</span>
+                        <span *ngIf="item.ExpirationDate">
+                          Vencimiento: <b>{{ item.ExpirationDate | date:'dd/MM/yyyy' }}</b>
+                        </span>
                       </span>
                     </div>
                   </div>

@@ -37,6 +37,7 @@ export class CreateproductconfigComponent implements OnInit {
   StorePage: number = 1;
   StorePageSize: number = 10;
   VisibleUnitPrice: number = 0;
+  VisibleDiscountMax: number = 0;
   TaxList: TaxEntity[] = [];
   TaxAffectationList: TaxAffectationEntity[] = [];
   MainTaxConfig: ProductTaxConfigEntity = new ProductTaxConfigEntity();
@@ -119,7 +120,9 @@ export class CreateproductconfigComponent implements OnInit {
       this.OneStoreSearchTerm = this.getStoreLabel(this.SelectedStore);
       this.Config.ProductCod = this.ProductCod;
       this.Config.StoreCod = this.SelectedStoreCod;
+      this.normalizeDiscountConfig();
       this.syncVisiblePriceFromInternal();
+      this.syncVisibleDiscountFromInternal();
       this.loadStores(this.SelectedStoreCod);
     } else {
       this.toastrService.error(rpt.Message);
@@ -231,8 +234,8 @@ export class CreateproductconfigComponent implements OnInit {
     copy.NumPrice = Number(config.NumPrice || 0);
     copy.NumMaxStock = Number(config.NumMaxStock || 0);
     copy.NumMinStock = Number(config.NumMinStock || 0);
-    copy.IsDiscontable = config.IsDiscontable;
-    copy.DiscountType = config.DiscountType;
+    copy.IsDiscontable = config.IsDiscontable || "N";
+    copy.DiscountType = config.DiscountType || "-";
     copy.NumDiscountMax = Number(config.NumDiscountMax || 0);
     copy.ProductUnitName = config.ProductUnitName || "NIU";
     copy.ProductUnitFactor = ProductUnitHelper.normalizeFactor(Number(config.ProductUnitFactor || 1));
@@ -540,6 +543,7 @@ export class CreateproductconfigComponent implements OnInit {
     }
     this.Config.ProductUnitFactor = this.getProductUnitFactor();
     this.syncVisiblePriceFromInternal();
+    this.syncVisibleDiscountFromInternal();
   }
 
   syncVisiblePriceFromInternal(): void {
@@ -548,6 +552,96 @@ export class CreateproductconfigComponent implements OnInit {
 
   syncInternalPriceFromVisible(): void {
     this.Config.NumPrice = ProductUnitHelper.toInternalUnitPrice(Number(this.VisibleUnitPrice || 0), this.getProductUnitFactor());
+  }
+
+  get isDiscountEnabled(): boolean {
+    return (this.Config.IsDiscontable || "N").trim().toUpperCase() === "S";
+  }
+
+  get isPercentageDiscount(): boolean {
+    return (this.Config.DiscountType || "").trim().toUpperCase() === "MP";
+  }
+
+  get isFixedDiscount(): boolean {
+    return (this.Config.DiscountType || "").trim().toUpperCase() === "MF";
+  }
+
+  onDiscountableChange(): void {
+    this.Config.IsDiscontable = (this.Config.IsDiscontable || "N").trim().toUpperCase();
+    if (!this.isDiscountEnabled) {
+      this.Config.IsDiscontable = "N";
+      this.Config.DiscountType = "-";
+      this.Config.NumDiscountMax = 0;
+      this.VisibleDiscountMax = 0;
+      return;
+    }
+    if (!this.isPercentageDiscount && !this.isFixedDiscount) {
+      this.Config.DiscountType = "MP";
+      this.Config.NumDiscountMax = 0;
+      this.VisibleDiscountMax = 0;
+    }
+  }
+
+  onDiscountTypeChange(): void {
+    this.Config.DiscountType = (this.Config.DiscountType || "").trim().toUpperCase();
+    this.Config.NumDiscountMax = 0;
+    this.VisibleDiscountMax = 0;
+  }
+
+  syncVisibleDiscountFromInternal(): void {
+    this.VisibleDiscountMax = this.isFixedDiscount
+      ? this.toMoney(
+        ProductUnitHelper.toVisibleUnitPrice(
+          Number(this.Config.NumDiscountMax || 0),
+          this.getProductUnitFactor()
+        )
+      )
+      : Number(this.Config.NumDiscountMax || 0);
+  }
+
+  syncInternalDiscountFromVisible(): void {
+    if (!this.isFixedDiscount) return;
+    this.Config.NumDiscountMax = this.toMoney(
+      ProductUnitHelper.toInternalUnitPrice(
+        Number(this.VisibleDiscountMax || 0),
+        this.getProductUnitFactor()
+      )
+    );
+  }
+
+  normalizeDiscountConfig(): void {
+    this.Config.IsDiscontable = (this.Config.IsDiscontable || "N").trim().toUpperCase();
+    if (this.Config.IsDiscontable !== "S") {
+      this.Config.IsDiscontable = "N";
+      this.Config.DiscountType = "-";
+      this.Config.NumDiscountMax = 0;
+      return;
+    }
+    this.Config.DiscountType = (this.Config.DiscountType || "").trim().toUpperCase();
+    this.Config.NumDiscountMax = this.toMoney(Number(this.Config.NumDiscountMax || 0));
+  }
+
+  validateDiscountConfig(): void {
+    this.normalizeDiscountConfig();
+    if (!this.isDiscountEnabled) return;
+    if (!this.isPercentageDiscount && !this.isFixedDiscount) {
+      throw new Error("Debe seleccionar porcentaje o monto fijo como tipo de descuento");
+    }
+    if (this.isFixedDiscount) {
+      this.syncInternalDiscountFromVisible();
+    }
+    ValidationHelper.validNumber(
+      this.Config.NumDiscountMax,
+      null,
+      0.01,
+      "El descuento maximo debe ser mayor a cero"
+    );
+    if (this.isPercentageDiscount && Number(this.Config.NumDiscountMax) > 100) {
+      throw new Error("El porcentaje maximo de descuento no puede superar 100%");
+    }
+    if (this.isFixedDiscount && Number(this.Config.NumDiscountMax) > Number(this.Config.NumPrice || 0)) {
+      throw new Error("El descuento fijo maximo no puede superar el precio del producto");
+    }
   }
 
   getTargetSummary(): string {
@@ -565,6 +659,7 @@ export class CreateproductconfigComponent implements OnInit {
       ValidationHelper.validNumber(this.Config.ProductUnitFactor, null, 1, "Factor de operacion no valido");
       ValidationHelper.validateIsNotEmpty(this.Config.NumPrice, "Debe ingresar un precio para el producto");
       ValidationHelper.validNumber(this.Config.NumPrice, null, 0, "Precio por NIU no valido");
+      this.validateDiscountConfig();
       if (this.ScopeMode === "ONE") {
         ValidationHelper.validateIsNotEmpty(this.SelectedStoreCod, "Debe seleccionar una tienda");
       }
@@ -633,6 +728,7 @@ export class CreateproductconfigComponent implements OnInit {
 
   async save(): Promise<void> {
     this.syncInternalPriceFromVisible();
+    this.syncInternalDiscountFromVisible();
     if (!this.validate()) return;
 
     const result = await Swal.fire({
@@ -668,6 +764,10 @@ export class CreateproductconfigComponent implements OnInit {
     } else {
       this.toastrService.error(rpt.Message);
     }
+  }
+
+  private toMoney(value: number): number {
+    return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
   }
 
   getTargetStoreCodList(): string[] {

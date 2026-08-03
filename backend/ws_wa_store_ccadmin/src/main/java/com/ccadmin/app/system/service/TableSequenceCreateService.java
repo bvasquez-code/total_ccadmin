@@ -23,19 +23,6 @@ public class TableSequenceCreateService {
         request.UsePrefix = normalizeUpper(request.UsePrefix);
         request.validate();
 
-        Long originalSequenceTrx = request.OriginalSequenceTrx;
-
-        if (originalSequenceTrx != null && !originalSequenceTrx.equals(request.SequenceTrx)) {
-            if (!this.tableSequenceRepository.existsById(originalSequenceTrx)) {
-                throw new IllegalArgumentException("Secuencia global original no encontrada");
-            }
-            if (this.tableSequenceRepository.existsById(request.SequenceTrx)) {
-                throw new IllegalArgumentException("SequenceTrx ya existe");
-            }
-            this.tableSequenceRepository.deleteById(originalSequenceTrx);
-        }
-
-        request.OriginalSequenceTrx = request.SequenceTrx;
         return this.tableSequenceRepository.save(request);
     }
 

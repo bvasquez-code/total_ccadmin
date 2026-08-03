@@ -12,7 +12,9 @@ import com.ccadmin.app.sale.repository.SaleHeadRepository;
 import com.ccadmin.app.shared.model.dto.ResponsePageSearchT;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import com.ccadmin.app.shared.model.dto.SearchDto;
+import com.ccadmin.app.shared.model.constants.BusinessConfigConstants;
 import com.ccadmin.app.shared.service.SearchTService;
+import com.ccadmin.app.shared.shared.CatalogSearchShared;
 import com.ccadmin.app.system.shared.CurrencyShared;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +41,8 @@ public class PresaleSearchService {
     private CurrencyShared currencyShared;
     @Autowired
     private SaleHeadRepository saleHeadRepository;
+    @Autowired
+    private CatalogSearchShared catalogSearchShared;
 
     private SearchTService searchService;
 
@@ -101,6 +105,10 @@ public class PresaleSearchService {
         ResponseWsDto rpt = new ResponseWsDto();
 
         rpt.AddResponseAdditional("CurrencySystem",this.currencyShared.findCurrencySystem());
+        rpt.AddResponseAdditional(
+                "IndManualDiscount",
+                this.catalogSearchShared.findIndicatorSystem(BusinessConfigConstants.ConfigCod.IND_MANUAL_DISCOUNT)
+        );
         if(PresaleCod!=null && !PresaleCod.isEmpty()) rpt.AddResponseAdditional("PresaleDetail",this.findById(PresaleCod));
 
         return rpt;

@@ -246,6 +246,84 @@
 
                     <div class="border-t-1 brc-secondary-l2 pt-4 mt-4">
                         <h4 class="text-120 text-primary-d2 mb-3">
+                            <i class="fa fa-percent text-dark-l3 mr-1"></i>
+                            Configuracion de descuento
+                        </h4>
+
+                        <div class="form-group row">
+                            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                                <label class="mb-0">Permite descuento manual</label>
+                            </div>
+                            <div class="col-sm-9">
+                                <select class="form-control col-sm-8 col-md-6"
+                                    name="IsDiscontable"
+                                    [(ngModel)]="Config.IsDiscontable"
+                                    (change)="onDiscountableChange()">
+                                    <option value="N">No</option>
+                                    <option value="S">Si</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group row" *ngIf="isDiscountEnabled">
+                            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                                <label class="mb-0">Tipo de descuento</label>
+                            </div>
+                            <div class="col-sm-9">
+                                <select class="form-control col-sm-8 col-md-6"
+                                    name="DiscountType"
+                                    [(ngModel)]="Config.DiscountType"
+                                    (change)="onDiscountTypeChange()">
+                                    <option value="MP">MP - Porcentaje</option>
+                                    <option value="MF">MF - Monto fijo</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group row" *ngIf="isDiscountEnabled && isPercentageDiscount">
+                            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                                <label class="mb-0">Porcentaje maximo</label>
+                            </div>
+                            <div class="col-sm-9">
+                                <div class="input-group col-sm-8 col-md-6 p-0">
+                                    <input type="number"
+                                        class="form-control"
+                                        name="NumDiscountMaxPercentage"
+                                        min="0.01"
+                                        max="100"
+                                        step="0.01"
+                                        [(ngModel)]="Config.NumDiscountMax">
+                                    <div class="input-group-append">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                                <small class="form-text text-muted">
+                                    Ejemplo: 5 permite reducir el precio como maximo en 5%.
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="form-group row" *ngIf="isDiscountEnabled && isFixedDiscount">
+                            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                                <label class="mb-0">Monto maximo por {{ getProductUnitName() }}</label>
+                            </div>
+                            <div class="col-sm-9">
+                                <input type="number"
+                                    class="form-control col-sm-8 col-md-6"
+                                    name="VisibleDiscountMax"
+                                    min="0.01"
+                                    step="0.01"
+                                    [(ngModel)]="VisibleDiscountMax"
+                                    (input)="syncInternalDiscountFromVisible()">
+                                <small class="form-text text-muted">
+                                    Equivale a {{ Config.NumDiscountMax | number:'1.2-2' }} por NIU y no puede superar el precio.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-t-1 brc-secondary-l2 pt-4 mt-4">
+                        <h4 class="text-120 text-primary-d2 mb-3">
                             <i class="fa fa-receipt text-dark-l3 mr-1"></i>
                             Configuracion tributaria
                         </h4>

@@ -3,6 +3,7 @@ package com.ccadmin.app.sale.repository;
 import com.ccadmin.app.sale.model.entity.SaleDetTaxEntity;
 import com.ccadmin.app.sale.model.entity.id.SaleDetTaxID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -31,4 +32,8 @@ public interface SaleDetTaxRepository extends JpaRepository<SaleDetTaxEntity, Sa
             @Param("SaleCod") String SaleCod,
             @Param("ItemNumber") int ItemNumber
     );
+
+    @Modifying(flushAutomatically = true)
+    @Query(value = "delete from sale_det_tax where SaleCod = :SaleCod", nativeQuery = true)
+    int deleteBySaleCodNative(@Param("SaleCod") String SaleCod);
 }

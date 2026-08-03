@@ -25,6 +25,7 @@ import { PaginationUtil } from '../../utility/PaginationUtility';
 import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
 import { CreditNoteService } from '../../service/CreditNote.service';
 import { CreditNoteDetailDto } from '../../model/dto/CreditNoteDetailDto';
+import { IndicatorDto } from 'src/app/enterprise/shared/model/dto/IndicatorDto';
 
 @Component({
   selector: 'app-createpresale',
@@ -52,6 +53,7 @@ export class CreatepresaleComponent implements OnInit {
 
   ShoppingCart: PresaleRegisterDto = new PresaleRegisterDto();
   CurrencySystem: CurrencyEntity = new CurrencyEntity();
+  IndManualDiscount: IndicatorDto = new IndicatorDto();
   ShoppingCartResult: PresaleDetailDto = new PresaleDetailDto();
   SaleDetail: SaleDetailDto = new SaleDetailDto();
   PresaleDetail: PresaleDetailDto = new PresaleDetailDto();
@@ -188,6 +190,8 @@ export class CreatepresaleComponent implements OnInit {
 
     if (!response.ErrorStatus) {
       this.CurrencySystem = response.DataAdditional.find(e => e.Name === "CurrencySystem")?.Data;
+      this.IndManualDiscount = response.DataAdditional.find(e => e.Name === "IndManualDiscount")?.Data
+        ?? new IndicatorDto();
       this.PresaleDetail = response.DataAdditional.find(e => e.Name === "PresaleDetail")?.Data;
 
       if (this.PresaleDetail) {
@@ -314,6 +318,53 @@ export class CreatepresaleComponent implements OnInit {
     }
   }
 
+  applyManualDiscount(
+    ProductInfo: ProductInfoDto,
+    ProductVariant: ProductVariantEntity,
+    event: Event
+  ): void {
+    const input = event.target as HTMLInputElement;
+    try {
+      const discount = this.clampManualDiscountInput(ProductInfo, input, false);
+      this.shoppingCartService.setManualDiscount(ProductInfo, ProductVariant, discount);
+      this.updateShoppingCart();
+      input.value = String(this.getManualDiscountInput(ProductInfo, ProductVariant));
+    } catch (error: any) {
+      input.value = String(this.getManualDiscountInput(ProductInfo, ProductVariant));
+      this.toastrService.error(error.message);
+    }
+  }
+
+  enforceManualDiscountMaximum(ProductInfo: ProductInfoDto, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.clampManualDiscountInput(ProductInfo, input, true);
+  }
+
+  private clampManualDiscountInput(
+    ProductInfo: ProductInfoDto,
+    input: HTMLInputElement,
+    showWarning: boolean
+  ): number {
+    const maximum = this.getManualDiscountMaximum(ProductInfo);
+    let value = Number(input.value || 0);
+    if (!Number.isFinite(value)) value = 0;
+    if (value < 0) value = 0;
+
+    if (value > maximum) {
+      value = maximum;
+      input.value = String(maximum);
+      if (showWarning) {
+        const limit = this.isPercentageManualDiscount(ProductInfo)
+          ? `${maximum}%`
+          : `${this.CurrencySystem.CurrencyCod} ${maximum.toFixed(2)}`;
+        this.toastrService.warning(
+          `El descuento maximo permitido es ${limit}. Se reemplazo el valor por el limite configurado.`
+        );
+      }
+    }
+    return value;
+  }
+
   updateShoppingCart() {
     this.ShoppingCart = this.shoppingCartService.getCart();
   }
@@ -348,6 +399,88 @@ export class CreatepresaleComponent implements OnInit {
 
   getProductUnitName(): string {
     return this.productInfoDtoSelect.Config.ProductUnitName || 'NIU';
+  }
+
+  get isManualDiscountEnabled(): boolean {
+    return this.IndManualDiscount?.Indicator === "IND_MANUAL_DISCOUNT"
+      && (this.IndManualDiscount?.Value || "N").trim().toUpperCase() === "S";
+  }
+
+  canApplyManualDiscount(ProductInfo: ProductInfoDto): boolean {
+    const config = ProductInfo?.Config;
+    const discountType = (config?.DiscountType || "").trim().toUpperCase();
+    return this.isManualDiscountEnabled
+      && this.isProductConfiguredDiscountable(ProductInfo)
+      && (discountType === "MP" || discountType === "MF")
+      && Number(config?.NumDiscountMax || 0) > 0;
+  }
+
+  isProductConfiguredDiscountable(ProductInfo: ProductInfoDto): boolean {
+    return (ProductInfo?.Config?.IsDiscontable || "").trim().toUpperCase() === "S";
+  }
+
+  isSearchProductDiscountable(product: ProductSearchEntity): boolean {
+    const discountType = (product?.DiscountType || "").trim().toUpperCase();
+    return this.isManualDiscountEnabled
+      && (product?.IsDiscontable || "").trim().toUpperCase() === "S"
+      && (discountType === "MP" || discountType === "MF")
+      && Number(product?.NumDiscountMax || 0) > 0;
+  }
+
+  isVariantInCart(ProductInfo: ProductInfoDto, ProductVariant: ProductVariantEntity): boolean {
+    return !!this.shoppingCartService.GetProductInCart(
+      ProductInfo.Product.ProductCod,
+      ProductVariant.Variant
+    );
+  }
+
+  getManualDiscountInput(ProductInfo: ProductInfoDto, ProductVariant: ProductVariantEntity): number {
+    const detail = this.shoppingCartService.GetProductInCart(
+      ProductInfo.Product.ProductCod,
+      ProductVariant.Variant
+    );
+    if (!detail || detail.NumDiscount <= 0) return 0;
+
+    const discountType = (ProductInfo.Config.DiscountType || "").trim().toUpperCase();
+    if (discountType === "MP") {
+      return detail.NumUnitPrice > 0
+        ? this.toMoney(detail.NumDiscount * 100 / detail.NumUnitPrice)
+        : 0;
+    }
+    return this.toMoney(detail.NumDiscount * ProductInfo.Config.ProductUnitFactor);
+  }
+
+  getManualDiscountMaximum(ProductInfo: ProductInfoDto): number {
+    const config = ProductInfo.Config;
+    return (config.DiscountType || "").trim().toUpperCase() === "MP"
+      ? Number(config.NumDiscountMax || 0)
+      : this.toMoney(
+        Number(config.NumDiscountMax || 0)
+        * ProductUnitHelper.normalizeFactor(Number(config.ProductUnitFactor || 1))
+      );
+  }
+
+  isPercentageManualDiscount(ProductInfo: ProductInfoDto): boolean {
+    return (ProductInfo.Config.DiscountType || "").trim().toUpperCase() === "MP";
+  }
+
+  getVisiblePriceAfterDiscount(ProductInfo: ProductInfoDto, ProductVariant: ProductVariantEntity): number {
+    const detail = this.shoppingCartService.GetProductInCart(
+      ProductInfo.Product.ProductCod,
+      ProductVariant.Variant
+    );
+    const internalPrice = detail?.NumUnitPriceSale ?? ProductInfo.Config.NumPrice;
+    return this.toMoney(
+      ProductUnitHelper.toVisibleUnitPrice(internalPrice, ProductInfo.Config.ProductUnitFactor)
+    );
+  }
+
+  getProductTotalAfterDiscount(ProductCod: string): number {
+    return this.toMoney(
+      this.ShoppingCart.DetailList
+        .filter(item => item.ProductCod === ProductCod)
+        .reduce((total, item) => total + Number(item.NumTotalPrice || 0), 0)
+    );
   }
 
   DeleteProduct(ProductCod: string) {

@@ -12,7 +12,7 @@ import { TableSequenceService } from '../../service/TableSequenceService';
 })
 export class CreatetablesequenceComponent implements OnInit {
 
-  SequenceTrx: number = 0;
+  SequenceTableType: string = "";
   tableSequence: TableSequenceEntity = new TableSequenceEntity();
   sequenceTableTypeList: string[] = [];
   isEdit: boolean = false;
@@ -26,17 +26,17 @@ export class CreatetablesequenceComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.FindDataForm(this.SequenceTrx);
+    this.FindDataForm(this.SequenceTableType);
   }
 
   GetParamUrl(router: Router): void {
     const urlTree: any = router.parseUrl(this.router.url);
-    this.SequenceTrx = Number(urlTree.queryParams['SequenceTrx'] ?? 0);
-    this.isEdit = this.SequenceTrx > 0;
+    this.SequenceTableType = (urlTree.queryParams['SequenceTableType'] ?? "").toString().trim();
+    this.isEdit = this.SequenceTableType !== "";
   }
 
-  async FindDataForm(SequenceTrx: number): Promise<void> {
-    const rpt: ResponseWsDto = await this.tableSequenceService.findDataForm(SequenceTrx > 0 ? SequenceTrx : null);
+  async FindDataForm(SequenceTableType: string): Promise<void> {
+    const rpt: ResponseWsDto = await this.tableSequenceService.findDataForm(SequenceTableType);
 
     if (!rpt.ErrorStatus) {
       const item = rpt.DataAdditional?.find(e => e.Name === "tableSequence")?.Data;
@@ -44,7 +44,6 @@ export class CreatetablesequenceComponent implements OnInit {
 
       if (item) {
         this.tableSequence = item;
-        this.tableSequence.OriginalSequenceTrx = this.SequenceTrx;
       }
       this.ensureDefaults();
     }
@@ -110,9 +109,6 @@ export class CreatetablesequenceComponent implements OnInit {
     this.tableSequence.Prefix = this.tableSequence.Prefix || "";
     this.tableSequence.SequenceTableType = this.tableSequence.SequenceTableType || "";
     this.tableSequence.UsePrefix = this.tableSequence.UsePrefix || "S";
-    if (this.isEdit && this.tableSequence.OriginalSequenceTrx === null) {
-      this.tableSequence.OriginalSequenceTrx = this.SequenceTrx;
-    }
   }
 
   private normalizeTableSequence(): void {

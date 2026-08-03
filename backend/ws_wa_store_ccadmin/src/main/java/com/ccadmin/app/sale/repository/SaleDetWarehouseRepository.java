@@ -3,6 +3,7 @@ package com.ccadmin.app.sale.repository;
 import com.ccadmin.app.sale.model.entity.SaleDetWarehouseEntity;
 import com.ccadmin.app.sale.model.entity.id.SaleDetWarehouseID;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -24,4 +25,8 @@ public interface SaleDetWarehouseRepository extends JpaRepository<SaleDetWarehou
             for update
             """, nativeQuery = true)
     List<SaleDetWarehouseEntity> findBySaleCodForUpdate(@Param("SaleCod") String saleCod);
+
+    @Modifying(flushAutomatically = true)
+    @Query(value = "delete from sale_det_warehouse where SaleCod = :SaleCod", nativeQuery = true)
+    int deleteBySaleCodNative(@Param("SaleCod") String SaleCod);
 }

@@ -2,10 +2,11 @@ package com.ccadmin.app.sale.service;
 
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
 import com.ccadmin.app.sale.repository.SaleHeadRepository;
+import com.ccadmin.app.shared.model.constants.BusinessConfigConstants;
+import com.ccadmin.app.shared.shared.CatalogSearchShared;
+import com.ccadmin.app.system.model.dto.IndicatorDto;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -21,14 +22,33 @@ public class SalePendingExpirationScheduler {
     private SaleHeadRepository saleHeadRepository;
     @Autowired
     private ExpiredSaleCancellationService expiredSaleCancellationService;
-    @Value("${app.sale.pending-expiration-minutes:60}")
-    private long expirationMinutes;
+    @Autowired
+    private CatalogSearchShared catalogSearchShared;
 
-    @Scheduled(fixedDelayString = "${app.sale.pending-expiration-scan-ms:60000}")
     public void cancelExpiredPendingSales() {
-        Date expirationLimit = new Date(
-                System.currentTimeMillis() - this.expirationMinutes * 60_000L
-        );
+        if (!this.catalogSearchShared.isIndicatorSystemEnabled(
+                BusinessConfigConstants.ConfigCod.IND_CANCEL_PENDING_AUTOMATIC_SALE
+        )) {
+            return;
+        }
+
+        Long expirationMillis = this.findExpirationMillis();
+        if (expirationMillis == null) {
+            return;
+        }
+
+        Date expirationLimit;
+        try {
+            expirationLimit = new Date(Math.subtractExact(System.currentTimeMillis(), expirationMillis));
+        } catch (ArithmeticException exception) {
+            log.error(
+                    "CONFIGURACION_CANCELACION_VENTA_PENDIENTE_FUERA_DE_RANGO -->> {} : {} MS",
+                    BusinessConfigConstants.ConfigCod.CANCEL_PENDING_AUTOMATIC_SALE_TIME,
+                    expirationMillis
+            );
+            return;
+        }
+
         List<SaleHeadEntity> expiredSales =
                 this.saleHeadRepository.findExpiredPendingSales(expirationLimit);
 
@@ -50,6 +70,28 @@ public class SalePendingExpirationScheduler {
                         exception
                 );
             }
+        }
+    }
+
+    private Long findExpirationMillis() {
+        IndicatorDto timeConfig = this.catalogSearchShared.findConfigSystem(
+                BusinessConfigConstants.ConfigCod.CANCEL_PENDING_AUTOMATIC_SALE_TIME
+        );
+        String configuredValue = timeConfig == null ? null : timeConfig.Value;
+
+        try {
+            long expirationMillis = Long.parseLong(configuredValue == null ? "" : configuredValue.trim());
+            if (expirationMillis < 1) {
+                throw new NumberFormatException();
+            }
+            return expirationMillis;
+        } catch (NumberFormatException exception) {
+            log.error(
+                    "CONFIGURACION_CANCELACION_VENTA_PENDIENTE_INVALIDA -->> {} debe ser un entero mayor que cero expresado en milisegundos: {}",
+                    BusinessConfigConstants.ConfigCod.CANCEL_PENDING_AUTOMATIC_SALE_TIME,
+                    configuredValue
+            );
+            return null;
         }
     }
 }

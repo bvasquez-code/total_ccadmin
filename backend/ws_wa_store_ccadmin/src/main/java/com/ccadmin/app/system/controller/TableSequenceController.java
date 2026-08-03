@@ -24,8 +24,8 @@ public class TableSequenceController {
     private TableSequenceCreateService tableSequenceCreateService;
 
     @GetMapping("findById")
-    public ResponseEntity<ResponseWsDto> findById(@RequestParam Long SequenceTrx) {
-        try { return new ResponseEntity<>(new ResponseWsDto(tableSequenceSearchService.findById(SequenceTrx)), HttpStatus.OK); }
+    public ResponseEntity<ResponseWsDto> findById(@RequestParam String SequenceTableType) {
+        try { return new ResponseEntity<>(new ResponseWsDto(tableSequenceSearchService.findById(SequenceTableType)), HttpStatus.OK); }
         catch (Exception ex) { return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST); }
     }
 
@@ -36,8 +36,8 @@ public class TableSequenceController {
     }
 
     @GetMapping("findDataForm")
-    public ResponseEntity<ResponseWsDto> findDataForm(@RequestParam(required = false) Long SequenceTrx) {
-        try { return new ResponseEntity<>(tableSequenceSearchService.findDataForm(SequenceTrx), HttpStatus.OK); }
+    public ResponseEntity<ResponseWsDto> findDataForm(@RequestParam(required = false) String SequenceTableType) {
+        try { return new ResponseEntity<>(tableSequenceSearchService.findDataForm(SequenceTableType), HttpStatus.OK); }
         catch (Exception ex) { return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST); }
     }
 

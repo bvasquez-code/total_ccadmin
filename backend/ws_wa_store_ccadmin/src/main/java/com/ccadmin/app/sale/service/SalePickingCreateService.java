@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import java.sql.Date;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -73,6 +74,10 @@ public class SalePickingCreateService extends SessionService {
                 request, saleDetailList, saleDetailTaxList, currentWarehouseList
         );
 
+        this.saleDetTaxRepository.deleteBySaleCodNative(saleHead.SaleCod);
+        this.saleDetWarehouseRepository.deleteBySaleCodNative(saleHead.SaleCod);
+        this.saleDetRepository.deleteBySaleCodNative(saleHead.SaleCod);
+
         saleHead.IsPickingConfirmed = "S";
         saleHead.addSession(getUserCod());
         this.saleDetRepository.saveAll(pickingResult.saleDetailList());
@@ -118,14 +123,17 @@ public class SalePickingCreateService extends SessionService {
             }
         }
 
-        int nextItemNumber = saleDetailList.stream()
+        List<SaleDetEntity> orderedSaleDetailList = saleDetailList.stream()
+                .sorted(Comparator.comparingInt(item -> item.ItemNumber))
+                .toList();
+        int nextItemNumber = orderedSaleDetailList.stream()
                 .mapToInt(item -> item.ItemNumber)
-                .max()
-                .orElse(0) + 1;
+                .min()
+                .orElse(1);
         List<SaleDetEntity> pickedDetailList = new ArrayList<>();
         List<SaleDetWarehouseEntity> pickedWarehouseList = new ArrayList<>();
         List<SaleDetTaxEntity> pickedTaxList = new ArrayList<>();
-        for (SaleDetEntity saleDetail : saleDetailList) {
+        for (SaleDetEntity saleDetail : orderedSaleDetailList) {
             List<SalePickingLineDto> pickingLineList = requestedByItem.get(saleDetail.ItemNumber);
             if (pickingLineList == null || pickingLineList.isEmpty()) {
                 throw new SaleException("Falta pickear el item " + saleDetail.ItemNumber);
@@ -141,11 +149,9 @@ public class SalePickingCreateService extends SessionService {
             this.validatePickingLines(saleDetail, pickingLineList);
             SaleDetWarehouseEntity baseWarehouse = currentItemWarehouseList.get(0);
             List<SaleDetailSplitLineDto> splitLineList = new ArrayList<>();
-            for (int index = 0; index < pickingLineList.size(); index++) {
-                SalePickingLineDto pickingLine = pickingLineList.get(index);
-                int itemNumber = index == 0 ? saleDetail.ItemNumber : nextItemNumber++;
+            for (SalePickingLineDto pickingLine : pickingLineList) {
                 splitLineList.add(new SaleDetailSplitLineDto(
-                        itemNumber,
+                        nextItemNumber++,
                         pickingLine.NumUnit,
                         this.normalizeLotNumber(pickingLine.LotNumber),
                         pickingLine.ExpirationDate
@@ -163,9 +169,7 @@ public class SalePickingCreateService extends SessionService {
             for (int index = 0; index < splitLineList.size(); index++) {
                 SaleDetailSplitLineDto splitLine = splitLineList.get(index);
                 SaleDetEntity pickedDetail = splitResult.DetailList.get(index);
-                SaleDetWarehouseEntity pickedWarehouse = index == 0
-                        ? baseWarehouse
-                        : this.copyWarehouse(baseWarehouse, splitLine.ItemNumber);
+                SaleDetWarehouseEntity pickedWarehouse = this.copyWarehouse(baseWarehouse, splitLine.ItemNumber);
                 pickedWarehouse.SaleCod = saleDetail.SaleCod;
                 pickedWarehouse.ItemNumber = splitLine.ItemNumber;
                 pickedWarehouse.ProductCod = pickedDetail.ProductCod;
@@ -196,6 +200,11 @@ public class SalePickingCreateService extends SessionService {
         target.WarehouseCod = source.WarehouseCod;
         target.ProductUnitName = source.ProductUnitName;
         target.ProductUnitFactor = source.ProductUnitFactor;
+        target.CreationUser = source.CreationUser;
+        target.CreationDate = source.CreationDate;
+        target.ModifyUser = source.ModifyUser;
+        target.ModifyDate = source.ModifyDate;
+        target.Status = source.Status;
         return target;
     }
 

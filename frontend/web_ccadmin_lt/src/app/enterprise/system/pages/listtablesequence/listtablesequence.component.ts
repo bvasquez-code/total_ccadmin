@@ -54,9 +54,9 @@ export class ListtablesequenceComponent implements OnInit, ActionTableService<Ta
         {
           Name: "Opciones",
           ColumnAction: true,
-          Id: ["SequenceTrx"],
+          Id: ["SequenceTableType"],
           Options: [
-            { Type: "Url", Name: "fa fa-pencil-alt", Url: "/enterprise/system/pages/createtablesequence?SequenceTrx={SequenceTrx}" }
+            { Type: "Url", Name: "fa fa-pencil-alt", Url: "/enterprise/system/pages/createtablesequence?SequenceTableType={SequenceTableType}" }
           ]
         }
       ],

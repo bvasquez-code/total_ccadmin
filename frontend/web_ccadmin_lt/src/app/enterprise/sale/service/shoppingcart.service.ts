@@ -141,6 +141,60 @@ export class ShoppingCartService
         this.ReBuild();
     }
 
+    public setManualDiscount(
+        ProductInfo: ProductInfoDto,
+        ProductVariant: ProductVariantEntity,
+        discountInput: number
+    ): void {
+        const detail = this.GetProductInCart(ProductInfo.Product.ProductCod, ProductVariant.Variant);
+        if (!detail || detail.NumUnit <= 0) {
+            throw new Error("Primero agregue una cantidad del producto.");
+        }
+
+        const config = ProductInfo.Config;
+        if ((config.IsDiscontable || "").trim().toUpperCase() !== "S") {
+            throw new Error("Este producto no permite descuentos manuales.");
+        }
+
+        const value = Number(discountInput || 0);
+        if (!Number.isFinite(value) || value < 0) {
+            throw new Error("Ingrese un descuento valido.");
+        }
+
+        const discountType = (config.DiscountType || "").trim().toUpperCase();
+        const configuredMaximum = Number(config.NumDiscountMax || 0);
+        const factor = this.getProductUnitFactor(ProductInfo);
+        let internalUnitDiscount = 0;
+
+        if (discountType === "MP") {
+            if (configuredMaximum <= 0 || configuredMaximum > 100) {
+                throw new Error("La configuracion porcentual del producto no es valida.");
+            }
+            if (value > configuredMaximum) {
+                throw new Error(`El descuento maximo permitido es ${configuredMaximum}%.`);
+            }
+            internalUnitDiscount = detail.NumUnitPrice * value / 100;
+        } else if (discountType === "MF") {
+            const visibleMaximum = this.toMoney(configuredMaximum * factor);
+            if (configuredMaximum <= 0) {
+                throw new Error("La configuracion de monto fijo del producto no es valida.");
+            }
+            if (value > visibleMaximum) {
+                throw new Error(`El descuento maximo permitido es ${visibleMaximum}.`);
+            }
+            internalUnitDiscount = value / factor;
+        } else {
+            throw new Error("El tipo de descuento del producto no es valido.");
+        }
+
+        internalUnitDiscount = this.toMoney(internalUnitDiscount);
+        if (internalUnitDiscount > detail.NumUnitPrice) {
+            throw new Error("El descuento no puede superar el precio del producto.");
+        }
+        detail.SetDiscount(internalUnitDiscount);
+        this.ReBuild();
+    }
+
     public preventZeroSubtract(ProductInfo : ProductInfoDto,ProductVariant : ProductVariantEntity){
 
         let presaleDetEntity : PresaleDetEntity | undefined = this.GetProductInCart(ProductInfo.Product.ProductCod,ProductVariant.Variant);
@@ -257,5 +311,10 @@ export class ShoppingCartService
     saveCartSession():void
     {
         sessionStorage.setItem("ShoppingCart",JSON.stringify(this.ShoppingCart));
+    }
+
+    private toMoney(value: number): number
+    {
+        return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
     }
 }

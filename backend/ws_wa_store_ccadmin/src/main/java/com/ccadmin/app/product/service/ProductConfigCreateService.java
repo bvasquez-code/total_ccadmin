@@ -10,6 +10,7 @@ import com.ccadmin.app.product.model.entity.ProductTaxConfigEntity;
 import com.ccadmin.app.product.model.entity.id.ProductConfigID;
 import com.ccadmin.app.product.repository.ProductConfigRepository;
 import com.ccadmin.app.product.repository.ProductRepository;
+import com.ccadmin.app.product.shared.ProductDiscountPolicy;
 import com.ccadmin.app.product.shared.ProductOperationConfigShared;
 import com.ccadmin.app.shared.model.myconst.StatusConst;
 import com.ccadmin.app.shared.service.SessionService;
@@ -32,6 +33,7 @@ public class ProductConfigCreateService extends SessionService {
     private final StoreShared storeShared;
     private final ProductFindCreateService productFindCreateService;
     private final ProductTaxConfigCreateService productTaxConfigCreateService;
+    private final ProductDiscountPolicy productDiscountPolicy;
 
     public ProductConfigCreateService(ProductConfigRepository productConfigRepository,
                                       ProductRepository productRepository,
@@ -39,7 +41,8 @@ public class ProductConfigCreateService extends SessionService {
                                       ProductOperationConfigShared productOperationConfigShared,
                                       StoreShared storeShared,
                                       ProductFindCreateService productFindCreateService,
-                                      ProductTaxConfigCreateService productTaxConfigCreateService) {
+                                      ProductTaxConfigCreateService productTaxConfigCreateService,
+                                      ProductDiscountPolicy productDiscountPolicy) {
         this.productConfigRepository = productConfigRepository;
         this.productRepository = productRepository;
         this.storeRepository = storeRepository;
@@ -47,6 +50,7 @@ public class ProductConfigCreateService extends SessionService {
         this.storeShared = storeShared;
         this.productFindCreateService = productFindCreateService;
         this.productTaxConfigCreateService = productTaxConfigCreateService;
+        this.productDiscountPolicy = productDiscountPolicy;
     }
 
     @Transactional
@@ -56,6 +60,11 @@ public class ProductConfigCreateService extends SessionService {
         }
         if (request.config == null) {
             throw new ProductBuildException("Debe ingresar la configuracion del producto.");
+        }
+        try {
+            this.productDiscountPolicy.normalizeAndValidate(request.config);
+        } catch (IllegalArgumentException exception) {
+            throw new ProductBuildException(exception.getMessage());
         }
 
         ProductConfigEntity baseConfig =
@@ -365,6 +374,9 @@ public class ProductConfigCreateService extends SessionService {
         target.NumMinStock = source.NumMinStock;
         target.ProductUnitName = source.ProductUnitName;
         target.ProductUnitFactor = source.ProductUnitFactor;
+        target.IsDiscontable = source.IsDiscontable;
+        target.DiscountType = source.DiscountType;
+        target.NumDiscountMax = source.NumDiscountMax;
     }
 
     private BigDecimal parseDecimal(String value) {

@@ -17,6 +17,7 @@ import com.ccadmin.app.sale.repository.SaleHeadRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
@@ -31,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -112,6 +114,59 @@ class SalePickingCreateServiceTest {
     }
 
     @Test
+    void keepsSplitLotsNextToTheirOriginalProductAndShiftsFollowingItems() throws Exception {
+        SaleHeadEntity saleHead = pendingSale();
+        SaleDetEntity firstDetail = saleDetail(1, "P001", 10);
+        SaleDetEntity secondDetail = saleDetail(2, "P002", 3);
+        SalePickingConfirmDto request = request(
+                line(1, 4, "L-01"),
+                line(1, 6, "L-02"),
+                line(2, 3, "L-03")
+        );
+
+        when(saleHeadRepository.findByIdForUpdate(saleHead.SaleCod)).thenReturn(Optional.of(saleHead));
+        when(saleDetRepository.findBySaleCod(saleHead.SaleCod))
+                .thenReturn(List.of(firstDetail, secondDetail));
+        when(saleDetTaxRepository.findBySaleCod(saleHead.SaleCod)).thenReturn(List.of());
+        when(saleDetWarehouseRepository.findBySaleCodForUpdate(saleHead.SaleCod))
+                .thenReturn(List.of(
+                        currentWarehouse(1, "P001", 10),
+                        currentWarehouse(2, "P002", 3)
+                ));
+        when(saleSearchService.findById(saleHead.SaleCod)).thenReturn(new SaleDetailDto());
+
+        salePickingCreateService.confirm(request);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<SaleDetEntity>> detailCaptor = ArgumentCaptor.forClass(List.class);
+        verify(saleDetRepository).saveAll(detailCaptor.capture());
+        List<SaleDetEntity> resultList = detailCaptor.getValue();
+
+        assertEquals(3, resultList.size());
+        assertEquals(1, resultList.get(0).ItemNumber);
+        assertEquals("P001", resultList.get(0).ProductCod);
+        assertEquals("L-01", resultList.get(0).LotNumber);
+        assertEquals(2, resultList.get(1).ItemNumber);
+        assertEquals("P001", resultList.get(1).ProductCod);
+        assertEquals("L-02", resultList.get(1).LotNumber);
+        assertEquals(3, resultList.get(2).ItemNumber);
+        assertEquals("P002", resultList.get(2).ProductCod);
+        assertEquals("L-03", resultList.get(2).LotNumber);
+
+        InOrder persistenceOrder = inOrder(
+                saleDetTaxRepository,
+                saleDetWarehouseRepository,
+                saleDetRepository
+        );
+        persistenceOrder.verify(saleDetTaxRepository).deleteBySaleCodNative(saleHead.SaleCod);
+        persistenceOrder.verify(saleDetWarehouseRepository).deleteBySaleCodNative(saleHead.SaleCod);
+        persistenceOrder.verify(saleDetRepository).deleteBySaleCodNative(saleHead.SaleCod);
+        persistenceOrder.verify(saleDetRepository).saveAll(anyList());
+        persistenceOrder.verify(saleDetWarehouseRepository).saveAll(anyList());
+        persistenceOrder.verify(saleDetTaxRepository).saveAll(anyList());
+    }
+
+    @Test
     void rejectsPickingWhenTotalIsLowerThanSaleQuantity() {
         SaleHeadEntity saleHead = pendingSale();
         SaleDetEntity saleDetail = saleDetail(10);
@@ -177,10 +232,14 @@ class SalePickingCreateServiceTest {
     }
 
     private SaleDetEntity saleDetail(int quantity) {
+        return saleDetail(1, "P001", quantity);
+    }
+
+    private SaleDetEntity saleDetail(int itemNumber, String productCod, int quantity) {
         SaleDetEntity detail = new SaleDetEntity();
         detail.SaleCod = "ST001";
-        detail.ItemNumber = 1;
-        detail.ProductCod = "P001";
+        detail.ItemNumber = itemNumber;
+        detail.ProductCod = productCod;
         detail.Variant = "0000";
         detail.NumUnit = quantity;
         detail.NumUnitPrice = new BigDecimal("10.00");
@@ -195,10 +254,14 @@ class SalePickingCreateServiceTest {
     }
 
     private SaleDetWarehouseEntity currentWarehouse(int quantity) {
+        return currentWarehouse(1, "P001", quantity);
+    }
+
+    private SaleDetWarehouseEntity currentWarehouse(int itemNumber, String productCod, int quantity) {
         SaleDetWarehouseEntity detail = new SaleDetWarehouseEntity();
         detail.SaleCod = "ST001";
-        detail.ItemNumber = 1;
-        detail.ProductCod = "P001";
+        detail.ItemNumber = itemNumber;
+        detail.ProductCod = productCod;
         detail.Variant = "0000";
         detail.WarehouseCod = "W001";
         detail.NumUnit = quantity;
@@ -224,8 +287,12 @@ class SalePickingCreateServiceTest {
     }
 
     private SalePickingLineDto line(int quantity, String lotNumber) {
+        return line(1, quantity, lotNumber);
+    }
+
+    private SalePickingLineDto line(int itemNumber, int quantity, String lotNumber) {
         SalePickingLineDto line = new SalePickingLineDto();
-        line.ItemNumber = 1;
+        line.ItemNumber = itemNumber;
         line.NumUnit = quantity;
         line.LotNumber = lotNumber;
         return line;

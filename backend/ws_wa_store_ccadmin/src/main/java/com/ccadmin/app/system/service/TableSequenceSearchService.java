@@ -26,18 +26,18 @@ public class TableSequenceSearchService {
         return this.searchTService.findAll(new SearchDto(query, page), 10);
     }
 
-    public TableSequenceEntity findById(Long sequenceTrx) {
-        return this.tableSequenceRepository.findById(sequenceTrx).orElse(null);
+    public TableSequenceEntity findById(String sequenceTableType) {
+        if (sequenceTableType == null || sequenceTableType.isBlank()) {
+            return null;
+        }
+        return this.tableSequenceRepository.findBySequenceTableType(sequenceTableType.trim());
     }
 
-    public ResponseWsDto findDataForm(Long sequenceTrx) {
+    public ResponseWsDto findDataForm(String sequenceTableType) {
         ResponseWsDto rpt = new ResponseWsDto();
 
-        if (sequenceTrx != null) {
-            TableSequenceEntity tableSequence = this.findById(sequenceTrx);
-            if (tableSequence != null) {
-                tableSequence.OriginalSequenceTrx = tableSequence.SequenceTrx;
-            }
+        if (sequenceTableType != null && !sequenceTableType.isBlank()) {
+            TableSequenceEntity tableSequence = this.findById(sequenceTableType);
             rpt.AddResponseAdditional("tableSequence", tableSequence);
         }
         rpt.AddResponseAdditional("sequenceTableTypeList", this.tableSequenceRepository.findSequenceTableTypes());

@@ -44,6 +44,12 @@ export class PresaleDetEntity extends AuditTableEntity
         this.recalculateAmounts();
     }
 
+    SetDiscount(NumDiscount: number): void
+    {
+        this.NumDiscount = this.toMoney(NumDiscount);
+        this.recalculateAmounts();
+    }
+
     getNameSummary() : string
     {
         let NameSummary : string = "";

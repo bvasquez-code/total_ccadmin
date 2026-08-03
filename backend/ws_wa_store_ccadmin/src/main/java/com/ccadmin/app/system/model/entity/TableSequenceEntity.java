@@ -3,7 +3,6 @@ package com.ccadmin.app.system.model.entity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
 
 import java.io.Serializable;
 
@@ -11,15 +10,12 @@ import java.io.Serializable;
 @Table(name = "table_sequence")
 public class TableSequenceEntity implements Serializable {
 
-    @Id
     public Long SequenceTrx;
     public String Prefix;
+    @Id
     public String SequenceTableType;
     public Integer length;
     public String UsePrefix;
-
-    @Transient
-    public Long OriginalSequenceTrx;
 
     public TableSequenceEntity validate() {
         if (SequenceTrx == null || SequenceTrx < 0) {

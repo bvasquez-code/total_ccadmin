@@ -22,8 +22,10 @@ import com.ccadmin.app.sale.repository.PresaleDetRepository;
 import com.ccadmin.app.sale.repository.PresaleDetWarehouseRepository;
 import com.ccadmin.app.sale.repository.PresaleHeadRepository;
 import com.ccadmin.app.shared.model.myconst.StatusConst;
+import com.ccadmin.app.shared.model.constants.BusinessConfigConstants;
 import com.ccadmin.app.shared.service.GenericQueuedService;
 import com.ccadmin.app.shared.service.SessionService;
+import com.ccadmin.app.shared.shared.CatalogSearchShared;
 import com.ccadmin.app.store.model.entity.WarehouseEntity;
 import com.ccadmin.app.store.shared.WarehouseShared;
 import com.ccadmin.app.system.model.entity.CurrencyEntity;
@@ -70,6 +72,10 @@ public class PresaleCreateService extends SessionService {
     private CreditNoteApplicationCreateService creditNoteApplicationCreateService;
     @Autowired
     private SaleSearchService saleSearchService;
+    @Autowired
+    private CatalogSearchShared catalogSearchShared;
+    @Autowired
+    private ManualDiscountValidationService manualDiscountValidationService;
 
     public String createCode(){
         String PresaleCod = presaleHeadRepository.getPresaleCod(getStoreCod());
@@ -158,6 +164,9 @@ public class PresaleCreateService extends SessionService {
 
     public List<PresaleDetEntity> recalculateAmountPresaleDet(PresaleRegisterDto presaleRegister) throws PresaleBuildException {
         int itemNumber = 1;
+        boolean manualDiscountEnabled = this.catalogSearchShared.isIndicatorSystemEnabled(
+                BusinessConfigConstants.ConfigCod.IND_MANUAL_DISCOUNT
+        );
         for(var product : presaleRegister.DetailList)
         {
             product.PresaleCod = presaleRegister.Headboard.PresaleCod;
@@ -172,6 +181,13 @@ public class PresaleCreateService extends SessionService {
                 product.ProductUnitFactor = config.ProductUnitFactor;
             }
             this.productOperationConfigShared.validateInternalQuantity(product.ProductCod, product.NumUnit, product.ProductUnitFactor);
+            product.NumDiscount = this.manualDiscountValidationService.validate(
+                    product.ProductCod,
+                    product.NumUnitPrice,
+                    product.NumDiscount,
+                    config,
+                    manualDiscountEnabled
+            );
             product.NumUnitPriceSale = product.NumUnitPrice.subtract( product.NumDiscount );
             product.NumTotalPrice = product.NumUnitPriceSale.multiply(new BigDecimal(product.NumUnit));
             product.addSession(getUserCod());

@@ -21,6 +21,7 @@
                             <input type="text"
                                 [maxLength]="32"
                                 list="tableSequenceTypes"
+                                [readonly]="isEdit"
                                 (keypress)="validateKeypress($event,'txtSequenceTableType')"
                                 class="form-control col-sm-8 col-md-6"
                                 [(ngModel)]="tableSequence.SequenceTableType"
