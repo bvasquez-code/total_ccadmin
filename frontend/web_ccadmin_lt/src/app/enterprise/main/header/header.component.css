@@ -1,0 +1,17 @@
+.user-session-summary {
+    max-width: 16rem;
+    vertical-align: middle;
+}
+
+.user-session-summary .nav-user-name,
+.user-session-summary .nav-user-code {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-session-summary .nav-user-code {
+    font-size: 0.8rem;
+    opacity: 0.85;
+}

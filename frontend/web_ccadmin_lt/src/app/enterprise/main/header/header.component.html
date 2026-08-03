@@ -44,7 +44,7 @@
         aria-controls="navbarMenu" aria-expanded="false" aria-label="Toggle navbar menu">
         <span class="pos-rel">
           <img class="border-2 brc-white-tp1 radius-round" width="36" src="assets/image/avatar/avatar6.jpg"
-            alt="Jason's Photo">
+            [attr.alt]="'Foto de ' + userNames">
           <span class="bgc-warning radius-round border-2 brc-white p-1 position-tr mr-n1px mt-n1px"></span>
         </span>
       </button>
@@ -463,14 +463,15 @@
 
 
             <li class="nav-item dropdown order-first order-lg-last">
-              <a class="nav-link dropdown-toggle" data-toggle="dropdown" href="#" role="button" aria-haspopup="true"
+              <a class="nav-link dropdown-toggle pl-lg-3" data-toggle="dropdown" href="#" role="button" aria-haspopup="true"
                 aria-expanded="false">
                 <img id="id-navbar-user-image"
                   class="d-none d-lg-inline-block radius-round border-2 brc-white-tp1 mr-2 w-6"
-                  src="assets/image/avatar/avatar6.jpg" alt="Jason's Photo">
-                <span class="d-inline-block d-lg-none d-xl-inline-block">
-                  <span class="text-90" id="id-user-welcome">Welcome,</span>
-                  <span class="nav-user-name">Jason</span>
+                  src="assets/image/avatar/avatar6.jpg" [attr.alt]="'Foto de ' + userNames">
+                <span class="d-inline-block d-lg-none d-xl-inline-block user-session-summary">
+                  <span class="text-90" id="id-user-welcome">Bienvenido,</span>
+                  <span class="nav-user-name" [attr.title]="userNames">{{ userNames }}</span>
+                  <span *ngIf="userCode" class="nav-user-code" [attr.title]="userCode">{{ userCode }}</span>
                 </span>
 
                 <i class="caret fa fa-angle-down d-none d-xl-block"></i>
@@ -480,7 +481,9 @@
               <div class="dropdown-menu dropdown-caret dropdown-menu-right dropdown-animated brc-primary-m3 py-1">
                 <div class="d-none d-lg-block d-xl-none">
                   <div class="dropdown-header">
-                    Welcome, Jason
+                    <span class="d-block">Bienvenido,</span>
+                    <strong class="d-block text-truncate" [attr.title]="userNames">{{ userNames }}</strong>
+                    <small *ngIf="userCode" class="d-block text-truncate" [attr.title]="userCode">{{ userCode }}</small>
                   </div>
                   <div class="dropdown-divider"></div>
                 </div>

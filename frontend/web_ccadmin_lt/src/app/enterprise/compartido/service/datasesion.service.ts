@@ -12,6 +12,17 @@ import { AppMenuEntity } from '../../menu/model/entity/AppMenuEntity';
 export class DataSesionService {
 
     private sessionStorageDto : SessionStorageDto = new SessionStorageDto();
+    private readonly sessionKeys: string[] = [
+        'Token',
+        'UserCod',
+        'PersonCod',
+        'Email',
+        'SessionID',
+        'StoreCod',
+        'Names',
+        'AppMenuPermissions'
+    ];
+    private readonly sessionSynchronizationKey: string = 'CcAdminSessionSynchronization';
 
     constructor()
     {
@@ -20,13 +31,13 @@ export class DataSesionService {
 
     private cargarInfoSesion()
     {
-        this.sessionStorageDto.Token = this.ObtenerKeySesion( sessionStorage.getItem('Token') );
-        this.sessionStorageDto.UserCod = this.ObtenerKeySesion( sessionStorage.getItem('UserCod') );
-        this.sessionStorageDto.PersonCod = this.ObtenerKeySesion( sessionStorage.getItem('PersonCod') );
-        this.sessionStorageDto.Email = this.ObtenerKeySesion( sessionStorage.getItem('Email') );
-        this.sessionStorageDto.SessionID = Number(this.ObtenerKeySesion( sessionStorage.getItem('SessionID') ));
-        this.sessionStorageDto.StoreCod = this.ObtenerKeySesion( sessionStorage.getItem('StoreCod') );
-        this.sessionStorageDto.Names = this.ObtenerKeySesion( sessionStorage.getItem('Names') );
+        this.sessionStorageDto.Token = this.ObtenerKeySesion( localStorage.getItem('Token') );
+        this.sessionStorageDto.UserCod = this.ObtenerKeySesion( localStorage.getItem('UserCod') );
+        this.sessionStorageDto.PersonCod = this.ObtenerKeySesion( localStorage.getItem('PersonCod') );
+        this.sessionStorageDto.Email = this.ObtenerKeySesion( localStorage.getItem('Email') );
+        this.sessionStorageDto.SessionID = Number(this.ObtenerKeySesion( localStorage.getItem('SessionID') ));
+        this.sessionStorageDto.StoreCod = this.ObtenerKeySesion( localStorage.getItem('StoreCod') );
+        this.sessionStorageDto.Names = this.ObtenerKeySesion( localStorage.getItem('Names') );
         this.sessionStorageDto.AppMenuPermissions = this.obtenerPermisosMenuSesion();
     }
 
@@ -45,6 +56,56 @@ export class DataSesionService {
         return this.sessionStorageDto;
     }
 
+    SessionExists(): boolean
+    {
+        const token = this.GetToken().toLowerCase();
+        return !!token && token !== 'null' && token !== 'undefined';
+    }
+
+    GetToken(): string
+    {
+        return this.ObtenerKeySesion(localStorage.getItem('Token')).trim();
+    }
+
+    SaveSession(token: string, session: SessionStorageDto): void
+    {
+        localStorage.setItem('UserCod', session.UserCod || '');
+        localStorage.setItem('PersonCod', session.PersonCod || '');
+        localStorage.setItem('Email', session.Email || '');
+        localStorage.setItem('SessionID', (session.SessionID || 0).toString());
+        localStorage.setItem('Names', session.Names || '');
+        localStorage.setItem('StoreCod', session.StoreCod || '');
+        localStorage.setItem('AppMenuPermissions', JSON.stringify(session.AppMenuPermissions || []));
+        localStorage.setItem('Token', token);
+
+        this.ClearCurrentTabData();
+        this.cargarInfoSesion();
+        this.notifySessionChange();
+    }
+
+    ClearSession(): void
+    {
+        this.sessionKeys.forEach(key => localStorage.removeItem(key));
+        this.ClearCurrentTabData();
+        this.cargarInfoSesion();
+        this.notifySessionChange();
+    }
+
+    ClearCurrentTabData(): void
+    {
+        sessionStorage.clear();
+    }
+
+    ReloadSession(): void
+    {
+        this.cargarInfoSesion();
+    }
+
+    IsSessionSynchronizationEvent(event: StorageEvent): boolean
+    {
+        return event.storageArea === localStorage && event.key === this.sessionSynchronizationKey;
+    }
+
     PermissionExists(MenuCod : string):boolean
     {
         let AppMenuPermissions : AppMenuEntity[] = this.getSessionStorageDto().AppMenuPermissions || [];
@@ -57,7 +118,7 @@ export class DataSesionService {
 
     private obtenerPermisosMenuSesion(): AppMenuEntity[]
     {
-        const appMenuPermissions = this.ObtenerKeySesion(sessionStorage.getItem('AppMenuPermissions'));
+        const appMenuPermissions = this.ObtenerKeySesion(localStorage.getItem('AppMenuPermissions'));
 
         if (!appMenuPermissions) {
             return [];
@@ -69,6 +130,12 @@ export class DataSesionService {
         } catch (error) {
             return [];
         }
+    }
+
+    private notifySessionChange(): void
+    {
+        const synchronizationValue = `${Date.now()}-${Math.random()}`;
+        localStorage.setItem(this.sessionSynchronizationKey, synchronizationValue);
     }
 
 }

@@ -2,6 +2,7 @@ import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { RespuestaWsDto } from '../../compartido/entity/RespuestaWsDto';
 import { LoginService } from '../service/login.service';
+import { DataSesionService } from '../../compartido/service/datasesion.service';
 
 @Component({
   selector: 'app-signin',
@@ -12,14 +13,13 @@ export class SigninComponent implements OnInit {
   @ViewChild('txt_usuario',{static: false}) txt_usuario!: ElementRef<HTMLInputElement>;
   @ViewChild('txt_password',{static: false}) txt_password!: ElementRef<HTMLInputElement>;
 
-  ExisteSesion : boolean = ( sessionStorage.getItem('Token') ) ? true : false;
-
   constructor(
     private g_loginService : LoginService,
-    private router: Router
+    private router: Router,
+    private dataSesionService: DataSesionService
   ) { 
 
-    if(this.ExisteSesion)
+    if(this.dataSesionService.SessionExists())
     {
       this.router.navigate(['/']);    
     }

@@ -86,19 +86,23 @@ import { ResolveStockExitComponent } from './enterprise/inventory/pages/resolves
 import { ListBulkLoadComponent } from './enterprise/bulkload/pages/listbulkload/listbulkload.component';
 import { CreateBulkLoadComponent } from './enterprise/bulkload/pages/createbulkload/createbulkload.component';
 import { ViewBulkLoadComponent } from './enterprise/bulkload/pages/viewbulkload/viewbulkload.component';
+import { SessionAccessGuard } from './enterprise/login/service/session-access.guard';
 
 const routes: Routes = [
   {
     path: 'pages/permissiondenied',
-    component: PermissiondeniedComponent
-  },
-  {
-    path: '',
-    component: MainComponent
+    component: PermissiondeniedComponent,
+    canActivate: [SessionAccessGuard]
   },
   {
     path: '',
     component: MainComponent,
+    canActivate: [SessionAccessGuard]
+  },
+  {
+    path: '',
+    component: MainComponent,
+    canActivate: [SessionAccessGuard],
     children: [
       {
         path: 'pages/prueba',
@@ -112,7 +116,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    canActivateChild: [MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
     children: [
       {
         path: 'enterprise/sale/pages/createpresale',
@@ -158,7 +162,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    canActivateChild: [MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
     children: [
       { path: 'enterprise/inventory/pages/liststockentry', component: ListStockEntryComponent },
       { path: 'enterprise/inventory/pages/createstockentry', component: CreateStockEntryComponent },
@@ -175,7 +179,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    canActivateChild: [MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
     children: [
       {
         path: 'enterprise/menu/pages/listmenu',
@@ -209,7 +213,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    canActivateChild: [MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
     children: [
       {
         path: 'enterprise/user/pages/listuser',
@@ -231,7 +235,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    canActivateChild: [MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
     children: [
       {
         path: 'enterprise/client/pages/listclient',
@@ -245,7 +249,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    canActivateChild: [MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
     children: [
       {
         path: 'enterprise/supplier/pages/listsupplier',
@@ -259,7 +263,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    canActivateChild: [MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
     children: [
       {
         path: 'enterprise/product/pages/listProduct',
@@ -325,7 +329,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    canActivateChild: [MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
     children: [
       {
         path: 'enterprise/pucharse/pages/listpucharse',
@@ -352,7 +356,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    canActivateChild: [MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
     children: [
       { path: 'enterprise/cash/pages/listcashregister', component: ListcashregisterComponent },
       { path: 'enterprise/cash/pages/createcashregister', component: CreatecashregisterComponent },
@@ -369,7 +373,7 @@ const routes: Routes = [
 
   {
     path: '',
-    canActivateChild: [MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
     children: [
       {
         path: 'enterprise/trxpayment/pages/listtrxpayment',
@@ -387,7 +391,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    canActivateChild: [MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
     children: [
       {
         path: 'enterprise/system/pages/appfile',
@@ -445,7 +449,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    canActivateChild: [MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
     children: [
       { path: 'enterprise/transfer/pages/listtransferrequest', component: ListtransferrequestComponent },
       { path: 'enterprise/transfer/pages/createtransferrequest', component: CreatetransferrequestComponent },
@@ -455,6 +459,10 @@ const routes: Routes = [
       { path: 'enterprise/transfer/pages/dispatchtransfer', component: DispatchtransferComponent },
       { path: 'enterprise/transfer/pages/directtransfer', component: DirecttransferComponent }
     ]
+  },
+  {
+    path: '**',
+    redirectTo: ''
   }
 ];
 

@@ -6,6 +6,7 @@ import { ResponseWsDto } from '../../shared/model/dto/ResponseWsDto';
 import { SessionStorageDto } from '../entity/SessionStorageDto';
 import { Router } from '@angular/router';
 import { catchError, map } from 'rxjs/operators';
+import { DataSesionService } from './datasesion.service';
 
 @Injectable({
     providedIn: 'root'
@@ -15,34 +16,29 @@ export class ApiService {
     constructor(
          private http: HttpClient,
          private router: Router,
+         private dataSesionService: DataSesionService,
     ){}
 
     generarheaders()
     {
-        if( !sessionStorage.getItem('Token')){
+        const token = this.dataSesionService.GetToken();
+
+        if (!token) {
             this.router.navigate(['/login']);
-            return;
-        }
-        let DataToken :string | null = sessionStorage.getItem('Token');
-
-        let Token  : string = "";
-
-        if( DataToken != null)
-        {
-            Token = DataToken;
-        }
-        else
-        {
-            Token = "";
         }
 
+        return this.createHeaders(token);
+    }
+
+    private createHeaders(token: string)
+    {
         const Myheaders = { 
             'Content-Type': 'application/json', 
             'timeout': '3600000',
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': '*',
             'Access-Control-Allow-Headers' : 'Origin, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, X-Response-Time, X-PINGOTHER, X-CSRF-Token,Authorization',
-            'Authorization' : Token
+            'Authorization' : token
         };
 
         return Myheaders;
@@ -189,11 +185,11 @@ export class ApiService {
 
                 console.log({ resp : resp } )
 
-                token = resp.headers.get('Authorization');
-                
-                sessionStorage.setItem('Token', token);
+                token = resp.headers.get('Authorization') || '';
 
-                this.InvokeGetService(URLDataLogin,{})
+                this.http.get<any>(URLDataLogin, {
+                    headers: new HttpHeaders(this.createHeaders(token))
+                })
                 .toPromise()
                 .then(data => { 
 
@@ -207,13 +203,7 @@ export class ApiService {
 
                         sessionStorageDto = rpt.Data;
 
-                        sessionStorage.setItem('UserCod', sessionStorageDto.UserCod);
-                        sessionStorage.setItem('PersonCod', sessionStorageDto.PersonCod);
-                        sessionStorage.setItem('Email', sessionStorageDto.Email);
-                        sessionStorage.setItem('SessionID',sessionStorageDto.SessionID.toString());
-                        sessionStorage.setItem('Names', sessionStorageDto.Names);
-                        sessionStorage.setItem('StoreCod', sessionStorageDto.StoreCod);
-                        sessionStorage.setItem('AppMenuPermissions', JSON.stringify(sessionStorageDto.AppMenuPermissions));
+                        this.dataSesionService.SaveSession(token, sessionStorageDto);
                         location.reload();  
                     }
 
