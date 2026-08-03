@@ -29,6 +29,16 @@ export class TicketSunatService {
   private readonly H_PADDING_MM = 5;    // padding horizontal interno (más chico = más ancho útil)
   private readonly BASE_FONT_PX = 9;   // sube a 13 si quieres “llenar” más
 
+  async printSaleDocument(saleDetailPrint: ResponseWsDto): Promise<void> {
+    const saleBlock: SaleDetailDto = saleDetailPrint?.DataAdditional
+      ?.find((x: any) => x.Name === 'SaleDetail')?.Data;
+    if (saleBlock?.SaleDocument?.DocumentType === '99') {
+      await this.printSaleProforma(saleDetailPrint);
+      return;
+    }
+    await this.printSalesInvoice(saleDetailPrint);
+  }
+
   /** Render principal: imprime con layout SUNAT 80mm */
   async printSalesInvoice(saleDetailPrint: ResponseWsDto) {
     // === Bloques del saleDetailPrint ===
@@ -80,7 +90,8 @@ export class TicketSunatService {
     // === Totales y fechas ===
     const taxAmount = this.fmtNum(cab.NumTotalTax);
     const totalAmount = this.fmtNum(cab.NumTotalPrice);
-    const issueDate = this.formatDateDDMMYYYY(String(cab.CreationDate));
+    const issueTimestamp = doc?.IssueDate || doc?.CreationDate || cab.CreationDate;
+    const issueDate = this.formatDateDDMMYYYY(String(issueTimestamp));
 
     // === Hash opcional de tu PSE (si lo recibes) ===
     const HASH = '';
@@ -109,8 +120,8 @@ export class TicketSunatService {
         typeCode: docTypeCode,
         series: series ?? '',
         number: number ?? '',
-        date: this.formatDateDDMMYYYY(String(cab.CreationDate)),
-        time: this.formatTimeHHMM(String(cab.CreationDate)),
+        date: this.formatDateDDMMYYYY(String(issueTimestamp)),
+        time: this.formatTimeHHMM(String(issueTimestamp)),
         currencySymbol: currency.CurrencySymbol || 'S/.'
       },
       customer: {
@@ -152,7 +163,30 @@ export class TicketSunatService {
     this.openAndPrint(html);
   }
 
-  async printSaleAdvance(saleDetailPrint: ResponseWsDto) {
+  async printSaleAdvance(saleDetailPrint: ResponseWsDto): Promise<void> {
+    await this.printInternalSaleDocument(
+      saleDetailPrint,
+      'ANTICIPO',
+      'advance',
+      'Comprobante interno de anticipo. No es documento oficial de venta.'
+    );
+  }
+
+  async printSaleProforma(saleDetailPrint: ResponseWsDto): Promise<void> {
+    await this.printInternalSaleDocument(
+      saleDetailPrint,
+      'PROFORMA',
+      'proforma',
+      'Proforma interna. No es un comprobante de pago electronico.'
+    );
+  }
+
+  private async printInternalSaleDocument(
+    saleDetailPrint: ResponseWsDto,
+    typeText: string,
+    tipDoc: 'advance' | 'proforma',
+    footerText: string
+  ): Promise<void> {
     const saleBlock: SaleDetailDto = saleDetailPrint?.DataAdditional?.find((x: any) => x.Name === 'SaleDetail')?.Data;
     const currencies: CurrencyEntity[] = saleDetailPrint?.DataAdditional?.find((x: any) => x.Name === 'CurrencyList')?.Data || [];
     const storeBlock: StoreInfoDto = saleDetailPrint?.DataAdditional?.find((x: any) => x.Name === 'Store')?.Data;
@@ -161,6 +195,7 @@ export class TicketSunatService {
     const cab: SaleHeadEntity = saleBlock?.Headboard || {};
     const items: SaleDetEntity[] = saleBlock?.DetailList || [];
     const payments: SalePaymentEntity[] = saleBlock?.DetailPayment || [];
+    const saleDocument: SaleDocumentEntity = saleBlock?.SaleDocument || {};
     const person: PersonEntity = saleBlock?.Headboard?.Client?.Person || {};
     const currency = currencies.find((c: any) => c.CurrencyCod === cab?.CurrencyCod) || { CurrencySymbol: 'S/.' };
 
@@ -189,13 +224,16 @@ export class TicketSunatService {
     const customerDocNumber = (person?.DocumentNum ?? '').toString().trim() || '00000000';
     const customerDocTypeSunat = this.mapCustomerDocTypeToSunat(person?.DocumentType);
 
-    const html = this.renderAdvanceHTML({
+    const issueDate = saleDocument?.IssueDate || saleDocument?.CreationDate || cab.CreationDate;
+    const html = this.renderTransactionHTML({
       issuer: issuer,
       document: {
-        typeText: 'ANTICIPO',
-        code: cab?.SaleCod || '',
-        date: this.formatDateDDMMYYYY(String(cab.CreationDate)),
-        time: this.formatTimeHHMM(String(cab.CreationDate)),
+        typeText,
+        code: tipDoc === 'proforma'
+          ? (saleDocument?.DocumentCod || cab?.SaleCod || '')
+          : (cab?.SaleCod || ''),
+        date: this.formatDateDDMMYYYY(String(issueDate)),
+        time: this.formatTimeHHMM(String(issueDate)),
         currencySymbol: currency.CurrencySymbol || 'S/.'
       },
       customer: {
@@ -231,7 +269,9 @@ export class TicketSunatService {
       })),
       qrDataUrl: '',
       qrText: '',
-      tipDoc: 'advance'
+      tipDoc,
+      detailTitle: 'DETALLE DE VENTA',
+      footerText
     });
 
     this.openAndPrint(html);
@@ -557,6 +597,8 @@ export class TicketSunatService {
   }
 
   private getSunatDocTypeCode(doc: SaleDocumentEntity): '01' | '03' {
+    if (doc?.DocumentType === '01') return '01';
+    if (doc?.DocumentType === '03') return '03';
     const cc = String(doc?.CounterfoilCod || '');
     const pref2 = cc.substring(0, 2);
     if (pref2 === '01') return '01';
@@ -805,18 +847,6 @@ export class TicketSunatService {
     });
   }
 
-  private renderAdvanceHTML(data: {
-    issuer: any, document: any, customer: any, items: any[],
-    totals: any, payments: any[], qrDataUrl: string, qrText: string, tipDoc: string
-  }): string {
-    return this.renderTransactionHTML({
-      ...data,
-      tipDoc: 'advance',
-      detailTitle: 'DETALLE DE VENTA',
-      footerText: 'Comprobante interno de anticipo. No es documento oficial de venta.'
-    });
-  }
-
   private renderCreditNoteHTML(data: {
     issuer: any, document: any, customer: any, items: any[],
     totals: any, payments: any[], qrDataUrl: string, qrText: string, tipDoc: string,
@@ -934,7 +964,16 @@ export class TicketSunatService {
     const documentCode = data.document.code
       ? this.escape(data.document.code)
       : `${this.escape(data.document.series)}-${this.escape(data.document.number)}`;
-    const showPayments = data.tipDoc === "sale" || data.tipDoc === "advance";
+    const showPayments = data.tipDoc === "sale" || data.tipDoc === "advance" || data.tipDoc === "proforma";
+    const taxSummary = data.tipDoc === 'proforma' ? '' : `
+      <div class="subttl small">
+        <span>Subtotal sin impuestos</span>
+        <span>${this.escape(data.document.currencySymbol)} ${this.formatMoney(data.totals.opGravada)}</span>
+      </div>
+      <div class="subttl small">
+        <span>Impuestos</span>
+        <span>${this.escape(data.document.currencySymbol)} ${this.formatMoney(data.totals.tax)}</span>
+      </div>`;
     const qrBlock = data.qrDataUrl
       ? `<div class="sep"></div>
       <div class="qr">
@@ -996,14 +1035,7 @@ export class TicketSunatService {
       ${itemRows}
 
       <div class="sep"></div>
-      <div class="subttl small">
-        <span>Subtotal sin impuestos</span>
-        <span>${this.escape(data.document.currencySymbol)} ${this.formatMoney(data.totals.opGravada)}</span>
-      </div>
-      <div class="subttl small">
-        <span>Impuestos</span>
-        <span>${this.escape(data.document.currencySymbol)} ${this.formatMoney(data.totals.tax)}</span>
-      </div>
+      ${taxSummary}
       <div class="subttl bold">
         <span>TOTAL</span>
         <span>${this.escape(data.document.currencySymbol)} ${this.formatMoney(data.totals.total)}</span>
@@ -1011,7 +1043,7 @@ export class TicketSunatService {
 
       ${showPayments ? `<div class="sep"></div><div class="small bold">PAGOS</div>${pagoRows}` : ''}
 
-      ${data.tipDoc === "sale" ? `<div class="subttl small">
+      ${data.tipDoc === "sale" || data.tipDoc === "proforma" ? `<div class="subttl small">
         <span>Importe Total</span>
         <span>${this.escape(data.document.currencySymbol)} ${this.formatMoney(totalPagado)}</span>
       </div>` : ''}
@@ -1026,14 +1058,16 @@ export class TicketSunatService {
         <span>${this.escape(data.document.currencySymbol)} ${this.formatMoney(saldoPendiente)}</span>
       </div>` : ''}
 
-      ${data.tipDoc === "sale" ? `<div class="subttl small">
+      ${data.tipDoc === "sale" || data.tipDoc === "proforma" ? `<div class="subttl small">
         <span>Vuelto</span>
         <span>${this.escape(data.document.currencySymbol)} ${this.formatMoney(vuelto)}</span>
       </div>` : ''}
 
       ${qrBlock}
       <div class="small center">* ${this.escape(data.document.typeText)} *</div>
-      <div class="small center">${data.tipDoc === "advance" ? 'Comprobante interno, no valido como documento oficial de venta' : 'Representación impresa del comprobante electrónico'}</div>
+      <div class="small center">${data.tipDoc === "advance" || data.tipDoc === "proforma"
+        ? 'Documento interno, no valido como comprobante de pago electronico'
+        : 'Representación impresa del comprobante electrónico'}</div>
       <div class="footer small">${this.escape(data.footerText)}</div>
     </div>
   </div>

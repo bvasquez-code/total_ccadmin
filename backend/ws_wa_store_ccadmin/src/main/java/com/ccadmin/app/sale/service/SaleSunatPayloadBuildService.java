@@ -12,6 +12,7 @@ import com.ccadmin.app.sale.model.entity.SaleDetEntity;
 import com.ccadmin.app.sale.model.entity.SaleDetTaxEntity;
 import com.ccadmin.app.sale.model.entity.SaleDocumentEntity;
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
+import com.ccadmin.app.sale.model.constants.SaleConstants;
 import com.ccadmin.app.store.model.dto.StoreInfoDto;
 import com.ccadmin.app.store.model.entity.CompanyEntity;
 import com.ccadmin.app.store.shared.StoreShared;
@@ -96,7 +97,9 @@ public class SaleSunatPayloadBuildService {
                 sunatDocumentType,
                 documentNumber.series,
                 documentNumber.correlative,
-                head.ModifyDate == null ? new Date() : head.ModifyDate,
+                document.IssueDate == null
+                        ? (document.CreationDate == null ? new Date() : document.CreationDate)
+                        : document.IssueDate,
                 head.CurrencyCod,
                 "Contado",
                 buildSupplier(head.StoreCod),
@@ -110,22 +113,21 @@ public class SaleSunatPayloadBuildService {
         if (saleDetail == null || saleDetail.SaleDocument == null || saleDetail.SaleDocument.DocumentCod == null) {
             return false;
         }
-        String series = saleDetail.SaleDocument.DocumentCod.split("-")[0];
-        return series.startsWith("F") || series.startsWith("B");
+        String documentType = saleDetail.SaleDocument.DocumentType;
+        return SaleConstants.DOCUMENT_TYPE_INVOICE.equals(documentType)
+                || SaleConstants.DOCUMENT_TYPE_RECEIPT.equals(documentType);
     }
 
     public boolean isInvoice(SaleDetailDto saleDetail) {
         return saleDetail != null
                 && saleDetail.SaleDocument != null
-                && saleDetail.SaleDocument.DocumentCod != null
-                && saleDetail.SaleDocument.DocumentCod.split("-")[0].startsWith("F");
+                && SaleConstants.DOCUMENT_TYPE_INVOICE.equals(saleDetail.SaleDocument.DocumentType);
     }
 
     public boolean isReceipt(SaleDetailDto saleDetail) {
         return saleDetail != null
                 && saleDetail.SaleDocument != null
-                && saleDetail.SaleDocument.DocumentCod != null
-                && saleDetail.SaleDocument.DocumentCod.split("-")[0].startsWith("B");
+                && SaleConstants.DOCUMENT_TYPE_RECEIPT.equals(saleDetail.SaleDocument.DocumentType);
     }
 
     private SunatPartyDto buildSupplier(String storeCod) {
@@ -147,6 +149,7 @@ public class SaleSunatPayloadBuildService {
     }
 
     private SunatPartyDto buildCustomer(ClientEntity client, String sunatDocumentType, BigDecimal payableAmount) {
+        this.validateCustomerForDocument(client, sunatDocumentType, payableAmount);
         if (client == null || client.Person == null) {
             return buildAnonymousCustomerOrThrow(sunatDocumentType, payableAmount);
         }
@@ -163,6 +166,37 @@ public class SaleSunatPayloadBuildService {
         customer.UbigeoCod = person.UbigeoCod;
         customer.CountryCode = "PE";
         return customer;
+    }
+
+    public void validateCustomerForDocument(
+            ClientEntity client,
+            String documentType,
+            BigDecimal payableAmount
+    ) {
+        PersonEntity person = client == null ? null : client.Person;
+        if (SUNAT_FACTURA.equals(documentType)) {
+            if (person == null
+                    || !"04".equals(person.PersonType)
+                    || !"6".equals(normalizeDocumentType(person.DocumentType))
+                    || person.DocumentNum == null
+                    || !person.DocumentNum.trim().matches("\\d{11}")
+                    || !hasCustomerIdentity(person)) {
+                throw new IllegalArgumentException(
+                        "La factura requiere un cliente juridico con RUC valido"
+                );
+            }
+            return;
+        }
+
+        if (!SUNAT_BOLETA.equals(documentType)) {
+            throw new IllegalArgumentException("Tipo de documento fiscal no permitido: " + documentType);
+        }
+        if ((person == null || !hasCustomerIdentity(person))
+                && amount(payableAmount).compareTo(ANONYMOUS_BOLETA_LIMIT) > 0) {
+            throw new IllegalArgumentException(
+                    "La boleta mayor a S/ 700 requiere un cliente identificado"
+            );
+        }
     }
 
     private SunatPartyDto buildAnonymousCustomerOrThrow(String sunatDocumentType, BigDecimal payableAmount) {

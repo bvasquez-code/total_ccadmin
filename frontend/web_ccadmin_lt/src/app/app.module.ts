@@ -34,6 +34,7 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { ToastrModule } from 'ngx-toastr';
 import { CreatesaleComponent } from './enterprise/sale/pages/createsale/createsale.component';
 import { ViewsaleComponent } from './enterprise/sale/pages/viewsale/viewsale.component';
+import { CreatesaledocumentComponent } from './enterprise/sale/pages/createsaledocument/createsaledocument.component';
 import { SalepaymentdetailComponent } from './enterprise/sale/component/salepaymentdetail/salepaymentdetail.component';
 import { ListclientComponent } from './enterprise/client/pages/listclient/listclient.component';
 import { CreateclientComponent } from './enterprise/client/pages/createclient/createclient.component';
@@ -147,6 +148,7 @@ import { ViewBulkLoadComponent } from './enterprise/bulkload/pages/viewbulkload/
     SpinnerComponent,
     CreatesaleComponent,
     ViewsaleComponent,
+    CreatesaledocumentComponent,
     SalepaymentdetailComponent,
     ListclientComponent,
     CreateclientComponent,

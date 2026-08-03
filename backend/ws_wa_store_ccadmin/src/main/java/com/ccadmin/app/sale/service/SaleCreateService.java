@@ -15,13 +15,10 @@ import com.ccadmin.app.sale.repository.*;
 import com.ccadmin.app.shared.model.myconst.StatusConst;
 import com.ccadmin.app.shared.service.GenericQueuedService;
 import com.ccadmin.app.shared.service.SessionService;
-import com.ccadmin.app.system.shared.CounterfoilShared;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -47,8 +44,6 @@ public class SaleCreateService extends SessionService {
     @Autowired
     private PeriodRepository periodRepository;
     @Autowired
-    private SaleDocumentRepository saleDocumentRepository;
-    @Autowired
     private SaleSearchService saleSearchService;
     @Autowired
     private GenericQueuedService genericQueuedService;
@@ -57,11 +52,9 @@ public class SaleCreateService extends SessionService {
     @Autowired
     private KardexShared kardexShared;
     @Autowired
-    private CounterfoilShared counterfoilShared;
-    @Autowired
-    private SaleSunatEmissionService saleSunatEmissionService;
-    @Autowired
     private SaleTaxCalculationService saleTaxCalculationService;
+    @Autowired
+    private SaleDocumentCreateService saleDocumentCreateService;
 
     @Transactional
     public SaleDetailDto save(PresaleDetailDto presaleDetail) throws SaleException, SaleBuildException {
@@ -182,7 +175,7 @@ public class SaleCreateService extends SessionService {
         return value == null ? BigDecimal.ZERO : value.setScale(2, RoundingMode.HALF_UP);
     }
 
-    @Transactional
+    @Transactional(rollbackOn = Exception.class)
     public SaleDetailDto confirm(String SaleCod,String DocumentType,String CounterfoilCod) throws SaleException {
         log.info("INI - CONFIRMACION DE VENTA : {}",SaleCod);
 
@@ -207,16 +200,20 @@ public class SaleCreateService extends SessionService {
         saleHead.SaleStatus = SaleConstants.CONFIRMED;
         saleHead.addSession(getUserCod());
 
-        SaleDocumentEntity saleDocument = counterfoilShared.generateDocumentSale(saleHead.StoreCod,DocumentType,saleHead.SaleCod);
+        SaleDocumentEntity saleDocument = this.saleDocumentCreateService.createDocument(saleHead, DocumentType);
 
         this.saleHeadRepository.save(saleHead);
-        this.saleDocumentRepository.save(saleDocument);
         this.kardexShared.saveAll(kardexList, kardexZoneList);
 
         SaleDetailDto saleDetail = this.saleSearchService.findById(saleHead.SaleCod);
 
         this.rankingProduct(saleDetail);
-        this.emitSunatAfterCommit(saleHead.SaleCod);
+        if (SaleConstants.DOCUMENT_ROLE_FISCAL.equals(saleDocument.DocumentRole)) {
+            this.saleDocumentCreateService.emitSunatAfterCommit(
+                    saleHead.SaleCod,
+                    saleDocument.DocumentCod
+            );
+        }
 
         log.info("FIN - CONFIRMACION DE VENTA : {}",SaleCod);
 
@@ -228,23 +225,6 @@ public class SaleCreateService extends SessionService {
                 productRankingService,saleDetail
         );
         this.genericQueuedService.addQueued(saleRankingService);
-    }
-
-    private void emitSunatAfterCommit(String saleCod) {
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    queueSunatEmission(saleCod);
-                }
-            });
-            return;
-        }
-        queueSunatEmission(saleCod);
-    }
-
-    private void queueSunatEmission(String saleCod) {
-        this.genericQueuedService.addQueued(new SaleSunatEmissionTaskService(this.saleSunatEmissionService, saleCod));
     }
 
     public SaleHeadEntity saveClientSale(String SaleCod, String ClientCod) throws SaleException {

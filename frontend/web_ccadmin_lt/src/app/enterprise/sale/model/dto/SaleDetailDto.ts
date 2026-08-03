@@ -10,6 +10,7 @@ export class SaleDetailDto
     public DetailList : SaleDetEntity[];
     public DetailPayment : SalePaymentEntity[];
     public SaleDocument : SaleDocumentEntity;
+    public SaleDocumentList : SaleDocumentEntity[];
     public CreditNoteDetail : CreditNoteDetailDto;
 
     public constructor()
@@ -18,6 +19,7 @@ export class SaleDetailDto
         this.DetailList = [];
         this.DetailPayment = [];
         this.SaleDocument = new SaleDocumentEntity();
+        this.SaleDocumentList = [];
         this.CreditNoteDetail = new CreditNoteDetailDto();
     }
 }

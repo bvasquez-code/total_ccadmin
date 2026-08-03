@@ -18,6 +18,7 @@ import { SaleDetEntity } from '../../model/entity/SaleDetEntity';
 import { PaymentMethodEntity } from 'src/app/enterprise/shared/model/entity/PaymentMethodEntity';
 import { SalePickingLineDto } from '../../model/dto/SalePickingLineDto';
 import { SalePickingConfirmDto } from '../../model/dto/SalePickingConfirmDto';
+import { IndicatorDto } from 'src/app/enterprise/shared/model/dto/IndicatorDto';
 
 @Component({
   selector: 'app-createsale',
@@ -36,6 +37,7 @@ export class CreatesaleComponent implements OnInit {
   SaleCod: string = "";
   SaleDetail: SaleDetailDto = new SaleDetailDto();
   PaymentMethodList: PaymentMethodEntity[] = [];
+  IndProformaSales: IndicatorDto = new IndicatorDto();
   TrxPaymentList: TrxPaymentEntity[] = [];
   ItemCount: number = 0;
   SaleDetailPrintData: ResponseWsDto = new ResponseWsDto();
@@ -79,6 +81,12 @@ export class CreatesaleComponent implements OnInit {
     if (!rpt.ErrorStatus) {
       this.SaleDetail = rpt.DataAdditional.find(e => e.Name == "SaleDetail")?.Data;
       this.PaymentMethodList = rpt.DataAdditional.find(e => e.Name == "PaymentMethodList")?.Data ?? [];
+      this.IndProformaSales = rpt.DataAdditional.find(e => e.Name === "IndProformaSales")?.Data ?? new IndicatorDto();
+
+      if (!this.isProformaSalesEnabled && this.SelectedPaymentOption === "99") {
+        this.SelectedPaymentOption = "";
+        this.DocumentType = "";
+      }
 
       if (this.SaleDetail.Headboard.SaleStatus === "C") {
         await this.router.navigate(
@@ -126,7 +134,7 @@ export class CreatesaleComponent implements OnInit {
   async AddPayment(TrxPayment: TrxPaymentEntity) {
     if (!this.ensurePickingAllowsOtherActions()) return;
     if (!this.hasSelectedPaymentOption()) {
-      this.toastrService.info("Seleccione boleta, factura o anticipo antes de pagar.", "Info");
+      this.toastrService.info("Seleccione un tipo de documento de venta o anticipo antes de pagar.", "Info");
       return;
     }
 
@@ -144,7 +152,7 @@ export class CreatesaleComponent implements OnInit {
       if (this.SaleDetail.Headboard.IsPaid == "S") {
 
         if (this.SelectedPaymentOption === "advance") {
-          this.toastrService.info("Pago total registrado. Seleccione boleta o factura para emitir el documento final.", "Info");
+          this.toastrService.info("Pago total registrado. Seleccione el documento de venta para cerrar la venta.", "Info");
           this.refreshPaymentAvailability();
           return;
         }
@@ -158,6 +166,10 @@ export class CreatesaleComponent implements OnInit {
 
   selectDocumentType(DocumentType: string) {
     if (!this.ensurePickingAllowsOtherActions()) return;
+    if (DocumentType === "99" && !this.isProformaSalesEnabled) {
+      this.toastrService.warning("La emision de proformas no esta habilitada para esta empresa.");
+      return;
+    }
     this.ClientSearchMode = "sale";
     this.SelectedPaymentOption = DocumentType;
     this.DocumentType = DocumentType;
@@ -189,7 +201,7 @@ export class CreatesaleComponent implements OnInit {
   async OpenTrxPaymentModal() {
     if (!this.ensurePickingAllowsOtherActions()) return;
     if (!this.hasSelectedPaymentOption()) {
-      this.toastrService.info("Seleccione boleta, factura o anticipo antes de pagar.", "Info");
+      this.toastrService.info("Seleccione un tipo de documento de venta o anticipo antes de pagar.", "Info");
       return;
     }
 
@@ -233,7 +245,7 @@ export class CreatesaleComponent implements OnInit {
       return;
     }
 
-    await this.ticketSvc.printSalesInvoice(this.SaleDetailPrintData);
+    await this.ticketSvc.printSaleDocument(this.SaleDetailPrintData);
   }
 
   shouldPrintAdvance(saleDetailPrint: ResponseWsDto): boolean {
@@ -249,7 +261,7 @@ export class CreatesaleComponent implements OnInit {
   viewAlertSelectDocumentType() {
     if (!this.ensurePickingAllowsOtherActions()) return;
     if (!this.hasSelectedPaymentOption()) {
-      this.toastrService.info("Seleccione boleta, factura o anticipo antes de pagar.", "Info");
+      this.toastrService.info("Seleccione un tipo de documento de venta o anticipo antes de pagar.", "Info");
       return;
     }
 
@@ -342,18 +354,27 @@ export class CreatesaleComponent implements OnInit {
   }
 
   refreshPaymentAvailability(): void {
-    const hasAllowedDocumentType = this.DocumentType === "01" || this.DocumentType === "03";
+    const hasAllowedDocumentType = this.DocumentType === "01" || this.DocumentType === "03"
+      || (this.DocumentType === "99" && this.isProformaSalesEnabled);
     const canUseAdvance = this.SelectedPaymentOption !== "advance" || !this.hasRegisteredPayment();
     this.enableButtonPay = this.hasSelectedPaymentOption() && hasAllowedDocumentType && canUseAdvance
       && !this.requiresClientForSelectedDocument() && !this.isPickingDraftBlocked();
   }
 
   hasSelectedPaymentOption(): boolean {
-    return this.SelectedPaymentOption === "01" || this.SelectedPaymentOption === "03" || this.SelectedPaymentOption === "advance";
+    return this.SelectedPaymentOption === "01" || this.SelectedPaymentOption === "03"
+      || (this.SelectedPaymentOption === "99" && this.isProformaSalesEnabled)
+      || this.SelectedPaymentOption === "advance";
   }
 
   isFinalDocumentSelected(): boolean {
-    return this.SelectedPaymentOption === "01" || this.SelectedPaymentOption === "03";
+    return this.SelectedPaymentOption === "01" || this.SelectedPaymentOption === "03"
+      || (this.SelectedPaymentOption === "99" && this.isProformaSalesEnabled);
+  }
+
+  get isProformaSalesEnabled(): boolean {
+    return this.IndProformaSales?.Indicator === "IND_PROFORMA_SALES"
+      && (this.IndProformaSales?.Value || "N").trim().toUpperCase() === "S";
   }
 
   hasRegisteredPayment(): boolean {
@@ -387,7 +408,7 @@ export class CreatesaleComponent implements OnInit {
   async confirmSaleDocument(): Promise<void> {
     if (!this.ensurePickingAllowsOtherActions()) return;
     if (!this.isFinalDocumentSelected()) {
-      this.toastrService.info("Seleccione boleta o factura para emitir el documento final.", "Info");
+      this.toastrService.info("Seleccione el documento de venta para cerrar la venta.", "Info");
       return;
     }
 

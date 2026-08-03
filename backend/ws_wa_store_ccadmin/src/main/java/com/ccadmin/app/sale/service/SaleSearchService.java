@@ -19,9 +19,11 @@ import com.ccadmin.app.shared.model.dto.ResponsePageSearch;
 import com.ccadmin.app.shared.model.dto.ResponsePageSearchT;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import com.ccadmin.app.shared.model.dto.SearchDto;
+import com.ccadmin.app.shared.model.constants.BusinessConfigConstants;
 import com.ccadmin.app.shared.service.SearchService;
 import com.ccadmin.app.shared.service.SearchTService;
 import com.ccadmin.app.shared.service.SessionService;
+import com.ccadmin.app.shared.shared.CatalogSearchShared;
 import com.ccadmin.app.store.shared.CompanyShared;
 import com.ccadmin.app.store.shared.StoreShared;
 import com.ccadmin.app.system.shared.CurrencyShared;
@@ -31,6 +33,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -63,6 +67,8 @@ public class SaleSearchService extends SessionService {
     @Autowired
     private StoreShared storeShared;
     @Autowired
+    private CatalogSearchShared catalogSearchShared;
+    @Autowired
     private CreditNoteSearchService creditNoteSearchService;
     private SearchService searchService;
 
@@ -77,6 +83,10 @@ public class SaleSearchService extends SessionService {
         }
         rpt.AddResponseAdditional("PaymentMethodList",this.paymentMethodShared.findAllActive());
         rpt.AddResponseAdditional("CurrencyList",this.currencyShared.findAllActive());
+        rpt.AddResponseAdditional(
+                "IndProformaSales",
+                this.catalogSearchShared.findIndicatorSystem(BusinessConfigConstants.ConfigCod.IND_PROFORMA_SALES)
+        );
 
         return rpt;
     }
@@ -84,7 +94,8 @@ public class SaleSearchService extends SessionService {
     public SaleDetailDto findById(String SaleCod) {
         SaleDetailDto saleDetail = new SaleDetailDto();
 
-        saleDetail.Headboard = this.saleHeadRepository.findById(SaleCod).get();
+        saleDetail.Headboard = this.saleHeadRepository.findById(SaleCod)
+                .orElseThrow(() -> new IllegalArgumentException("No existe la venta " + SaleCod));
         saleDetail.DetailList = this.saleDetRepository.findBySaleCod(SaleCod);
         Map<Integer, List<SaleDetWarehouseEntity>> warehouseDetailByItem =
                 this.saleDetWarehouseRepository.findBySaleCod(SaleCod)
@@ -94,7 +105,9 @@ public class SaleSearchService extends SessionService {
                 .stream()
                 .collect(Collectors.groupingBy(item -> item.ItemNumber));
         saleDetail.DetailPayment = this.salePaymentRepository.findBySaleCod(SaleCod);
-        saleDetail.SaleDocument = this.saleDocumentRepository.findBySaleCod(SaleCod);
+        saleDetail.SaleDocumentList = this.saleDocumentRepository.findBySaleCod(SaleCod);
+        this.loadDocumentClients(saleDetail.SaleDocumentList);
+        saleDetail.SaleDocument = saleDetail.SaleDocumentList.stream().findFirst().orElse(null);
         saleDetail.CreditNoteDetail = this.creditNoteSearchService.findBySaleCod(SaleCod);
 
         if(saleDetail.Headboard.existClient())
@@ -164,13 +177,38 @@ public class SaleSearchService extends SessionService {
 
         if(saleDocument==null) return null;
 
-        return this.findById(saleDocument.SaleCod);
+        SaleDetailDto saleDetail = this.findById(saleDocument.SaleCod);
+        this.loadDocumentClients(List.of(saleDocument));
+        saleDetail.SaleDocument = saleDocument;
+        saleDetail.Headboard.ClientCod = saleDocument.ClientCod;
+        saleDetail.Headboard.Client = saleDocument.Client;
+        return saleDetail;
     }
 
     public ResponseWsDto findDataPrint(String SaleCod){
+        return this.findDataPrint(SaleCod, null);
+    }
+
+    public ResponseWsDto findDataPrint(String SaleCod, String DocumentCod){
         ResponseWsDto rpt = new ResponseWsDto();
 
         SaleDetailDto saleDetail = findById(SaleCod);
+        if (DocumentCod != null && !DocumentCod.isBlank()) {
+            SaleDocumentEntity selectedDocument = this.saleDocumentRepository.findByDocumentCodAndSaleCod(
+                    DocumentCod,
+                    SaleCod
+            );
+            if (selectedDocument == null) {
+                throw new IllegalArgumentException(
+                        "El documento " + DocumentCod + " no pertenece a la venta " + SaleCod
+                );
+            }
+            this.loadDocumentClients(List.of(selectedDocument));
+            saleDetail.SaleDocument = selectedDocument;
+        }
+        if (saleDetail.SaleDocument != null) {
+            saleDetail.Headboard.Client = saleDetail.SaleDocument.Client;
+        }
 
         rpt.AddResponseAdditional("SaleDetail",saleDetail);
         rpt.AddResponseAdditional("PaymentMethodList",this.paymentMethodShared.findAllActive());
@@ -178,5 +216,24 @@ public class SaleSearchService extends SessionService {
         rpt.AddResponseAdditional("Store",this.storeShared.findStoreInfo(saleDetail.Headboard.StoreCod));
 
         return rpt;
+    }
+
+    private void loadDocumentClients(List<SaleDocumentEntity> documentList) {
+        if (documentList == null || documentList.isEmpty()) {
+            return;
+        }
+        List<String> clientCodes = documentList.stream()
+                .map(document -> document.ClientCod)
+                .filter(Objects::nonNull)
+                .filter(code -> !code.isBlank())
+                .distinct()
+                .toList();
+        if (clientCodes.isEmpty()) {
+            return;
+        }
+        Map<String, ClientEntity> clientsByCode = this.clientShared.findAllById(clientCodes)
+                .stream()
+                .collect(Collectors.toMap(client -> client.ClientCod, Function.identity()));
+        documentList.forEach(document -> document.Client = clientsByCode.get(document.ClientCod));
     }
 }

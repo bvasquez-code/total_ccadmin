@@ -30,6 +30,10 @@ public class CounterfoilCreateService extends SessionService {
         SaleDocumentEntity saleDocument = new SaleDocumentEntity();
         CounterfoilEntity counterfoil = this.counterfoilRepository.findByStoreDefault(DocumentType,StoreCod);
 
+        if(counterfoil == null){
+            throw new RuntimeException("No existe talonario automatico para documento " + DocumentType + " y local " + StoreCod);
+        }
+
         counterfoil.Correlative = counterfoil.Correlative + 1;
         this.counterfoilRepository.save(counterfoil);
 

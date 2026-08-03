@@ -11,6 +11,7 @@ public class SaleDetailDto {
 
     public SaleHeadEntity Headboard;
     public SaleDocumentEntity SaleDocument;
+    public List<SaleDocumentEntity> SaleDocumentList;
 
     public List<SaleDetEntity> DetailList;
     public List<SalePaymentEntity> DetailPayment;

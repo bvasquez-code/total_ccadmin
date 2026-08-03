@@ -4,7 +4,9 @@ import com.ccadmin.app.sale.exception.SaleException;
 import com.ccadmin.app.sale.model.dto.SaleConfirmDto;
 import com.ccadmin.app.sale.model.dto.SalePaymentRegisterDto;
 import com.ccadmin.app.sale.model.dto.SalePickingConfirmDto;
+import com.ccadmin.app.sale.model.dto.SaleDocumentIssueDto;
 import com.ccadmin.app.sale.service.SaleCreateService;
+import com.ccadmin.app.sale.service.SaleDocumentCreateService;
 import com.ccadmin.app.sale.service.SalePaymentCreateService;
 import com.ccadmin.app.sale.service.SaleSearchService;
 import com.ccadmin.app.sale.service.SalePickingCreateService;
@@ -29,6 +31,8 @@ public class SaleController {
     private SaleCreateService saleCreateService;
     @Autowired
     private SalePickingCreateService salePickingCreateService;
+    @Autowired
+    private SaleDocumentCreateService saleDocumentCreateService;
 
     @PostMapping("addPayment")
     public ResponseEntity<ResponseWsDto> addPayment(@RequestBody SalePaymentRegisterDto salePayment)
@@ -123,11 +127,14 @@ public class SaleController {
     }
 
     @GetMapping("findDataPrint")
-    public ResponseEntity<ResponseWsDto> findDataPrint(@RequestParam String SaleCod)
+    public ResponseEntity<ResponseWsDto> findDataPrint(
+            @RequestParam String SaleCod,
+            @RequestParam(required = false) String DocumentCod
+    )
     {
         try{
             return new ResponseEntity<ResponseWsDto>(
-                    this.saleSearchService.findDataPrint(SaleCod)
+                    this.saleSearchService.findDataPrint(SaleCod, DocumentCod)
                     ,HttpStatus.OK
             );
         }
@@ -167,6 +174,22 @@ public class SaleController {
         {
             log.error("Error :{}",ex.getMessage(), ex);
             return new ResponseEntity<ResponseWsDto>(new ResponseWsDto(ex),HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("issueFiscalDocument")
+    public ResponseEntity<ResponseWsDto> issueFiscalDocument(@RequestBody SaleDocumentIssueDto request)
+    {
+        try{
+            return new ResponseEntity<>(
+                    new ResponseWsDto(this.saleDocumentCreateService.issueFiscalDocument(request)),
+                    HttpStatus.OK
+            );
+        }
+        catch (Exception ex)
+        {
+            log.error("Error :{}",ex.getMessage(), ex);
+            return new ResponseEntity<>(new ResponseWsDto(ex),HttpStatus.BAD_REQUEST);
         }
     }
 

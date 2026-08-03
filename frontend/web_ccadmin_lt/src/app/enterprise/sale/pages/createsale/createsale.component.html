@@ -251,6 +251,13 @@
                               FACTURA
                             </div>
 
+                            <div *ngIf="isProformaSalesEnabled" role="button" (click)="selectDocumentType('99')"
+                              class="mr-1 p-3 border-2 btn btn-brc-tp shadow-sm btn-text-green btn-light btn-h-lighter-green btn-a-light-green bgc-white"
+                              [ngClass]="{'active': SelectedPaymentOption === '99'}">
+                              <input type="radio" name="place" id="placeProforma" value="99">
+                              PROFORMA
+                            </div>
+
                             <div role="button" (click)="OpenAdvanceClientModal()"
                               class="mr-1 p-3 border-2 btn btn-brc-tp shadow-sm btn-text-orange btn-light btn-h-lighter-orange btn-a-light-orange bgc-white"
                               [ngClass]="{'active': SelectedPaymentOption === 'advance'}">
@@ -258,6 +265,11 @@
                               ANTICIPO
                             </div>
                           </form>
+                          <div class="alert bgc-info-l4 brc-info-m3 border-1 text-dark-m2 mt-2 mb-0 py-2"
+                            *ngIf="isProformaSalesEnabled && SelectedPaymentOption === '99'">
+                            La proforma registra y cierra la venta sin enviarla a facturación electrónica.
+                            Después podrá agregar una boleta o factura desde la lista de ventas.
+                          </div>
                         </div>
                       </div>
 
@@ -562,9 +574,9 @@
           <div class="col-sm-8">
             <select class="form-control" #cboDocumentType [disabled]="DocumentType === '01' || ClientSearchMode === 'advance'">
               <option value="06" *ngIf="DocumentType === '01' && ClientSearchMode !== 'advance'">RUC</option>
-              <option value="01" *ngIf="!DocumentType || DocumentType === '03' || ClientSearchMode === 'advance'">DNI</option>
-              <option value="04" *ngIf="(!DocumentType || DocumentType === '03') && ClientSearchMode !== 'advance'">CARNET DE EXTRANJERIA</option>
-              <option value="06" *ngIf="(!DocumentType || DocumentType === '03') && ClientSearchMode !== 'advance'">RUC</option>
+              <option value="01" *ngIf="!DocumentType || DocumentType === '03' || DocumentType === '99' || ClientSearchMode === 'advance'">DNI</option>
+              <option value="04" *ngIf="(!DocumentType || DocumentType === '03' || DocumentType === '99') && ClientSearchMode !== 'advance'">CARNET DE EXTRANJERIA</option>
+              <option value="06" *ngIf="(!DocumentType || DocumentType === '03' || DocumentType === '99') && ClientSearchMode !== 'advance'">RUC</option>
             </select>
           </div>
         </div>

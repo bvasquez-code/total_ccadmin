@@ -33,6 +33,7 @@ public class SaleHeadEntity extends AuditTableEntity implements Serializable {
     public BigDecimal NumExchangevalue;
     public String IsPaid;
     public String HasCreditNote;
+    public String HasFiscalDocument = "N";
     public String IsPickingConfirmed = "N";
 
     @Transient
@@ -60,6 +61,7 @@ public class SaleHeadEntity extends AuditTableEntity implements Serializable {
         CurrencyCodSys = presaleHead.CurrencyCodSys;
         NumExchangevalue = presaleHead.NumExchangevalue;
         IsPaid = presaleHead.IsPaid;
+        HasFiscalDocument = "N";
         IsPickingConfirmed = "N";
     }
 
@@ -108,6 +110,7 @@ public class SaleHeadEntity extends AuditTableEntity implements Serializable {
         this.IsPaid = presaleHead.IsPaid;
         this.PeriodId = period.PeriodId;
         this.HasCreditNote = "N";
+        this.HasFiscalDocument = "N";
         this.IsPickingConfirmed = "N";
         return this;
     }

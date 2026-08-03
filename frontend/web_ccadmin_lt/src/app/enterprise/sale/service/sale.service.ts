@@ -7,6 +7,7 @@ import { SalePaymentRegisterDto } from "../model/dto/SalePaymentRegisterDto";
 import { SearchDto } from "../../shared/model/dto/SearchDto";
 import { SaleConfirmDto } from "../model/dto/SaleConfirmDto";
 import { SalePickingConfirmDto } from "../model/dto/SalePickingConfirmDto";
+import { SaleDocumentIssueDto } from "../model/dto/SaleDocumentIssueDto";
 
 @Injectable({
     providedIn: 'root'
@@ -68,11 +69,13 @@ export class SaleService
         return RespuestaWS;
     }
 
-    async findDataPrint(SaleCod : string)
+    async findDataPrint(SaleCod : string, DocumentCod: string = '')
     {
         let url: string = `${AppSetting.API}/api/v1/sale/findDataPrint`;
         let RespuestaWS : ResponseWsDto;
-        RespuestaWS = await this.apiService.ExecuteGetService(url,{ SaleCod : SaleCod });
+        const params: any = { SaleCod : SaleCod };
+        if (DocumentCod) params.DocumentCod = DocumentCod;
+        RespuestaWS = await this.apiService.ExecuteGetService(url, params);
         return RespuestaWS;
     }
 
@@ -95,6 +98,11 @@ export class SaleService
         RespuestaWS = await this.apiService.ExecutePostService(url,request);
 
         return RespuestaWS;
+    }
+
+    async issueFiscalDocument(request: SaleDocumentIssueDto): Promise<ResponseWsDto> {
+        const url: string = `${AppSetting.API}/api/v1/sale/issueFiscalDocument`;
+        return await this.apiService.ExecutePostService(url, request);
     }
 
     async confirmPicking(request: SalePickingConfirmDto): Promise<ResponseWsDto> {

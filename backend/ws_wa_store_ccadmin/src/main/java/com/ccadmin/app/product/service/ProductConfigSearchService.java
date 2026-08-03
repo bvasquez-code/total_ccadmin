@@ -53,8 +53,8 @@ public class ProductConfigSearchService extends SessionService {
         response.AddResponseAdditional("store", this.storeShared.findById(storeCod));
         response.AddResponseAdditional("storeList", this.storeShared.findAll());
         response.AddResponseAdditional(
-                "indDetailedTaxIndicator",
-                this.catalogSearchShared.findIndicator("ActiTaxCalcFunctionalities", "IndDetailedTaxIndicator"));
+                "indDetailedTax",
+                this.catalogSearchShared.findIndicatorSystem("IND_DETAILED_TAX"));
         return response;
     }
 

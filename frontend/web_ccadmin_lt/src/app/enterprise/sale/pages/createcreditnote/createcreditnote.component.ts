@@ -210,6 +210,12 @@ export class CreatecreditnoteComponent
     if (rpt?.Data) {
       this.SaleDetail = rpt.Data;
 
+      if (this.SaleDetail.SaleDocument?.DocumentType === '99') {
+        this.SaleDetail = new SaleDetailDto();
+        this.toastrService.error('Una proforma no puede originar una nota de credito. Emita primero la boleta o factura.');
+        return;
+      }
+
       const credit = this.SaleDetail.CreditNoteDetail;
       const status = credit?.Headboard?.CreditNoteStatus;
 

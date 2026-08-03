@@ -1,0 +1,238 @@
+<div role="main" class="main-content">
+  <div class="page-content container container-plus">
+    <div class="container px-0">
+      <div class="row mt-4">
+        <div class="col-12">
+          <div class="page-header border-0 mb-0">
+            <h1 class="page-title text-dark-l3 text-115">
+              Facturar proforma
+              <i class="fa fa-angle-right text-80 ml-1"></i>
+              <small class="page-info text-dark-m3">{{ SaleDetail.Headboard.SaleCod }}</small>
+            </h1>
+          </div>
+
+          <div class="card dcard mb-4">
+            <div class="card-body px-4 px-lg-5">
+              <div class="alert bgc-info-l4 brc-info-m3 border-1 text-dark-m2 mt-2">
+                <i class="fa fa-info-circle mr-2"></i>
+                La proforma <b>{{ getProformaCode() }}</b> ya registro la venta y sus pagos.
+                Aquí solo se agregará la boleta o factura; no se volverá a cobrar ni a mover stock.
+              </div>
+
+              <div class="row mt-4">
+                <div class="col-sm-6">
+                  <div class="text-100 text-grey-m1">Cliente del nuevo documento:</div>
+                  <div class="text-600 text-110 text-primary mt-2">{{ getClientName() }}</div>
+                  <div class="text-dark-l1" *ngIf="hasClient()">
+                    N° Documento: {{ SaleDetail.Headboard.Client.Person.DocumentNum }}
+                  </div>
+                  <button type="button" class="btn btn-sm btn-outline-primary mt-2"
+                    (click)="openClientModal()" [disabled]="loading || !DocumentType">
+                    {{ hasClient() ? 'Cambiar cliente' : 'Agregar cliente' }}
+                  </button>
+                </div>
+
+                <div class="col-sm-6 align-self-start d-sm-flex justify-content-end text-95">
+                  <div class="text-dark-l1">
+                    <div class="mt-1 mb-2 text-secondary-d1 text-600 text-125">Datos de venta</div>
+                    <div class="my-2"><b>Código:</b> {{ SaleDetail.Headboard.SaleCod }}</div>
+                    <div class="my-2"><b>Proforma:</b> {{ getProformaCode() }}</div>
+                    <div class="my-2">
+                      <b>Fecha:</b> {{ SaleDetail.Headboard.CreationDate | date:'dd/MM/yyyy HH:mm:ss' }}
+                    </div>
+                    <div class="my-2">
+                      <b>Estado:</b>
+                      <span class="badge bgc-success-d1 text-white badge-pill px-25">
+                        {{ SaleDetail.Headboard.SaleStatus | SaleStatusPipe }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <div class="row text-600 text-95 text-secondary-d3 brc-green-l1 py-25 border-y-2">
+                  <div class="col-sm-4">Producto</div>
+                  <div class="col-sm-1">Unid.</div>
+                  <div class="col-sm-2">Precio unitario</div>
+                  <div class="col-sm-2">Subtotal</div>
+                  <div class="col-sm-1">Descuento</div>
+                  <div class="col-sm-2">Total</div>
+                </div>
+                <div class="text-95 text-dark-m3">
+                  <div class="row mb-2 mb-sm-0 py-25"
+                    *ngFor="let item of SaleDetail.DetailList; let index = index"
+                    [ngClass]="(index + 1) % 2 === 0 ? 'bgc-green-l4' : ''">
+                    <div class="col-7 col-sm-4">
+                      ({{ item.Product.ProductCod }}) - {{ item.Product.ProductName }}
+                    </div>
+                    <div class="col-sm-1">
+                      {{ getVisibleQuantity(item.NumUnit, item.ProductUnitFactor) }} {{ item.ProductUnitName }}
+                    </div>
+                    <div class="col-sm-2">
+                      {{ SaleDetail.Headboard.CurrencyCod }}
+                      {{ getVisibleUnitPrice(item.NumUnitPriceSale, item.ProductUnitFactor) | FormatoMonedaPeruana:false }}
+                    </div>
+                    <div class="col-sm-2">
+                      {{ SaleDetail.Headboard.CurrencyCod }} {{ item.NumPriceSubTotal | FormatoMonedaPeruana:false }}
+                    </div>
+                    <div class="col-sm-1">
+                      {{ item.NumDiscount | FormatoMonedaPeruana:false }}
+                    </div>
+                    <div class="col-5 col-sm-2 text-secondary-d3 text-600">
+                      {{ SaleDetail.Headboard.CurrencyCod }} {{ item.NumTotalPrice | FormatoMonedaPeruana:false }}
+                    </div>
+                    <div class="col-12 mt-1 text-90 text-grey-d2" *ngIf="getTaxDetailList(item).length > 0">
+                      <span class="badge badge-sm bgc-secondary-l3 text-dark-m2 mr-1"
+                        *ngFor="let tax of getTaxDetailList(item)">
+                        {{ getTaxLineLabel(tax) }}: {{ SaleDetail.Headboard.CurrencyCod }}
+                        {{ tax.TaxAmount | FormatoMonedaPeruana:false }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="row border-b-2 brc-green-l1"></div>
+              </div>
+
+              <div class="row mt-4">
+                <div class="col-sm-7">
+                  <div class="text-600 text-105 mb-2">Seleccione el documento a emitir</div>
+                  <div class="btn-group btn-group-toggle" data-toggle="buttons">
+                    <button type="button" class="btn btn-light btn-text-blue border-2 px-4 py-3"
+                      [ngClass]="{'active bgc-blue-l3': DocumentType === '03'}"
+                      (click)="selectDocumentType('03')">
+                      BOLETA
+                    </button>
+                    <button type="button" class="btn btn-light btn-text-purple border-2 px-4 py-3"
+                      [ngClass]="{'active bgc-purple-l3': DocumentType === '01'}"
+                      (click)="selectDocumentType('01')">
+                      FACTURA
+                    </button>
+                  </div>
+                  <div class="alert alert-warning mt-3 py-2" *ngIf="requiresClient()">
+                    {{ DocumentType === '01'
+                      ? 'La factura requiere un cliente con RUC.'
+                      : 'Las boletas mayores a S/ 700 requieren un cliente identificado.' }}
+                  </div>
+                </div>
+
+                <div class="col-sm-5 text-dark-l1 text-90">
+                  <div class="row my-2">
+                    <div class="col-7 text-right">Subtotal</div>
+                    <div class="col-5 text-115 text-secondary-d3">
+                      {{ SaleDetail.Headboard.CurrencyCod }}
+                      {{ SaleDetail.Headboard.NumTotalPriceNoTax | FormatoMonedaPeruana:false }}
+                    </div>
+                  </div>
+                  <div class="row my-2">
+                    <div class="col-7 text-right">Impuestos</div>
+                    <div class="col-5 text-115 text-secondary-d3">
+                      {{ SaleDetail.Headboard.CurrencyCod }}
+                      {{ SaleDetail.Headboard.NumTotalTax | FormatoMonedaPeruana:false }}
+                    </div>
+                  </div>
+                  <div class="row my-3">
+                    <div class="col-7 text-right text-150"><b>Total</b></div>
+                    <div class="col-5 text-150 text-secondary-d3">
+                      {{ SaleDetail.Headboard.CurrencyCod }}
+                      {{ SaleDetail.Headboard.NumTotalPrice | FormatoMonedaPeruana:false }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mt-4">
+                <app-salepaymentdetail
+                  [paymentList]="SaleDetail.DetailPayment"
+                  [paymentMethodList]="PaymentMethodList"
+                  [currencyCod]="SaleDetail.Headboard.CurrencyCod">
+                </app-salepaymentdetail>
+              </div>
+
+              <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25 text-center">
+                <button type="button" class="btn btn-primary btn-bold px-5 mr-2"
+                  (click)="issueFiscalDocument()" [disabled]="loading || !DocumentType">
+                  <i class="fa fa-file-invoice mr-1"></i>
+                  Emitir documento
+                </button>
+                <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold px-4"
+                  routerLink="/enterprise/sale/pages/listsale">
+                  <i class="fa fa-undo mr-1"></i>
+                  Volver
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<button type="button" class="d-none" data-toggle="modal" data-target="#SaleDocumentClientModal"
+  #btnOpenClientModal></button>
+
+<div class="modal fade" id="SaleDocumentClientModal" tabindex="-1" role="dialog"
+  aria-labelledby="SaleDocumentClientModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document" *ngIf="ShowClientSearch">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-primary-d3" id="SaleDocumentClientModalLabel">Buscar cliente</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3 row">
+          <label class="col-sm-4 col-form-label">Tipo documento</label>
+          <div class="col-sm-8">
+            <select class="form-control" #cboDocumentType [disabled]="DocumentType === '01'">
+              <option value="06" *ngIf="DocumentType === '01'">RUC</option>
+              <option value="01" *ngIf="DocumentType === '03'">DNI</option>
+              <option value="04" *ngIf="DocumentType === '03'">CARNET DE EXTRANJERIA</option>
+              <option value="06" *ngIf="DocumentType === '03'">RUC</option>
+            </select>
+          </div>
+        </div>
+        <div class="mb-3 row">
+          <label class="col-sm-4 col-form-label">N.° Documento</label>
+          <div class="col-sm-8">
+            <input type="text" class="form-control" #txtDocumentNum>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+        <button type="button" class="btn btn-primary" (click)="findByDocumentNum()">Buscar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-dialog modal-lg" role="document" *ngIf="ShowClientRegister">
+    <div class="modal-content">
+      <div class="modal-body p-0">
+        <app-createclient
+          (ResultForm)="responseResultFormSaleClient($event)"
+          [InputDocumentNum]="ClientDocumentNum"
+          [InputDocumentType]="ClientDocumentType"
+          [InvokeType]="'modal'">
+        </app-createclient>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-dialog" role="document" *ngIf="ShowClient">
+    <div class="modal-content">
+      <div class="modal-body text-center py-4">
+        <i class="far fa-user text-primary text-170 mr-2"></i>
+        <span class="text-grey-d3 text-120">{{ getClientInfo() }}</span>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-dismiss="modal">Aceptar</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -13,6 +13,7 @@ import { ListprofileComponent } from './enterprise/user/pages/listprofile/listpr
 import { CreateprofileComponent } from './enterprise/user/pages/createprofile/createprofile.component';
 import { CreatesaleComponent } from './enterprise/sale/pages/createsale/createsale.component';
 import { ViewsaleComponent } from './enterprise/sale/pages/viewsale/viewsale.component';
+import { CreatesaledocumentComponent } from './enterprise/sale/pages/createsaledocument/createsaledocument.component';
 import { ListclientComponent } from './enterprise/client/pages/listclient/listclient.component';
 import { CreateclientComponent } from './enterprise/client/pages/createclient/createclient.component';
 import { ListsupplierComponent } from './enterprise/supplier/pages/listsupplier/listsupplier.component';
@@ -141,6 +142,10 @@ const routes: Routes = [
       {
         path: 'enterprise/sale/pages/viewsale',
         component: ViewsaleComponent
+      },
+      {
+        path: 'enterprise/sale/pages/createsaledocument',
+        component: CreatesaledocumentComponent
       },
       {
         path: 'enterprise/sale/pages/listcreditnote',

@@ -112,7 +112,9 @@ public class CreditNoteSearchService {
         creditNoteDetail.NumAvailableBalance =
                 this.creditNoteApplicationSearchService.findAvailableBalance(creditNoteDetail.Headboard);
         creditNoteDetail.Document = this.creditNoteDocumentRepository.findByCreditNoteCod(creditNoteDetail.Headboard.CreditNoteCod);
-        creditNoteDetail.DocumentReference = this.saleDocumentRepository.findBySaleCod(creditNoteDetail.Headboard.SaleCod);
+        creditNoteDetail.DocumentReference = this.saleDocumentRepository.findFiscalBySaleCod(
+                creditNoteDetail.Headboard.SaleCod
+        );
         return creditNoteDetail;
     }
 

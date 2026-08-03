@@ -1,6 +1,8 @@
 package com.ccadmin.app.sale.service;
 
 import com.ccadmin.app.sale.model.dto.SaleDetailDto;
+import com.ccadmin.app.sale.model.entity.SaleDocumentEntity;
+import com.ccadmin.app.sale.repository.SaleDocumentRepository;
 import com.ccadmin.app.sunat.model.dto.sunat.SunatInvoiceProcessRequestDto;
 import com.ccadmin.app.sunat.model.dto.sunat.SunatReceiptProcessRequestDto;
 import com.ccadmin.app.sunat.service.SaleSunatClientService;
@@ -21,11 +23,36 @@ public class SaleSunatEmissionService {
     @Autowired
     private SaleSunatClientService saleSunatClientService;
 
+    @Autowired
+    private SaleDocumentRepository saleDocumentRepository;
+
     public void emitSale(String saleCod) {
-        log.info("INI - EMISION SUNAT VENTA : {}", saleCod);
+        SaleDocumentEntity document = this.saleDocumentRepository.findFiscalBySaleCod(saleCod);
+        if (document == null) {
+            log.info("VENTA SIN DOCUMENTO FISCAL PARA SUNAT : {}", saleCod);
+            return;
+        }
+        this.emitSale(saleCod, document.DocumentCod);
+    }
+
+    public void emitSale(String saleCod, String documentCod) {
+        log.info("INI - EMISION SUNAT VENTA : {} DOCUMENTO : {}", saleCod, documentCod);
         SaleDetailDto saleDetail = this.saleSearchService.findById(saleCod);
+        SaleDocumentEntity selectedDocument = saleDetail.SaleDocumentList == null
+                ? null
+                : saleDetail.SaleDocumentList.stream()
+                .filter(document -> documentCod != null && documentCod.equals(document.DocumentCod))
+                .findFirst()
+                .orElse(null);
+        if (selectedDocument == null) {
+            throw new IllegalArgumentException(
+                    "El documento " + documentCod + " no pertenece a la venta " + saleCod
+            );
+        }
+        saleDetail.SaleDocument = selectedDocument;
+        saleDetail.Headboard.Client = selectedDocument.Client;
         if (!this.saleSunatPayloadBuildService.isInvoiceOrReceipt(saleDetail)) {
-            log.info("VENTA SIN DOCUMENTO FACTURA/BOLETA PARA SUNAT : {}", saleCod);
+            log.info("DOCUMENTO NO FISCAL OMITIDO PARA SUNAT : {} - {}", saleCod, documentCod);
             return;
         }
         Object response;
@@ -38,6 +65,6 @@ public class SaleSunatEmissionService {
         } else {
             throw new IllegalArgumentException("Documento de venta no corresponde a factura o boleta SUNAT");
         }
-        log.info("FIN - EMISION SUNAT VENTA : {} -> {}", saleCod, response);
+        log.info("FIN - EMISION SUNAT VENTA : {} DOCUMENTO : {} -> {}", saleCod, documentCod, response);
     }
 }

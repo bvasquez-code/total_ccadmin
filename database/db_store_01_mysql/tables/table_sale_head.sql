@@ -34,6 +34,7 @@ BEGIN
           `NumExchangevalue` decimal(16,4) DEFAULT NULL COMMENT 'valor de cambio',
           `IsPaid` char(1) NOT NULL DEFAULT 'N',
           `HasCreditNote` char(1) NOT NULL DEFAULT 'N' COMMENT 'Tiene nota de credito (S/N)',
+          `HasFiscalDocument` char(1) NOT NULL DEFAULT 'N' COMMENT 'Indica si la venta ya tiene boleta o factura emitida (S/N)',
           `IsPickingConfirmed` char(1) NOT NULL DEFAULT 'N' COMMENT 'Indica si el pickeo por lote fue confirmado (S/N)',
           `CreationUser` varchar(16) NOT NULL,
           `CreationDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -52,10 +53,11 @@ BEGIN
           CONSTRAINT `fk_sale_head_currencySys` FOREIGN KEY (`CurrencyCodSys`) REFERENCES `currency` (`CurrencyCod`),
           CONSTRAINT `fk_sale_head_period` FOREIGN KEY (`PeriodId`) REFERENCES `period` (`PeriodId`),
           CONSTRAINT `fk_sale_head_presale` FOREIGN KEY (`PresaleCod`) REFERENCES `presale_head` (`PresaleCod`),
-          CONSTRAINT `fk_sale_head_store` FOREIGN KEY (`StoreCod`) REFERENCES `store` (`StoreCod`)
+          CONSTRAINT `fk_sale_head_store` FOREIGN KEY (`StoreCod`) REFERENCES `store` (`StoreCod`),
+          CONSTRAINT `chk_sale_head_fiscal_document` CHECK (`HasFiscalDocument` IN ('S', 'N'))
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
         
-        SELECT 'Tabla sale_head creada desde cero con HasCreditNote.' AS Mensaje;
+        SELECT 'Tabla sale_head creada con indicadores de nota de credito y facturacion.' AS Mensaje;
 
     ELSE
         -- =============================================
@@ -73,12 +75,54 @@ BEGIN
 
         IF NOT EXISTS (
             SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sale_head'
+            AND column_name = 'HasFiscalDocument'
+        ) THEN
+            ALTER TABLE `sale_head`
+                ADD COLUMN `HasFiscalDocument` CHAR(1) NOT NULL DEFAULT 'N'
+                COMMENT 'Indica si la venta ya tiene boleta o factura emitida (S/N)' AFTER `HasCreditNote`;
+            SELECT 'Columna HasFiscalDocument agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.table_constraints
+            WHERE table_schema = DATABASE()
+              AND table_name = 'sale_head'
+              AND constraint_name = 'chk_sale_head_fiscal_document'
+              AND constraint_type = 'CHECK'
+        ) THEN
+            ALTER TABLE `sale_head`
+                ADD CONSTRAINT `chk_sale_head_fiscal_document`
+                CHECK (`HasFiscalDocument` IN ('S', 'N'));
+            SELECT 'Restriccion chk_sale_head_fiscal_document agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sale_head'
             AND column_name = 'IsPickingConfirmed'
         ) THEN
             ALTER TABLE `sale_head`
                 ADD COLUMN `IsPickingConfirmed` CHAR(1) NOT NULL DEFAULT 'N'
                 COMMENT 'Indica si el pickeo por lote fue confirmado (S/N)' AFTER `HasCreditNote`;
             SELECT 'Columna IsPickingConfirmed agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF EXISTS (
+            SELECT * FROM information_schema.tables
+            WHERE table_schema = DATABASE() AND table_name = 'sale_document'
+        ) AND EXISTS (
+            SELECT * FROM information_schema.tables
+            WHERE table_schema = DATABASE() AND table_name = 'counterfoil'
+        ) THEN
+            UPDATE `sale_head` sh
+            SET sh.`HasFiscalDocument` = 'S'
+            WHERE EXISTS (
+                SELECT 1
+                FROM `sale_document` sd
+                INNER JOIN `counterfoil` c ON c.`CounterfoilCod` = sd.`CounterfoilCod`
+                WHERE sd.`SaleCod` = sh.`SaleCod`
+                  AND sd.`Status` = 'A'
+                  AND c.`DocumentType` IN ('01', '03')
+            );
         END IF;
 
         -- Aqui puedes agregar mas bloques IF NOT EXISTS para otros ALTER futuros...

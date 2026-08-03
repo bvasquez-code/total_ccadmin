@@ -3,6 +3,7 @@ package com.ccadmin.app.shared.service;
 import java.util.List;
 
 import com.ccadmin.app.shared.model.entity.BusinessConfigEntity;
+import com.ccadmin.app.shared.model.myconst.StatusConst;
 import com.ccadmin.app.system.model.dto.IndicatorDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -41,6 +42,9 @@ public class CatalogSearchService {
 
     public IndicatorDto findIndicator(String groupCod, String configCod){
         BusinessConfigEntity businessConfig = this.businessConfigSearchService.findByConfigCod(groupCod,configCod);
+        if (businessConfig == null || !StatusConst.ACTIVE.equals(businessConfig.Status)) {
+            return new IndicatorDto(configCod, "N");
+        }
         return new IndicatorDto(businessConfig.ConfigCod,businessConfig.ConfigVal);
     }
 }

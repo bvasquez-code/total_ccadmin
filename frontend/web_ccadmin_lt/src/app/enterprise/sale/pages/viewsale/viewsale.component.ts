@@ -8,6 +8,7 @@ import { CreditNoteDetailDto } from '../../model/dto/CreditNoteDetailDto';
 import { SaleDetailDto } from '../../model/dto/SaleDetailDto';
 import { SaleDetEntity } from '../../model/entity/SaleDetEntity';
 import { SaleDetTaxEntity } from '../../model/entity/SaleDetTaxEntity';
+import { SaleDocumentEntity } from '../../model/entity/SaleDocumentEntity';
 import { SaleService } from '../../service/sale.service';
 import { TicketSunatService } from '../../service/TicketSunatService';
 
@@ -19,6 +20,7 @@ export class ViewsaleComponent implements OnInit {
 
   SaleCod: string = '';
   AutoPrint: boolean = false;
+  DocumentCod: string = '';
   SaleDetail: SaleDetailDto = new SaleDetailDto();
   PaymentMethodList: PaymentMethodEntity[] = [];
   loading: boolean = false;
@@ -34,6 +36,7 @@ export class ViewsaleComponent implements OnInit {
     this.route.queryParamMap.subscribe(async params => {
       this.SaleCod = params.get('SaleCod') || '';
       this.AutoPrint = params.get('AutoPrint') === 'Y';
+      this.DocumentCod = params.get('DocumentCod') || '';
       if (!this.SaleCod) {
         this.toastrService.error('Debe indicar la venta que desea visualizar.');
         return;
@@ -58,20 +61,47 @@ export class ViewsaleComponent implements OnInit {
 
       if (this.AutoPrint) {
         this.AutoPrint = false;
-        await this.print();
+        await this.print(this.DocumentCod);
       }
     } finally {
       this.loading = false;
     }
   }
 
-  async print(): Promise<void> {
-    const response: ResponseWsDto = await this.saleService.findDataPrint(this.SaleCod);
+  async print(documentCod: string = ''): Promise<void> {
+    const selectedDocumentCod = documentCod || this.DocumentCod || this.SaleDetail?.SaleDocument?.DocumentCod || '';
+    const response: ResponseWsDto = await this.saleService.findDataPrint(this.SaleCod, selectedDocumentCod);
     if (response.ErrorStatus) {
       this.toastrService.error(response.Message || 'No se pudo imprimir la venta.');
       return;
     }
-    await this.ticketSunatService.printSalesInvoice(response);
+    await this.ticketSunatService.printSaleDocument(response);
+  }
+
+  getDocumentList(): SaleDocumentEntity[] {
+    const documentList = this.SaleDetail?.SaleDocumentList ?? [];
+    if (documentList.length > 0) return documentList;
+    return this.SaleDetail?.SaleDocument?.DocumentCod ? [this.SaleDetail.SaleDocument] : [];
+  }
+
+  getDocumentTypeName(document: SaleDocumentEntity): string {
+    if (document.DocumentType === '99') return 'Proforma';
+    if (document.DocumentType === '01') return 'Factura';
+    if (document.DocumentType === '03') return 'Boleta';
+    return document.DocumentType || 'Documento';
+  }
+
+  getDocumentClientName(document: SaleDocumentEntity): string {
+    const person = document?.Client?.Person;
+    if (!person) return 'Cliente no identificado';
+    const naturalName = `${person.Names || ''} ${person.LastNames || ''}`.trim();
+    return person.BusinessName || person.CommercialName || naturalName || 'Cliente no identificado';
+  }
+
+  canIssueFiscalDocument(): boolean {
+    return this.SaleDetail?.Headboard?.SaleStatus === 'C'
+      && this.SaleDetail?.Headboard?.HasFiscalDocument !== 'S'
+      && this.getDocumentList().some(document => document.DocumentType === '99');
   }
 
   hasClient(): boolean {

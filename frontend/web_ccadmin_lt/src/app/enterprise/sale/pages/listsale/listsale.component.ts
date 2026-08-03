@@ -53,6 +53,12 @@ export class ListsaleComponent implements OnInit,ActionTableService<SaleHeadEnti
     const showViewSale = (SaleHead : SaleHeadEntity) =>{
       return (SaleHead.SaleStatus === "C");
     }
+    const showIssueFiscalDocument = (SaleHead : SaleHeadEntity) =>{
+      return SaleHead.SaleStatus === "C" && SaleHead.HasFiscalDocument !== "S";
+    }
+    const viewFiscalStatus = (SaleHead: SaleHeadEntity) => {
+      return SaleHead.SaleStatus === "X" ? "X" : SaleHead.HasFiscalDocument;
+    }
 
     const viewClient = (SaleHead : SaleHeadEntity) =>{
       if(SaleHead.ClientCod !== null && SaleHead.ClientCod !== ""){
@@ -75,6 +81,22 @@ export class ListsaleComponent implements OnInit,ActionTableService<SaleHeadEnti
         { Name :  "Monto total" , key : "NumTotalPrice", IsMoney : true } ,
         { Name :  "Vendedor" , key : "CreationUser"} ,
         { Name :  "Fecha de venta", key : "CreationDate" , IsDate : true },
+        {
+          Name: "Facturación",
+          key: "HasFiscalDocument",
+          FunctionKey: viewFiscalStatus,
+          IsStatus: true,
+          Html: {
+            S: 'badge badge-sm bgc-success-d1 text-white pb-1 px-25',
+            N: 'badge badge-sm bgc-warning-d1 text-white pb-1 px-25',
+            X: 'badge badge-sm bgc-secondary text-white pb-1 px-25'
+          },
+          Mask: {
+            S: 'Boleta/Factura emitida',
+            N: 'Pendiente de facturar',
+            X: 'No aplica'
+          }
+        },
         { Name :  "Estado" , 
           key : "SaleStatus" , 
           IsStatus : true,
@@ -95,6 +117,7 @@ export class ListsaleComponent implements OnInit,ActionTableService<SaleHeadEnti
           Options : [
             { Type : "Url" , Name : "fa fa-check" , Title: "Procesar venta pendiente", Url : "/enterprise/sale/pages/createsale?SaleCod={SaleCod}", Function :showConfirmSale  },
             { Type : "Modal" , Name : "fa fa-ban" , Title: "Anular venta pendiente", Url : "#", ID: "modal_cancel_pending_sale", Function: showConfirmSale },
+            { Type : "Url" , Name : "fa fa-file-invoice" , Title: "Emitir boleta o factura", Url : "/enterprise/sale/pages/createsaledocument?SaleCod={SaleCod}", Function :showIssueFiscalDocument  },
             { Type : "Url" , Name : "fa fa-search" , Title: "Ver venta confirmada", Url : "/enterprise/sale/pages/viewsale?SaleCod={SaleCod}", Function :showViewSale  }
           ] 
         }

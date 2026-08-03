@@ -91,6 +91,11 @@ public class CreditNoteCreateService extends SessionService {
         this.validateCreditNoteRegisterDto(creditNoteRegister);
 
         SaleHeadEntity saleHead = this.saleHeadRepository.findById(creditNoteRegister.Headboard.SaleCod).get();
+        if (this.saleDocumentRepository.findFiscalBySaleCod(saleHead.SaleCod) == null) {
+            throw new SaleException(
+                    "La venta no tiene una boleta o factura que pueda originar una nota de credito"
+            );
+        }
 
         int itemNumber = 1;
         List<SaleDetEntity> saleDetList = this.saleDetRepository.findBySaleCod(creditNoteRegister.Headboard.SaleCod);
@@ -195,7 +200,12 @@ public class CreditNoteCreateService extends SessionService {
         CreditNoteDocumentEntity creditNoteDocument = this.creditNoteDocumentRepository.findByCreditNoteCod(creditNoteHead.CreditNoteCod);
 
         if (creditNoteDocument == null) {
-            SaleDocumentEntity saleDocument = this.saleDocumentRepository.findBySaleCod(creditNoteHead.SaleCod);
+            SaleDocumentEntity saleDocument = this.saleDocumentRepository.findFiscalBySaleCod(creditNoteHead.SaleCod);
+            if (saleDocument == null) {
+                throw new SaleException(
+                        "La venta no tiene una boleta o factura que pueda originar una nota de credito"
+                );
+            }
             String GroupDocument = (saleDocument.DocumentCod.startsWith("B")) ? "B" : "F";
             creditNoteDocument = this.counterfoilShared.generateDocumentCreditNote(getStoreCod(),"07",creditNoteHead.CreditNoteCod,GroupDocument);
             log.info("DOCUMENTO_NOTA_CREDITO -->> {}",creditNoteDocument.DocumentCod);

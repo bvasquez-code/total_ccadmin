@@ -19,6 +19,7 @@ export class SidebarMenuConfigService {
                 { permission: "VT000002", label: "Anular pagos de preventa", url: "enterprise/sale/pages/cancelpresalepayments", urlShade: "enterprise/sale/pages/listpresale", isVisible: false },
                 { permission: "VT000005", label: "Proceso de facturacion de venta", url: "enterprise/sale/pages/createsale", urlShade: "enterprise/sale/pages/listsale", isVisible: false },
                 { permission: "VT000005", label: "Ver venta", url: "enterprise/sale/pages/viewsale", urlShade: "enterprise/sale/pages/listsale", isVisible: false },
+                { permission: "VT000005", label: "Facturar proforma", url: "enterprise/sale/pages/createsaledocument", urlShade: "enterprise/sale/pages/listsale", isVisible: false },
                 { permission: "VT000006", label: "Nota de credito", url: "enterprise/sale/pages/listcreditnote" },
                 { permission: "VT000007", label: "Crear nota de credito", url: "enterprise/sale/pages/createcreditnote", urlShade: "enterprise/sale/pages/listcreditnote", isVisible: false },
                 { permission: "VT000008", label: "Devolver stock de nota de credito", url: "enterprise/sale/pages/returnstockcreditnote", urlShade: "enterprise/sale/pages/listcreditnote", isVisible: false },

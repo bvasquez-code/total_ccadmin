@@ -8,18 +8,30 @@ public class SaleSunatEmissionTaskService implements IGenericTaskService {
 
     private final SaleSunatEmissionService saleSunatEmissionService;
     private final String saleCod;
+    private final String documentCod;
 
-    public SaleSunatEmissionTaskService(SaleSunatEmissionService saleSunatEmissionService, String saleCod) {
+    public SaleSunatEmissionTaskService(
+            SaleSunatEmissionService saleSunatEmissionService,
+            String saleCod,
+            String documentCod
+    ) {
         this.saleSunatEmissionService = saleSunatEmissionService;
         this.saleCod = saleCod;
+        this.documentCod = documentCod;
     }
 
     @Override
     public void execute() {
         try {
-            this.saleSunatEmissionService.emitSale(this.saleCod);
+            this.saleSunatEmissionService.emitSale(this.saleCod, this.documentCod);
         } catch (Exception ex) {
-            log.error("Error en emision SUNAT de venta {}: {}", this.saleCod, ex.getMessage(), ex);
+            log.error(
+                    "Error en emision SUNAT de venta {} documento {}: {}",
+                    this.saleCod,
+                    this.documentCod,
+                    ex.getMessage(),
+                    ex
+            );
         }
     }
 }

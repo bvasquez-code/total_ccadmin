@@ -2,6 +2,7 @@ package com.ccadmin.app.shared.shared;
 
 import java.util.List;
 
+import com.ccadmin.app.shared.model.constants.BusinessConfigConstants;
 import com.ccadmin.app.system.model.dto.IndicatorDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -30,5 +31,16 @@ public class CatalogSearchShared {
 
     public IndicatorDto findIndicator(String groupCod, String configCod){
         return this.catalogSearchService.findIndicator(groupCod,configCod);
+    }
+
+    public IndicatorDto findIndicatorSystem(String configCod){
+        return this.catalogSearchService.findIndicator(BusinessConfigConstants.GroupCod.SYSTEM_FUNCTIONALITY_ACTIVATOR,configCod);
+    }
+
+    public boolean isIndicatorSystemEnabled(String configCod) {
+        IndicatorDto indicator = this.findIndicatorSystem(configCod);
+        return indicator != null
+                && indicator.Value != null
+                && "S".equalsIgnoreCase(indicator.Value.trim());
     }
 }

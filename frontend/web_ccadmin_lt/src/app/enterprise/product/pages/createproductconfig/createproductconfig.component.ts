@@ -114,7 +114,7 @@ export class CreateproductconfigComponent implements OnInit {
       this.StoreList = rpt.DataAdditional.find(e => e.Name === "storeList")?.Data ?? [];
       this.TaxList = rpt.DataAdditional.find(e => e.Name === "taxList")?.Data ?? [];
       this.TaxAffectationList = rpt.DataAdditional.find(e => e.Name === "taxAffectationList")?.Data ?? [];
-      this.IndDetailedTaxIndicator = rpt.DataAdditional.find(e => e.Name === "indDetailedTaxIndicator")?.Data ?? new IndicatorDto();
+      this.IndDetailedTaxIndicator = rpt.DataAdditional.find(e => e.Name === "indDetailedTax")?.Data ?? new IndicatorDto();
       this.loadTaxConfig(rpt.DataAdditional.find(e => e.Name === "productTaxConfigList")?.Data ?? []);
       this.OneStoreSearchTerm = this.getStoreLabel(this.SelectedStore);
       this.Config.ProductCod = this.ProductCod;

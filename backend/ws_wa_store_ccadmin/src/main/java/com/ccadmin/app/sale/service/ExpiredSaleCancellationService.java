@@ -119,7 +119,7 @@ public class ExpiredSaleCancellationService extends SessionService {
         if (this.pendingPaymentAmount(saleCod).signum() > 0) {
             throw new SaleException("La venta pendiente tiene pagos y requiere gestion manual");
         }
-        if (this.saleDocumentRepository.findBySaleCod(saleCod) != null) {
+        if (!this.saleDocumentRepository.findBySaleCod(saleCod).isEmpty()) {
             throw new SaleException("La venta ya tiene un documento y no puede cancelarse automaticamente");
         }
         if (saleHead.PresaleCod == null || saleHead.PresaleCod.isBlank()) {
@@ -158,7 +158,7 @@ public class ExpiredSaleCancellationService extends SessionService {
         if (!SaleConstants.PENDING.equals(saleHead.SaleStatus)) {
             throw new SaleException("La venta asociada ya no se encuentra pendiente");
         }
-        if (this.saleDocumentRepository.findBySaleCod(saleHead.SaleCod) != null) {
+        if (!this.saleDocumentRepository.findBySaleCod(saleHead.SaleCod).isEmpty()) {
             throw new SaleException("La venta ya tiene un documento y no puede anularse");
         }
         if (this.pendingPaymentAmount(saleHead.SaleCod).signum() > 0) {
