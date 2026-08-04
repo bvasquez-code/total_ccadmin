@@ -16,6 +16,7 @@ public final class BusinessConfigConstants {
         public static final String IND_PROFORMA_SALES = "IND_PROFORMA_SALES";
         public static final String IND_ADVANCE_PAYMENT = "IND_ADVANCE_PAYMENT";
         public static final String IND_MANUAL_DISCOUNT = "IND_MANUAL_DISCOUNT";
+        public static final String IND_MANDATORY_PICKING = "IND_MANDATORY_PICKING";
         public static final String IND_CANCEL_PENDING_AUTOMATIC_SALE = "IND_CANCEL_PENDING_AUTOMATIC_SALE";
         public static final String CANCEL_PENDING_AUTOMATIC_SALE_TIME = "CANCEL_PENDING_AUTOMATIC_SALE_TIME";
         public static final String SALE_PENDING_EXPIRATION = "SALE_PENDING_EXPIRATION";

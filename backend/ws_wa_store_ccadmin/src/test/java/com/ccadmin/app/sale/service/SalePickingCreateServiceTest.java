@@ -14,6 +14,8 @@ import com.ccadmin.app.sale.repository.SaleDetRepository;
 import com.ccadmin.app.sale.repository.SaleDetTaxRepository;
 import com.ccadmin.app.sale.repository.SaleDetWarehouseRepository;
 import com.ccadmin.app.sale.repository.SaleHeadRepository;
+import com.ccadmin.app.shared.model.constants.BusinessConfigConstants;
+import com.ccadmin.app.shared.shared.CatalogSearchShared;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -51,6 +53,8 @@ class SalePickingCreateServiceTest {
     private SaleSearchService saleSearchService;
     @Mock
     private ProductOperationConfigShared productOperationConfigShared;
+    @Mock
+    private CatalogSearchShared catalogSearchShared;
     @Spy
     private SaleTaxCalculationService saleTaxCalculationService = new SaleTaxCalculationService();
     @InjectMocks
@@ -208,6 +212,81 @@ class SalePickingCreateServiceTest {
         verify(saleDetWarehouseRepository).saveAll(allocationCaptor.capture());
         assertNull(allocationCaptor.getValue().get(0).LotNumber);
         assertNull(allocationCaptor.getValue().get(0).ExpirationDate);
+    }
+
+    @Test
+    void confirmsOnlyPickedProductsWhenFullPickingIsNotMandatory() throws Exception {
+        SaleHeadEntity saleHead = pendingSale();
+        SaleDetEntity pickedDetail = saleDetail(1, "P001", 10);
+        SaleDetEntity unpickedDetail = saleDetail(2, "P002", 3);
+        SalePickingConfirmDto request = request(
+                line(1, 4, "L-01"),
+                line(1, 6, "L-02")
+        );
+
+        when(catalogSearchShared.isIndicatorSystemEnabled(
+                BusinessConfigConstants.ConfigCod.IND_MANDATORY_PICKING
+        )).thenReturn(false);
+        when(saleHeadRepository.findByIdForUpdate(saleHead.SaleCod)).thenReturn(Optional.of(saleHead));
+        when(saleDetRepository.findBySaleCod(saleHead.SaleCod))
+                .thenReturn(List.of(pickedDetail, unpickedDetail));
+        when(saleDetTaxRepository.findBySaleCod(saleHead.SaleCod)).thenReturn(List.of());
+        when(saleDetWarehouseRepository.findBySaleCodForUpdate(saleHead.SaleCod))
+                .thenReturn(List.of(
+                        currentWarehouse(1, "P001", 10),
+                        currentWarehouse(2, "P002", 3)
+                ));
+        when(saleSearchService.findById(saleHead.SaleCod)).thenReturn(new SaleDetailDto());
+
+        salePickingCreateService.confirm(request);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<SaleDetEntity>> detailCaptor = ArgumentCaptor.forClass(List.class);
+        verify(saleDetRepository).saveAll(detailCaptor.capture());
+        List<SaleDetEntity> detailList = detailCaptor.getValue();
+        assertEquals(3, detailList.size());
+        assertEquals("P001", detailList.get(0).ProductCod);
+        assertEquals("P001", detailList.get(1).ProductCod);
+        assertEquals("P002", detailList.get(2).ProductCod);
+        assertEquals(3, detailList.get(2).ItemNumber);
+        assertEquals(3, detailList.get(2).NumUnit);
+        assertNull(detailList.get(2).LotNumber);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<SaleDetWarehouseEntity>> warehouseCaptor = ArgumentCaptor.forClass(List.class);
+        verify(saleDetWarehouseRepository).saveAll(warehouseCaptor.capture());
+        assertEquals(3, warehouseCaptor.getValue().size());
+        assertEquals("P002", warehouseCaptor.getValue().get(2).ProductCod);
+        assertEquals(3, warehouseCaptor.getValue().get(2).ItemNumber);
+        assertEquals(3, warehouseCaptor.getValue().get(2).NumUnit);
+    }
+
+    @Test
+    void rejectsPartialPickingWhenFullPickingIsMandatory() {
+        SaleHeadEntity saleHead = pendingSale();
+        SaleDetEntity firstDetail = saleDetail(1, "P001", 10);
+        SaleDetEntity secondDetail = saleDetail(2, "P002", 3);
+
+        when(catalogSearchShared.isIndicatorSystemEnabled(
+                BusinessConfigConstants.ConfigCod.IND_MANDATORY_PICKING
+        )).thenReturn(true);
+        when(saleHeadRepository.findByIdForUpdate(saleHead.SaleCod)).thenReturn(Optional.of(saleHead));
+        when(saleDetRepository.findBySaleCod(saleHead.SaleCod))
+                .thenReturn(List.of(firstDetail, secondDetail));
+        when(saleDetTaxRepository.findBySaleCod(saleHead.SaleCod)).thenReturn(List.of());
+        when(saleDetWarehouseRepository.findBySaleCodForUpdate(saleHead.SaleCod))
+                .thenReturn(List.of(
+                        currentWarehouse(1, "P001", 10),
+                        currentWarehouse(2, "P002", 3)
+                ));
+
+        SaleException exception = assertThrows(
+                SaleException.class,
+                () -> salePickingCreateService.confirm(request(line(1, 10, "L-01")))
+        );
+
+        assertEquals("Falta pickear el item 2", exception.getMessage());
+        verify(saleDetRepository, never()).saveAll(anyList());
     }
 
     @Test

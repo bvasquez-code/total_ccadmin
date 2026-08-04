@@ -16,7 +16,9 @@ import com.ccadmin.app.sale.repository.SaleDetRepository;
 import com.ccadmin.app.sale.repository.SaleDetTaxRepository;
 import com.ccadmin.app.sale.repository.SaleDetWarehouseRepository;
 import com.ccadmin.app.sale.repository.SaleHeadRepository;
+import com.ccadmin.app.shared.model.constants.BusinessConfigConstants;
 import com.ccadmin.app.shared.service.SessionService;
+import com.ccadmin.app.shared.shared.CatalogSearchShared;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -52,6 +54,8 @@ public class SalePickingCreateService extends SessionService {
     private SaleTaxCalculationService saleTaxCalculationService;
     @Autowired
     private ProductOperationConfigShared productOperationConfigShared;
+    @Autowired
+    private CatalogSearchShared catalogSearchShared;
 
     @Transactional(rollbackOn = Exception.class)
     public SaleDetailDto confirm(SalePickingConfirmDto request) throws SaleException {
@@ -70,8 +74,11 @@ public class SalePickingCreateService extends SessionService {
         List<SaleDetTaxEntity> saleDetailTaxList = this.saleDetTaxRepository.findBySaleCod(request.SaleCod);
         List<SaleDetWarehouseEntity> currentWarehouseList =
                 this.saleDetWarehouseRepository.findBySaleCodForUpdate(request.SaleCod);
+        boolean mandatoryPicking = this.catalogSearchShared.isIndicatorSystemEnabled(
+                BusinessConfigConstants.ConfigCod.IND_MANDATORY_PICKING
+        );
         PickingResult pickingResult = this.buildPickingResult(
-                request, saleDetailList, saleDetailTaxList, currentWarehouseList
+                request, saleDetailList, saleDetailTaxList, currentWarehouseList, mandatoryPicking
         );
 
         this.saleDetTaxRepository.deleteBySaleCodNative(saleHead.SaleCod);
@@ -93,7 +100,7 @@ public class SalePickingCreateService extends SessionService {
             throw new SaleException("El codigo de venta es obligatorio para confirmar el pickeo");
         }
         if (request.DetailList == null || request.DetailList.isEmpty()) {
-            throw new SaleException("Debe ingresar el pickeo de todos los productos");
+            throw new SaleException("Debe ingresar el pickeo de al menos un producto");
         }
     }
 
@@ -101,7 +108,8 @@ public class SalePickingCreateService extends SessionService {
             SalePickingConfirmDto request,
             List<SaleDetEntity> saleDetailList,
             List<SaleDetTaxEntity> saleDetailTaxList,
-            List<SaleDetWarehouseEntity> currentWarehouseList
+            List<SaleDetWarehouseEntity> currentWarehouseList,
+            boolean mandatoryPicking
     ) throws SaleException {
         if (saleDetailList.isEmpty()) {
             throw new SaleException("La venta no tiene productos para pickear");
@@ -136,7 +144,37 @@ public class SalePickingCreateService extends SessionService {
         for (SaleDetEntity saleDetail : orderedSaleDetailList) {
             List<SalePickingLineDto> pickingLineList = requestedByItem.get(saleDetail.ItemNumber);
             if (pickingLineList == null || pickingLineList.isEmpty()) {
-                throw new SaleException("Falta pickear el item " + saleDetail.ItemNumber);
+                if (mandatoryPicking) {
+                    throw new SaleException("Falta pickear el item " + saleDetail.ItemNumber);
+                }
+
+                int preservedItemNumber = nextItemNumber++;
+                SaleTaxCalculationResultDto preservedResult =
+                        this.saleTaxCalculationService.renumberExistingSaleDetail(
+                                saleDetail,
+                                taxByItem.getOrDefault(saleDetail.ItemNumber, List.of()),
+                                preservedItemNumber,
+                                getUserCod()
+                        );
+                pickedDetailList.addAll(preservedResult.DetailList);
+                pickedTaxList.addAll(preservedResult.TaxDetailList);
+
+                List<SaleDetWarehouseEntity> currentItemWarehouseList =
+                        currentByItem.getOrDefault(saleDetail.ItemNumber, List.of());
+                if (currentItemWarehouseList.size() != 1) {
+                    throw new SaleException(
+                            "El item " + saleDetail.ItemNumber + " no tiene una asignacion unica de almacen"
+                    );
+                }
+                SaleDetWarehouseEntity currentWarehouse = currentItemWarehouseList.get(0);
+                SaleDetWarehouseEntity preservedWarehouse =
+                        this.copyWarehouse(currentWarehouse, preservedItemNumber);
+                preservedWarehouse.NumUnit = currentWarehouse.NumUnit;
+                preservedWarehouse.LotNumber = currentWarehouse.LotNumber;
+                preservedWarehouse.ExpirationDate = currentWarehouse.ExpirationDate;
+                preservedWarehouse.session(getUserCod()).validate();
+                pickedWarehouseList.add(preservedWarehouse);
+                continue;
             }
 
             List<SaleDetWarehouseEntity> currentItemWarehouseList = currentByItem.get(saleDetail.ItemNumber);

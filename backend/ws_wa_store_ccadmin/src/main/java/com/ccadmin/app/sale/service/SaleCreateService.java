@@ -12,9 +12,11 @@ import com.ccadmin.app.sale.model.dto.SaleDetailDto;
 import com.ccadmin.app.sale.model.dto.SaleTaxCalculationResultDto;
 import com.ccadmin.app.sale.model.entity.*;
 import com.ccadmin.app.sale.repository.*;
+import com.ccadmin.app.shared.model.constants.BusinessConfigConstants;
 import com.ccadmin.app.shared.model.myconst.StatusConst;
 import com.ccadmin.app.shared.service.GenericQueuedService;
 import com.ccadmin.app.shared.service.SessionService;
+import com.ccadmin.app.shared.shared.CatalogSearchShared;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -55,6 +57,8 @@ public class SaleCreateService extends SessionService {
     private SaleTaxCalculationService saleTaxCalculationService;
     @Autowired
     private SaleDocumentCreateService saleDocumentCreateService;
+    @Autowired
+    private CatalogSearchShared catalogSearchShared;
 
     @Transactional
     public SaleDetailDto save(PresaleDetailDto presaleDetail) throws SaleException, SaleBuildException {
@@ -185,6 +189,11 @@ public class SaleCreateService extends SessionService {
 
         if(!SaleConstants.PENDING.equals(saleHead.SaleStatus)){
             throw new SaleException("La venta ya no se encuentra pendiente");
+        }
+        if (this.catalogSearchShared.isIndicatorSystemEnabled(
+                BusinessConfigConstants.ConfigCod.IND_MANDATORY_PICKING
+        ) && !"S".equals(saleHead.IsPickingConfirmed)) {
+            throw new SaleException("Debe confirmar el pickeo de todos los productos antes de confirmar la venta");
         }
         if(saleDetWarehouseList.isEmpty()){
             throw new SaleException("La venta no tiene stock asignado por almacen");

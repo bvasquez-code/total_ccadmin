@@ -39,6 +39,7 @@ export class CreatesaleComponent implements OnInit {
   PaymentMethodList: PaymentMethodEntity[] = [];
   IndProformaSales: IndicatorDto = new IndicatorDto();
   IndAdvancePayment: IndicatorDto = new IndicatorDto();
+  IndMandatoryPicking: IndicatorDto = new IndicatorDto();
   TrxPaymentList: TrxPaymentEntity[] = [];
   ItemCount: number = 0;
   SaleDetailPrintData: ResponseWsDto = new ResponseWsDto();
@@ -84,6 +85,7 @@ export class CreatesaleComponent implements OnInit {
       this.PaymentMethodList = rpt.DataAdditional.find(e => e.Name == "PaymentMethodList")?.Data ?? [];
       this.IndProformaSales = rpt.DataAdditional.find(e => e.Name === "IndProformaSales")?.Data ?? new IndicatorDto();
       this.IndAdvancePayment = rpt.DataAdditional.find(e => e.Name === "IndAdvancePayment")?.Data ?? new IndicatorDto();
+      this.IndMandatoryPicking = rpt.DataAdditional.find(e => e.Name === "IndMandatoryPicking")?.Data ?? new IndicatorDto();
 
       if (!this.isProformaSalesEnabled && this.SelectedPaymentOption === "99") {
         this.SelectedPaymentOption = "";
@@ -392,6 +394,11 @@ export class CreatesaleComponent implements OnInit {
       && (this.IndAdvancePayment?.Value || "N").trim().toUpperCase() === "S";
   }
 
+  get isMandatoryPickingEnabled(): boolean {
+    return this.IndMandatoryPicking?.Indicator === "IND_MANDATORY_PICKING"
+      && (this.IndMandatoryPicking?.Value || "N").trim().toUpperCase() === "S";
+  }
+
   hasRegisteredPayment(): boolean {
     return this.getTotalPaid() > 0;
   }
@@ -644,8 +651,11 @@ export class CreatesaleComponent implements OnInit {
 
   async confirmAllPicking(): Promise<void> {
     if (this.IsConfirmingPicking || this.isPickingConfirmed()) return;
-    if (!this.isCompletePickingDraft()) {
-      this.toastrService.error("Debe pickear la cantidad exacta de todos los productos.");
+    if (!this.canConfirmPickingDraft()) {
+      const message = this.isMandatoryPickingEnabled
+        ? "Debe pickear la cantidad exacta de todos los productos."
+        : "Debe completar el pickeo de al menos un producto.";
+      this.toastrService.error(message);
       return;
     }
 
@@ -708,9 +718,16 @@ export class CreatesaleComponent implements OnInit {
       && lineList.reduce((sum, line) => sum + Number(line.NumUnit || 0), 0) === Number(item.NumUnit || 0);
   }
 
-  isCompletePickingDraft(): boolean {
-    return this.SaleDetail.DetailList.length > 0
-      && this.SaleDetail.DetailList.every(item => this.isProductPickingComplete(item));
+  canConfirmPickingDraft(): boolean {
+    const startedProductList = this.SaleDetail.DetailList.filter(item =>
+      (this.PickingDraftByItem[item.ItemNumber] ?? []).length > 0
+    );
+    if (startedProductList.length === 0
+      || startedProductList.some(item => !this.isProductPickingComplete(item))) {
+      return false;
+    }
+    return !this.isMandatoryPickingEnabled
+      || this.SaleDetail.DetailList.every(item => this.isProductPickingComplete(item));
   }
 
   isPickingConfirmed(): boolean {
@@ -718,12 +735,16 @@ export class CreatesaleComponent implements OnInit {
   }
 
   isPickingDraftBlocked(): boolean {
-    return this.IsPickingDraftStarted && !this.isPickingConfirmed();
+    return !this.isPickingConfirmed()
+      && (this.IsPickingDraftStarted || this.isMandatoryPickingEnabled);
   }
 
   ensurePickingAllowsOtherActions(): boolean {
     if (!this.isPickingDraftBlocked()) return true;
-    this.toastrService.warning("Debe confirmar todo el pickeo antes de realizar otra operacion.");
+    const message = this.isMandatoryPickingEnabled
+      ? "Debe completar y confirmar el pickeo de todos los productos antes de realizar otra operacion."
+      : "Debe confirmar el pickeo iniciado antes de realizar otra operacion.";
+    this.toastrService.warning(message);
     return false;
   }
 
@@ -750,14 +771,22 @@ export class CreatesaleComponent implements OnInit {
   }
 
   private saveCurrentPickingDraft(): void {
-    this.PickingDraftByItem[this.SelectedPickingDetail.ItemNumber] =
-      this.PickingLineList.map(line => ({ ...line } as SalePickingLineDto));
-    this.IsPickingDraftStarted = true;
+    if (this.PickingLineList.length > 0) {
+      this.PickingDraftByItem[this.SelectedPickingDetail.ItemNumber] =
+        this.PickingLineList.map(line => ({ ...line } as SalePickingLineDto));
+    } else {
+      delete this.PickingDraftByItem[this.SelectedPickingDetail.ItemNumber];
+    }
+    this.IsPickingDraftStarted = Object.keys(this.PickingDraftByItem).length > 0;
     this.persistPickingDraft();
     this.refreshPaymentAvailability();
   }
 
   private persistPickingDraft(): void {
+    if (Object.keys(this.PickingDraftByItem).length === 0) {
+      sessionStorage.removeItem(this.getPickingStorageKey());
+      return;
+    }
     sessionStorage.setItem(this.getPickingStorageKey(), JSON.stringify(this.PickingDraftByItem));
   }
 

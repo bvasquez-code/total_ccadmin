@@ -134,6 +134,42 @@ public class SaleTaxCalculationService {
         return result;
     }
 
+    public SaleTaxCalculationResultDto renumberExistingSaleDetail(
+            SaleDetEntity originDetail,
+            List<SaleDetTaxEntity> originTaxList,
+            int itemNumber,
+            String userCod
+    ) {
+        if (originDetail == null || itemNumber <= 0) {
+            throw new SaleBuildException("El detalle de venta que se conservara no es valido");
+        }
+
+        SaleDetEntity detail = this.copySaleDetail(originDetail, itemNumber);
+        detail.NumUnit = originDetail.NumUnit;
+        detail.NumTotalPrice = originDetail.NumTotalPrice;
+        detail.NumPriceSubTotal = originDetail.NumPriceSubTotal;
+        detail.NumTotalTax = originDetail.NumTotalTax;
+        detail.LotNumber = originDetail.LotNumber;
+        detail.ExpirationDate = originDetail.ExpirationDate;
+        detail.session(userCod).validate();
+
+        List<SaleDetTaxEntity> taxList = (originTaxList == null ? List.<SaleDetTaxEntity>of() : originTaxList)
+                .stream()
+                .map(originTax -> {
+                    SaleDetTaxEntity tax = this.copySaleDetailTax(originTax, itemNumber);
+                    tax.TaxBaseAmount = originTax.TaxBaseAmount;
+                    tax.TaxQuantity = originTax.TaxQuantity;
+                    tax.TaxAmount = originTax.TaxAmount;
+                    return tax.session(userCod).validate();
+                })
+                .toList();
+
+        SaleTaxCalculationResultDto result = new SaleTaxCalculationResultDto();
+        result.addLine(detail, taxList);
+        result.recalculateTotals();
+        return result;
+    }
+
     public CreditNoteTaxCalculationResultDto buildCreditNoteTaxResult(
             String creditNoteCod,
             CreditNoteDetEntity creditNoteDetail,

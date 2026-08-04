@@ -91,6 +91,10 @@ public class SaleSearchService extends SessionService {
                 "IndAdvancePayment",
                 this.catalogSearchShared.findIndicatorSystem(BusinessConfigConstants.ConfigCod.IND_ADVANCE_PAYMENT)
         );
+        rpt.AddResponseAdditional(
+                "IndMandatoryPicking",
+                this.catalogSearchShared.findIndicatorSystem(BusinessConfigConstants.ConfigCod.IND_MANDATORY_PICKING)
+        );
 
         return rpt;
     }

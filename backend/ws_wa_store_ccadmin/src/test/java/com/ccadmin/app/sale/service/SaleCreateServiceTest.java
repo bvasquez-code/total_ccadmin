@@ -9,9 +9,12 @@ import com.ccadmin.app.sale.model.dto.SaleDetailDto;
 import com.ccadmin.app.sale.model.entity.SaleDetWarehouseEntity;
 import com.ccadmin.app.sale.model.entity.SaleDocumentEntity;
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
+import com.ccadmin.app.sale.exception.SaleException;
 import com.ccadmin.app.sale.repository.SaleDetWarehouseRepository;
 import com.ccadmin.app.sale.repository.SaleHeadRepository;
+import com.ccadmin.app.shared.model.constants.BusinessConfigConstants;
 import com.ccadmin.app.shared.service.GenericQueuedService;
+import com.ccadmin.app.shared.shared.CatalogSearchShared;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,6 +25,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -44,6 +48,8 @@ class SaleCreateServiceTest {
     private KardexShared kardexShared;
     @Mock
     private SaleDocumentCreateService saleDocumentCreateService;
+    @Mock
+    private CatalogSearchShared catalogSearchShared;
     @InjectMocks
     private SaleCreateService saleCreateService;
 
@@ -100,6 +106,31 @@ class SaleCreateServiceTest {
         saleCreateService.confirm(saleHead.SaleCod, SaleConstants.DOCUMENT_TYPE_INVOICE, "");
 
         verify(saleDocumentCreateService).emitSunatAfterCommit(saleHead.SaleCod, invoice.DocumentCod);
+    }
+
+    @Test
+    void rejectsSaleConfirmationWhenPickingIsMandatoryAndNotConfirmed() throws Exception {
+        SaleHeadEntity saleHead = pendingSale();
+        saleHead.IsPickingConfirmed = "N";
+
+        when(saleHeadRepository.findByIdForUpdate(saleHead.SaleCod)).thenReturn(Optional.of(saleHead));
+        when(saleDetWarehouseRepository.findBySaleCod(saleHead.SaleCod))
+                .thenReturn(List.of(new SaleDetWarehouseEntity()));
+        when(catalogSearchShared.isIndicatorSystemEnabled(
+                BusinessConfigConstants.ConfigCod.IND_MANDATORY_PICKING
+        )).thenReturn(true);
+
+        SaleException exception = assertThrows(
+                SaleException.class,
+                () -> saleCreateService.confirm(saleHead.SaleCod, SaleConstants.DOCUMENT_TYPE_INVOICE, "")
+        );
+
+        assertEquals(
+                "Debe confirmar el pickeo de todos los productos antes de confirmar la venta",
+                exception.getMessage()
+        );
+        verify(kardexShared, never()).buildSaleConfirmation(any(), any(), any());
+        verify(saleDocumentCreateService, never()).createDocument(any(), any());
     }
 
     private SaleHeadEntity pendingSale() {

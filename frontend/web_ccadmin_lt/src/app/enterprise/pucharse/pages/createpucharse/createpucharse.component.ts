@@ -298,8 +298,8 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
     if(this.productSelectInfo){
       if ((this.productSelectInfo.Config?.IsDigital || "N").trim().toUpperCase() === "S") {
         this.productSelect = new ProductEntity();
+        this.productSelectInfo = new ProductInfoDto();
         this.toastrService.warning("Los productos digitales no pueden utilizarse en compras.");
-        setTimeout(() => (window as any).$('#modalProduct').modal('hide'));
         return;
       }
 
@@ -312,6 +312,7 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
         this.txtNumUnitPrice.nativeElement.value = String(this.toVisibleUnitPrice(existing.NumUnitPrice, existing.ProductUnitFactor));
       }
 
+      this.openProductModal();
     }
 
   }
@@ -325,6 +326,11 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
     this.productSelectInfo.Config.ProductUnitFactor = detail.ProductUnitFactor > 0 ? detail.ProductUnitFactor : 1;
     this.txtNumUnit.nativeElement.value = String(this.toVisibleQuantity(detail.NumUnit, detail.ProductUnitFactor));
     this.txtNumUnitPrice.nativeElement.value = String(this.toVisibleUnitPrice(detail.NumUnitPrice, detail.ProductUnitFactor));
+    this.openProductModal();
+  }
+
+  private openProductModal(): void {
+    (window as any).$('#modalProduct').modal('show');
   }
 
   async removeProduct(detail: PucharseRequestDetEntity) {

@@ -85,8 +85,7 @@
                           </div>
                         </td>
                         <td class="text-center">
-                          <a class="btn btn-sm btn-outline-primary" (click)="selectProduct(product)" data-toggle="modal"
-                            data-target="#modalProduct">
+                          <a class="btn btn-sm btn-outline-primary" (click)="selectProduct(product)">
                             Elegir
                           </a>
                         </td>
@@ -123,8 +122,7 @@
                         <td class="text-right">{{ toVisibleUnitPrice(detail.NumUnitPrice, detail.ProductUnitFactor) | FormatoMonedaPeruana : false }}</td>
                         <td class="text-right">{{ detail.NumTotalPrice | FormatoMonedaPeruana : false }}</td>
                         <td class="text-center">
-                          <button class="btn btn-sm btn-info mr-1" (click)="editDetail(detail)" data-toggle="modal"
-                            data-target="#modalProduct">
+                          <button class="btn btn-sm btn-info mr-1" (click)="editDetail(detail)">
                             <i class="fa fa-edit"></i>
                           </button>
                           <button class="btn btn-sm btn-danger" (click)="removeProduct(detail)" [disabled]="isSavingDetail">

@@ -160,7 +160,7 @@
                             {{ isPickingConfirmed() ? 'Ver pickeo' : (isProductPickingComplete(item) ? 'Editar pickeo' : 'Pickear') }}
                           </button>
                           <span class="ml-2 text-85" [ngClass]="isProductPickingComplete(item) ? 'text-success' : 'text-grey'"
-                            *ngIf="IsPickingDraftStarted || isPickingConfirmed()">
+                            *ngIf="IsPickingDraftStarted || isPickingConfirmed() || isMandatoryPickingEnabled">
                             {{ getPickedQuantityVisible(item) }} / {{ getVisibleQuantity(item.NumUnit, item.ProductUnitFactor) }}
                             {{ item.ProductUnitName }}
                           </span>
@@ -223,13 +223,18 @@
                     <div class="d-flex flex-wrap align-items-center justify-content-between">
                       <div class="mr-3 my-1">
                         <i class="fa fa-exclamation-triangle text-warning-d2 mr-2"></i>
-                        El pickeo está en edición. Complete todos los productos y confirme todo el pickeo antes de cambiar cliente, documento o pagos.
+                        <ng-container *ngIf="isMandatoryPickingEnabled; else optionalPickingMessage">
+                          El pickeo es obligatorio. Complete todos los productos y confirme el pickeo antes de continuar.
+                        </ng-container>
+                        <ng-template #optionalPickingMessage>
+                          El pickeo está en edición. Confirme los productos pickeados antes de cambiar cliente, documento o pagos.
+                        </ng-template>
                       </div>
                       <button type="button" class="btn btn-success btn-bold my-1"
-                        [disabled]="!isCompletePickingDraft() || IsConfirmingPicking"
+                        [disabled]="!canConfirmPickingDraft() || IsConfirmingPicking"
                         (click)="confirmAllPicking()">
                         <i class="fa fa-check mr-1"></i>
-                        {{ IsConfirmingPicking ? 'Confirmando...' : 'Confirmar todo el pickeo' }}
+                        {{ IsConfirmingPicking ? 'Confirmando...' : 'Confirmar pickeo' }}
                       </button>
                     </div>
                   </div>
