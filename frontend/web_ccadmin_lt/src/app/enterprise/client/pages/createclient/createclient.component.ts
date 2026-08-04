@@ -2,12 +2,11 @@ import { Component, ElementRef, EventEmitter, Input, Output, ViewChild, OnInit }
 import { ClientService } from '../../service/client.service';
 import { ClientEntity } from '../../model/entity/ClientEntity';
 import { ResponseWsDto } from '../../../shared/model/dto/ResponseWsDto';
-import { NonNullableFormBuilder } from '@angular/forms';
 import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { ValidationHelper } from 'src/app/enterprise/shared/helper/ValidationHelper';
-import { PersonService } from 'src/app/enterprise/person/service/person.service';
 import { PersonEntity } from 'src/app/enterprise/person/model/entity/PersonEntity';
+import { PersonIdentityLookupService } from 'src/app/enterprise/person/service/person-identity-lookup.service';
 
 @Component({
   selector: 'app-createclient',
@@ -35,12 +34,14 @@ export class CreateclientComponent implements OnInit{
   Client : ClientEntity = new ClientEntity();
   IsLegalPerson: boolean = false;
   IsEdit: boolean = false;
+  IsDocumentLocked: boolean = false;
+  IsSearchingIdentity: boolean = false;
   ExistingRegisterMessage: string = "";
   ExistingRegisterUrl: string = "";
 
   public constructor(
     private clientService : ClientService,
-    private personService : PersonService,
+    private personIdentityLookupService: PersonIdentityLookupService,
     private router: Router,
     private toastrService: ToastrService
   )
@@ -200,32 +201,62 @@ export class CreateclientComponent implements OnInit{
 
   async findPersonByDocumentNum()
   {
-    let DocumentType : string = "";
-    let DocumentNum : string = "";
-
-    if (this.IsEdit) return;
+    if (this.IsEdit || this.IsDocumentLocked || this.IsSearchingIdentity) return;
 
     this.clearExistingRegisterMessage();
 
-    DocumentType = this.cboDocumentType.nativeElement.value;
-    DocumentNum = this.txtDocumentNum.nativeElement.value;
+    const DocumentType = this.cboDocumentType.nativeElement.value;
+    const DocumentNum = this.txtDocumentNum.nativeElement.value.trim().toUpperCase();
+    this.txtDocumentNum.nativeElement.value = DocumentNum;
 
-    if( DocumentType === "01" && String(DocumentNum).length != 8 ) return;
-    if( DocumentType === "04" && String(DocumentNum).length < 9 ) return;
-    if( DocumentType === "06" && String(DocumentNum).length != 11 ) return;
+    if (!this.validateDocumentForSearch(DocumentType, DocumentNum)) return;
 
-    if (await this.validateExistingRegister(DocumentType, DocumentNum)) return;
+    this.IsSearchingIdentity = true;
+    try {
+      const identityResult = await this.personIdentityLookupService.findByDocument(
+        DocumentType,
+        DocumentNum
+      );
 
-    const rpt : ResponseWsDto = await this.personService.findByDocumentNum(DocumentType,DocumentNum);
-
-    if( !rpt.ErrorStatus )
-    {
-      if(rpt.Data != NonNullableFormBuilder && rpt.Data) {
-        this.Client.Person = rpt.Data;
-        this.loadingPerson(this.Client.Person);
+      if (!identityResult.person) {
+        this.toastrService.info("No se encontraron datos para el documento ingresado.");
+        return;
       }
-    }
 
+      this.Client.Person = identityResult.person;
+      this.loadingPerson(this.Client.Person);
+      this.IsDocumentLocked = true;
+      this.toastrService.success(
+        identityResult.source === 'SUNAT'
+          ? "Datos obtenidos correctamente desde el servicio de identidad."
+          : "Datos encontrados en el sistema."
+      );
+    } catch (error: any) {
+      this.toastrService.error(error?.message || "No fue posible consultar el documento.");
+    } finally {
+      this.IsSearchingIdentity = false;
+    }
+  }
+
+  private validateDocumentForSearch(DocumentType: string, DocumentNum: string): boolean
+  {
+    if (!DocumentNum) {
+      this.toastrService.error("Debe ingresar un número de documento.");
+      return false;
+    }
+    if (DocumentType === "01" && DocumentNum.length !== 8) {
+      this.toastrService.error("El número de documento DNI debe tener 8 caracteres.");
+      return false;
+    }
+    if (DocumentType === "04" && DocumentNum.length < 9) {
+      this.toastrService.error("El carnet de extranjería debe tener como mínimo 9 caracteres.");
+      return false;
+    }
+    if (DocumentType === "06" && DocumentNum.length !== 11) {
+      this.toastrService.error("El número de RUC debe tener 11 caracteres.");
+      return false;
+    }
+    return true;
   }
 
   clearExistingRegisterMessage()

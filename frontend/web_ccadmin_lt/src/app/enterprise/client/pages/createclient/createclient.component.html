@@ -21,7 +21,7 @@
                         </div>
 
                         <div class="col-sm-9">
-                            <select class="form-control col-sm-8 col-md-6" #cboPersonType [disabled]="IsEdit || ExistingRegisterMessage" (change)="changePersonType()">
+                            <select class="form-control col-sm-8 col-md-6" #cboPersonType [disabled]="IsEdit || ExistingRegisterMessage || IsDocumentLocked" (change)="changePersonType()">
                                 <option value="01">NATURAL</option>
                                 <option value="04">JURIDICA</option>
                             </select>
@@ -36,7 +36,7 @@
                         </div>
 
                         <div class="col-sm-9">
-                            <select class="form-control col-sm-8 col-md-6" #cboDocumentType [disabled]="IsLegalPerson || IsEdit || ExistingRegisterMessage">
+                            <select class="form-control col-sm-8 col-md-6" #cboDocumentType [disabled]="IsLegalPerson || IsEdit || ExistingRegisterMessage || IsDocumentLocked">
                                 <option value="01">DNI</option>
                                 <option value="04" *ngIf="!IsLegalPerson">CARNET EXTRANJERIA</option>
                                 <option value="06" *ngIf="IsLegalPerson">RUC</option>
@@ -57,12 +57,12 @@
                                         class="form-control" 
                                         #txtDocumentNum
                                         maxlength="16"
-                                        [readonly]="IsEdit || ExistingRegisterMessage"
+                                        [readonly]="IsEdit || ExistingRegisterMessage || IsDocumentLocked"
                                         (input)="clearExistingRegisterMessage()"
                                 >
                                 <div class="input-group-append">
-                                    <button class="btn btn-primary" type="button" [disabled]="IsEdit || ExistingRegisterMessage" (click)="findPersonByDocumentNum()">
-                                        <i class="fa fa-search"></i>
+                                    <button class="btn btn-primary" type="button" [disabled]="IsEdit || ExistingRegisterMessage || IsDocumentLocked || IsSearchingIdentity" (click)="findPersonByDocumentNum()">
+                                        <i class="fa" [class.fa-search]="!IsSearchingIdentity" [class.fa-spinner]="IsSearchingIdentity" [class.fa-spin]="IsSearchingIdentity"></i>
                                     </button>
                                 </div>
                             </div>
