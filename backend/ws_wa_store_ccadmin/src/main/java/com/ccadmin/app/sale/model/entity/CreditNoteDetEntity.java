@@ -33,6 +33,7 @@ public class CreditNoteDetEntity extends AuditTableEntity implements Serializabl
     public BigDecimal NumTotalTax = BigDecimal.ZERO;
     public String ProductUnitName = "NIU";
     public int ProductUnitFactor = 1;
+    public String IsDigital = "N";
     public String IsAppliedTax;
     public String LotNumber;
     public Date ExpirationDate;

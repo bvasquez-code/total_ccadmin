@@ -30,6 +30,7 @@ CREATE TABLE `presale_det` (
   `NumTotalPrice` decimal(16,2) DEFAULT NULL COMMENT 'Precio Total',
   `ProductUnitName` varchar(32) NOT NULL DEFAULT 'NIU' COMMENT 'Unidad visible usada al registrar el detalle',
   `ProductUnitFactor` int NOT NULL DEFAULT '1' COMMENT 'Factor usado al registrar el detalle',
+  `IsDigital` char(1) NOT NULL DEFAULT 'N' COMMENT 'Estado digital del producto al registrar la preventa',
   `CreationUser` varchar(16) NOT NULL,
   `CreationDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `ModifyUser` varchar(16) DEFAULT NULL,
@@ -40,6 +41,7 @@ CREATE TABLE `presale_det` (
   PRIMARY KEY (`PresaleCod`,`ItemNumber`),
   KEY `idx_presale_det_old_pk` (`PresaleCod`,`ProductCod`,`Variant`),
   KEY `fk_presale_det_variant` (`ProductCod`,`Variant`),
+  CONSTRAINT `chk_presale_det_is_digital` CHECK (`IsDigital` IN ('S','N')),
   CONSTRAINT `fk_presale_det_presale_head` FOREIGN KEY (`PresaleCod`) REFERENCES `presale_head` (`PresaleCod`),
   CONSTRAINT `fk_presale_det_product` FOREIGN KEY (`ProductCod`) REFERENCES `product` (`ProductCod`),
   CONSTRAINT `fk_presale_det_variant` FOREIGN KEY (`ProductCod`, `Variant`) REFERENCES `product_variant` (`ProductCod`, `Variant`)
@@ -104,6 +106,24 @@ CREATE TABLE `presale_det` (
         ) THEN
             ALTER TABLE `presale_det` ADD COLUMN `ProductUnitFactor` int NOT NULL DEFAULT '1' COMMENT 'Factor usado al registrar el detalle' AFTER `ProductUnitName`;
             SELECT 'Columna ProductUnitFactor agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'presale_det'
+            AND column_name = 'IsDigital'
+        ) THEN
+            ALTER TABLE `presale_det` ADD COLUMN `IsDigital` char(1) NOT NULL DEFAULT 'N'
+            COMMENT 'Estado digital del producto al registrar la preventa' AFTER `ProductUnitFactor`;
+            SELECT 'Columna IsDigital agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.table_constraints WHERE table_schema = DATABASE() AND table_name = 'presale_det'
+            AND constraint_name = 'chk_presale_det_is_digital'
+        ) THEN
+            ALTER TABLE `presale_det` ADD CONSTRAINT `chk_presale_det_is_digital`
+            CHECK (`IsDigital` IN ('S','N'));
+            SELECT 'Check chk_presale_det_is_digital agregado exitosamente.' AS Mensaje;
         END IF;
 
         -- AGREGANDO COLUMNA ExpirationDate

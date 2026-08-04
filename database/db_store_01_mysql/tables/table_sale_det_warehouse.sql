@@ -277,14 +277,14 @@ CREATE TABLE `sale_det_warehouse` (
                 `SaleCod`, `ItemNumber`, `ProductCod`, `Variant`, `NumUnit`,
                 `NumUnitPrice`, `NumDiscount`, `NumUnitPriceSale`, `NumTotalPrice`,
                 `NumPriceSubTotal`, `NumTotalTax`, `ProductUnitName`, `ProductUnitFactor`,
-                `IsAppliedTax`, `CreationUser`, `CreationDate`, `ModifyUser`, `ModifyDate`,
+                `IsDigital`, `IsAppliedTax`, `CreationUser`, `CreationDate`, `ModifyUser`, `ModifyDate`,
                 `Status`, `LotNumber`, `ExpirationDate`
             )
             SELECT detail.SaleCod, detail.NewItemNumber, source.`ProductCod`, source.`Variant`,
                    detail.NumUnit, source.`NumUnitPrice`, detail.NewDiscount,
                    source.`NumUnitPriceSale`, detail.NewTotalPrice, detail.NewSubtotal,
                    detail.NewTax, source.`ProductUnitName`, source.`ProductUnitFactor`,
-                   source.`IsAppliedTax`, source.`CreationUser`, source.`CreationDate`,
+                   source.`IsDigital`, source.`IsAppliedTax`, source.`CreationUser`, source.`CreationDate`,
                    source.`ModifyUser`, source.`ModifyDate`, source.`Status`,
                    detail.LotNumber, detail.ExpirationDate
             FROM `tmp_sale_picking_detail` detail

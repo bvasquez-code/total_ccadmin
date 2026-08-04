@@ -32,6 +32,18 @@ public interface ProductInfoRepository extends JpaRepository<ProductInfoEntity, 
     public List<ProductInfoEntity> findInfoStore(String ProductCod, String StoreCod);
 
     @Query(value = """
+            SELECT *
+            FROM product_info
+            WHERE ProductCod = :ProductCod
+              AND StoreCod = :StoreCod
+            FOR UPDATE
+            """, nativeQuery = true)
+    List<ProductInfoEntity> findInfoStoreForUpdate(
+            @Param("ProductCod") String productCod,
+            @Param("StoreCod") String storeCod
+    );
+
+    @Query(value = """
             SELECT COUNT(1)
             FROM product_info product_info
             INNER JOIN product product

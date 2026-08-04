@@ -116,6 +116,7 @@ public class CreditNoteCreateService extends SessionService {
                     .orElseThrow(() -> new SaleException(" producto no existe en la compra de origen  "+ product.ProductCod));
             product.ProductUnitName = originDetail.ProductUnitName;
             product.ProductUnitFactor = originDetail.ProductUnitFactor;
+            product.IsDigital = originDetail.IsDigital;
             product.NumTotalPrice = product.NumUnitPriceSale.multiply(BigDecimal.valueOf(product.NumUnit));
             CreditNoteTaxCalculationResultDto productTaxResult = this.saleTaxCalculationService.buildCreditNoteTaxResult(
                     creditNoteRegister.Headboard.CreditNoteCod,

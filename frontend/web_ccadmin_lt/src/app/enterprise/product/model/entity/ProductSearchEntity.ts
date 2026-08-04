@@ -12,6 +12,7 @@ export class ProductSearchEntity{
     public NumPrice  : number = 0;
     public NumMaxStock  : number = 0;
     public NumMinStock  : number = 0;
+    public IsDigital : string = "N";
     public IsDiscontable : string = "";
     public DiscountType : string = "";
     public NumDiscountMax : number = 0;

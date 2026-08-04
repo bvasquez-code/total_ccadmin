@@ -174,6 +174,7 @@ public class PresaleCreateService extends SessionService {
                 product.ItemNumber = itemNumber;
             }
             ProductConfigEntity config = this.productOperationConfigShared.findByProduct(product.ProductCod, getStoreCod());
+            product.IsDigital = config.IsDigital;
             if (product.ProductUnitName == null || product.ProductUnitName.trim().isEmpty()) {
                 product.ProductUnitName = config.ProductUnitName;
             }

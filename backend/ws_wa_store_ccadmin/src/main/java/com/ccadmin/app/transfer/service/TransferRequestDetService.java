@@ -74,6 +74,12 @@ public class TransferRequestDetService extends SessionService {
         ProductConfigEntity configDestination = this.productOperationConfigShared.findByProduct(
                 source.ProductCod, head.StoreCodDest
         );
+        if (this.productOperationConfigShared.isDigital(configOrigin)
+                || this.productOperationConfigShared.isDigital(configDestination)) {
+            throw new TransferException(
+                    "El producto " + source.ProductCod + " es digital y no puede transferirse"
+            );
+        }
         if (StringUtil.isEmpty(source.ProductUnitName)) {
             source.ProductUnitName = configDestination.ProductUnitName;
         }

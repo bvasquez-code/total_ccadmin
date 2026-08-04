@@ -14,6 +14,7 @@ import Swal from 'sweetalert2';
 import { ProductBarcodeEntity } from '../../model/entity/ProductBarcodeEntity';
 import { ProductUnitHelper } from 'src/app/enterprise/shared/helper/ProductUnitHelper';
 import { DataSesionService } from 'src/app/enterprise/compartido/service/datasesion.service';
+import { ProductConfigEntity } from '../../model/entity/ProductConfigEntity';
 
 interface ProductUnitOption {
   Code: string;
@@ -121,13 +122,30 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
     const rpt: ResponseWsDto = await this.productService.FindDataForm(ProductCod);
 
     if (!rpt.ErrorStatus) {
-      this.BrandList = rpt.DataAdditional.find(e => e.Name === "brandList")?.Data;
-      this.CategoryList = rpt.DataAdditional.find(e => e.Name === "categoryList")?.Data;
-      this.ProductRegister = rpt.DataAdditional.find(e => e.Name === "product")?.Data;
+      this.BrandList = rpt.DataAdditional.find(e => e.Name === "brandList")?.Data || [];
+      this.CategoryList = rpt.DataAdditional.find(e => e.Name === "categoryList")?.Data || [];
+      const productData = rpt.DataAdditional.find(e => e.Name === "product")?.Data;
+      this.ProductRegister = this.buildProductRegister(productData);
 
       setTimeout(() => { this.loadingForm(this.ProductRegister); }, 100);
 
     }
+  }
+
+  private buildProductRegister(data: ProductRegisterDto | null | undefined): ProductRegisterDto {
+    const productRegister = new ProductRegisterDto();
+
+    if (!data) {
+      return productRegister;
+    }
+
+    Object.assign(productRegister, data);
+    productRegister.product = Object.assign(new ProductEntity(), data.product || {});
+    productRegister.config = Object.assign(new ProductConfigEntity(), data.config || {});
+    productRegister.productBarcode = Object.assign(new ProductBarcodeEntity(), data.productBarcode || {});
+    productRegister.pictureList = data.pictureList || [];
+
+    return productRegister;
   }
 
   loadingForm(ProductRegister: ProductRegisterDto) {
@@ -150,6 +168,7 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
     }
 
     this.ProductRegister.config.ProductCod = this.txtProductCod.nativeElement.value;
+    this.ProductRegister.config.IsDigital = (this.ProductRegister.config.IsDigital || "N").trim().toUpperCase();
 
     if (!this.IsEditMode) {
       this.ProductRegister.config.NumMinStock = this.defaultMinStock;
@@ -188,6 +207,7 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
       this.ProductRegister.product.CategoryCod = this.cboCategoryCod.nativeElement.value;
 
       this.ProductRegister.config.ProductCod = this.ProductRegister.product.ProductCod;
+      this.ProductRegister.config.IsDigital = (this.ProductRegister.config.IsDigital || "N").trim().toUpperCase();
 
       if (!this.IsEditMode) {
         this.ProductRegister.config.NumPrice = Number(this.txtNumPrice.nativeElement.value);

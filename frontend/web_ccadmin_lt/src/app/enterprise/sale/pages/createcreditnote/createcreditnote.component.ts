@@ -325,6 +325,7 @@ export class CreatecreditnoteComponent
       creditNoteDetNew.NumTotalPrice = creditNoteDetNew.NumUnit * unitPriceSale;
       creditNoteDetNew.ProductUnitName = saleDet.ProductUnitName || 'NIU';
       creditNoteDetNew.ProductUnitFactor = productUnitFactor;
+      creditNoteDetNew.IsDigital = (saleDet.IsDigital || 'N').trim().toUpperCase();
       creditNoteDetNew.LotNumber = saleDet.LotNumber ?? '';
       creditNoteDetNew.ExpirationDate = saleDet.ExpirationDate ?? null;
 
@@ -594,6 +595,7 @@ export class CreatecreditnoteComponent
         creditNoteDetNew.NumTotalPrice = 0; // se recalcula abajo
         creditNoteDetNew.ProductUnitName = saleItem.ProductUnitName || 'NIU';
         creditNoteDetNew.ProductUnitFactor = ProductUnitHelper.normalizeFactor(saleItem.ProductUnitFactor);
+        creditNoteDetNew.IsDigital = (saleItem.IsDigital || 'N').trim().toUpperCase();
         creditNoteDetNew.LotNumber = saleItem.LotNumber ?? '';
         creditNoteDetNew.ExpirationDate = saleItem.ExpirationDate ?? null;
 
@@ -607,6 +609,7 @@ export class CreatecreditnoteComponent
         creditNoteDetail.NumUnitPriceSale = unitPriceSale;
         creditNoteDetail.ProductUnitName = creditNoteDetail.ProductUnitName || saleItem.ProductUnitName || 'NIU';
         creditNoteDetail.ProductUnitFactor = ProductUnitHelper.normalizeFactor(creditNoteDetail.ProductUnitFactor || saleItem.ProductUnitFactor);
+        creditNoteDetail.IsDigital = (saleItem.IsDigital || 'N').trim().toUpperCase();
         // NumTotalPrice se recalcula en recalcTotals()
       }
     }

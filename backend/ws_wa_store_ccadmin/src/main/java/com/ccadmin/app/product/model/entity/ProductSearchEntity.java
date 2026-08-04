@@ -32,6 +32,7 @@ public class ProductSearchEntity extends AuditTableEntity implements Serializabl
     public BigDecimal NumPrice;
     public int NumMaxStock;
     public int NumMinStock;
+    public String IsDigital;
     public String IsDiscontable;
     public String DiscountType;
     public BigDecimal NumDiscountMax;
@@ -70,6 +71,7 @@ public class ProductSearchEntity extends AuditTableEntity implements Serializabl
         this.NumPrice = productConfig.NumPrice;
         this.NumMaxStock = productConfig.NumMaxStock;
         this.NumMinStock = productConfig.NumMinStock;
+        this.IsDigital = productConfig.IsDigital;
         this.IsDiscontable = productConfig.IsDiscontable;
         this.DiscountType = productConfig.DiscountType;
         this.NumDiscountMax = productConfig.NumDiscountMax;
@@ -106,6 +108,7 @@ public class ProductSearchEntity extends AuditTableEntity implements Serializabl
                 ", NumPrice=" + NumPrice +
                 ", NumMaxStock=" + NumMaxStock +
                 ", NumMinStock=" + NumMinStock +
+                ", IsDigital='" + IsDigital + '\'' +
                 ", IsDiscontable='" + IsDiscontable + '\'' +
                 ", DiscountType='" + DiscountType + '\'' +
                 ", NumDiscountMax=" + NumDiscountMax +

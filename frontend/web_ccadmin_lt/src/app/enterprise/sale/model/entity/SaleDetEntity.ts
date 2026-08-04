@@ -18,6 +18,7 @@ export class SaleDetEntity extends AuditTableEntity
 	public IsAppliedTax: string = "";
 	public ProductUnitName: string = "NIU";
 	public ProductUnitFactor: number = 1;
+	public IsDigital: string = "N";
 	public LotNumber: string = "";
 	public ExpirationDate: Date | any = null;
 

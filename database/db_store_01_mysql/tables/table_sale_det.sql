@@ -32,6 +32,7 @@ CREATE TABLE `sale_det` (
   `NumTotalTax` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Total de impuestos del detalle',
   `ProductUnitName` varchar(32) NOT NULL DEFAULT 'NIU' COMMENT 'Unidad visible usada al registrar el detalle',
   `ProductUnitFactor` int NOT NULL DEFAULT '1' COMMENT 'Factor usado al registrar el detalle',
+  `IsDigital` char(1) NOT NULL DEFAULT 'N' COMMENT 'Estado digital del producto al registrar la venta',
   `IsAppliedTax` char(1) DEFAULT 'S',
   `CreationUser` varchar(16) NOT NULL,
   `CreationDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -43,6 +44,7 @@ CREATE TABLE `sale_det` (
   PRIMARY KEY (`SaleCod`,`ItemNumber`),
   KEY `idx_sale_det_old_pk` (`SaleCod`,`ProductCod`,`Variant`),
   KEY `fk_sale_det_variant` (`ProductCod`,`Variant`),
+  CONSTRAINT `chk_sale_det_is_digital` CHECK (`IsDigital` IN ('S','N')),
   CONSTRAINT `fk_sale_det_product` FOREIGN KEY (`ProductCod`) REFERENCES `product` (`ProductCod`),
   CONSTRAINT `fk_sale_det_sale` FOREIGN KEY (`SaleCod`) REFERENCES `sale_head` (`SaleCod`),
   CONSTRAINT `fk_sale_det_variant` FOREIGN KEY (`ProductCod`, `Variant`) REFERENCES `product_variant` (`ProductCod`, `Variant`)
@@ -123,6 +125,24 @@ CREATE TABLE `sale_det` (
         ) THEN
             ALTER TABLE `sale_det` ADD COLUMN `ProductUnitFactor` int NOT NULL DEFAULT '1' COMMENT 'Factor usado al registrar el detalle' AFTER `ProductUnitName`;
             SELECT 'Columna ProductUnitFactor agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sale_det'
+            AND column_name = 'IsDigital'
+        ) THEN
+            ALTER TABLE `sale_det` ADD COLUMN `IsDigital` char(1) NOT NULL DEFAULT 'N'
+            COMMENT 'Estado digital del producto al registrar la venta' AFTER `ProductUnitFactor`;
+            SELECT 'Columna IsDigital agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.table_constraints WHERE table_schema = DATABASE() AND table_name = 'sale_det'
+            AND constraint_name = 'chk_sale_det_is_digital'
+        ) THEN
+            ALTER TABLE `sale_det` ADD CONSTRAINT `chk_sale_det_is_digital`
+            CHECK (`IsDigital` IN ('S','N'));
+            SELECT 'Check chk_sale_det_is_digital agregado exitosamente.' AS Mensaje;
         END IF;
 
         -- AGREGANDO COLUMNA ExpirationDate

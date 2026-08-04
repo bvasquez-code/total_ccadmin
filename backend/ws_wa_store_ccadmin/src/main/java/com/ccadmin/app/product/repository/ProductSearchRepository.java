@@ -51,6 +51,7 @@ public interface ProductSearchRepository extends JpaRepository<ProductSearchEnti
              ,pc.NumPrice
              ,pc.NumMaxStock
              ,pc.NumMinStock
+             ,pc.IsDigital
              ,pc.IsDiscontable
              ,pc.DiscountType
              ,pc.NumDiscountMax
@@ -97,7 +98,7 @@ public interface ProductSearchRepository extends JpaRepository<ProductSearchEnti
         where (ps.ProductCod = :id or ps.ProductName like %:query%) 
           and ps.StoreCod = :storeCod 
           and ps.Status = 'A'
-          and ps.NumPhysicalStock >= :stockMin
+          and (ps.IsDigital = 'S' or ps.NumPhysicalStock >= :stockMin)
         order by
             CASE WHEN :orderBy = 'trend' THEN ps.NumTrend END
                 * IF(:direction = 'desc', -1, 1),
@@ -124,7 +125,7 @@ public interface ProductSearchRepository extends JpaRepository<ProductSearchEnti
         where (ps.ProductCod = :id or ps.ProductName like %:query%) 
           and ps.StoreCod = :storeCod 
           and ps.Status = 'A'
-          and ps.NumPhysicalStock >= :stockMin
+          and (ps.IsDigital = 'S' or ps.NumPhysicalStock >= :stockMin)
         """, nativeQuery = true)
     public int countByQueryTextStorePersonalized(
             @Param("id") String id,

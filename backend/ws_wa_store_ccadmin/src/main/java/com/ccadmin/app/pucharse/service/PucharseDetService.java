@@ -3,6 +3,7 @@ package com.ccadmin.app.pucharse.service;
 import com.ccadmin.app.product.model.entity.KardexEntity;
 import com.ccadmin.app.product.model.entity.KardexZoneEntity;
 import com.ccadmin.app.product.shared.KardexShared;
+import com.ccadmin.app.product.shared.ProductOperationConfigShared;
 import com.ccadmin.app.pucharse.exception.PucharseException;
 import com.ccadmin.app.pucharse.model.dto.PucharseDetConfirmDto;
 import com.ccadmin.app.pucharse.model.dto.PucharseDetLotConfirmDto;
@@ -32,6 +33,8 @@ public class PucharseDetService extends SessionService {
     private PucharseDetDeliveryRepository pucharseDetDeliveryRepository;
     @Autowired
     private KardexShared kardexShared;
+    @Autowired
+    private ProductOperationConfigShared productOperationConfigShared;
     @Transactional
     public PucharseDetConfirmDto confirm(PucharseDetConfirmDto pucharseDetConfirm) throws PucharseException {
 
@@ -46,6 +49,7 @@ public class PucharseDetService extends SessionService {
         PucharseDetEntity originDet = this.pucharseDetRepository.findByIdForUpdate(purchaseCod, itemNumber)
                 .orElseThrow(() -> new PucharseException("No existe el detalle " + itemNumber));
         this.validatePendingReceipt(pucharseHead, originDet);
+        this.validateNonDigitalProduct(pucharseHead, originDet);
 
         PucharseDetDeliveryEntity delivery = pucharseDetConfirm.pucharseDetDelivery;
         delivery.PucharseCod = purchaseCod;
@@ -107,6 +111,7 @@ public class PucharseDetService extends SessionService {
                 )
                 .orElseThrow(() -> new PucharseException("No existe el detalle " + pucharseDetId.ItemNumber));
         this.validatePendingReceipt(pucharseHead, originDet);
+        this.validateNonDigitalProduct(pucharseHead, originDet);
 
         int nextItemNumber = this.pucharseDetRepository.findMaxItemNumber(originDet.PucharseCod) + 1;
         List<PucharseDetEntity> detailList = new ArrayList<>();
@@ -146,6 +151,17 @@ public class PucharseDetService extends SessionService {
         }
         if ("S".equals(detail.IsKardexAffected)) {
             throw new PucharseException("Producto ya fue confirmado como ingresado");
+        }
+    }
+
+    private void validateNonDigitalProduct(
+            PucharseHeadEntity pucharseHead,
+            PucharseDetEntity detail
+    ) throws PucharseException {
+        if (this.productOperationConfigShared.isDigital(detail.ProductCod, pucharseHead.StoreCod)) {
+            throw new PucharseException(
+                    "El producto " + detail.ProductCod + " es digital y no puede recibirse mediante una compra"
+            );
         }
     }
 

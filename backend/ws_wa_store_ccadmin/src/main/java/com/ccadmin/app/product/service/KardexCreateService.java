@@ -12,6 +12,7 @@ import com.ccadmin.app.product.repository.KardexZoneRepository;
 import com.ccadmin.app.product.repository.ProductInfoRepository;
 import com.ccadmin.app.product.repository.ProductInfoWarehouseRepository;
 import com.ccadmin.app.product.shared.ProductFindCreateShared;
+import com.ccadmin.app.product.shared.ProductOperationConfigShared;
 import com.ccadmin.app.pucharse.exception.PucharseException;
 import com.ccadmin.app.pucharse.model.constants.PucharseConstants;
 import com.ccadmin.app.pucharse.model.entity.PucharseDetDeliveryEntity;
@@ -61,6 +62,8 @@ public class KardexCreateService {
     private ProductInfoWarehouseRepository productInfoWarehouseRepository;
     @Autowired
     private ProductFindCreateShared productFindCreateShared;
+    @Autowired
+    private ProductOperationConfigShared productOperationConfigShared;
 
     public List<KardexZoneEntity> buildPresaleReservation(
             PresaleHeadEntity presaleHead,
@@ -640,6 +643,13 @@ public class KardexCreateService {
     ) {
         List<KardexEntity> totalMovementList = mutableList(kardexList);
         List<KardexZoneEntity> zoneMovementList = mutableList(kardexZoneList);
+        Map<ProductStoreKey, Boolean> digitalProductMap = new LinkedHashMap<>();
+        totalMovementList.removeIf(item -> this.isDigital(
+                item.ProductCod, item.StoreCod, digitalProductMap
+        ));
+        zoneMovementList.removeIf(item -> this.isDigital(
+                item.ProductCod, item.StoreCod, digitalProductMap
+        ));
         if (totalMovementList.isEmpty() && zoneMovementList.isEmpty()) {
             return List.of();
         }
@@ -921,6 +931,18 @@ public class KardexCreateService {
         return source == null ? new ArrayList<>() : new ArrayList<>(source);
     }
 
+    private boolean isDigital(
+            String productCod,
+            String storeCod,
+            Map<ProductStoreKey, Boolean> digitalProductMap
+    ) {
+        ProductStoreKey key = new ProductStoreKey(productCod, storeCod);
+        return digitalProductMap.computeIfAbsent(
+                key,
+                ignored -> this.productOperationConfigShared.isDigital(productCod, storeCod)
+        );
+    }
+
     private record EventKey(String sourceTable, String operationCod, int itemNumber, String movementEvent) {
         static EventKey from(KardexZoneEntity item) {
             return new EventKey(item.SourceTable, item.OperationCod, item.ItemNumber, item.MovementEvent);
@@ -938,6 +960,9 @@ public class KardexCreateService {
     }
 
     private record ProductKey(String productCod, String variant, String storeCod) {
+    }
+
+    private record ProductStoreKey(String productCod, String storeCod) {
     }
 
     private record StockKey(String productCod, String variant, String storeCod, String warehouseCod) {

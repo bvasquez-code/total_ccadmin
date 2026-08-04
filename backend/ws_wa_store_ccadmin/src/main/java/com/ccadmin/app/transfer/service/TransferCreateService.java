@@ -528,6 +528,7 @@ public class TransferCreateService extends SessionService {
 
             ProductConfigEntity configOrigin = this.productOperationConfigShared.findByProduct(det.ProductCod, head.StoreCodOrigin);
             ProductConfigEntity config = this.productOperationConfigShared.findByProduct(det.ProductCod, head.StoreCodDest);
+            this.validateNonDigitalProduct(det.ProductCod, configOrigin, config);
             if (StringUtil.isEmpty(det.ProductUnitName)) {
                 det.ProductUnitName = config.ProductUnitName;
             }
@@ -703,6 +704,13 @@ public class TransferCreateService extends SessionService {
                 throw new TransferException("Todos los detalles deben pertenecer a la misma transferencia");
             }
             detail.TypeOperation = TransferConstants.TYPE_OPERATION_SEND;
+            ProductConfigEntity configOrigin = this.productOperationConfigShared.findByProduct(
+                    detail.ProductCod, transferHead.StoreCodOrigin
+            );
+            ProductConfigEntity configDestination = this.productOperationConfigShared.findByProduct(
+                    detail.ProductCod, transferHead.StoreCodDest
+            );
+            this.validateNonDigitalProduct(detail.ProductCod, configOrigin, configDestination);
             TransferDetId id = new TransferDetId();
             id.TransferCod = detail.TransferCod;
             id.ItemNumber = detail.ItemNumber;
@@ -720,6 +728,19 @@ public class TransferCreateService extends SessionService {
         });
 
         return new TransferDetRegisterMassiveDto(transferDetListDB);
+    }
+
+    private void validateNonDigitalProduct(
+            String productCod,
+            ProductConfigEntity configOrigin,
+            ProductConfigEntity configDestination
+    ) throws TransferException {
+        if (this.productOperationConfigShared.isDigital(configOrigin)
+                || this.productOperationConfigShared.isDigital(configDestination)) {
+            throw new TransferException(
+                    "El producto " + productCod + " es digital y no puede transferirse"
+            );
+        }
     }
 
     @Transactional

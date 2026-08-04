@@ -464,7 +464,10 @@
               <h3 class="text-primary text-110">
                 PRECIO : {{ getVisibleUnitPrice(product.NumPrice, product.ProductUnitFactor) | currency: product.CurrencyCod + ' '}}
               </h3>
-              <h4 class="text-danger text-100">
+              <h4 class="text-success text-100" *ngIf="isDigitalSearchProduct(product)">
+                <i class="fa fa-infinity mr-1"></i> PRODUCTO DIGITAL · STOCK ILIMITADO
+              </h4>
+              <h4 class="text-danger text-100" *ngIf="!isDigitalSearchProduct(product)">
                 STOCK : {{ getVisibleStock(product.NumDigitalStock, product.ProductUnitFactor) }} {{ product.ProductUnitName }}
               </h4>
               <div>
@@ -576,7 +579,10 @@
               </div>
               <div class="mb-2">
                 <div class="text-grey-m2 text-75 text-uppercase">Stock</div>
-                <div class="text-105">
+                <div class="text-success-d2 text-105" *ngIf="isDigitalSelectedProduct()">
+                  Ilimitado (producto digital)
+                </div>
+                <div class="text-105" *ngIf="!isDigitalSelectedProduct()">
                   {{ getVisibleStock(NumPhysicalStockTotal, productInfoDtoSelect.Config.ProductUnitFactor) }} {{ getProductUnitName() }}
                 </div>
               </div>

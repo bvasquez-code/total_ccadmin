@@ -71,7 +71,9 @@
                         <td class="text-center">{{ toVisibleQuantity(product.NumPhysicalStock, product.ProductUnitFactor) }} {{ product.ProductUnitName }}</td>
                         <td class="text-center">
                           <button class="btn btn-sm btn-outline-primary" (click)="selectProduct(product)"
-                            data-toggle="modal" data-target="#modalProduct" [disabled]="isSavingDetail">
+                            data-toggle="modal" data-target="#modalProduct"
+                            [disabled]="isSavingDetail || isDigitalProduct(product)"
+                            [title]="isDigitalProduct(product) ? 'Los productos digitales no se transfieren' : 'Elegir producto'">
                             Elegir
                           </button>
                         </td>

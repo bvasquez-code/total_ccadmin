@@ -63,6 +63,7 @@ public class ProductConfigCreateService extends SessionService {
         }
         try {
             this.productDiscountPolicy.normalizeAndValidate(request.config);
+            this.productOperationConfigShared.validateDigitalIndicator(request.config);
         } catch (IllegalArgumentException exception) {
             throw new ProductBuildException(exception.getMessage());
         }
@@ -73,13 +74,21 @@ public class ProductConfigCreateService extends SessionService {
         String userCod = getUserCod();
 
         for (String storeCod : storeCodList) {
-            ProductConfigEntity config = productConfigRepository
-                    .findById(new ProductConfigID(request.ProductCod, storeCod))
-                    .orElseGet(() -> buildConfigForStore(
-                            baseConfig != null ? baseConfig : request.config,
-                            storeCod,
-                            userCod
-                    ));
+            ProductConfigEntity config = productConfigRepository.findForUpdate(request.ProductCod, storeCod);
+            try {
+                productOperationConfigShared.validateDigitalConversion(
+                        config, request.ProductCod, storeCod, request.config.IsDigital
+                );
+            } catch (IllegalArgumentException exception) {
+                throw new ProductBuildException(exception.getMessage());
+            }
+            if (config == null) {
+                config = buildConfigForStore(
+                        baseConfig != null ? baseConfig : request.config,
+                        storeCod,
+                        userCod
+                );
+            }
             copyEditableConfig(request.config, config);
             config.ProductCod = request.ProductCod;
             config.StoreCod = storeCod;
@@ -356,6 +365,7 @@ public class ProductConfigCreateService extends SessionService {
         config.NumPrice = source.NumPrice;
         config.NumMaxStock = source.NumMaxStock;
         config.NumMinStock = source.NumMinStock;
+        config.IsDigital = source.IsDigital;
         config.IsDiscontable = source.IsDiscontable;
         config.DiscountType = source.DiscountType;
         config.NumDiscountMax = source.NumDiscountMax;
@@ -372,6 +382,7 @@ public class ProductConfigCreateService extends SessionService {
         target.NumPrice = source.NumPrice;
         target.NumMaxStock = source.NumMaxStock;
         target.NumMinStock = source.NumMinStock;
+        target.IsDigital = source.IsDigital;
         target.ProductUnitName = source.ProductUnitName;
         target.ProductUnitFactor = source.ProductUnitFactor;
         target.IsDiscontable = source.IsDiscontable;

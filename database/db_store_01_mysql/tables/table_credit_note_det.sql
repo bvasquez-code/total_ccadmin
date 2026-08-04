@@ -31,6 +31,7 @@ CREATE TABLE `credit_note_det` (
   `NumTotalTax` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Total de impuestos del detalle',
   `ProductUnitName` varchar(32) NOT NULL DEFAULT 'NIU' COMMENT 'Unidad visible usada al registrar el detalle',
   `ProductUnitFactor` int NOT NULL DEFAULT '1' COMMENT 'Factor usado al registrar el detalle',
+  `IsDigital` char(1) NOT NULL DEFAULT 'N' COMMENT 'Estado digital del producto en la venta que origino la nota de credito',
   `IsAppliedTax` char(1) DEFAULT 'S',
   `CreationUser` varchar(16) NOT NULL,
   `CreationDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -42,6 +43,7 @@ CREATE TABLE `credit_note_det` (
   PRIMARY KEY (`CreditNoteCod`,`ItemNumber`),
   KEY `idx_credit_note_det_old_pk` (`CreditNoteCod`,`ProductCod`,`Variant`),
   KEY `fk_credit_note_det_variant` (`ProductCod`,`Variant`),
+  CONSTRAINT `chk_credit_note_det_is_digital` CHECK (`IsDigital` IN ('S','N')),
   CONSTRAINT `fk_credit_note_det_head` FOREIGN KEY (`CreditNoteCod`) REFERENCES `credit_note_head` (`CreditNoteCod`),
   CONSTRAINT `fk_credit_note_det_product` FOREIGN KEY (`ProductCod`) REFERENCES `product` (`ProductCod`),
   CONSTRAINT `fk_credit_note_det_variant` FOREIGN KEY (`ProductCod`, `Variant`) REFERENCES `product_variant` (`ProductCod`, `Variant`)
@@ -106,6 +108,24 @@ CREATE TABLE `credit_note_det` (
         ) THEN
             ALTER TABLE `credit_note_det` ADD COLUMN `ProductUnitFactor` int NOT NULL DEFAULT '1' COMMENT 'Factor usado al registrar el detalle' AFTER `ProductUnitName`;
             SELECT 'Columna ProductUnitFactor agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'credit_note_det'
+            AND column_name = 'IsDigital'
+        ) THEN
+            ALTER TABLE `credit_note_det` ADD COLUMN `IsDigital` char(1) NOT NULL DEFAULT 'N'
+            COMMENT 'Estado digital del producto en la venta que origino la nota de credito' AFTER `ProductUnitFactor`;
+            SELECT 'Columna IsDigital agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.table_constraints WHERE table_schema = DATABASE() AND table_name = 'credit_note_det'
+            AND constraint_name = 'chk_credit_note_det_is_digital'
+        ) THEN
+            ALTER TABLE `credit_note_det` ADD CONSTRAINT `chk_credit_note_det_is_digital`
+            CHECK (`IsDigital` IN ('S','N'));
+            SELECT 'Check chk_credit_note_det_is_digital agregado exitosamente.' AS Mensaje;
         END IF;
 
         IF NOT EXISTS (

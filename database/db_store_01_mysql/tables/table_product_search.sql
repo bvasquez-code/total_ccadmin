@@ -31,6 +31,7 @@ CREATE TABLE `product_search` (
   `NumPrice` decimal(16,2) DEFAULT '0.00',
   `NumMaxStock` int DEFAULT '0',
   `NumMinStock` int DEFAULT '0',
+  `IsDigital` char(1) NOT NULL DEFAULT 'N',
   `IsDiscontable` char(1) DEFAULT 'N',
   `DiscountType` char(2) DEFAULT NULL,
   `NumDiscountMax` decimal(16,2) DEFAULT '0.00',
@@ -102,6 +103,14 @@ CREATE TABLE `product_search` (
         ) THEN
             ALTER TABLE `product_search` ADD COLUMN `NumTotalStock` int NOT NULL DEFAULT '0' AFTER `NumReservedStock`;
             SELECT 'Columna NumTotalStock agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'product_search'
+            AND column_name = 'IsDigital'
+        ) THEN
+            ALTER TABLE `product_search` ADD COLUMN `IsDigital` char(1) NOT NULL DEFAULT 'N' AFTER `NumMinStock`;
+            SELECT 'Columna IsDigital agregada exitosamente.' AS Mensaje;
         END IF;
 
         IF NOT EXISTS (

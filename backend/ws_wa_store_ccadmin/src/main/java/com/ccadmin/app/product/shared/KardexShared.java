@@ -21,19 +21,24 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.function.Function;
 
 @Service
 public class KardexShared {
 
     @Autowired
     private KardexCreateService kardexCreateService;
+    @Autowired
+    private ProductOperationConfigShared productOperationConfigShared;
 
     public List<KardexZoneEntity> buildPresaleReservation(
             PresaleHeadEntity head,
             List<PresaleDetWarehouseEntity> detailList,
             String userCod
     ) {
-        return this.kardexCreateService.buildPresaleReservation(head, detailList, userCod);
+        return this.kardexCreateService.buildPresaleReservation(
+                head, this.stockControlled(detailList, head.StoreCod, item -> item.ProductCod), userCod
+        );
     }
 
     public List<KardexEntity> buildSaleConfirmation(
@@ -41,7 +46,9 @@ public class KardexShared {
             List<SaleDetWarehouseEntity> detailList,
             String userCod
     ) {
-        return this.kardexCreateService.buildSaleConfirmation(head, detailList, userCod);
+        return this.kardexCreateService.buildSaleConfirmation(
+                head, this.stockControlled(detailList, head.StoreCod, item -> item.ProductCod), userCod
+        );
     }
 
     public List<KardexZoneEntity> buildZoneSaleConfirmation(
@@ -49,7 +56,9 @@ public class KardexShared {
             List<SaleDetWarehouseEntity> detailList,
             String userCod
     ) throws SaleException {
-        return this.kardexCreateService.buildZoneSaleConfirmation(head, detailList, userCod);
+        return this.kardexCreateService.buildZoneSaleConfirmation(
+                head, this.stockControlled(detailList, head.StoreCod, item -> item.ProductCod), userCod
+        );
     }
 
     public List<KardexZoneEntity> buildSaleExpirationRelease(
@@ -57,7 +66,9 @@ public class KardexShared {
             List<SaleDetWarehouseEntity> detailList,
             String userCod
     ) throws SaleException {
-        return this.kardexCreateService.buildSaleExpirationRelease(head, detailList, userCod);
+        return this.kardexCreateService.buildSaleExpirationRelease(
+                head, this.stockControlled(detailList, head.StoreCod, item -> item.ProductCod), userCod
+        );
     }
 
     public List<KardexEntity> buildPurchaseReceipt(
@@ -65,6 +76,7 @@ public class KardexShared {
             List<PucharseDetDeliveryEntity> detailList,
             String userCod
     ) throws PucharseException {
+        this.validatePurchaseProducts(detailList, head.StoreCod, item -> item.ProductCod);
         return this.kardexCreateService.buildPurchaseReceipt(head, detailList, userCod);
     }
 
@@ -73,6 +85,7 @@ public class KardexShared {
             List<PucharseDetDeliveryEntity> detailList,
             String userCod
     ) throws PucharseException {
+        this.validatePurchaseProducts(detailList, head.StoreCod, item -> item.ProductCod);
         return this.kardexCreateService.buildZonePurchaseReceipt(head, detailList, userCod);
     }
 
@@ -80,6 +93,7 @@ public class KardexShared {
             String operationCod, String storeCod,
             List<TransferDetEntity> detailList, String userCod
     ) throws TransferException {
+        this.validateTransferProducts(detailList, storeCod, item -> item.ProductCod);
         return this.kardexCreateService.buildTransferDispatch(
                 operationCod, storeCod, detailList, userCod
         );
@@ -89,6 +103,7 @@ public class KardexShared {
             String operationCod, String storeCod,
             List<TransferDetEntity> detailList, String userCod
     ) throws TransferException {
+        this.validateTransferProducts(detailList, storeCod, item -> item.ProductCod);
         return this.kardexCreateService.buildZoneTransferDispatch(
                 operationCod, storeCod, detailList, userCod
         );
@@ -98,6 +113,7 @@ public class KardexShared {
             String operationCod, String storeCod,
             List<TransferRequestDetEntity> detailList, String userCod
     ) throws TransferException {
+        this.validateTransferProducts(detailList, storeCod, item -> item.ProductCod);
         return this.kardexCreateService.buildTransferRequestDispatch(
                 operationCod, storeCod, detailList, userCod
         );
@@ -107,6 +123,7 @@ public class KardexShared {
             String operationCod, String storeCod,
             List<TransferRequestDetEntity> detailList, String userCod
     ) throws TransferException {
+        this.validateTransferProducts(detailList, storeCod, item -> item.ProductCod);
         return this.kardexCreateService.buildZoneTransferRequestDispatch(
                 operationCod, storeCod, detailList, userCod
         );
@@ -116,6 +133,7 @@ public class KardexShared {
             String operationCod, String storeCod,
             List<TransferDetEntity> detailList, String userCod
     ) throws TransferException {
+        this.validateTransferProducts(detailList, storeCod, item -> item.ProductCod);
         return this.kardexCreateService.buildTransferReceipt(
                 operationCod, storeCod, detailList, userCod
         );
@@ -125,6 +143,7 @@ public class KardexShared {
             String operationCod, String storeCod,
             List<TransferDetEntity> detailList, String userCod
     ) throws TransferException {
+        this.validateTransferProducts(detailList, storeCod, item -> item.ProductCod);
         return this.kardexCreateService.buildZoneTransferReceipt(
                 operationCod, storeCod, detailList, userCod
         );
@@ -134,6 +153,7 @@ public class KardexShared {
             String operationCod, String storeCod,
             List<TransferRequestDetEntity> detailList, String userCod
     ) throws TransferException {
+        this.validateTransferProducts(detailList, storeCod, item -> item.ProductCod);
         return this.kardexCreateService.buildTransferRequestReceipt(
                 operationCod, storeCod, detailList, userCod
         );
@@ -143,6 +163,7 @@ public class KardexShared {
             String operationCod, String storeCod,
             List<TransferRequestDetEntity> detailList, String userCod
     ) throws TransferException {
+        this.validateTransferProducts(detailList, storeCod, item -> item.ProductCod);
         return this.kardexCreateService.buildZoneTransferRequestReceipt(
                 operationCod, storeCod, detailList, userCod
         );
@@ -154,8 +175,11 @@ public class KardexShared {
             WarehouseEntity warehouse,
             String userCod
     ) throws SaleException {
-        return this.kardexCreateService.buildCreditNoteConfirmation(
-                head, detailList, warehouse, userCod
+        List<CreditNoteDetEntity> stockDetailList = this.stockControlled(
+                detailList, head.StoreCod, item -> item.ProductCod
+        );
+        return stockDetailList.isEmpty() ? List.of() : this.kardexCreateService.buildCreditNoteConfirmation(
+                head, stockDetailList, warehouse, userCod
         );
     }
 
@@ -165,8 +189,11 @@ public class KardexShared {
             WarehouseEntity warehouse,
             String userCod
     ) throws SaleException {
-        return this.kardexCreateService.buildZoneCreditNoteConfirmation(
-                head, detailList, warehouse, userCod
+        List<CreditNoteDetEntity> stockDetailList = this.stockControlled(
+                detailList, head.StoreCod, item -> item.ProductCod
+        );
+        return stockDetailList.isEmpty() ? List.of() : this.kardexCreateService.buildZoneCreditNoteConfirmation(
+                head, stockDetailList, warehouse, userCod
         );
     }
 
@@ -176,8 +203,11 @@ public class KardexShared {
             WarehouseEntity warehouse,
             String userCod
     ) throws SaleException {
-        return this.kardexCreateService.buildCreditNoteRejectedExit(
-                head, detailList, warehouse, userCod
+        List<CreditNoteDetEntity> stockDetailList = this.stockControlled(
+                detailList, head.StoreCod, item -> item.ProductCod
+        );
+        return stockDetailList.isEmpty() ? List.of() : this.kardexCreateService.buildCreditNoteRejectedExit(
+                head, stockDetailList, warehouse, userCod
         );
     }
 
@@ -187,8 +217,11 @@ public class KardexShared {
             WarehouseEntity warehouse,
             String userCod
     ) throws SaleException {
-        return this.kardexCreateService.buildZoneCreditNoteReturn(
-                head, detailList, warehouse, userCod
+        List<CreditNoteDetEntity> stockDetailList = this.stockControlled(
+                detailList, head.StoreCod, item -> item.ProductCod
+        );
+        return stockDetailList.isEmpty() ? List.of() : this.kardexCreateService.buildZoneCreditNoteReturn(
+                head, stockDetailList, warehouse, userCod
         );
     }
 
@@ -197,6 +230,62 @@ public class KardexShared {
             List<KardexZoneEntity> kardexZoneList
     ) {
         return this.kardexCreateService.saveAll(kardexList, kardexZoneList);
+    }
+
+    private <T> List<T> stockControlled(
+            List<T> detailList,
+            String storeCod,
+            Function<T, String> productCodExtractor
+    ) {
+        if (detailList == null || detailList.isEmpty()) {
+            return List.of();
+        }
+        return detailList.stream()
+                .filter(item -> !this.productOperationConfigShared.isDigital(
+                        productCodExtractor.apply(item), storeCod
+                ))
+                .toList();
+    }
+
+    private <T> void validatePurchaseProducts(
+            List<T> detailList,
+            String storeCod,
+            Function<T, String> productCodExtractor
+    ) throws PucharseException {
+        String digitalProductCod = this.findDigitalProduct(detailList, storeCod, productCodExtractor);
+        if (digitalProductCod != null) {
+            throw new PucharseException(
+                    "El producto " + digitalProductCod + " es digital y no puede utilizarse en compras"
+            );
+        }
+    }
+
+    private <T> void validateTransferProducts(
+            List<T> detailList,
+            String storeCod,
+            Function<T, String> productCodExtractor
+    ) throws TransferException {
+        String digitalProductCod = this.findDigitalProduct(detailList, storeCod, productCodExtractor);
+        if (digitalProductCod != null) {
+            throw new TransferException(
+                    "El producto " + digitalProductCod + " es digital y no puede utilizarse en transferencias"
+            );
+        }
+    }
+
+    private <T> String findDigitalProduct(
+            List<T> detailList,
+            String storeCod,
+            Function<T, String> productCodExtractor
+    ) {
+        if (detailList == null || detailList.isEmpty()) {
+            return null;
+        }
+        return detailList.stream()
+                .map(productCodExtractor)
+                .filter(productCod -> this.productOperationConfigShared.isDigital(productCod, storeCod))
+                .findFirst()
+                .orElse(null);
     }
 
 }

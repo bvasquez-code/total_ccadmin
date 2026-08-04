@@ -234,6 +234,7 @@ export class CreateproductconfigComponent implements OnInit {
     copy.NumPrice = Number(config.NumPrice || 0);
     copy.NumMaxStock = Number(config.NumMaxStock || 0);
     copy.NumMinStock = Number(config.NumMinStock || 0);
+    copy.IsDigital = (config.IsDigital || "N").trim().toUpperCase();
     copy.IsDiscontable = config.IsDiscontable || "N";
     copy.DiscountType = config.DiscountType || "-";
     copy.NumDiscountMax = Number(config.NumDiscountMax || 0);
@@ -653,6 +654,10 @@ export class CreateproductconfigComponent implements OnInit {
   validate(): boolean {
     try {
       ValidationHelper.validateIsNotEmpty(this.ProductCod, "Debe seleccionar un producto");
+      this.Config.IsDigital = (this.Config.IsDigital || "N").trim().toUpperCase();
+      if (this.Config.IsDigital !== "S" && this.Config.IsDigital !== "N") {
+        throw new Error("El indicador de producto digital debe ser S o N");
+      }
       ValidationHelper.validNumber(this.Config.NumMaxStock, null, 0, "Stock maximo no valido");
       ValidationHelper.validNumber(this.Config.NumMinStock, null, 0, "Stock minimo no valido");
       ValidationHelper.validateIsNotEmpty(this.Config.ProductUnitName, "Debe ingresar la unidad de venta");

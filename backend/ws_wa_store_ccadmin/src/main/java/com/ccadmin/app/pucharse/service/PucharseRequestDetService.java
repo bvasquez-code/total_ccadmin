@@ -45,6 +45,11 @@ public class PucharseRequestDetService extends SessionService {
         }
 
         ProductConfigEntity config = this.productOperationConfigShared.findByProduct(source.ProductCod, getStoreCod());
+        if (this.productOperationConfigShared.isDigital(config)) {
+            throw new IllegalArgumentException(
+                    "El producto " + source.ProductCod + " es digital y no puede utilizarse en compras"
+            );
+        }
         if (source.ProductUnitName == null || source.ProductUnitName.trim().isEmpty()) {
             source.ProductUnitName = config.ProductUnitName;
         }

@@ -85,10 +85,12 @@ class SalePickingCreateServiceTest {
         assertEquals(new BigDecimal("40.00"), splitDetailList.get(0).NumTotalPrice);
         assertEquals(new BigDecimal("32.00"), splitDetailList.get(0).NumPriceSubTotal);
         assertEquals(new BigDecimal("8.00"), splitDetailList.get(0).NumTotalTax);
+        assertEquals("S", splitDetailList.get(0).IsDigital);
         assertEquals("L-01", splitDetailList.get(0).LotNumber);
         assertEquals(2, splitDetailList.get(1).ItemNumber);
         assertEquals(6, splitDetailList.get(1).NumUnit);
         assertEquals(new BigDecimal("60.00"), splitDetailList.get(1).NumTotalPrice);
+        assertEquals("S", splitDetailList.get(1).IsDigital);
         assertEquals("L-02", splitDetailList.get(1).LotNumber);
 
         @SuppressWarnings("unchecked")
@@ -250,6 +252,7 @@ class SalePickingCreateServiceTest {
         detail.NumTotalTax = new BigDecimal("20.00");
         detail.ProductUnitName = "NIU";
         detail.ProductUnitFactor = 1;
+        detail.IsDigital = "S";
         return detail;
     }
 

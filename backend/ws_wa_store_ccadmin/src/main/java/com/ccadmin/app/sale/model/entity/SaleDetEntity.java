@@ -31,6 +31,7 @@ public class SaleDetEntity extends AuditTableEntity implements Serializable {
     public BigDecimal NumTotalTax = BigDecimal.ZERO;
     public String ProductUnitName = "NIU";
     public int ProductUnitFactor = 1;
+    public String IsDigital = "N";
     public String IsAppliedTax;
     public String LotNumber;
     public Date ExpirationDate;
@@ -62,6 +63,7 @@ public class SaleDetEntity extends AuditTableEntity implements Serializable {
         this.NumTotalTax = BigDecimal.ZERO;
         this.ProductUnitName = presaleDet.ProductUnitName;
         this.ProductUnitFactor = presaleDet.ProductUnitFactor;
+        this.IsDigital = presaleDet.IsDigital;
         this.IsAppliedTax = "S";
         this.LotNumber = presaleDet.LotNumber;
         this.ExpirationDate = presaleDet.ExpirationDate;
@@ -80,6 +82,7 @@ public class SaleDetEntity extends AuditTableEntity implements Serializable {
         this.NumTotalTax = BigDecimal.ZERO;
         this.ProductUnitName = presaleDet.ProductUnitName;
         this.ProductUnitFactor = presaleDet.ProductUnitFactor;
+        this.IsDigital = presaleDet.IsDigital;
         this.IsAppliedTax = "S";
         this.SaleCod = SaleCod;
         this.LotNumber = presaleDet.LotNumber;

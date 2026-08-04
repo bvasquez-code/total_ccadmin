@@ -414,6 +414,10 @@ export class DirecttransferComponent implements OnInit {
   }
 
   async selectProduct(product: ProductSearchEntity) {
+    if (this.isDigitalProduct(product)) {
+      this.toastrService.warning('Los productos digitales no pueden utilizarse en transferencias.');
+      return;
+    }
     this.clearConversionValidationMessage();
     this.productSelect = product;
     this.selectedVisibleQuantity = 0;
@@ -437,6 +441,10 @@ export class DirecttransferComponent implements OnInit {
     setTimeout(() => {
       (window as any).$('#modalProduct').modal('show');
     });
+  }
+
+  isDigitalProduct(product: ProductSearchEntity): boolean {
+    return (product?.IsDigital || 'N').trim().toUpperCase() === 'S';
   }
 
   async AddProduct() {

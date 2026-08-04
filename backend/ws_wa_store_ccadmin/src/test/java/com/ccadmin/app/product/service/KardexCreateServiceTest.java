@@ -10,6 +10,7 @@ import com.ccadmin.app.product.repository.KardexZoneRepository;
 import com.ccadmin.app.product.repository.ProductInfoRepository;
 import com.ccadmin.app.product.repository.ProductInfoWarehouseRepository;
 import com.ccadmin.app.product.shared.ProductFindCreateShared;
+import com.ccadmin.app.product.shared.ProductOperationConfigShared;
 import com.ccadmin.app.sale.model.entity.SaleDetWarehouseEntity;
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
 import org.junit.jupiter.api.Test;
@@ -26,6 +27,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,6 +43,8 @@ class KardexCreateServiceTest {
     private ProductInfoWarehouseRepository productInfoWarehouseRepository;
     @Mock
     private ProductFindCreateShared productFindCreateShared;
+    @Mock
+    private ProductOperationConfigShared productOperationConfigShared;
     @InjectMocks
     private KardexCreateService kardexCreateService;
 
@@ -136,6 +140,30 @@ class KardexCreateServiceTest {
         assertEquals("L-02", movementList.get(3).LotNumber);
         verify(kardexZoneRepository, times(1)).findByOperationEvent(
                 "presale_head", head.PresaleCod, "PRESALE_RESERVATION"
+        );
+    }
+
+    @Test
+    void digitalProductsNeverPersistKardexOrModifyStock() {
+        KardexEntity movement = new KardexEntity();
+        movement.ProductCod = "DIG001";
+        movement.StoreCod = "T001";
+        KardexZoneEntity zoneMovement = new KardexZoneEntity();
+        zoneMovement.ProductCod = "DIG001";
+        zoneMovement.StoreCod = "T001";
+
+        when(productOperationConfigShared.isDigital("DIG001", "T001")).thenReturn(true);
+
+        List<KardexEntity> result = this.kardexCreateService.saveAll(
+                List.of(movement), List.of(zoneMovement)
+        );
+
+        assertEquals(List.of(), result);
+        verifyNoInteractions(
+                productInfoRepository,
+                productInfoWarehouseRepository,
+                kardexRepository,
+                kardexZoneRepository
         );
     }
 

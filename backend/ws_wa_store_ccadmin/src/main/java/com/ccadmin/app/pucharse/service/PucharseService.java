@@ -4,6 +4,7 @@ import com.ccadmin.app.product.model.entity.KardexEntity;
 import com.ccadmin.app.product.model.entity.KardexZoneEntity;
 import com.ccadmin.app.product.shared.KardexShared;
 import com.ccadmin.app.product.shared.ProductShared;
+import com.ccadmin.app.product.shared.ProductOperationConfigShared;
 import com.ccadmin.app.pucharse.exception.PucharseException;
 import com.ccadmin.app.pucharse.model.dto.PucharseDetailsDto;
 import com.ccadmin.app.pucharse.model.dto.PucharseRegisterDto;
@@ -49,6 +50,8 @@ public class PucharseService extends SessionService {
     @Autowired
     private ProductShared productShared;
     @Autowired
+    private ProductOperationConfigShared productOperationConfigShared;
+    @Autowired
     private StoreShared storeShared;
     private SearchService searchService;
 
@@ -57,6 +60,10 @@ public class PucharseService extends SessionService {
 
         PucharseRequestHeadEntity headRequest = pucharseRequestHeadRepository.findById(pucharseRegister.PucharseReqCod).get();
         List<PucharseRequestDetEntity> detailRequestList = pucharseRequestDetRepository.findAllActive(pucharseRegister.PucharseReqCod);
+        this.validateNonDigitalProducts(
+                detailRequestList.stream().map(item -> item.ProductCod).toList(),
+                headRequest.StoreCod
+        );
 
         if( !headRequest.PurchaseStatus.equals(StatusConst.PENDING) )
         {
@@ -105,6 +112,10 @@ public class PucharseService extends SessionService {
         PucharseHeadEntity Headboard = this.pucharseHeadRepository.findByIdForUpdate(pucharseRegister.PucharseCod)
                 .orElseThrow(() -> new PucharseException("No existe la compra " + pucharseRegister.PucharseCod));
         List<PucharseDetEntity> DetailList = this.pucharseDetRepository.findAllActive(pucharseRegister.PucharseCod);
+        this.validateNonDigitalProducts(
+                DetailList.stream().map(item -> item.ProductCod).toList(),
+                Headboard.StoreCod
+        );
         List<PucharseDetDeliveryEntity> DeliveryList = new ArrayList<>();
         WarehouseEntity warehouseUnit = new WarehouseEntity();
 
@@ -227,5 +238,16 @@ public class PucharseService extends SessionService {
         SearchDto search = new SearchDto(Query,Page,StoreCod);
         this.searchService = new SearchService(this.pucharseHeadRepository);
         return this.searchService.findAllStore(search,10);
+    }
+
+    private void validateNonDigitalProducts(List<String> productCodList, String storeCod)
+            throws PucharseException {
+        for (String productCod : productCodList) {
+            if (this.productOperationConfigShared.isDigital(productCod, storeCod)) {
+                throw new PucharseException(
+                        "El producto " + productCod + " es digital y no puede utilizarse en compras"
+                );
+            }
+        }
     }
 }

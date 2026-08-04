@@ -22,6 +22,7 @@ public class ProductConfigEntity extends AuditTableEntity implements Serializabl
     public BigDecimal NumPrice;
     public int NumMaxStock;
     public int NumMinStock;
+    public String IsDigital = "N";
     public String IsDiscontable;
     public String DiscountType;
     public BigDecimal NumDiscountMax;

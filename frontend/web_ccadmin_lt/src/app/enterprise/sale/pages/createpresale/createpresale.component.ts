@@ -389,6 +389,14 @@ export class CreatepresaleComponent implements OnInit {
     return ProductUnitHelper.toVisibleQuantity(stock, ProductUnitFactor);
   }
 
+  isDigitalSearchProduct(product: ProductSearchEntity): boolean {
+    return (product?.IsDigital || "N").trim().toUpperCase() === "S";
+  }
+
+  isDigitalSelectedProduct(): boolean {
+    return (this.productInfoDtoSelect?.Config?.IsDigital || "N").trim().toUpperCase() === "S";
+  }
+
   getVisibleQuantity(internalQuantity: number, ProductUnitFactor: number): number {
     return ProductUnitHelper.toVisibleQuantity(internalQuantity, ProductUnitFactor);
   }

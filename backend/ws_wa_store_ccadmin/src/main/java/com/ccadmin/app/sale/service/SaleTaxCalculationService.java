@@ -270,6 +270,7 @@ public class SaleTaxCalculationService {
         target.NumUnitPriceSale = source.NumUnitPriceSale;
         target.ProductUnitName = source.ProductUnitName;
         target.ProductUnitFactor = source.ProductUnitFactor;
+        target.IsDigital = source.IsDigital;
         target.IsAppliedTax = source.IsAppliedTax;
         target.CreationUser = source.CreationUser;
         target.CreationDate = source.CreationDate;

@@ -73,15 +73,18 @@ export class ShoppingCartService
 
     public GetExistsStock(NumUnit : number,ProductInfo : ProductInfoDto,ProductVariant : ProductVariantEntity):number
     {
-        let NumDigitalStock : number = ProductInfo.InfoList.find( e => e.Variant === ProductVariant.Variant )?.NumDigitalStock  || 0;
+        if( NumUnit <  0)
+        {
+            throw new Error('Imposible stock');
+        }
+        if ((ProductInfo.Config?.IsDigital || "N").trim().toUpperCase() === "S") {
+            return NumUnit;
+        }
 
+        let NumDigitalStock : number = ProductInfo.InfoList.find( e => e.Variant === ProductVariant.Variant )?.NumDigitalStock  || 0;
         if( NumUnit >  NumDigitalStock)
         {
             this.toastrService.error("No existe stock disponible para el producto");
-            throw new Error('Imposible stock');
-        }
-        if( NumUnit <  0)
-        {
             throw new Error('Imposible stock');
         }
         return NumUnit;

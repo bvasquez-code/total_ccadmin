@@ -62,7 +62,11 @@ public class ProductCreateService extends SessionService {
         ensureProductCode(productRegister);
         productRegister.product.session(getUserCod());
         productRegister.config.session(getUserCod()).ProductCod = productRegister.product.ProductCod;
-        this.productOperationConfigShared.normalize(productRegister.config);
+        try {
+            this.productOperationConfigShared.validateDigitalIndicator(productRegister.config);
+        } catch (IllegalArgumentException exception) {
+            throw new ProductBuildException(exception.getMessage());
+        }
 
         if (!productRegister.productBarcode.ProductCod.isEmpty() && !productRegister.productBarcode.BarCode.isEmpty()) {
             Optional<ProductBarcodeEntity> productBarcode = this.productBarcodeRepository
@@ -82,10 +86,21 @@ public class ProductCreateService extends SessionService {
         if (existProduct && !productRegister.IsEditMode) {
             throw new ProductBuildException("Codigo de producto ya existe.");
         }
+        if (existProduct) {
+            productRegister.config.StoreCod = getStoreCod();
+            try {
+                this.productOperationConfigShared.validateDigitalConversion(
+                        productRegister.config.ProductCod,
+                        productRegister.config.StoreCod,
+                        productRegister.config.IsDigital
+                );
+            } catch (IllegalArgumentException exception) {
+                throw new ProductBuildException(exception.getMessage());
+            }
+        }
 
         this.productRepository.save(productRegister.product);
         if (existProduct) {
-            productRegister.config.StoreCod = getStoreCod();
             this.productConfigRepository.save(productRegister.config);
             this.productTaxConfigCreateService.ensureDefaultMainTax(productRegister.config.ProductCod, productRegister.config.StoreCod);
         } else {
@@ -212,7 +227,7 @@ public class ProductCreateService extends SessionService {
 
             productRegister.config.ProductCod = productCod;
             productRegister.config.session(auditUser);
-            productOperationConfigShared.normalize(productRegister.config);
+            productOperationConfigShared.validateDigitalIndicator(productRegister.config);
             productList.add(productRegister.product);
             configList.addAll(buildConfigForAllStores(
                     productRegister.config, auditUser
@@ -311,6 +326,7 @@ public class ProductCreateService extends SessionService {
         config.NumPrice = source.NumPrice;
         config.NumMaxStock = source.NumMaxStock;
         config.NumMinStock = source.NumMinStock;
+        config.IsDigital = source.IsDigital;
         config.IsDiscontable = source.IsDiscontable;
         config.DiscountType = source.DiscountType;
         config.NumDiscountMax = source.NumDiscountMax;

@@ -64,13 +64,13 @@ BEGIN
     -- 3.4 Inicializar información de búsqueda (product_search)
     INSERT INTO product_config (
         ProductCod, StoreCod, NumPrice, NumMaxStock, NumMinStock,
-        IsDiscontable, DiscountType, NumDiscountMax, ProductUnitName,
+        IsDigital, IsDiscontable, DiscountType, NumDiscountMax, ProductUnitName,
         ProductUnitFactor, Version, CreationUser, CreationDate,
         ModifyUser, ModifyDate, Status
     )
     SELECT
         base.ProductCod, p_StoreCod, base.NumPrice, base.NumMaxStock, base.NumMinStock,
-        base.IsDiscontable, base.DiscountType, base.NumDiscountMax, base.ProductUnitName,
+        base.IsDigital, base.IsDiscontable, base.DiscountType, base.NumDiscountMax, base.ProductUnitName,
         base.ProductUnitFactor, base.Version, 'SYSTEM', NOW(),
         NULL, NOW(), 'A'
     FROM (
@@ -148,7 +148,7 @@ BEGIN
     INSERT INTO product_search (
         ProductCod, StoreCod, ProductName, ProductDesc,
         NumDigitalStock, NumPhysicalStock, NumPrice,
-        NumMaxStock, NumMinStock, IsDiscontable,
+        NumMaxStock, NumMinStock, IsDigital, IsDiscontable,
         DiscountType, NumDiscountMax, ProductUnitName, ProductUnitFactor,
         BrandCod, BrandName,
         CategoryCod, CategoryName, CategoryDadCod, CategoryDadName,
@@ -167,6 +167,7 @@ BEGIN
         pc.NumPrice,
         pc.NumMaxStock,
         pc.NumMinStock,
+        pc.IsDigital,
         pc.IsDiscontable,
         pc.DiscountType,
         pc.NumDiscountMax,

@@ -14,6 +14,7 @@ export class CreditNoteDetEntity extends AuditTableEntity {
     public NumTotalTax: number = 0;
     public ProductUnitName: string = 'NIU';
     public ProductUnitFactor: number = 1;
+    public IsDigital: string = 'N';
     public IsAppliedTax: string = '';
     public LotNumber: string = '';
     public ExpirationDate: Date | any = null;

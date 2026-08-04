@@ -24,6 +24,7 @@ CREATE TABLE `product_config` (
   `NumPrice` decimal(16,2) DEFAULT '0.00',
   `NumMaxStock` int DEFAULT '0',
   `NumMinStock` int DEFAULT '0',
+  `IsDigital` char(1) NOT NULL DEFAULT 'N' COMMENT 'S: no controla stock ni genera Kardex; N: producto inventariable',
   `IsDiscontable` char(1) DEFAULT 'N',
   `DiscountType` char(2) DEFAULT NULL,
   `NumDiscountMax` decimal(16,2) DEFAULT '0.00',
@@ -37,6 +38,7 @@ CREATE TABLE `product_config` (
   `Status` char(1) NOT NULL DEFAULT 'A',
   PRIMARY KEY (`ProductCod`,`StoreCod`),
   KEY `fk_product_config_store` (`StoreCod`),
+  CONSTRAINT `chk_product_config_is_digital` CHECK (`IsDigital` IN ('S','N')),
   CONSTRAINT `chk_product_config_product_unit_factor` CHECK (`ProductUnitFactor` >= 1),
   CONSTRAINT `fk_product_config_product` FOREIGN KEY (`ProductCod`) REFERENCES `product` (`ProductCod`),
   CONSTRAINT `fk_product_config_store` FOREIGN KEY (`StoreCod`) REFERENCES `store` (`StoreCod`)
@@ -66,6 +68,15 @@ CREATE TABLE `product_config` (
         
         IF NOT EXISTS (
             SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'product_config'
+            AND column_name = 'IsDigital'
+        ) THEN
+            ALTER TABLE `product_config` ADD COLUMN `IsDigital` char(1) NOT NULL DEFAULT 'N'
+            COMMENT 'S: no controla stock ni genera Kardex; N: producto inventariable' AFTER `NumMinStock`;
+            SELECT 'Columna IsDigital agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'product_config'
             AND column_name = 'ProductUnitName'
         ) THEN
             ALTER TABLE `product_config` ADD COLUMN `ProductUnitName` varchar(32) NOT NULL DEFAULT 'NIU' COMMENT 'Unidad visible usada para operar el producto' AFTER `NumDiscountMax`;
@@ -78,6 +89,15 @@ CREATE TABLE `product_config` (
         ) THEN
             ALTER TABLE `product_config` ADD COLUMN `ProductUnitFactor` int NOT NULL DEFAULT '1' COMMENT 'Multiplicador desde cantidad visible hacia unidad minima' AFTER `ProductUnitName`;
             SELECT 'Columna ProductUnitFactor agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.table_constraints WHERE table_schema = DATABASE() AND table_name = 'product_config'
+            AND constraint_name = 'chk_product_config_is_digital'
+        ) THEN
+            ALTER TABLE `product_config` ADD CONSTRAINT `chk_product_config_is_digital`
+            CHECK (`IsDigital` IN ('S','N'));
+            SELECT 'Check chk_product_config_is_digital agregado exitosamente.' AS Mensaje;
         END IF;
 
         IF NOT EXISTS (
@@ -109,13 +129,13 @@ CREATE TABLE `product_config` (
 
             INSERT INTO `product_config` (
                 `ProductCod`, `StoreCod`, `NumPrice`, `NumMaxStock`, `NumMinStock`,
-                `IsDiscontable`, `DiscountType`, `NumDiscountMax`, `ProductUnitName`,
+                `IsDigital`, `IsDiscontable`, `DiscountType`, `NumDiscountMax`, `ProductUnitName`,
                 `ProductUnitFactor`, `Version`, `CreationUser`, `CreationDate`,
                 `ModifyUser`, `ModifyDate`, `Status`
             )
             SELECT
                 base.`ProductCod`, s.`StoreCod`, base.`NumPrice`, base.`NumMaxStock`, base.`NumMinStock`,
-                base.`IsDiscontable`, base.`DiscountType`, base.`NumDiscountMax`, base.`ProductUnitName`,
+                base.`IsDigital`, base.`IsDiscontable`, base.`DiscountType`, base.`NumDiscountMax`, base.`ProductUnitName`,
                 base.`ProductUnitFactor`, base.`Version`, base.`CreationUser`, base.`CreationDate`,
                 base.`ModifyUser`, base.`ModifyDate`, base.`Status`
             FROM (

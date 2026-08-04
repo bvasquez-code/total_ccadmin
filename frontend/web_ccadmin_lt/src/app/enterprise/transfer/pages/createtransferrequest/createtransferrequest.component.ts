@@ -365,6 +365,10 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
   }
 
   selectProduct(product: ProductSearchEntity) {
+    if (this.isDigitalProduct(product)) {
+      this.toastrService.warning('Los productos digitales no pueden utilizarse en transferencias.');
+      return;
+    }
     this.clearConversionValidationMessage();
     this.txtNumUnit.nativeElement.value = '';
     this.productSelect = product;
@@ -514,6 +518,10 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
     if (currentStock !== null && this.productSelect.ProductCod === productCod) {
       this.productSelect.NumPhysicalStock = currentStock;
     }
+  }
+
+  isDigitalProduct(product: ProductSearchEntity): boolean {
+    return (product?.IsDigital || 'N').trim().toUpperCase() === 'S';
   }
 
   toVisibleQuantity(internalQuantity: number, ProductUnitFactor: number): number {

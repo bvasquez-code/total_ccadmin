@@ -296,6 +296,12 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
     this.productSelectInfo = await this.findDetailById(product.ProductCod);
 
     if(this.productSelectInfo){
+      if ((this.productSelectInfo.Config?.IsDigital || "N").trim().toUpperCase() === "S") {
+        this.productSelect = new ProductEntity();
+        this.toastrService.warning("Los productos digitales no pueden utilizarse en compras.");
+        setTimeout(() => (window as any).$('#modalProduct').modal('hide'));
+        return;
+      }
 
       console.log( { aaa : this.productSelectInfo })
 
@@ -360,6 +366,10 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
     }
 
     const productInfoDto: ProductInfoDto = await this.findDetailById(product.ProductCod);
+    if ((productInfoDto.Config?.IsDigital || "N").trim().toUpperCase() === "S") {
+      this.toastrService.warning("Los productos digitales no pueden utilizarse en compras.");
+      return;
+    }
 
     purchaseDet.ProductCod = product.ProductCod;
     purchaseDet.Variant = productInfoDto.VariantList[0]?.Variant || '0000';
