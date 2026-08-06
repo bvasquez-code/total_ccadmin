@@ -87,7 +87,6 @@ import { StockMovementService } from '../../service/stock-movement.service';
                           </td>
                           <td class="text-center">
                             <button type="button" class="btn btn-sm btn-outline-primary"
-                                    data-toggle="modal" data-target="#modalExceptionalStockProduct"
                                     (click)="selectProduct(product)" [disabled]="saving">
                               Elegir
                             </button>
@@ -308,11 +307,17 @@ export class StockMovementFormComponent implements OnInit {
   }
 
   selectProduct(product: ProductSearchEntity): void {
+    if (this.isDigitalProduct(product)) {
+      this.selectedProduct = new ProductSearchEntity();
+      this.toastr.warning('Los productos digitales no pueden utilizarse en movimientos de stock.');
+      return;
+    }
     this.selectedProduct = product;
     this.selectedWarehouse = this.warehouseList.length === 1
       ? this.warehouseList[0].WarehouseCod
       : '';
     this.visibleQuantity = 0;
+    (window as any).$('#modalExceptionalStockProduct').modal('show');
   }
 
   async addProduct(): Promise<void> {
@@ -327,6 +332,9 @@ export class StockMovementFormComponent implements OnInit {
       );
       if (infoResponse.ErrorStatus) throw new Error(infoResponse.Message);
       const info = infoResponse.Data;
+      if (this.isDigitalProduct(info.Config) || this.isDigitalProduct(product)) {
+        throw new Error('Los productos digitales no pueden utilizarse en movimientos de stock.');
+      }
       const factor = Number(info.Config?.ProductUnitFactor || product.ProductUnitFactor || 1);
       const internalQuantity = ProductUnitHelper.toInternalQuantity(this.visibleQuantity, factor);
       if (!Number.isInteger(internalQuantity)) throw new Error('La cantidad no representa unidades internas completas');
@@ -348,9 +356,14 @@ export class StockMovementFormComponent implements OnInit {
       this.selectedWarehouse = '';
       this.visibleQuantity = 0;
       this.btnCloseProductModal?.nativeElement.click();
+      await this.save(false);
     } catch (error: any) {
       this.toastr.error(error.message);
     }
+  }
+
+  private isDigitalProduct(product: { IsDigital?: string } | null | undefined): boolean {
+    return (product?.IsDigital || 'N').trim().toUpperCase() === 'S';
   }
 
   removeDetail(index: number): void { this.register.DetailList.splice(index, 1); }

@@ -114,8 +114,8 @@ public class StockExitService extends SessionService {
             head.CreationDate = current.CreationDate;
             head.ProcessStatus = current.ProcessStatus;
         }
-        normalizeAndValidate(head, request.DetailList);
         head.StoreCod = getStoreCod();
+        normalizeAndValidate(head, request.DetailList);
         head.Status = StatusConst.ACTIVE;
         head.addSession(getUserCod());
         headRepository.save(head);
@@ -137,6 +137,10 @@ public class StockExitService extends SessionService {
         requirePending(head);
         List<StockExitDetEntity> details = detRepository.findByCode(code);
         if (details.isEmpty()) throw new IllegalArgumentException("Debe registrar al menos un producto");
+        validation.requirePhysicalProducts(
+                details.stream().map(detail -> detail.ProductCod).toList(),
+                head.StoreCod
+        );
         List<KardexEntity> totals = new ArrayList<>();
         List<KardexZoneEntity> zones = new ArrayList<>();
 
@@ -281,6 +285,10 @@ public class StockExitService extends SessionService {
                 validation.requireReason(10, d.UnavailableReasonCode, "El motivo de no disponible");
             } else d.UnavailableReasonCode = null;
         }
+        validation.requirePhysicalProducts(
+                details.stream().map(detail -> detail.ProductCod).toList(),
+                head.StoreCod
+        );
     }
 
     private void requireResolvable(StockExitHeadEntity head) {

@@ -6,6 +6,7 @@ import com.ccadmin.app.product.model.dto.ProductRegisterMassiveDto;
 import com.ccadmin.app.product.model.entity.*;
 import com.ccadmin.app.product.model.entity.id.ProductPictureID;
 import com.ccadmin.app.product.repository.*;
+import com.ccadmin.app.product.shared.ProductCategoryDigitalPolicy;
 import com.ccadmin.app.product.shared.ProductOperationConfigShared;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import com.ccadmin.app.shared.service.GenericQueuedService;
@@ -46,6 +47,8 @@ public class ProductCreateService extends SessionService {
     @Autowired
     private ProductOperationConfigShared productOperationConfigShared;
     @Autowired
+    private ProductCategoryDigitalPolicy productCategoryDigitalPolicy;
+    @Autowired
     private StoreShared storeShared;
 
     @Autowired
@@ -63,6 +66,10 @@ public class ProductCreateService extends SessionService {
         productRegister.product.session(getUserCod());
         productRegister.config.session(getUserCod()).ProductCod = productRegister.product.ProductCod;
         try {
+            this.productCategoryDigitalPolicy.apply(
+                    productRegister.product.CategoryCod,
+                    productRegister.config
+            );
             this.productOperationConfigShared.validateDigitalIndicator(productRegister.config);
         } catch (IllegalArgumentException exception) {
             throw new ProductBuildException(exception.getMessage());
@@ -227,6 +234,10 @@ public class ProductCreateService extends SessionService {
 
             productRegister.config.ProductCod = productCod;
             productRegister.config.session(auditUser);
+            productCategoryDigitalPolicy.apply(
+                    productRegister.product.CategoryCod,
+                    productRegister.config
+            );
             productOperationConfigShared.validateDigitalIndicator(productRegister.config);
             productList.add(productRegister.product);
             configList.addAll(buildConfigForAllStores(

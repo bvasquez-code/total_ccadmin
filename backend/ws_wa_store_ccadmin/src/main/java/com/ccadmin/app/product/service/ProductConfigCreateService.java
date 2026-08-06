@@ -10,6 +10,7 @@ import com.ccadmin.app.product.model.entity.ProductTaxConfigEntity;
 import com.ccadmin.app.product.model.entity.id.ProductConfigID;
 import com.ccadmin.app.product.repository.ProductConfigRepository;
 import com.ccadmin.app.product.repository.ProductRepository;
+import com.ccadmin.app.product.shared.ProductCategoryDigitalPolicy;
 import com.ccadmin.app.product.shared.ProductDiscountPolicy;
 import com.ccadmin.app.product.shared.ProductOperationConfigShared;
 import com.ccadmin.app.shared.model.myconst.StatusConst;
@@ -34,6 +35,7 @@ public class ProductConfigCreateService extends SessionService {
     private final ProductFindCreateService productFindCreateService;
     private final ProductTaxConfigCreateService productTaxConfigCreateService;
     private final ProductDiscountPolicy productDiscountPolicy;
+    private final ProductCategoryDigitalPolicy productCategoryDigitalPolicy;
 
     public ProductConfigCreateService(ProductConfigRepository productConfigRepository,
                                       ProductRepository productRepository,
@@ -42,7 +44,8 @@ public class ProductConfigCreateService extends SessionService {
                                       StoreShared storeShared,
                                       ProductFindCreateService productFindCreateService,
                                       ProductTaxConfigCreateService productTaxConfigCreateService,
-                                      ProductDiscountPolicy productDiscountPolicy) {
+                                      ProductDiscountPolicy productDiscountPolicy,
+                                      ProductCategoryDigitalPolicy productCategoryDigitalPolicy) {
         this.productConfigRepository = productConfigRepository;
         this.productRepository = productRepository;
         this.storeRepository = storeRepository;
@@ -51,6 +54,7 @@ public class ProductConfigCreateService extends SessionService {
         this.productFindCreateService = productFindCreateService;
         this.productTaxConfigCreateService = productTaxConfigCreateService;
         this.productDiscountPolicy = productDiscountPolicy;
+        this.productCategoryDigitalPolicy = productCategoryDigitalPolicy;
     }
 
     @Transactional
@@ -62,6 +66,11 @@ public class ProductConfigCreateService extends SessionService {
             throw new ProductBuildException("Debe ingresar la configuracion del producto.");
         }
         try {
+            ProductEntity product = this.productRepository.findByProductCodNative(request.ProductCod)
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "No existe el producto " + request.ProductCod
+                    ));
+            this.productCategoryDigitalPolicy.apply(product.CategoryCod, request.config);
             this.productDiscountPolicy.normalizeAndValidate(request.config);
             this.productOperationConfigShared.validateDigitalIndicator(request.config);
         } catch (IllegalArgumentException exception) {

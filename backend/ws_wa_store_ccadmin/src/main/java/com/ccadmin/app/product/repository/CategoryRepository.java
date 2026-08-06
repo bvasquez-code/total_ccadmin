@@ -22,6 +22,16 @@ public interface CategoryRepository extends JpaRepository<CategoryEntity,String>
     public List<CategoryEntity> findAllActiveDad();
 
     @Query(value = """
+            select c.*
+            from category c
+            where c.CategoryCod = :categoryCod
+            limit 1
+            """, nativeQuery = true)
+    Optional<CategoryEntity> findByCategoryCodNative(
+            @Param("categoryCod") String categoryCod
+    );
+
+    @Query(value = """
             select *
             from category c
             where c.Status = 'A'

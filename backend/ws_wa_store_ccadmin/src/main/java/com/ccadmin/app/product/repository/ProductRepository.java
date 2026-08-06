@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 
 public interface ProductRepository extends JpaRepository<ProductEntity,String>, CcAdminRepository<ProductEntity,String> {
@@ -40,4 +41,14 @@ public interface ProductRepository extends JpaRepository<ProductEntity,String>, 
             select p.* from product p where p.CategoryCod = :CategoryCod and p.Status = 'A'
             """,nativeQuery = true)
     public List<ProductEntity> findByCategoryCod(@Param("CategoryCod")String CategoryCod);
+
+    @Query(value = """
+            select p.*
+            from product p
+            where p.ProductCod = :productCod
+            limit 1
+            """, nativeQuery = true)
+    Optional<ProductEntity> findByProductCodNative(
+            @Param("productCod") String productCod
+    );
 }

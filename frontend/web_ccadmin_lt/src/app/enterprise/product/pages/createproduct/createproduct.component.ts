@@ -164,7 +164,8 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
 
     const selectedCategory = this.CategoryList.find(c => c.CategoryCod === this.ProductRegister.product.CategoryCod);
     if (selectedCategory) {
-      this.searchCategoryTerm = selectedCategory.CategoryName;
+      this.searchCategoryTerm = this.categoryVisibleLabel(selectedCategory);
+      this.applyCategoryDigitalRule(selectedCategory);
     }
 
     this.ProductRegister.config.ProductCod = this.txtProductCod.nativeElement.value;
@@ -207,6 +208,7 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
       this.ProductRegister.product.CategoryCod = this.cboCategoryCod.nativeElement.value;
 
       this.ProductRegister.config.ProductCod = this.ProductRegister.product.ProductCod;
+      this.applyCategoryDigitalRule(this.getSelectedCategory());
       this.ProductRegister.config.IsDigital = (this.ProductRegister.config.IsDigital || "N").trim().toUpperCase();
 
       if (!this.IsEditMode) {
@@ -577,7 +579,10 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
 
   get filteredCategories() {
     if (!this.searchCategoryTerm) return this.CategoryList;
-    return this.CategoryList.filter(c => c.CategoryName.toLowerCase().includes(this.searchCategoryTerm.toLowerCase()));
+    const searchTerm = this.searchCategoryTerm.toLowerCase();
+    return this.CategoryList.filter(category =>
+      this.categoryVisibleLabel(category).toLowerCase().includes(searchTerm)
+    );
   }
 
   selectBrand(brand: BrandEntity | null) {
@@ -608,7 +613,8 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
   selectCategory(category: CategoryEntity | null) {
     if (category) {
       this.cboCategoryCod.nativeElement.value = category.CategoryCod;
-      this.searchCategoryTerm = category.CategoryName;
+      this.searchCategoryTerm = this.categoryVisibleLabel(category);
+      this.applyCategoryDigitalRule(category);
     } else {
       this.cboCategoryCod.nativeElement.value = '';
       this.searchCategoryTerm = '';
@@ -619,15 +625,43 @@ export class CreateproductComponent implements OnInit, AfterViewInit {
   onCategoryBlur() {
     setTimeout(() => {
       this.showCategoryDropdown = false;
-      const exists = this.CategoryList.find(c => c.CategoryName.toLowerCase() === this.searchCategoryTerm?.toLowerCase());
+      const normalizedSearch = (this.searchCategoryTerm || '').trim().toLowerCase();
+      const exists = this.CategoryList.find(category =>
+        category.CategoryName.toLowerCase() === normalizedSearch
+        || this.categoryVisibleLabel(category).toLowerCase() === normalizedSearch
+      );
       if (!exists) {
         this.cboCategoryCod.nativeElement.value = '';
         this.searchCategoryTerm = '';
       } else {
         this.cboCategoryCod.nativeElement.value = exists.CategoryCod;
-        this.searchCategoryTerm = exists.CategoryName;
+        this.searchCategoryTerm = this.categoryVisibleLabel(exists);
+        this.applyCategoryDigitalRule(exists);
       }
     }, 200);
+  }
+
+  get isSelectedCategoryDigital(): boolean {
+    return this.isDigitalCategory(this.getSelectedCategory());
+  }
+
+  categoryVisibleLabel(category: CategoryEntity): string {
+    return `${category.CategoryName} (${this.isDigitalCategory(category) ? 'digital' : 'regular'})`;
+  }
+
+  private getSelectedCategory(): CategoryEntity | null {
+    const categoryCod = this.cboCategoryCod?.nativeElement?.value || this.ProductRegister.product.CategoryCod;
+    return this.CategoryList.find(category => category.CategoryCod === categoryCod) || null;
+  }
+
+  private isDigitalCategory(category: CategoryEntity | null): boolean {
+    return (category?.IsDigital || 'N').trim().toUpperCase() === 'S';
+  }
+
+  private applyCategoryDigitalRule(category: CategoryEntity | null): void {
+    if (this.isDigitalCategory(category)) {
+      this.ProductRegister.config.IsDigital = 'S';
+    }
   }
 
 }

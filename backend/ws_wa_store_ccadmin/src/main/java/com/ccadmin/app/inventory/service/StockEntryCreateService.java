@@ -345,6 +345,12 @@ public class StockEntryCreateService extends SessionService {
                     "Debe registrar al menos un producto"
             );
         }
+        stockMovementValidationService.requirePhysicalProducts(
+                stockEntryDetails.stream()
+                        .map(stockEntryDetail -> stockEntryDetail.ProductCod)
+                        .toList(),
+                stockEntryHead.StoreCod
+        );
         if (!StockMovementConstants.PROCESS_ORIGINAL.equals(
                 stockEntryHead.ProcessType
         )) {
@@ -756,6 +762,12 @@ public class StockEntryCreateService extends SessionService {
                 stockEntryDetail.UnavailableReasonCode = null;
             }
         }
+        stockMovementValidationService.requirePhysicalProducts(
+                stockEntryDetails.stream()
+                        .map(stockEntryDetail -> stockEntryDetail.ProductCod)
+                        .toList(),
+                stockEntryHead.StoreCod
+        );
     }
 
     private void requireResolvable(StockEntryHeadEntity head) {
