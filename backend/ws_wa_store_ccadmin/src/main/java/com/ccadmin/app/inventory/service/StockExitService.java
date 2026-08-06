@@ -4,6 +4,7 @@ import com.ccadmin.app.inventory.model.constants.StockMovementConstants;
 import com.ccadmin.app.inventory.model.dto.*;
 import com.ccadmin.app.inventory.model.entity.StockExitDetEntity;
 import com.ccadmin.app.inventory.model.entity.StockExitHeadEntity;
+import com.ccadmin.app.inventory.model.factory.StockExitRegisterDtoFactory;
 import com.ccadmin.app.inventory.repository.StockExitDetRepository;
 import com.ccadmin.app.inventory.repository.StockExitHeadRepository;
 import com.ccadmin.app.product.model.constants.KardexZoneConstants;
@@ -75,11 +76,9 @@ public class StockExitService extends SessionService {
         StockExitHeadEntity head = headRepository.findById(code)
                 .orElseThrow(() -> new IllegalArgumentException("No existe el retiro de stock"));
         requireStore(head.StoreCod);
-        StockExitRegisterDto result = new StockExitRegisterDto();
-        result.Head = head;
-        result.DetailList = detRepository.findByCode(code);
-        populateProductNames(result.DetailList);
-        return result;
+        List<StockExitDetEntity> details = detRepository.findByCode(code);
+        populateProductNames(details);
+        return StockExitRegisterDtoFactory.fromEntities(head, details);
     }
 
     public ResponseWsDto findDataForm(String code) {

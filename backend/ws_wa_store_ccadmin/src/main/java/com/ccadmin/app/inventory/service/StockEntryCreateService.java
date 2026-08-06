@@ -6,6 +6,9 @@ import com.ccadmin.app.inventory.model.constants.StockMovementConstants;
 import com.ccadmin.app.inventory.model.dto.*;
 import com.ccadmin.app.inventory.model.entity.StockEntryDetEntity;
 import com.ccadmin.app.inventory.model.entity.StockEntryHeadEntity;
+import com.ccadmin.app.inventory.model.factory.StockEntryBulkResultDtoFactory;
+import com.ccadmin.app.inventory.model.factory.StockEntryDetEntityFactory;
+import com.ccadmin.app.inventory.model.factory.StockEntryHeadEntityFactory;
 import com.ccadmin.app.inventory.repository.StockEntryDetRepository;
 import com.ccadmin.app.inventory.repository.StockEntryHeadRepository;
 import com.ccadmin.app.product.model.constants.KardexZoneConstants;
@@ -38,7 +41,6 @@ import java.util.ArrayList;
 import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Set;
 import java.util.Date;
@@ -199,18 +201,17 @@ public class StockEntryCreateService extends SessionService {
     ) {
         validateBulkCreateRequest(request);
         String auditUser = clean(userCod).isEmpty() ? "SISTEMA" : userCod.trim();
-        Map<Integer, Integer> referenceByDetailIndex = new LinkedHashMap<>();
-        List<StockEntryDetEntity> stockEntryDetails = buildBulkDetails(
-                request, referenceByDetailIndex
-        );
-        StockEntryHeadEntity stockEntryHead = buildBulkHead(request);
+        List<StockEntryDetEntity> stockEntryDetails =
+                StockEntryDetEntityFactory.fromBulkCreate(request);
+        StockEntryHeadEntity stockEntryHead =
+                StockEntryHeadEntityFactory.fromBulkCreate(request);
 
         normalizeAndValidate(stockEntryHead, stockEntryDetails);
         persistEntry(stockEntryHead, stockEntryDetails, auditUser);
         confirmEntry(stockEntryHead, stockEntryDetails, auditUser);
 
-        return buildBulkResult(
-                stockEntryHead, stockEntryDetails, referenceByDetailIndex
+        return StockEntryBulkResultDtoFactory.fromConfirmedBulk(
+                stockEntryHead, request.DetailList, stockEntryDetails
         );
     }
 
@@ -228,59 +229,6 @@ public class StockEntryCreateService extends SessionService {
                     "La entrada de stock no tiene detalles"
             );
         }
-    }
-
-    private StockEntryHeadEntity buildBulkHead(StockEntryBulkCreateDto request) {
-        StockEntryHeadEntity stockEntryHead = new StockEntryHeadEntity();
-        stockEntryHead.StockEntryCod = request.StockEntryCod;
-        stockEntryHead.StoreCod = request.StoreCod;
-        stockEntryHead.ProcessType = StockMovementConstants.PROCESS_ORIGINAL;
-        stockEntryHead.MovementMode = StockMovementConstants.MODE_DIRECT;
-        stockEntryHead.ReasonCode = BulkLoadConstants.STOCK_REASON;
-        stockEntryHead.OriginStockEntryCod = null;
-        stockEntryHead.ProcessStatus = StatusConst.PENDING;
-        stockEntryHead.Observation =
-                "Generado por carga masiva " + request.BulkLoadCod;
-        return stockEntryHead;
-    }
-
-    private List<StockEntryDetEntity> buildBulkDetails(
-            StockEntryBulkCreateDto request,
-            Map<Integer, Integer> referenceByDetailIndex
-    ) {
-        List<StockEntryDetEntity> stockEntryDetails = new ArrayList<>();
-        for (int index = 0; index < request.DetailList.size(); index++) {
-            StockEntryBulkLineDto line = request.DetailList.get(index);
-            StockEntryDetEntity stockEntryDetail = new StockEntryDetEntity();
-            stockEntryDetail.ProductCod = line.ProductCod;
-            stockEntryDetail.Variant = line.Variant;
-            stockEntryDetail.WarehouseCod = line.WarehouseCod;
-            stockEntryDetail.LotNumber = "";
-            stockEntryDetail.ProductUnitName = line.ProductUnitName;
-            stockEntryDetail.ProductUnitFactor = line.ProductUnitFactor;
-            stockEntryDetail.NumUnit = line.NumUnit;
-            stockEntryDetail.Observation = "Carga masiva " + request.BulkLoadCod
-                    + ", fila Excel " + line.SourceRowNumber;
-            stockEntryDetails.add(stockEntryDetail);
-            referenceByDetailIndex.put(index, line.ReferenceItemNumber);
-        }
-        return stockEntryDetails;
-    }
-
-    private StockEntryBulkResultDto buildBulkResult(
-            StockEntryHeadEntity stockEntryHead,
-            List<StockEntryDetEntity> stockEntryDetails,
-            Map<Integer, Integer> referenceByDetailIndex
-    ) {
-        StockEntryBulkResultDto result = new StockEntryBulkResultDto();
-        result.StockEntryCod = stockEntryHead.StockEntryCod;
-        for (int index = 0; index < stockEntryDetails.size(); index++) {
-            result.ItemNumberByReference.put(
-                    referenceByDetailIndex.get(index),
-                    stockEntryDetails.get(index).ItemNumber
-            );
-        }
-        return result;
     }
 
     private void persistEntry(

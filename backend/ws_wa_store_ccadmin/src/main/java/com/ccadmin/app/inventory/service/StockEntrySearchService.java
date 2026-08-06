@@ -5,6 +5,7 @@ import com.ccadmin.app.inventory.model.dto.StockEntryRegisterDto;
 import com.ccadmin.app.inventory.model.dto.StockMovementSearchDto;
 import com.ccadmin.app.inventory.model.entity.StockEntryDetEntity;
 import com.ccadmin.app.inventory.model.entity.StockEntryHeadEntity;
+import com.ccadmin.app.inventory.model.factory.StockEntryRegisterDtoFactory;
 import com.ccadmin.app.inventory.repository.StockEntryDetRepository;
 import com.ccadmin.app.inventory.repository.StockEntryHeadRepository;
 import com.ccadmin.app.product.model.entity.ProductEntity;
@@ -74,11 +75,12 @@ public class StockEntrySearchService extends SessionService {
                         new IllegalArgumentException("No existe la entrada de stock")
                 );
         requireStore(stockEntryHead.StoreCod);
-        StockEntryRegisterDto result = new StockEntryRegisterDto();
-        result.Head = stockEntryHead;
-        result.DetailList = stockEntryDetRepository.findByCode(code);
-        populateProductNames(result.DetailList);
-        return result;
+        List<StockEntryDetEntity> stockEntryDetails =
+                stockEntryDetRepository.findByCode(code);
+        populateProductNames(stockEntryDetails);
+        return StockEntryRegisterDtoFactory.fromEntities(
+                stockEntryHead, stockEntryDetails
+        );
     }
 
     public ResponseWsDto findDataForm(String code) {
