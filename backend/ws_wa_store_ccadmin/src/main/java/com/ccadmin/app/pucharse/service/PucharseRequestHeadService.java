@@ -3,6 +3,9 @@ package com.ccadmin.app.pucharse.service;
 import com.ccadmin.app.product.shared.ProductShared;
 import com.ccadmin.app.pucharse.model.dto.PucharseRequestDetailsDto;
 import com.ccadmin.app.pucharse.model.dto.PucharseRequestRegisterDto;
+import com.ccadmin.app.pucharse.model.entity.PucharseRequestDetEntity;
+import com.ccadmin.app.pucharse.model.entity.PucharseRequestHeadEntity;
+import com.ccadmin.app.pucharse.model.factory.PucharseRequestDetailsDtoFactory;
 import com.ccadmin.app.pucharse.repository.PucharseRequestDetRepository;
 import com.ccadmin.app.pucharse.repository.PucharseRequestHeadRepository;
 import com.ccadmin.app.shared.model.dto.ResponsePageSearch;
@@ -18,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.List;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.LogManager;
 
@@ -72,7 +76,9 @@ public class PucharseRequestHeadService extends SessionService {
 
         for(var product : pucharseRegister.DetailList)
         {
-            this.pucharseRequestDetService.buildDetailToSave(product, pucharseRegister.Headboard.PucharseReqCod);
+            this.pucharseRequestDetService.prepareDetailToSave(
+                    product, pucharseRegister.Headboard.PucharseReqCod
+            );
         }
 
         pucharseRegister.Headboard.NumTotalPrice = new BigDecimal(
@@ -107,17 +113,18 @@ public class PucharseRequestHeadService extends SessionService {
 
     public PucharseRequestDetailsDto findById(String PucharseReqCod)
     {
-        PucharseRequestDetailsDto pucharseRequestDetails = new PucharseRequestDetailsDto();
+        PucharseRequestHeadEntity head = this.pucharseRequestHeadRepository
+                .findById(PucharseReqCod)
+                .get();
+        List<PucharseRequestDetEntity> details =
+                this.pucharseRequestDetRepository.findAllActive(PucharseReqCod);
 
-        pucharseRequestDetails.Headboard = this.pucharseRequestHeadRepository.findById(PucharseReqCod).get();
-        pucharseRequestDetails.DetailList = this.pucharseRequestDetRepository.findAllActive(PucharseReqCod);
-
-        for(var item : pucharseRequestDetails.DetailList)
+        for(var item : details)
         {
             item.Product = this.productShared.findById(item.ProductCod);
         }
 
-        return pucharseRequestDetails;
+        return PucharseRequestDetailsDtoFactory.fromEntities(head, details);
     }
 
 }

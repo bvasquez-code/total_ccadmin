@@ -10,7 +10,8 @@ import com.ccadmin.app.pucharse.model.dto.PucharseDetLotConfirmDto;
 import com.ccadmin.app.pucharse.model.entity.PucharseHeadEntity;
 import com.ccadmin.app.pucharse.model.entity.PucharseDetDeliveryEntity;
 import com.ccadmin.app.pucharse.model.entity.PucharseDetEntity;
-import com.ccadmin.app.pucharse.model.entity.id.PucharseDetId;
+import com.ccadmin.app.pucharse.model.factory.PucharseDetDeliveryEntityFactory;
+import com.ccadmin.app.pucharse.model.factory.PucharseDetEntityFactory;
 import com.ccadmin.app.pucharse.repository.PucharseDetDeliveryRepository;
 import com.ccadmin.app.pucharse.repository.PucharseDetRepository;
 import com.ccadmin.app.pucharse.repository.PucharseHeadRepository;
@@ -51,15 +52,15 @@ public class PucharseDetService extends SessionService {
         this.validatePendingReceipt(pucharseHead, originDet);
         this.validateNonDigitalProduct(pucharseHead, originDet);
 
-        PucharseDetDeliveryEntity delivery = pucharseDetConfirm.pucharseDetDelivery;
-        delivery.PucharseCod = purchaseCod;
-        delivery.ItemNumber = itemNumber;
-        delivery.ProductCod = originDet.ProductCod;
-        delivery.Variant = originDet.Variant;
-        delivery.ProductUnitName = originDet.ProductUnitName;
-        delivery.ProductUnitFactor = originDet.ProductUnitFactor;
-        delivery.LotNumber = originDet.LotNumber;
-        delivery.ExpirationDate = originDet.ExpirationDate;
+        PucharseDetDeliveryEntity sourceDelivery =
+                pucharseDetConfirm.pucharseDetDelivery;
+        PucharseDetDeliveryEntity delivery =
+                PucharseDetDeliveryEntityFactory.fromReceipt(
+                        originDet,
+                        purchaseCod,
+                        sourceDelivery.WarehouseCod,
+                        sourceDelivery.NumUnit
+                );
         originDet.validate();
         delivery.validate();
 
@@ -75,10 +76,11 @@ public class PucharseDetService extends SessionService {
                 pucharseHead, List.of(delivery), getUserCod()
         );
         this.pucharseDetRepository.save(originDet);
-        this.pucharseDetDeliveryRepository.save(pucharseDetConfirm.pucharseDetDelivery);
+        this.pucharseDetDeliveryRepository.save(delivery);
         this.kardexShared.saveAll(kardexList, kardexZoneList);
 
         pucharseDetConfirm.pucharseDet = originDet;
+        pucharseDetConfirm.pucharseDetDelivery = delivery;
         return pucharseDetConfirm;
     }
 
@@ -101,15 +103,16 @@ public class PucharseDetService extends SessionService {
                 .orElseThrow(() -> new PucharseException(
                         "No existe la compra " + pucharseDetLotConfirm.pucharseDet.PucharseCod
                 ));
-        PucharseDetId pucharseDetId = new PucharseDetId();
-        pucharseDetId.PucharseCod = pucharseDetLotConfirm.pucharseDet.PucharseCod;
-        pucharseDetId.ItemNumber = pucharseDetLotConfirm.pucharseDet.ItemNumber;
+        String pucharseCod = pucharseDetLotConfirm.pucharseDet.PucharseCod;
+        int originItemNumber = pucharseDetLotConfirm.pucharseDet.ItemNumber;
 
         PucharseDetEntity originDet = this.pucharseDetRepository.findByIdForUpdate(
-                        pucharseDetId.PucharseCod,
-                        pucharseDetId.ItemNumber
+                        pucharseCod,
+                        originItemNumber
                 )
-                .orElseThrow(() -> new PucharseException("No existe el detalle " + pucharseDetId.ItemNumber));
+                .orElseThrow(() -> new PucharseException(
+                        "No existe el detalle " + originItemNumber
+                ));
         this.validatePendingReceipt(pucharseHead, originDet);
         this.validateNonDigitalProduct(pucharseHead, originDet);
 
@@ -121,8 +124,16 @@ public class PucharseDetService extends SessionService {
             PucharseDetEntity lotDet = pucharseDetLotConfirm.lotDetailList.get(index);
             lotDet.validate();
             int itemNumber = index == 0 ? originDet.ItemNumber : nextItemNumber++;
-            PucharseDetEntity detail = PucharseDetEntity.buildLotDetail(originDet, lotDet, itemNumber, index == 0, getUserCod());
-            PucharseDetDeliveryEntity delivery = PucharseDetDeliveryEntity.buildLotDelivery(detail, pucharseDetLotConfirm.WarehouseCod, getUserCod());
+            boolean isOriginLine = index == 0;
+            PucharseDetEntity detail = PucharseDetEntityFactory.fromLotDetail(
+                    originDet, lotDet, itemNumber, isOriginLine
+            );
+            detail.addSession(getUserCod(), !isOriginLine);
+            PucharseDetDeliveryEntity delivery =
+                    PucharseDetDeliveryEntityFactory.fromLotDetail(
+                            detail, pucharseDetLotConfirm.WarehouseCod
+                    );
+            delivery.addSession(getUserCod(), true);
 
             detailList.add(detail);
             deliveryList.add(delivery);

@@ -9,6 +9,10 @@ import com.ccadmin.app.pucharse.exception.PucharseException;
 import com.ccadmin.app.pucharse.model.dto.PucharseDetailsDto;
 import com.ccadmin.app.pucharse.model.dto.PucharseRegisterDto;
 import com.ccadmin.app.pucharse.model.entity.*;
+import com.ccadmin.app.pucharse.model.factory.PucharseDetailsDtoFactory;
+import com.ccadmin.app.pucharse.model.factory.PucharseDetDeliveryEntityFactory;
+import com.ccadmin.app.pucharse.model.factory.PucharseDetEntityFactory;
+import com.ccadmin.app.pucharse.model.factory.PucharseHeadEntityFactory;
 import com.ccadmin.app.pucharse.repository.*;
 import com.ccadmin.app.shared.model.dto.ResponsePageSearch;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
@@ -70,20 +74,25 @@ public class PucharseService extends SessionService {
             throw new PucharseException("¡Request is Confirmed!");
         }
 
-        PucharseHeadEntity head = new PucharseHeadEntity(headRequest);
+        String pucharseCod = this.pucharseHeadRepository.getPucharseCod(
+                getStoreCod()
+        );
+        PucharseHeadEntity head = PucharseHeadEntityFactory.fromRequest(
+                headRequest,
+                pucharseCod,
+                pucharseRegister.PucharseReqCod
+        );
         head.addSession(getUserCod(),true);
-        head.PucharseCod = this.pucharseHeadRepository.getPucharseCod(getStoreCod());
-        head.PurchaseStatus = StatusConst.PENDING;
-        head.PucharseReqCod = pucharseRegister.PucharseReqCod;
         List<PucharseDetEntity> detailList = new ArrayList<>();
 
         int itemNumber = 1;
         for (var item : detailRequestList)
         {
-            PucharseDetEntity pucharseDet = new PucharseDetEntity(item);
+            PucharseDetEntity pucharseDet =
+                    PucharseDetEntityFactory.fromRequest(
+                            item, head.PucharseCod, itemNumber++
+                    );
             pucharseDet.addSession(getUserCod(),true);
-            pucharseDet.PucharseCod = head.PucharseCod;
-            pucharseDet.ItemNumber = itemNumber++;
             detailList.add(pucharseDet);
         }
 
@@ -98,12 +107,11 @@ public class PucharseService extends SessionService {
 
     public PucharseDetailsDto findById(String PucharseCod)
     {
-        PucharseDetailsDto pucharseDetails = new PucharseDetailsDto();
-
-        pucharseDetails.Headboard = this.pucharseHeadRepository.findById(PucharseCod).get();
-        pucharseDetails.DetailList = this.pucharseDetRepository.findAllActive(PucharseCod);
-
-        return pucharseDetails;
+        PucharseHeadEntity head =
+                this.pucharseHeadRepository.findById(PucharseCod).get();
+        List<PucharseDetEntity> details =
+                this.pucharseDetRepository.findAllActive(PucharseCod);
+        return PucharseDetailsDtoFactory.fromEntities(head, details);
     }
 
     @Transactional
@@ -117,7 +125,7 @@ public class PucharseService extends SessionService {
                 Headboard.StoreCod
         );
         List<PucharseDetDeliveryEntity> DeliveryList = new ArrayList<>();
-        WarehouseEntity warehouseUnit = new WarehouseEntity();
+        WarehouseEntity warehouseUnit = null;
 
         boolean IsMultipleWarehouse = warehouseShared.IsMultipleWarehouse(Headboard.StoreCod);
 
@@ -134,40 +142,35 @@ public class PucharseService extends SessionService {
         for(var item : DetailList)
         {
 
-            List<PucharseDetDeliveryEntity> detailWarehouseCod = new ArrayList<>();
+            List<PucharseDetDeliveryEntity> detailWarehouseCod;
 
             if( IsMultipleWarehouse )
             {
-                detailWarehouseCod = pucharseRegister.DeliveryList.stream().filter(
-                        e-> e.ItemNumber == item.ItemNumber
-                ).toList();
+                detailWarehouseCod = pucharseRegister.DeliveryList.stream()
+                        .filter(e -> e.ItemNumber == item.ItemNumber)
+                        .map(receipt ->
+                                PucharseDetDeliveryEntityFactory.fromReceipt(
+                                        item,
+                                        pucharseRegister.PucharseCod,
+                                        receipt.WarehouseCod,
+                                        receipt.NumUnit
+                                )
+                        )
+                        .toList();
             }
             else
             {
-                PucharseDetDeliveryEntity detDelivery = new PucharseDetDeliveryEntity();
-                detDelivery.PucharseCod = pucharseRegister.PucharseCod;
-                detDelivery.ItemNumber = item.ItemNumber;
-                detDelivery.ProductCod = item.ProductCod;
-                detDelivery.Variant = item.Variant;
-                detDelivery.NumUnit = item.NumUnit;
-                detDelivery.ProductUnitName = item.ProductUnitName;
-                detDelivery.ProductUnitFactor = item.ProductUnitFactor;
-                detDelivery.WarehouseCod = warehouseUnit.WarehouseCod;
-                detDelivery.LotNumber = item.LotNumber;
-                detDelivery.ExpirationDate = item.ExpirationDate;
-                detailWarehouseCod.add(detDelivery);
+                detailWarehouseCod = List.of(
+                        PucharseDetDeliveryEntityFactory.fromFullReceipt(
+                                item,
+                                pucharseRegister.PucharseCod,
+                                warehouseUnit.WarehouseCod
+                        )
+                );
             }
 
             for(var itemWarehouse : detailWarehouseCod )
             {
-                itemWarehouse.PucharseCod = pucharseRegister.PucharseCod;
-                itemWarehouse.ItemNumber = item.ItemNumber;
-                itemWarehouse.ProductCod = item.ProductCod;
-                itemWarehouse.Variant = item.Variant;
-                itemWarehouse.ProductUnitName = item.ProductUnitName;
-                itemWarehouse.ProductUnitFactor = item.ProductUnitFactor;
-                itemWarehouse.LotNumber = item.LotNumber;
-                itemWarehouse.ExpirationDate = item.ExpirationDate;
                 itemWarehouse.addSession(getUserCod(),true);
 
                 DeliveryList.add(itemWarehouse);

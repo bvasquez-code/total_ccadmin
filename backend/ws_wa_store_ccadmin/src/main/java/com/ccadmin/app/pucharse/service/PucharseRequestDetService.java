@@ -5,7 +5,8 @@ import com.ccadmin.app.product.shared.ProductOperationConfigShared;
 import com.ccadmin.app.pucharse.model.dto.PucharseRequestDetSaveDto;
 import com.ccadmin.app.pucharse.model.entity.PucharseRequestDetEntity;
 import com.ccadmin.app.pucharse.model.entity.PucharseRequestHeadEntity;
-import com.ccadmin.app.pucharse.model.entity.id.PucharseRequestDetId;
+import com.ccadmin.app.pucharse.model.factory.PucharseRequestDetEntityFactory;
+import com.ccadmin.app.pucharse.model.factory.PucharseRequestDetIdFactory;
 import com.ccadmin.app.pucharse.repository.PucharseRequestDetRepository;
 import com.ccadmin.app.pucharse.repository.PucharseRequestHeadRepository;
 import com.ccadmin.app.shared.model.myconst.StatusConst;
@@ -31,13 +32,16 @@ public class PucharseRequestDetService extends SessionService {
     {
         PucharseRequestHeadEntity headboard = findPendingHead(request);
         request.Detail = this.pucharseRequestDetRepository.save(
-                buildDetailToSave(request.Detail, headboard.PucharseReqCod)
+                prepareDetailToSave(request.Detail, headboard.PucharseReqCod)
         );
         request.Headboard = refreshTotal(headboard);
         return request;
     }
 
-    public PucharseRequestDetEntity buildDetailToSave(PucharseRequestDetEntity source, String PucharseReqCod)
+    public PucharseRequestDetEntity prepareDetailToSave(
+            PucharseRequestDetEntity source,
+            String PucharseReqCod
+    )
     {
         source.PucharseReqCod = PucharseReqCod;
         if (source.Variant == null || source.Variant.trim().isEmpty()) {
@@ -61,17 +65,14 @@ public class PucharseRequestDetService extends SessionService {
         source.NumUnitPrice = source.NumUnitPrice == null ? BigDecimal.ZERO : source.NumUnitPrice;
         source.NumTotalPrice = source.NumUnitPrice.multiply(new BigDecimal(source.NumUnit));
 
-        PucharseRequestDetEntity detail = this.pucharseRequestDetRepository.findById(buildId(source)).orElse(source);
+        PucharseRequestDetEntity current = this.pucharseRequestDetRepository
+                .findById(PucharseRequestDetIdFactory.fromEntity(source))
+                .orElse(null);
+        PucharseRequestDetEntity detail =
+                PucharseRequestDetEntityFactory.fromSaveRequest(
+                        source, current
+                );
         boolean isNew = detail.CreationUser == null || detail.CreationUser.trim().isEmpty();
-        detail.PucharseReqCod = source.PucharseReqCod;
-        detail.ProductCod = source.ProductCod;
-        detail.Variant = source.Variant;
-        detail.NumUnit = source.NumUnit;
-        detail.NumUnitPrice = source.NumUnitPrice;
-        detail.NumTotalPrice = source.NumTotalPrice;
-        detail.ProductUnitName = source.ProductUnitName;
-        detail.ProductUnitFactor = source.ProductUnitFactor;
-        detail.Status = "A";
         detail.addSession(getUserCod(), isNew);
 
         return detail;
@@ -83,7 +84,9 @@ public class PucharseRequestDetService extends SessionService {
         PucharseRequestHeadEntity headboard = findPendingHead(request);
         request.Detail.PucharseReqCod = headboard.PucharseReqCod;
 
-        PucharseRequestDetEntity detailDb = this.pucharseRequestDetRepository.findById(buildId(request.Detail)).get();
+        PucharseRequestDetEntity detailDb = this.pucharseRequestDetRepository
+                .findById(PucharseRequestDetIdFactory.fromEntity(request.Detail))
+                .get();
         detailDb.inactive(getUserCod());
         request.Detail = this.pucharseRequestDetRepository.save(detailDb);
         request.Headboard = refreshTotal(headboard);
@@ -101,15 +104,6 @@ public class PucharseRequestDetService extends SessionService {
             throw new RuntimeException("La solicitud de compra ya no esta pendiente");
         }
         return headboard;
-    }
-
-    private PucharseRequestDetId buildId(PucharseRequestDetEntity detail)
-    {
-        PucharseRequestDetId id = new PucharseRequestDetId();
-        id.PucharseReqCod = detail.PucharseReqCod;
-        id.ProductCod = detail.ProductCod;
-        id.Variant = detail.Variant == null || detail.Variant.trim().isEmpty() ? "0000" : detail.Variant;
-        return id;
     }
 
     private PucharseRequestHeadEntity refreshTotal(PucharseRequestHeadEntity headboard)

@@ -29,16 +29,4 @@ public class PucharseHeadEntity extends AuditTableEntity implements Serializable
     {
 
     }
-    public PucharseHeadEntity(PucharseRequestHeadEntity pucharseHead)
-    {
-        this.StoreCod =  pucharseHead.StoreCod;
-        this.ExternalCod = pucharseHead.ExternalCod;
-        this.DealerCod = pucharseHead.DealerCod;
-        this.Commenter = pucharseHead.Commenter;
-        this.PurchaseStatus = pucharseHead.PurchaseStatus;
-        this.CurrencyCod = pucharseHead.CurrencyCod;
-        this.CurrencyCodSys = pucharseHead.CurrencyCodSys;
-        this.NumExchangevalue = pucharseHead.NumExchangevalue;
-        this.NumTotalPrice = pucharseHead.NumTotalPrice;
-    }
 }

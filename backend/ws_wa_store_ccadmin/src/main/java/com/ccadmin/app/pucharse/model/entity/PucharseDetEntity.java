@@ -38,45 +38,12 @@ public class PucharseDetEntity extends AuditTableEntity implements Serializable 
     {
         this.IsKardexAffected = "N";
     }
-    public PucharseDetEntity(PucharseRequestDetEntity pucharseRequestDet)
-    {
-        this.ProductCod = pucharseRequestDet.ProductCod;
-        this.Variant = pucharseRequestDet.Variant;
-        this.NumUnit = pucharseRequestDet.NumUnit;
-        this.NumUnitPrice = pucharseRequestDet.NumUnitPrice;
-        this.NumTotalPrice = pucharseRequestDet.NumTotalPrice;
-        this.ProductUnitName = pucharseRequestDet.ProductUnitName;
-        this.ProductUnitFactor = pucharseRequestDet.ProductUnitFactor;
-    }
 
     public PucharseDetEntity validate() throws PucharseException {
         if (this.LotNumber != null && this.LotNumber.length() > 32) {
             throw new PucharseException("El lote no puede superar 32 caracteres");
         }
         return this;
-    }
-
-    public static PucharseDetEntity buildLotDetail(PucharseDetEntity originDet, PucharseDetEntity lotDet, int itemNumber, boolean isOriginLine, String userCod) {
-        PucharseDetEntity detail = isOriginLine ? originDet : new PucharseDetEntity();
-        int numUnit = lotDet.NumUnitDelivered > 0 ? lotDet.NumUnitDelivered : lotDet.NumUnit;
-
-        detail.PucharseCod = originDet.PucharseCod;
-        detail.ItemNumber = itemNumber;
-        detail.ProductCod = originDet.ProductCod;
-        detail.Variant = originDet.Variant;
-        detail.NumUnit = numUnit;
-        detail.NumUnitDelivered = numUnit;
-        detail.NumUnitPrice = originDet.NumUnitPrice;
-        detail.NumTotalPrice = originDet.NumUnitPrice == null ? BigDecimal.ZERO : originDet.NumUnitPrice.multiply(BigDecimal.valueOf(numUnit));
-        detail.ProductUnitName = originDet.ProductUnitName;
-        detail.ProductUnitFactor = originDet.ProductUnitFactor;
-        detail.IsKardexAffected = "S";
-        detail.LotNumber = lotDet.LotNumber;
-        detail.ExpirationDate = lotDet.ExpirationDate;
-        detail.Status = "A";
-        detail.addSession(userCod, !isOriginLine);
-
-        return detail;
     }
 
 }
