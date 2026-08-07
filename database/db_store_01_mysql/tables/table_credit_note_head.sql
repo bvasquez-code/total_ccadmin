@@ -20,6 +20,7 @@ BEGIN
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `credit_note_head` (
   `CreditNoteCod` varchar(16) NOT NULL COMMENT 'codigo de nota de credito',
+  `CashSessionID` bigint DEFAULT NULL COMMENT 'Sesion de caja del backend al guardar la nota de credito',
   `SaleCod` varchar(16) NOT NULL COMMENT 'codigo de venta',
   `StoreCod` varchar(4) NOT NULL COMMENT 'codigo de tienda',
   `ClientCod` varchar(16) DEFAULT NULL COMMENT 'codigo de cliente',
@@ -48,10 +49,12 @@ CREATE TABLE `credit_note_head` (
   KEY `fk_credit_note_head_currency` (`CurrencyCod`),
   KEY `fk_credit_note_head_currencySys` (`CurrencyCodSys`),
   KEY `fk_credit_note_head_sale` (`SaleCod`),
+  KEY `idx_credit_note_head_cash_session` (`CashSessionID`),
   CONSTRAINT `fk_credit_note_head_client` FOREIGN KEY (`ClientCod`) REFERENCES `client` (`ClientCod`),
   CONSTRAINT `fk_credit_note_head_currency` FOREIGN KEY (`CurrencyCod`) REFERENCES `currency` (`CurrencyCod`),
   CONSTRAINT `fk_credit_note_head_currencySys` FOREIGN KEY (`CurrencyCodSys`) REFERENCES `currency` (`CurrencyCod`),
   CONSTRAINT `fk_credit_note_head_period` FOREIGN KEY (`PeriodId`) REFERENCES `period` (`PeriodId`),
+  CONSTRAINT `fk_credit_note_head_cash_session` FOREIGN KEY (`CashSessionID`) REFERENCES `cash_session` (`CashSessionID`),
   CONSTRAINT `fk_credit_note_head_sale` FOREIGN KEY (`SaleCod`) REFERENCES `sale_head` (`SaleCod`),
   CONSTRAINT `fk_credit_note_head_store` FOREIGN KEY (`StoreCod`) REFERENCES `store` (`StoreCod`),
   CONSTRAINT `chk_credit_note_type` CHECK ((`TypeCreditNote` in (_utf8mb4'T',_utf8mb4'P'))),
@@ -108,6 +111,36 @@ CREATE TABLE `credit_note_head` (
                 ADD CONSTRAINT `chk_credit_note_product_exchange`
                 CHECK (`IsProductExchange` IN ('S', 'N'));
             SELECT 'Restriccion chk_credit_note_product_exchange agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'credit_note_head'
+              AND column_name = 'CashSessionID'
+        ) THEN
+            ALTER TABLE `credit_note_head`
+                ADD COLUMN `CashSessionID` bigint DEFAULT NULL
+                    COMMENT 'Sesion de caja del backend al guardar la nota de credito'
+                    AFTER `CreditNoteCod`;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.statistics
+            WHERE table_schema = DATABASE() AND table_name = 'credit_note_head'
+              AND index_name = 'idx_credit_note_head_cash_session'
+        ) THEN
+            ALTER TABLE `credit_note_head`
+                ADD KEY `idx_credit_note_head_cash_session` (`CashSessionID`);
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.referential_constraints
+            WHERE constraint_schema = DATABASE() AND table_name = 'credit_note_head'
+              AND constraint_name = 'fk_credit_note_head_cash_session'
+        ) THEN
+            ALTER TABLE `credit_note_head`
+                ADD CONSTRAINT `fk_credit_note_head_cash_session`
+                FOREIGN KEY (`CashSessionID`) REFERENCES `cash_session` (`CashSessionID`);
         END IF;
         
         SELECT 'Tabla credit_note_head ya existe. Validacion de estructura completada.' AS Mensaje;

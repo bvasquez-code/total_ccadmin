@@ -1,90 +1,191 @@
 <div role="main" class="main-content">
-
     <div class="page-content container container-plus">
         <div class="card acard mt-2 mt-lg-3">
-
-            <div class="card-header">
-                <h3 class="card-title text-125 text-primary-d2">
-                    <i class="far fa-edit text-dark-l3 mr-1"></i>
-                    Aperturar Caja
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <h3 class="card-title text-125 text-primary-d2 mb-0">
+                    <i class="fas fa-cash-register text-dark-l3 mr-1"></i>
+                    Gestión de caja
                 </h3>
+                <span *ngIf="!isLoading" class="badge"
+                    [ngClass]="isOpen ? 'badge-success' : 'badge-secondary'">
+                    {{ isOpen ? 'Caja abierta' : 'Caja cerrada' }}
+                </span>
             </div>
 
             <div class="card-body px-3 pb-1">
-                <form class="mt-lg-3" autocomplete="off">
+                <div *ngIf="isLoading" class="text-center text-muted py-5">
+                    <i class="fas fa-spinner fa-spin mr-1"></i>Cargando estado de caja...
+                </div>
 
-                    <div class="form-group row">
-                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
-                            <label class="mb-0">Caja</label>
+                <ng-container *ngIf="!isLoading && !isOpen">
+                    <div class="alert alert-info">
+                        No existe una sesión de caja activa. Selecciona la caja que utilizarás e indica el fondo inicial.
+                    </div>
+
+                    <div *ngIf="lastClosedCashSessionId > 0" class="alert alert-success d-flex justify-content-between align-items-center">
+                        <span>La sesión anterior se cerró correctamente.</span>
+                        <button type="button" class="btn btn-sm btn-outline-success"
+                            (click)="viewSession(lastClosedCashSessionId)">
+                            Ver cierre
+                        </button>
+                    </div>
+
+                    <div *ngIf="!current.CashRegister" class="alert alert-warning">
+                        El usuario actual no tiene una caja activa asignada en esta tienda.
+                    </div>
+
+                    <form *ngIf="current.CashRegister as cashRegister" class="mt-lg-3" autocomplete="off">
+                        <div class="form-group row">
+                            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                                <label class="mb-0">Caja</label>
+                            </div>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control col-sm-8 col-md-6"
+                                    [value]="cashRegister.RegisterCod + ' - ' + cashRegister.Name" readonly>
+                                <small class="form-text text-muted">
+                                    Caja asignada al usuario actual en la tienda {{ cashRegister.StoreCod }}.
+                                </small>
+                            </div>
                         </div>
-                        <div class="col-sm-9">
-                            <input type="text" class="form-control col-sm-8 col-md-6" [(ngModel)]="req.RegisterCod"
-                                name="RegisterCod" readonly>
+
+                        <div class="form-group row">
+                            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                                <label class="mb-0">Moneda</label>
+                            </div>
+                            <div class="col-sm-9">
+                                <select class="form-control col-sm-8 col-md-6" [(ngModel)]="openRequest.CurrencyCod"
+                                    name="CurrencyCod">
+                                    <option value="PEN">PEN</option>
+                                    <option value="USD">USD</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                                <label class="mb-0">Fondo inicial</label>
+                            </div>
+                            <div class="col-sm-9">
+                                <input type="number" min="0" step="0.01" class="form-control col-sm-8 col-md-6"
+                                    [(ngModel)]="openRequest.OpeningFloatAmount" name="OpeningFloatAmount">
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                                <label class="mb-0">Comentario</label>
+                            </div>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control col-sm-8 col-md-6"
+                                    [(ngModel)]="openRequest.Commenter" name="OpenCommenter">
+                            </div>
+                        </div>
+
+                        <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
+                            <div class="offset-md-3 col-md-9 text-nowrap">
+                                <button class="btn btn-success btn-bold px-4" type="button" (click)="open()"
+                                    [disabled]="!current.CashRegister">
+                                    <i class="fa fa-lock-open mr-1"></i>Abrir caja
+                                </button>
+                                <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4"
+                                    href="/enterprise/cash/pages/listcashregister">
+                                    <i class="fa fa-undo mr-1"></i>Volver
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </ng-container>
+
+                <ng-container *ngIf="!isLoading && isOpen && activeCashSession as session">
+                    <div class="alert alert-success">
+                        Esta caja se encuentra abierta. Desde esta misma pantalla puedes consultar su apertura o cerrarla.
+                    </div>
+
+                    <div class="card border-0 bgc-secondary-l4 mb-4">
+                        <div class="card-body py-3">
+                            <div class="row">
+                                <div class="col-md-6 mb-2 mb-md-0">
+                                    <div><strong>Caja:</strong> {{ session.RegisterCod }}<span *ngIf="current.CashRegister"> - {{ current.CashRegister.Name }}</span></div>
+                                    <div><strong>Usuario:</strong> {{ session.UserCod }}</div>
+                                    <div><strong>Apertura:</strong> {{ session.OpenDate | date:'dd/MM/yyyy HH:mm:ss' }}</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div><strong>Moneda:</strong> {{ session.CurrencyCod }}</div>
+                                    <div><strong>Fondo inicial:</strong> {{ session.CurrencyCod }} {{ session.OpeningFloatAmount | number:'1.2-2' }}</div>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mt-2"
+                                        (click)="viewSession(session.CashSessionID)">
+                                        <i class="fa fa-search mr-1"></i>Ver detalle
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="form-group row">
-                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
-                            <label class="mb-0">Tienda</label>
+                    <form autocomplete="off">
+                        <div class="alert alert-info col-md-9 offset-md-3">
+                            El arqueo es opcional. Puedes cerrar la caja sin ingresar importes contados.
                         </div>
-                        <div class="col-sm-9">
-                            <input type="text" class="form-control col-sm-8 col-md-6" [(ngModel)]="req.StoreCod"
-                                name="StoreCod" readonly>
-                        </div>
-                    </div>
 
-                    <div class="form-group row">
-                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
-                            <label class="mb-0">Moneda</label>
+                        <div class="form-group row">
+                            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                                <label class="mb-0">Realizar arqueo</label>
+                            </div>
+                            <div class="col-sm-9">
+                                <select class="form-control col-sm-8 col-md-6" [(ngModel)]="closeRequest.HasCashCount"
+                                    name="HasCashCount" (change)="onCashCountChange()">
+                                    <option value="N">No, cerrar sin arqueo</option>
+                                    <option value="S">Sí, registrar importes contados</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="col-sm-9">
-                            <select class="form-control col-sm-8 col-md-6" [(ngModel)]="req.CurrencyCod"
-                                name="CurrencyCod">
-                                <option value="PEN">PEN</option>
-                                <option value="USD">USD</option>
-                            </select>
-                        </div>
-                    </div>
 
-                    <div class="form-group row">
-                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
-                            <label class="mb-0">Fondo inicial</label>
-                        </div>
-                        <div class="col-sm-9">
-                            <input type="number" class="form-control col-sm-8 col-md-6"
-                                [(ngModel)]="req.OpeningFloatAmount" name="OpeningFloatAmount">
-                        </div>
-                    </div>
+                        <ng-container *ngIf="closeRequest.HasCashCount === 'S'">
+                            <div class="form-group row">
+                                <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                                    <label class="mb-0">Efectivo contado</label>
+                                </div>
+                                <div class="col-sm-9">
+                                    <input type="number" min="0" step="0.01" class="form-control col-sm-8 col-md-6"
+                                        [(ngModel)]="closeRequest.CountedCashAmount" name="CountedCashAmount">
+                                </div>
+                            </div>
 
-                    <div class="form-group row">
-                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
-                            <label class="mb-0">Comentario</label>
-                        </div>
-                        <div class="col-sm-9">
-                            <input type="text" class="form-control col-sm-8 col-md-6" [(ngModel)]="req.Commenter"
-                                name="Commenter">
-                        </div>
-                    </div>
+                            <div class="form-group row">
+                                <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                                    <label class="mb-0">Otros medios contados</label>
+                                </div>
+                                <div class="col-sm-9">
+                                    <input type="number" min="0" step="0.01" class="form-control col-sm-8 col-md-6"
+                                        [(ngModel)]="closeRequest.CountedOtherAmount" name="CountedOtherAmount">
+                                </div>
+                            </div>
+                        </ng-container>
 
-                    <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
-                        <div class="offset-md-3 col-md-9 text-nowrap">
-                            <button class="btn btn-success btn-bold px-4" type="button" (click)="open()"
-                                [disabled]="!isReady">
-                                <i class="fa fa-check mr-1"></i>
-                                Aperturar
-                            </button>
-
-                            <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4" type="reset"
-                                href="/enterprise/cash/pages/listcashregister">
-                                <i class="fa fa-undo mr-1"></i>
-                                Volver
-                            </a>
+                        <div class="form-group row">
+                            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                                <label class="mb-0">Comentario de cierre</label>
+                            </div>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control col-sm-8 col-md-6"
+                                    [(ngModel)]="closeRequest.Commenter" name="CloseCommenter">
+                            </div>
                         </div>
-                    </div>
 
-                </form>
+                        <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
+                            <div class="offset-md-3 col-md-9 text-nowrap">
+                                <button class="btn btn-danger btn-bold px-4" type="button" (click)="close()"
+                                    [disabled]="!canClose()">
+                                    <i class="fa fa-lock mr-1"></i>Cerrar caja
+                                </button>
+                                <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4"
+                                    href="/enterprise/cash/pages/listcashregister">
+                                    <i class="fa fa-undo mr-1"></i>Volver
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </ng-container>
             </div>
-
         </div>
     </div>
 </div>

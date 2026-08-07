@@ -30,6 +30,22 @@ public interface CashSessionRepository extends JpaRepository<CashSessionEntity, 
     Optional<CashSessionEntity> findOpenByRegister(@Param("registerCod") String registerCod);
 
     @Query(value = """
+        select s.CashSessionID
+        from cash_session s
+        where s.UserCod = :userCod
+          and s.StoreCod = :storeCod
+          and s.IsOpen = 1
+          and s.SessionStatus = 'O'
+          and s.Status = 'A'
+        order by s.OpenDate desc, s.CashSessionID desc
+        limit 1
+        """, nativeQuery = true)
+    Optional<Long> findOpenIdByUserAndStore(
+            @Param("userCod") String userCod,
+            @Param("storeCod") String storeCod
+    );
+
+    @Query(value = """
         select s.*
         from cash_session s
         where s.StoreCod = :storeCod

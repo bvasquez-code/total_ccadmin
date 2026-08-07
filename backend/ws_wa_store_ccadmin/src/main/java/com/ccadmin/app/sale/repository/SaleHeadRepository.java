@@ -123,8 +123,11 @@ public interface SaleHeadRepository extends JpaRepository<SaleHeadEntity,String>
             inner join trx_payments tp on tp.TrxPaymentId = sp.TrxPaymentId
             inner join payment_method pm on pm.PaymentMethodCod  = tp.PaymentMethodCod
             where 
-            CashSessionID = :sessionId
+            tp.CashSessionID = :sessionId
             and sh.Status = 'A'
+            and sp.Status = 'A'
+            and tp.Status = 'A'
+            and tp.PaymentMethodCod <> 'NC001'
         """, nativeQuery = true)
     IExpectedTotalsDto getExpectedTotalsForSession(@Param("sessionId") Long sessionId);
 

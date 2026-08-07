@@ -1,6 +1,5 @@
 package com.ccadmin.app.security.service;
 
-import com.ccadmin.app.security.model.entity.AppSessionEntity;
 import com.ccadmin.app.security.model.entity.AppUserEntity;
 import com.ccadmin.app.security.util.TokenUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,16 +7,21 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.transaction.Transactional;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.Collections;
+
 public class JWTAuthenticationFilterService extends UsernamePasswordAuthenticationFilter {
+
+    private final SecurityService securityService;
+
+    public JWTAuthenticationFilterService(SecurityService securityService) {
+        this.securityService = securityService;
+    }
 
     @Override
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
@@ -47,16 +51,11 @@ public class JWTAuthenticationFilterService extends UsernamePasswordAuthenticati
 
         String token = TokenUtil.createToken(userDetailsImp.getUsername(),userDetailsImp.getEmail());
 
-        sessionDB(userDetailsImp,token);
+        securityService.createUserSession(userDetailsImp.getUsername(), token);
 
         response.addHeader("Authorization", "Bearer "+token);
         response.getWriter().flush();
         super.successfulAuthentication(request, response, chain, authResult);
     }
 
-    @Transactional
-    public void sessionDB(UserDetailsImp userDetailsImp,String token)
-    {
-        userDetailsImp.appSessionRepository.save(new AppSessionEntity(userDetailsImp.getUsername(),token));
-    }
 }

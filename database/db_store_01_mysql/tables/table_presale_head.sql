@@ -20,6 +20,7 @@ BEGIN
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `presale_head` (
   `PresaleCod` varchar(16) NOT NULL COMMENT 'codigo de preventa',
+  `CashSessionID` bigint DEFAULT NULL COMMENT 'Sesion de caja del backend al guardar la preventa',
   `StoreCod` varchar(4) NOT NULL COMMENT 'codigo de tienda',
   `ClientCod` varchar(16) DEFAULT NULL COMMENT 'codigo de cliente',
   `NumPriceSubTotal` decimal(16,2) NOT NULL COMMENT 'Precio subtotal',
@@ -45,10 +46,12 @@ CREATE TABLE `presale_head` (
   KEY `fk_presale_head_store` (`StoreCod`),
   KEY `fk_presale_head_currency` (`CurrencyCod`),
   KEY `fk_presale_head_currencySys` (`CurrencyCodSys`),
+  KEY `idx_presale_head_cash_session` (`CashSessionID`),
   CONSTRAINT `fk_presale_head_client` FOREIGN KEY (`ClientCod`) REFERENCES `client` (`ClientCod`),
   CONSTRAINT `fk_presale_head_currency` FOREIGN KEY (`CurrencyCod`) REFERENCES `currency` (`CurrencyCod`),
   CONSTRAINT `fk_presale_head_currencySys` FOREIGN KEY (`CurrencyCodSys`) REFERENCES `currency` (`CurrencyCod`),
   CONSTRAINT `fk_presale_head_period` FOREIGN KEY (`PeriodId`) REFERENCES `period` (`PeriodId`),
+  CONSTRAINT `fk_presale_head_cash_session` FOREIGN KEY (`CashSessionID`) REFERENCES `cash_session` (`CashSessionID`),
   CONSTRAINT `fk_presale_head_store` FOREIGN KEY (`StoreCod`) REFERENCES `store` (`StoreCod`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -64,9 +67,37 @@ CREATE TABLE `presale_head` (
         -- CASO: LA TABLA YA EXISTE -> APLICAR ALTERS
         -- =============================================
         
-        -- Aqui puedes agregar bloques IF NOT EXISTS para futuros ALTERs
-        
-        SELECT 'Tabla presale_head ya existe. No se realizaron cambios estructurales.' AS Mensaje;
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'presale_head'
+              AND column_name = 'CashSessionID'
+        ) THEN
+            ALTER TABLE `presale_head`
+                ADD COLUMN `CashSessionID` bigint DEFAULT NULL
+                    COMMENT 'Sesion de caja del backend al guardar la preventa'
+                    AFTER `PresaleCod`;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.statistics
+            WHERE table_schema = DATABASE() AND table_name = 'presale_head'
+              AND index_name = 'idx_presale_head_cash_session'
+        ) THEN
+            ALTER TABLE `presale_head`
+                ADD KEY `idx_presale_head_cash_session` (`CashSessionID`);
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.referential_constraints
+            WHERE constraint_schema = DATABASE() AND table_name = 'presale_head'
+              AND constraint_name = 'fk_presale_head_cash_session'
+        ) THEN
+            ALTER TABLE `presale_head`
+                ADD CONSTRAINT `fk_presale_head_cash_session`
+                FOREIGN KEY (`CashSessionID`) REFERENCES `cash_session` (`CashSessionID`);
+        END IF;
+
+        SELECT 'Tabla presale_head regularizada con sesion de caja.' AS Mensaje;
 
     END IF;
 

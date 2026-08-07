@@ -4,7 +4,6 @@ import { ApiService } from "src/app/enterprise/compartido/service/api.service";
 import { ResponseWsDto } from "src/app/enterprise/shared/model/dto/ResponseWsDto";
 import { OpenRequestDto } from "../model/dto/OpenRequestDto";
 import { CloseRequestDto } from "../model/dto/CloseRequestDto";
-import { CashSessionItemEntity } from "../model/entity/CashSessionItemEntity";
 import { Subject } from "rxjs";
 
 @Injectable({
@@ -24,6 +23,11 @@ export class CashsessionService {
         RespuestaWS = await this.apiService.ExecuteGetService(url, {});
 
         return RespuestaWS;
+    }
+
+    async findById(cashSessionId: number): Promise<ResponseWsDto> {
+        const url: string = `${AppSetting.API}/api/v1/cash/session/detail`;
+        return await this.apiService.ExecuteGetService(url, { CashSessionID: cashSessionId });
     }
 
     async open(req: OpenRequestDto): Promise<ResponseWsDto> {
@@ -52,30 +56,4 @@ export class CashsessionService {
         return RespuestaWS;
     }
 
-    async getItems(CashSessionID: number): Promise<ResponseWsDto> {
-        let url: string = `${AppSetting.API}/api/v1/cash/session/items`;
-        let RespuestaWS: ResponseWsDto;
-
-        RespuestaWS = await this.apiService.ExecuteGetService(url, { CashSessionID: CashSessionID });
-
-        return RespuestaWS;
-    }
-
-    async addItem(item: CashSessionItemEntity): Promise<ResponseWsDto> {
-        let url: string = `${AppSetting.API}/api/v1/cash/session/item/add`;
-        let RespuestaWS: ResponseWsDto;
-
-        RespuestaWS = await this.apiService.ExecutePostService(url, item);
-
-        return RespuestaWS;
-    }
-
-    async addAll(items: CashSessionItemEntity[]): Promise<ResponseWsDto> {
-        let url: string = `${AppSetting.API}/api/v1/cash/session/item/addAll`;
-        let RespuestaWS: ResponseWsDto;
-
-        RespuestaWS = await this.apiService.ExecutePostService(url, items);
-
-        return RespuestaWS;
-    }
 }

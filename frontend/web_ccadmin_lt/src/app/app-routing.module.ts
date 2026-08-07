@@ -53,7 +53,6 @@ import { ListcreditnoteComponent } from './enterprise/sale/pages/listcreditnote/
 import { CreatecreditnoteComponent } from './enterprise/sale/pages/createcreditnote/createcreditnote.component';
 import { ReturnstockcreditnoteComponent } from './enterprise/sale/pages/returnstockcreditnote/returnstockcreditnote.component';
 import { ViewcreditnoteComponent } from './enterprise/sale/pages/viewcreditnote/viewcreditnote.component';
-import { ClosecashsessionComponent } from './enterprise/cash/pages/closecashsession/closecashsession.component';
 import { ListcashregisterComponent } from './enterprise/cash/pages/listcashregister/listcashregister.component';
 import { CreatecashregisterComponent } from './enterprise/cash/pages/createcashregister/createcashregister.component';
 import { OpencashsessionComponent } from './enterprise/cash/pages/opencashsession/opencashsession.component';
@@ -367,7 +366,7 @@ const routes: Routes = [
       { path: 'enterprise/cash/pages/createcashregister', component: CreatecashregisterComponent },
 
       { path: 'enterprise/cash/pages/opencashsession', component: OpencashsessionComponent },
-      { path: 'enterprise/cash/pages/closecashsession', component: ClosecashsessionComponent },
+      { path: 'enterprise/cash/pages/closecashsession', component: OpencashsessionComponent },
       { path: 'enterprise/cash/pages/viewcashsession', component: ViewcashsessionComponent },
 
       { path: 'enterprise/cash/pages/listcounterfoil', component: ListcounterfoilComponent },

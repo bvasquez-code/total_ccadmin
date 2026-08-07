@@ -248,6 +248,7 @@ public class PresaleCreateService extends SessionService {
                 )
                 .session(getUserCod())
                 .validate();
+        presaleHead.CashSessionID = getCashSessionID();
 
         return presaleHead;
     }

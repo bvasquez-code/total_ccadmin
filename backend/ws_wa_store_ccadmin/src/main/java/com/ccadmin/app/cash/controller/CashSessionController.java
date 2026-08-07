@@ -35,12 +35,24 @@ public class CashSessionController {
         }
     }
 
+    @GetMapping("detail")
+    public ResponseEntity<ResponseWsDto> findById(@RequestParam Long CashSessionID) {
+        try {
+            return new ResponseEntity<>(
+                    new ResponseWsDto(cashSessionAdminService.findById(CashSessionID)),
+                    HttpStatus.OK
+            );
+        } catch (Exception ex) {
+            return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+
     // ========= Open =========
     @PostMapping("open")
     public ResponseEntity<ResponseWsDto> open(@RequestBody OpenRequestDto req) {
         try {
             CashSessionEntity s = cashSessionAdminService.open(
-                    req.RegisterCod, req.StoreCod, req.CurrencyCod, req.Commenter, req.OpeningFloatAmount
+                    req.CurrencyCod, req.Commenter, req.OpeningFloatAmount
             );
             return new ResponseEntity<>(new ResponseWsDto(s), HttpStatus.OK);
         } catch (Exception ex) {
@@ -80,7 +92,12 @@ public class CashSessionController {
     @PostMapping("close")
     public ResponseEntity<ResponseWsDto> close(@RequestBody CloseRequestDto req) {
         try {
-            CashSessionEntity s = cashSessionAdminService.close(req.CashSessionID, req.Commenter);
+            CashSessionEntity s = cashSessionAdminService.close(
+                    req.HasCashCount,
+                    req.CountedCashAmount,
+                    req.CountedOtherAmount,
+                    req.Commenter
+            );
             return new ResponseEntity<>(new ResponseWsDto(s), HttpStatus.OK);
         } catch (Exception ex) {
             return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);

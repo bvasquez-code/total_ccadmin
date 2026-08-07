@@ -159,6 +159,7 @@ public class CreditNoteCreateService extends SessionService {
                 .tax(numTotalPriceNoTax, numTotalTax)
                 .validate()
                 .session(getUserCod());
+        creditNoteRegister.Headboard.CashSessionID = getCashSessionID();
 
         this.creditNoteDetTaxRepository.updateStatusAll(creditNoteRegister.Headboard.CreditNoteCod,"I");
         this.creditNoteDetRepository.updateStatusAll(creditNoteRegister.Headboard.CreditNoteCod,"I");

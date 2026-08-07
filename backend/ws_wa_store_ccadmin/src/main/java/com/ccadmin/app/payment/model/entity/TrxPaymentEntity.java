@@ -15,6 +15,7 @@ public class TrxPaymentEntity extends AuditTableEntity implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long TrxPaymentId;
+    public Long CashSessionID;
     public String PaymentMethodCod;
     public String PaymentPlatform;
     public String CardNumber;

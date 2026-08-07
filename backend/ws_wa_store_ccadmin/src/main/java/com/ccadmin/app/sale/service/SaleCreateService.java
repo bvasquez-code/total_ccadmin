@@ -110,6 +110,7 @@ public class SaleCreateService extends SessionService {
                 )
                 .session(getUserCod())
                 .validate();
+        saleHead.CashSessionID = getCashSessionID();
 
         return saleHead;
     }

@@ -2,6 +2,7 @@ package com.ccadmin.app.security.config;
 
 import com.ccadmin.app.security.service.JWTAuthenticationFilterService;
 import com.ccadmin.app.security.service.JWTAuthorizationFilterService;
+import com.ccadmin.app.security.service.SecurityService;
 import com.ccadmin.app.security.service.UserDetailsServiceImp;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -29,11 +30,12 @@ public class WebSecurityConfig {
 
     private final JWTAuthorizationFilterService jwtAuthorizationFilter;
     private final UserDetailsServiceImp userDetailsService;
+    private final SecurityService securityService;
 
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http, AuthenticationManager authManager) throws Exception {
         // Filtro de autenticación (login -> genera token)
-        JWTAuthenticationFilterService jwtAuthenticationFilter = new JWTAuthenticationFilterService();
+        JWTAuthenticationFilterService jwtAuthenticationFilter = new JWTAuthenticationFilterService(securityService);
         jwtAuthenticationFilter.setAuthenticationManager(authManager);
         jwtAuthenticationFilter.setFilterProcessesUrl("/login");
 

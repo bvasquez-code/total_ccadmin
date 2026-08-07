@@ -31,11 +31,12 @@ public class CashSessionEntity extends AuditTableEntity implements Serializable 
     public BigDecimal ExpectedOtherAmount = BigDecimal.ZERO;
     public BigDecimal ExpectedTotalAmount = BigDecimal.ZERO;
 
-    public BigDecimal CountedCashAmount   = BigDecimal.ZERO;
-    public BigDecimal CountedOtherAmount  = BigDecimal.ZERO;
-    public BigDecimal CountedTotalAmount  = BigDecimal.ZERO;
+    public String HasCashCount = "N";
+    public BigDecimal CountedCashAmount;
+    public BigDecimal CountedOtherAmount;
+    public BigDecimal CountedTotalAmount;
 
-    public BigDecimal DifferenceAmount    = BigDecimal.ZERO;
+    public BigDecimal DifferenceAmount;
 
     public Character SessionStatus = 'O'; // O/C/X
     public Integer IsOpen = 1;

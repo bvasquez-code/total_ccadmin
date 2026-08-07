@@ -20,6 +20,7 @@ BEGIN
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `trx_payments` (
   `TrxPaymentId` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID del pago',
+  `CashSessionID` bigint DEFAULT NULL COMMENT 'Sesion de caja del backend al registrar el movimiento',
   `PaymentMethodCod` varchar(8) NOT NULL COMMENT 'CÃ³digo del mÃ©todo de pago',
   `PaymentPlatform` varchar(16) NOT NULL COMMENT 'Plataforma de pago utilizada (POS o PayPal)',
   `CardNumber` varchar(16) DEFAULT NULL COMMENT 'NÃºmero de la tarjeta',
@@ -43,7 +44,9 @@ CREATE TABLE `trx_payments` (
   PRIMARY KEY (`TrxPaymentId`),
   KEY `fk_card_payments_payment` (`PaymentMethodCod`),
   KEY `idx_trx_payments_reversal_of` (`ReversalOfTrxPaymentId`),
-  CONSTRAINT `fk_card_payments_payment` FOREIGN KEY (`PaymentMethodCod`) REFERENCES `payment_method` (`PaymentMethodCod`)
+  KEY `idx_trx_payments_cash_session` (`CashSessionID`),
+  CONSTRAINT `fk_card_payments_payment` FOREIGN KEY (`PaymentMethodCod`) REFERENCES `payment_method` (`PaymentMethodCod`),
+  CONSTRAINT `fk_trx_payments_cash_session` FOREIGN KEY (`CashSessionID`) REFERENCES `cash_session` (`CashSessionID`)
 ) ENGINE=InnoDB AUTO_INCREMENT=195 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -58,9 +61,37 @@ CREATE TABLE `trx_payments` (
         -- CASO: LA TABLA YA EXISTE -> APLICAR ALTERS
         -- =============================================
         
-        -- Aqui puedes agregar bloques IF NOT EXISTS para futuros ALTERs
-        
-        SELECT 'Tabla trx_payments ya existe. No se realizaron cambios estructurales.' AS Mensaje;
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'trx_payments'
+              AND column_name = 'CashSessionID'
+        ) THEN
+            ALTER TABLE `trx_payments`
+                ADD COLUMN `CashSessionID` bigint DEFAULT NULL
+                    COMMENT 'Sesion de caja del backend al registrar el movimiento'
+                    AFTER `TrxPaymentId`;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.statistics
+            WHERE table_schema = DATABASE() AND table_name = 'trx_payments'
+              AND index_name = 'idx_trx_payments_cash_session'
+        ) THEN
+            ALTER TABLE `trx_payments`
+                ADD KEY `idx_trx_payments_cash_session` (`CashSessionID`);
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.referential_constraints
+            WHERE constraint_schema = DATABASE() AND table_name = 'trx_payments'
+              AND constraint_name = 'fk_trx_payments_cash_session'
+        ) THEN
+            ALTER TABLE `trx_payments`
+                ADD CONSTRAINT `fk_trx_payments_cash_session`
+                FOREIGN KEY (`CashSessionID`) REFERENCES `cash_session` (`CashSessionID`);
+        END IF;
+
+        SELECT 'Tabla trx_payments regularizada con sesion de caja.' AS Mensaje;
 
     END IF;
 

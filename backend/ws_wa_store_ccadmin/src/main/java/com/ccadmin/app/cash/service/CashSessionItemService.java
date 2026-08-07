@@ -16,16 +16,29 @@ public class CashSessionItemService extends SessionService {
     private CashSessionItemRepository itemRepository;
 
     public CashSessionItemEntity addItem(CashSessionItemEntity item) {
+        item.CashSessionID = requireCurrentCashSessionId();
         item.validate().session(this.getUserCod());
         return itemRepository.save(item);
     }
 
     public List<CashSessionItemEntity> addItems(List<CashSessionItemEntity> items) {
-        items.forEach(i -> i.validate().session(this.getUserCod()));
+        Long cashSessionId = requireCurrentCashSessionId();
+        items.forEach(item -> {
+            item.CashSessionID = cashSessionId;
+            item.validate().session(this.getUserCod());
+        });
         return itemRepository.saveAll(items);
     }
 
     public List<CashSessionItemEntity> getItems(Long sessionId) {
         return itemRepository.findByCashSessionID(sessionId);
+    }
+
+    private Long requireCurrentCashSessionId() {
+        Long cashSessionId = getCashSessionID();
+        if (cashSessionId == null) {
+            throw new IllegalStateException("La sesión autenticada no tiene una caja abierta");
+        }
+        return cashSessionId;
     }
 }

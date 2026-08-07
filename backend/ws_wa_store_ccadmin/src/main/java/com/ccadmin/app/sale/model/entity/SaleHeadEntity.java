@@ -17,6 +17,7 @@ public class SaleHeadEntity extends AuditTableEntity implements Serializable {
 
     @Id
     public String SaleCod;
+    public Long CashSessionID;
     public String PresaleCod;
     public String StoreCod;
     public String ClientCod;

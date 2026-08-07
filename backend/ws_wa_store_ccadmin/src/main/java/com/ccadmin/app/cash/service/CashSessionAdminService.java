@@ -4,7 +4,6 @@ import com.ccadmin.app.cash.model.dto.CurrentCashSessionDto;
 import com.ccadmin.app.cash.model.entity.CashRegisterEntity;
 import com.ccadmin.app.cash.model.entity.CashSessionEntity;
 import com.ccadmin.app.cash.repository.CashRegisterRepository;
-import com.ccadmin.app.cash.repository.CashSessionItemRepository;
 import com.ccadmin.app.cash.repository.CashSessionRepository;
 import com.ccadmin.app.sale.model.idto.IExpectedTotalsDto;
 import com.ccadmin.app.sale.repository.SaleHeadRepository;
@@ -22,139 +21,165 @@ public class CashSessionAdminService extends SessionService {
     @Autowired
     private CashSessionRepository sessionRepository;
     @Autowired
-    private CashSessionItemRepository itemRepository;
-    @Autowired
     private CashRegisterRepository cashRegisterRepository;
-
     @Autowired
     private SaleHeadRepository saleHeadRepository;
 
-    @Transactional(readOnly = true)
+    @Transactional
     public CurrentCashSessionDto findCurrent() {
-        CashRegisterEntity cashRegister = findCurrentCashRegister();
-        CashSessionEntity cashSession = sessionRepository
-                .findOpenByRegister(cashRegister.RegisterCod)
-                .orElse(null);
+        String storeCod = getStoreCod();
+        CashSessionEntity cashSession = null;
+        CashRegisterEntity cashRegister;
 
-        if (cashSession != null && !this.getUserCod().equals(cashSession.UserCod)) {
-            throw new IllegalStateException("La caja se encuentra abierta por otro usuario");
+        Long cashSessionId = getCashSessionID();
+        if (cashSessionId == null) {
+            cashSessionId = sessionRepository.findOpenIdByUserAndStore(getUserCod(), storeCod)
+                    .orElse(null);
+            if (cashSessionId != null) {
+                setCashSessionID(cashSessionId);
+            }
+        }
+        if (cashSessionId != null) {
+            cashSession = sessionRepository.findByCashSessionId(cashSessionId)
+                    .orElseThrow(() -> new IllegalStateException("La sesión de caja del contexto ya no existe"));
+            if (cashSession.IsOpen == 0 || cashSession.SessionStatus != 'O') {
+                throw new IllegalStateException("La sesión de caja del contexto ya se encuentra cerrada");
+            }
+            if (!getUserCod().equals(cashSession.UserCod) || !storeCod.equals(cashSession.StoreCod)) {
+                throw new IllegalStateException("La sesión de caja no pertenece al usuario y tienda actuales");
+            }
+            cashRegister = cashRegisterRepository.findActiveByRegisterCod(cashSession.RegisterCod)
+                    .orElseThrow(() -> new IllegalStateException("La caja de la sesión ya no se encuentra activa"));
+        } else {
+            cashRegister = findCurrentUserCashRegister();
         }
 
         return new CurrentCashSessionDto(cashRegister, cashSession);
     }
 
+    @Transactional(readOnly = true)
+    public CashSessionEntity findById(Long cashSessionId) {
+        if (cashSessionId == null || cashSessionId <= 0) {
+            throw new IllegalArgumentException("El identificador de sesión de caja es obligatorio");
+        }
+        CashSessionEntity cashSession = sessionRepository.findByCashSessionId(cashSessionId)
+                .orElseThrow(() -> new IllegalArgumentException("Sesión de caja no encontrada"));
+        if (!getStoreCod().equals(cashSession.StoreCod)) {
+            throw new IllegalStateException("La sesión de caja no pertenece a la tienda actual");
+        }
+        return cashSession;
+    }
+
     @Transactional
-    public CashSessionEntity open(String registerCod, String storeCod, String currencyCod,
-                                  String commenter, java.math.BigDecimal openingFloat) {
+    public CashSessionEntity open(String currencyCod, String commenter, BigDecimal openingFloat) {
+        if (getCashSessionID() != null) {
+            throw new IllegalStateException("La sesión autenticada ya tiene una caja abierta");
+        }
 
-        CashRegisterEntity cashRegister = findCurrentCashRegister();
-        validateRequestedCashRegister(registerCod, storeCod, cashRegister);
+        CashRegisterEntity cashRegister = findCurrentUserCashRegister();
 
-        sessionRepository.findOpenByRegister(cashRegister.RegisterCod).ifPresent(s -> {
+        sessionRepository.findOpenByRegister(cashRegister.RegisterCod).ifPresent(session -> {
             throw new IllegalStateException("La caja ya tiene una sesión abierta");
         });
 
-        CashSessionEntity s = new CashSessionEntity();
-        s.RegisterCod = cashRegister.RegisterCod;
-        s.StoreCod = cashRegister.StoreCod;
-        s.UserCod = this.getUserCod();
-        s.CurrencyCod = currencyCod;
-        s.OpenDate = new Date();
-        s.OpeningFloatAmount = openingFloat == null ? java.math.BigDecimal.ZERO : openingFloat;
-        s.SessionStatus = 'O';
-        s.IsOpen = 1;
-        s.Commenter = commenter;
+        CashSessionEntity cashSession = new CashSessionEntity();
+        cashSession.RegisterCod = cashRegister.RegisterCod;
+        cashSession.StoreCod = cashRegister.StoreCod;
+        cashSession.UserCod = getUserCod();
+        cashSession.CurrencyCod = currencyCod;
+        cashSession.OpenDate = new Date();
+        cashSession.OpeningFloatAmount = openingFloat == null ? BigDecimal.ZERO : openingFloat;
+        cashSession.SessionStatus = 'O';
+        cashSession.IsOpen = 1;
+        cashSession.Commenter = commenter;
 
-        s.validateOpen().session(this.getUserCod());
-        return sessionRepository.save(s);
+        cashSession.validateOpen().session(getUserCod());
+        CashSessionEntity saved = sessionRepository.save(cashSession);
+        setCashSessionID(saved.CashSessionID);
+        return saved;
     }
-
 
     @Transactional
-    public CashSessionEntity close(Long sessionId, String commenter) {
-        CashSessionEntity s = sessionRepository.findByCashSessionId(sessionId)
+    public CashSessionEntity close(String hasCashCount,
+                                   BigDecimal countedCashAmount,
+                                   BigDecimal countedOtherAmount,
+                                   String commenter) {
+        Long cashSessionId = getCashSessionID();
+        if (cashSessionId == null) {
+            throw new IllegalStateException("La sesión autenticada no tiene una caja abierta");
+        }
+
+        CashSessionEntity cashSession = sessionRepository.findByCashSessionId(cashSessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Sesión no encontrada"));
 
-        CashRegisterEntity cashRegister = findCurrentCashRegister();
-        if (!this.getUserCod().equals(s.UserCod)
-                || !cashRegister.StoreCod.equals(s.StoreCod)
-                || !cashRegister.RegisterCod.equals(s.RegisterCod)) {
+        if (!getUserCod().equals(cashSession.UserCod) || !getStoreCod().equals(cashSession.StoreCod)) {
             throw new IllegalStateException("La sesión de caja no pertenece al usuario y tienda actuales");
         }
-
-        if (s.IsOpen == 0 || s.SessionStatus != 'O')
+        if (cashSession.IsOpen == 0 || cashSession.SessionStatus != 'O') {
             throw new IllegalStateException("La sesión ya está cerrada o cancelada");
-
-        // ---- Calculados esperados (ventas + movimientos + fondo)
-        BigDecimal expCash  = BigDecimal.ZERO;
-        BigDecimal expOther = BigDecimal.ZERO;
-
-        if (saleHeadRepository != null) {
-            IExpectedTotalsDto totals = saleHeadRepository.getExpectedTotalsForSession(sessionId);
-            if (totals != null) {
-                expCash  = safe(totals.getCash());
-                expOther = safe(totals.getOther());
-            }
         }
-        // Movimientos manuales (IN/OU) impactan el esperado
-        BigDecimal netMovements = safe(itemRepository.sumNetMovements(sessionId));
-        expCash = expCash.add(safe(s.OpeningFloatAmount)).add(netMovements); // caja suele impactar en efectivo
-        BigDecimal expTotal = expCash.add(expOther);
 
-        // ---- Contados (ingresados por el cajero)
-        BigDecimal countedCashFromDenoms = safe(itemRepository.sumDenominations(sessionId));
-        BigDecimal countedCashFromPayments = safe(itemRepository.sumCountedCashFromPayments(sessionId));
-        BigDecimal countedCash = countedCashFromDenoms.add(countedCashFromPayments);
+        BigDecimal expectedCash = BigDecimal.ZERO;
+        BigDecimal expectedOther = BigDecimal.ZERO;
+        IExpectedTotalsDto totals = saleHeadRepository.getExpectedTotalsForSession(cashSessionId);
+        if (totals != null) {
+            expectedCash = safe(totals.getCash());
+            expectedOther = safe(totals.getOther());
+        }
+        expectedCash = expectedCash.add(safe(cashSession.OpeningFloatAmount));
+        BigDecimal expectedTotal = expectedCash.add(expectedOther);
 
-        BigDecimal countedOther = safe(itemRepository.sumCountedOther(sessionId));
-        BigDecimal countedTotal = countedCash.add(countedOther);
+        cashSession.ExpectedCashAmount = expectedCash;
+        cashSession.ExpectedOtherAmount = expectedOther;
+        cashSession.ExpectedTotalAmount = expectedTotal;
 
-        // ---- Diferencia
-        BigDecimal difference = countedTotal.subtract(expTotal);
+        boolean performCashCount = "S".equalsIgnoreCase(hasCashCount);
+        cashSession.HasCashCount = performCashCount ? "S" : "N";
+        if (performCashCount) {
+            if (countedCashAmount == null || countedOtherAmount == null) {
+                throw new IllegalArgumentException("Debe indicar los importes contados para realizar el arqueo");
+            }
+            BigDecimal countedCash = validateCountedAmount(countedCashAmount, "efectivo contado");
+            BigDecimal countedOther = validateCountedAmount(countedOtherAmount, "otros medios contados");
+            BigDecimal countedTotal = countedCash.add(countedOther);
+            cashSession.CountedCashAmount = countedCash;
+            cashSession.CountedOtherAmount = countedOther;
+            cashSession.CountedTotalAmount = countedTotal;
+            cashSession.DifferenceAmount = countedTotal.subtract(expectedTotal);
+        } else {
+            cashSession.CountedCashAmount = null;
+            cashSession.CountedOtherAmount = null;
+            cashSession.CountedTotalAmount = null;
+            cashSession.DifferenceAmount = null;
+        }
 
-        // ---- Persistimos cierre
-        s.ExpectedCashAmount  = expCash;
-        s.ExpectedOtherAmount = expOther;
-        s.ExpectedTotalAmount = expTotal;
+        cashSession.SessionStatus = 'C';
+        cashSession.IsOpen = 0;
+        cashSession.CloseDate = new Date();
+        cashSession.Commenter = commenter;
+        cashSession.session(getUserCod());
 
-        s.CountedCashAmount   = countedCash;
-        s.CountedOtherAmount  = countedOther;
-        s.CountedTotalAmount  = countedTotal;
-
-        s.DifferenceAmount    = difference;
-
-        s.SessionStatus = 'C';
-        s.IsOpen = 0;
-        s.CloseDate = new Date();
-        s.Commenter = commenter;
-        s.session(this.getUserCod());
-
-        return sessionRepository.save(s);
+        CashSessionEntity saved = sessionRepository.save(cashSession);
+        clearCashSessionID(cashSessionId);
+        return saved;
     }
 
-    private CashRegisterEntity findCurrentCashRegister() {
-        String userCod = this.getUserCod();
-        String storeCod = this.getStoreCod();
-
-        return cashRegisterRepository.findActiveByUserAndStore(userCod, storeCod)
+    private CashRegisterEntity findCurrentUserCashRegister() {
+        return cashRegisterRepository.findActiveByUserAndStore(getUserCod(), getStoreCod())
                 .orElseThrow(() -> new IllegalStateException(
-                        "El usuario actual no tiene una caja activa asignada en la tienda " + storeCod
+                        "El usuario actual no tiene una caja activa asignada en la tienda " + getStoreCod()
                 ));
     }
 
-    private void validateRequestedCashRegister(String registerCod, String storeCod,
-                                               CashRegisterEntity cashRegister) {
-        if (registerCod != null && !registerCod.isBlank()
-                && !cashRegister.RegisterCod.equals(registerCod)) {
-            throw new IllegalArgumentException("La caja indicada no pertenece al usuario actual");
+    private static BigDecimal validateCountedAmount(BigDecimal value, String fieldName) {
+        BigDecimal amount = safe(value);
+        if (amount.signum() < 0) {
+            throw new IllegalArgumentException("El " + fieldName + " no puede ser negativo");
         }
-
-        if (storeCod != null && !storeCod.isBlank()
-                && !cashRegister.StoreCod.equals(storeCod)) {
-            throw new IllegalArgumentException("La tienda indicada no corresponde a la sesión actual");
-        }
+        return amount;
     }
 
-    private static BigDecimal safe(BigDecimal v) { return v == null ? BigDecimal.ZERO : v; }
+    private static BigDecimal safe(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
 }
-

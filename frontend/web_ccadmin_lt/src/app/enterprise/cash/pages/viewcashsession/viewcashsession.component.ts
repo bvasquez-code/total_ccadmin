@@ -1,101 +1,43 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { ToastrService } from 'ngx-toastr';
-
-import { ActionTableService } from 'src/app/enterprise/shared/interface/ActionTableService';
-import { ResponsePageSearch } from 'src/app/enterprise/shared/model/dto/ResponsePageSearch';
-import { TableDto } from 'src/app/enterprise/shared/model/dto/TableDto';
-import { DataTablaGeneticDto } from 'src/app/enterprise/shared/model/dto/DataTablaGeneticDto';
-
-import { CashSessionItemEntity } from '../../model/entity/CashSessionItemEntity';
-import { ResponseWsDto } from 'src/app/enterprise/shared/model/dto/ResponseWsDto';
+import { CashSessionEntity } from '../../model/entity/extends AuditTableEntity';
 import { CashsessionService } from '../../service/CashsessionService';
+import { ResponseWsDto } from 'src/app/enterprise/shared/model/dto/ResponseWsDto';
 
 @Component({
   selector: 'app-viewcashsession',
   templateUrl: './viewcashsession.component.html'
 })
-export class ViewcashsessionComponent implements OnInit, ActionTableService<CashSessionItemEntity> {
+export class ViewcashsessionComponent implements OnInit {
 
-  CashSessionID: number = 0;
-
-  @ViewChild('txtSearch') txtSearch!: ElementRef<HTMLInputElement>;
-
-  table: TableDto<CashSessionItemEntity> = new TableDto();
+  cashSession: CashSessionEntity | null = null;
+  isLoading: boolean = true;
 
   constructor(
     private cashSessionService: CashsessionService,
-    private router: Router,
-    private toastrService: ToastrService
-  ) {
-    let urlTree: any = this.router.parseUrl(this.router.url);
-    this.CashSessionID = Number(urlTree.queryParams['CashSessionID'] ?? 0);
-  }
-  findAll(Page: number, Query: string): Promise<void> {
-    throw new Error('Method not implemented.');
-  }
+    private router: Router
+  ) { }
 
   ngOnInit(): void {
-    this.findItems();
+    this.loadCashSession();
   }
 
-  filter(_Page: number): void {
-    // no hay paginado aquí, es listado por sesión
-    this.findItems();
-  }
+  private async loadCashSession(): Promise<void> {
+    const urlTree = this.router.parseUrl(this.router.url);
+    const cashSessionId = Number(urlTree.queryParams['CashSessionID'] ?? 0);
+    let response: ResponseWsDto;
 
-  async findItems() {
-    const rpt: ResponseWsDto = await this.cashSessionService.getItems(this.CashSessionID);
-
-    if (!rpt.ErrorStatus) {
-      // Para reutilizar tu tabla shared (aunque no haya paginado),
-      // armamos un ResponsePageSearch "fake"
-      const response: ResponsePageSearch<CashSessionItemEntity> = new ResponsePageSearch<CashSessionItemEntity>();
-      response.resultSearch = rpt.Data ?? [];
-      response.Page = 1;
-      response.TotalPages = 1;
-      response.TotalResult = response.resultSearch.length;
-
-      this.table.responsePageSearch = response;
-      this.loadingTable(this.table.responsePageSearch);
+    if (cashSessionId > 0) {
+      response = await this.cashSessionService.findById(cashSessionId);
+      if (!response.ErrorStatus) this.cashSession = response.Data;
+    } else {
+      response = await this.cashSessionService.findCurrent();
+      if (!response.ErrorStatus) this.cashSession = response.Data.CashSession;
     }
+    this.isLoading = false;
   }
 
-  loadingTable(responsePageSearch: ResponsePageSearch<CashSessionItemEntity>): void {
-    const data: DataTablaGeneticDto<CashSessionItemEntity> = new DataTablaGeneticDto();
-
-    const viewType = (i: CashSessionItemEntity) => i.ItemType;
-    const viewDenom = (i: CashSessionItemEntity) => i.Denomination;
-    const viewQty = (i: CashSessionItemEntity) => i.Qty;
-    const viewPay = (i: CashSessionItemEntity) => i.PaymentMethodCod;
-    const viewMov = (i: CashSessionItemEntity) => i.MovementType;
-    const viewRef = (i: CashSessionItemEntity) => i.ReferenceCod;
-    const viewAmount = (i: CashSessionItemEntity) => i.Amount;
-    const viewCurr = (i: CashSessionItemEntity) => i.CurrencyCod;
-
-    data.init(
-      [
-        { Name: "Tipo", key: "ItemType", FunctionKey: viewType },
-        { Name: "Denom", key: "Denomination", FunctionKey: viewDenom },
-        { Name: "Qty", key: "Qty", FunctionKey: viewQty },
-        { Name: "Pago", key: "PaymentMethodCod", FunctionKey: viewPay },
-        { Name: "Mov", key: "MovementType", FunctionKey: viewMov },
-        { Name: "Ref", key: "ReferenceCod", FunctionKey: viewRef },
-        { Name: "Monto", key: "Amount", FunctionKey: viewAmount },
-        { Name: "Moneda", key: "CurrencyCod", FunctionKey: viewCurr },
-      ],
-      { data: responsePageSearch },
-      "Items de sesión"
-    );
-
-    this.table.dataTablaGenetic = data;
-  }
-
-  getDataRow(item: any): void {
-    this.table.itemTableSelect = item;
-  }
-
-  goClose() {
-    this.router.navigate(["enterprise/cash/pages/closecashsession"], { queryParams: { CashSessionID: this.CashSessionID } });
+  goClose(): void {
+    this.router.navigate(["enterprise/cash/pages/opencashsession"]);
   }
 }

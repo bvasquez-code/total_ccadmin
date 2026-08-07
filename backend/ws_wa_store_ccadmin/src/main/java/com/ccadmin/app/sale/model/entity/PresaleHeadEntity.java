@@ -17,6 +17,7 @@ public class PresaleHeadEntity extends AuditTableEntity implements Serializable 
 
     @Id
     public String PresaleCod;
+    public Long CashSessionID;
     public String StoreCod;
     public String ClientCod;
     public BigDecimal NumPriceSubTotal;

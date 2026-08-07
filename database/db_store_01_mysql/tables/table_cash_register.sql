@@ -28,7 +28,7 @@ BEGIN
           `Status` char(1) NOT NULL DEFAULT 'A' COMMENT 'Estado logico del registro: A=Activo, I=Inactivo',
           PRIMARY KEY (`RegisterCod`),
           KEY `idx_cash_register_store` (`StoreCod`),
-          UNIQUE KEY `uq_cash_register_user_store` (`UserCod`,`StoreCod`),
+          KEY `idx_cash_register_user_store` (`UserCod`,`StoreCod`),
           CONSTRAINT `fk_cash_register_store`
             FOREIGN KEY (`StoreCod`) REFERENCES `store` (`StoreCod`),
           CONSTRAINT `fk_cash_register_user`
@@ -55,11 +55,24 @@ BEGIN
         FROM information_schema.statistics
         WHERE table_schema = DATABASE()
           AND table_name = 'cash_register'
-          AND index_name = 'uq_cash_register_user_store';
+          AND index_name = 'idx_cash_register_user_store';
 
         IF v_index_exists = 0 THEN
             ALTER TABLE `cash_register`
-                ADD UNIQUE KEY `uq_cash_register_user_store` (`UserCod`,`StoreCod`);
+                ADD KEY `idx_cash_register_user_store` (`UserCod`,`StoreCod`);
+        END IF;
+
+        -- La FK de UserCod puede estar utilizando el indice unico como indice
+        -- de soporte. El indice no unico debe existir antes de retirar el unico.
+        SELECT COUNT(*) INTO v_index_exists
+        FROM information_schema.statistics
+        WHERE table_schema = DATABASE()
+          AND table_name = 'cash_register'
+          AND index_name = 'uq_cash_register_user_store';
+
+        IF v_index_exists > 0 THEN
+            ALTER TABLE `cash_register`
+                DROP INDEX `uq_cash_register_user_store`;
         END IF;
 
         SELECT COUNT(*) INTO v_constraint_exists
@@ -74,7 +87,7 @@ BEGIN
                 FOREIGN KEY (`UserCod`) REFERENCES `app_user` (`UserCod`);
         END IF;
 
-        SELECT 'Tabla cash_register regularizada para cajas automaticas por usuario y tienda.' AS Mensaje;
+        SELECT 'Tabla cash_register regularizada: una caja inicial automatica y cajas adicionales permitidas.' AS Mensaje;
     END IF;
 END $$
 

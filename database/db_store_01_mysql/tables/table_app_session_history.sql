@@ -5,6 +5,7 @@ DELIMITER $$
 CREATE PROCEDURE `p_manage_app_session_history`()
 BEGIN
     DECLARE v_table_exists INT DEFAULT 0;
+    DECLARE v_column_exists INT DEFAULT 0;
 
     -- 1. Verificamos si la tabla existe
     SELECT COUNT(*) INTO v_table_exists
@@ -20,6 +21,7 @@ BEGIN
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `app_session_history` (
   `SessionID` bigint NOT NULL AUTO_INCREMENT,
+  `CashSessionID` bigint DEFAULT NULL COMMENT 'Sesion de caja que tenia el token al archivarse',
   `UserCod` varchar(16) NOT NULL,
   `Token` varchar(256) NOT NULL,
   `SessionOjb` text,
@@ -46,9 +48,20 @@ CREATE TABLE `app_session_history` (
         -- CASO: LA TABLA YA EXISTE -> APLICAR ALTERS
         -- =============================================
         
-        -- Aqui puedes agregar bloques IF NOT EXISTS para futuros ALTERs
-        
-        SELECT 'Tabla app_session_history ya existe. No se realizaron cambios estructurales.' AS Mensaje;
+        SELECT COUNT(*) INTO v_column_exists
+        FROM information_schema.columns
+        WHERE table_schema = DATABASE()
+          AND table_name = 'app_session_history'
+          AND column_name = 'CashSessionID';
+
+        IF v_column_exists = 0 THEN
+            ALTER TABLE `app_session_history`
+                ADD COLUMN `CashSessionID` bigint DEFAULT NULL
+                    COMMENT 'Sesion de caja que tenia el token al archivarse'
+                    AFTER `SessionID`;
+        END IF;
+
+        SELECT 'Tabla app_session_history regularizada con el contexto historico de caja.' AS Mensaje;
 
     END IF;
 

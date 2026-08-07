@@ -65,6 +65,7 @@ public class TrxPaymentCreateService extends SessionService {
     }
 
     private void prepareForSave(TrxPaymentEntity trxPayment) {
+        trxPayment.CashSessionID = getCashSessionID();
         trxPayment.addSession(getUserCod());
         trxPayment.validate();
 

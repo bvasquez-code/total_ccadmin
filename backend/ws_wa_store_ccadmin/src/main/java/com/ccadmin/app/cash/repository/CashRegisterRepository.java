@@ -56,9 +56,19 @@ public interface CashRegisterRepository extends JpaRepository<CashRegisterEntity
     @Query(value = """
         select r.*
         from cash_register r
+        where r.RegisterCod = :registerCod
+          and r.Status = 'A'
+        limit 1
+        """, nativeQuery = true)
+    Optional<CashRegisterEntity> findActiveByRegisterCod(@Param("registerCod") String registerCod);
+
+    @Query(value = """
+        select r.*
+        from cash_register r
         where r.UserCod = :userCod
           and r.StoreCod = :storeCod
           and r.Status = 'A'
+        order by r.CreationDate asc, r.RegisterCod asc
         limit 1
         """, nativeQuery = true)
     Optional<CashRegisterEntity> findActiveByUserAndStore(

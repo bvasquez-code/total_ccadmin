@@ -1,80 +1,41 @@
 import { DOCUMENT } from '@angular/common';
-import { Component, Inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { SidebarMenuConfigDto } from 'src/app/enterprise/menu/model/dto/SidebarMenuConfigDto';
 import { SidebarSubMenuConfigDto } from 'src/app/enterprise/menu/model/dto/SidebarSubMenuConfigDto';
 import { SidebarMenuConfigService } from 'src/app/enterprise/menu/service/sidebar-menu-config.service';
 import { MenuPagina } from 'src/app/enterprise/menu/model/entity/MenuPagina';
 import { SubMenuPagina } from 'src/app/enterprise/menu/model/entity/SubMenuPagina';
 import { DataSesionService } from '../../compartido/service/datasesion.service';
-import { CashsessionService } from '../../cash/service/CashsessionService';
-import { CurrentCashSessionDto } from '../../cash/model/dto/CurrentCashSessionDto';
-import { ResponseWsDto } from '../../shared/model/dto/ResponseWsDto';
-import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-menusidebar',
   templateUrl: './menusidebar.component.html',
   styleUrls: ['./menusidebar.component.css']
 })
-export class MenusidebarComponent implements OnInit, OnDestroy {
+export class MenusidebarComponent implements OnInit {
 
   public g_flg_menu_defecto: boolean = false;
   public g_list_menu: MenuPagina[] = [];
   public isOpenMenu: boolean = false;
 
   private readonly defaultIcon = "nav-icon fa fa-cube";
-  private cashSessionChangedSubscription?: Subscription;
-
   constructor(
     @Inject(DOCUMENT) private document: Document,
     private dataSesionService: DataSesionService,
-    private sidebarMenuConfigService: SidebarMenuConfigService,
-    private cashSessionService: CashsessionService
+    private sidebarMenuConfigService: SidebarMenuConfigService
   ) {
   }
 
   ngOnInit(): void {
-    this.cashSessionChangedSubscription = this.cashSessionService.cashSessionChanged$.subscribe(() => {
-      this.ObtenerMenu();
-    });
     this.ObtenerMenu();
-  }
-
-  ngOnDestroy(): void {
-    this.cashSessionChangedSubscription?.unsubscribe();
   }
 
   async ObtenerMenu(): Promise<void> {
     this.g_list_menu = [this.getOptionDashboard()];
 
     const menuConfig = this.sidebarMenuConfigService.getMenuConfig();
-    await this.configureCurrentCashSessionOption(menuConfig);
-
     menuConfig.forEach(config => this.addMenuIfAllowed(config));
     this.markActiveMenu();
-  }
-
-  private async configureCurrentCashSessionOption(menuConfig: SidebarMenuConfigDto[]): Promise<void> {
-    if (!this.permissionExists("CJ000000") || !this.permissionExists("CJ000003")) {
-      return;
-    }
-
-    const cashMenu = menuConfig.find(config => config.permission === "CJ000000");
-    const cashSessionOption = cashMenu?.children.find(child =>
-      this.normalizeUrl(child.url) === "enterprise/cash/pages/opencashsession"
-    );
-
-    if (!cashSessionOption) return;
-
-    const rpt: ResponseWsDto = await this.cashSessionService.findCurrent();
-    if (rpt.ErrorStatus) return;
-
-    const current: CurrentCashSessionDto = rpt.Data;
-    if (current.IsOpen && current.CashSession) {
-      cashSessionOption.label = "Cerrar caja";
-      cashSessionOption.url = "enterprise/cash/pages/closecashsession";
-      cashSessionOption.urlPosition = "enterprise/cash/pages/closecashsession";
-    }
   }
 
   private addMenuIfAllowed(config: SidebarMenuConfigDto): void {

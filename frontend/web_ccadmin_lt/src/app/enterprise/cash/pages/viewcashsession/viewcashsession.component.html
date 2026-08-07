@@ -1,44 +1,58 @@
 <div role="main" class="main-content">
-
     <div class="page-content container container-plus">
+        <div class="card acard mt-2 mt-lg-3">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <h3 class="card-title text-125 text-primary-d2 mb-0">
+                    <i class="fas fa-cash-register text-dark-l3 mr-1"></i>
+                    Resumen de caja
+                </h3>
+                <button *ngIf="cashSession?.IsOpen === 1" type="button" class="btn btn-danger btn-sm"
+                    (click)="goClose()">
+                    <i class="fa fa-lock mr-1"></i>Cerrar caja
+                </button>
+            </div>
 
-        <div class="card-header">
-            <h3 class="card-title text-125 text-primary-d2">
-                <i class="far fa-edit text-dark-l3 mr-1"></i>
-                Sesión de Caja: {{ CashSessionID }}
-            </h3>
-        </div>
-
-        <div class="row">
-            <div class="col-12">
-                <div class="card dcard">
-                    <div class="card-body px-1 px-md-3">
-
-                        <div autocomplete="off">
-                            <div class="d-flex justify-content-between flex-column flex-sm-row mb-3 px-2 px-sm-0">
-
-                                <div class="mb-2 mb-sm-0">
-                                    <a class="btn px-4 btn-light mb-1"
-                                        href="enterprise/cash/pages/listcashregister">Volver</a>
-                                </div>
-
-                                <div class="mb-2 mb-sm-0">
-                                    <a class="btn px-4 btn-danger mb-1" (click)="goClose()">
-                                        Cerrar Caja
-                                    </a>
-                                </div>
-
-                            </div>
-
-                            <app-table [data]="table.dataTablaGenetic" [action]="this"></app-table>
-
-                        </div>
-
+            <div class="card-body px-3" *ngIf="cashSession as session; else emptyState">
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row mb-0">
+                            <dt class="col-5">Caja</dt><dd class="col-7">{{ session.RegisterCod }}</dd>
+                            <dt class="col-5">Tienda</dt><dd class="col-7">{{ session.StoreCod }}</dd>
+                            <dt class="col-5">Usuario</dt><dd class="col-7">{{ session.UserCod }}</dd>
+                            <dt class="col-5">Apertura</dt><dd class="col-7">{{ session.OpenDate | date:'dd/MM/yyyy HH:mm:ss' }}</dd>
+                            <dt class="col-5">Cierre</dt>
+                            <dd class="col-7">{{ session.CloseDate ? (session.CloseDate | date:'dd/MM/yyyy HH:mm:ss') : 'Pendiente' }}</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row mb-0">
+                            <dt class="col-6">Fondo inicial</dt><dd class="col-6">{{ session.CurrencyCod }} {{ session.OpeningFloatAmount | number:'1.2-2' }}</dd>
+                            <dt class="col-6">Total esperado</dt><dd class="col-6">{{ session.CurrencyCod }} {{ session.ExpectedTotalAmount | number:'1.2-2' }}</dd>
+                            <ng-container *ngIf="session.HasCashCount === 'S'">
+                                <dt class="col-6">Total contado</dt><dd class="col-6">{{ session.CurrencyCod }} {{ session.CountedTotalAmount | number:'1.2-2' }}</dd>
+                                <dt class="col-6">Diferencia</dt>
+                                <dd class="col-6" [class.text-danger]="session.DifferenceAmount !== 0">
+                                    {{ session.CurrencyCod }} {{ session.DifferenceAmount | number:'1.2-2' }}
+                                </dd>
+                            </ng-container>
+                            <dt class="col-6">Arqueo</dt><dd class="col-6">{{ session.HasCashCount === 'S' ? 'Realizado' : 'No realizado' }}</dd>
+                            <dt class="col-6">Estado</dt><dd class="col-6">{{ session.IsOpen === 1 ? 'Abierta' : 'Cerrada' }}</dd>
+                        </dl>
                     </div>
                 </div>
+                <div class="mt-3" *ngIf="session.Commenter">
+                    <strong>Comentario:</strong> {{ session.Commenter }}
+                </div>
+                <a class="btn btn-outline-secondary mt-4" href="enterprise/cash/pages/opencashsession">
+                    <i class="fa fa-undo mr-1"></i>Volver
+                </a>
             </div>
+
+            <ng-template #emptyState>
+                <div class="card-body text-center text-muted py-5" *ngIf="!isLoading">
+                    No existe una sesión de caja para mostrar.
+                </div>
+            </ng-template>
         </div>
-
     </div>
-
 </div>

@@ -18,6 +18,7 @@ BEGIN
         -- =============================================
         CREATE TABLE `sale_head` (
           `SaleCod` varchar(16) NOT NULL COMMENT 'codigo de venta',
+          `CashSessionID` bigint DEFAULT NULL COMMENT 'Sesion de caja del backend al crear la venta',
           `PresaleCod` varchar(16) NOT NULL COMMENT 'codigo de preventa',
           `StoreCod` varchar(4) NOT NULL COMMENT 'codigo de tienda',
           `ClientCod` varchar(16) DEFAULT NULL COMMENT 'codigo de cliente',
@@ -48,10 +49,12 @@ BEGIN
           KEY `fk_sale_head_store` (`StoreCod`),
           KEY `fk_sale_head_currency` (`CurrencyCod`),
           KEY `fk_sale_head_currencySys` (`CurrencyCodSys`),
+          KEY `idx_sale_head_cash_session` (`CashSessionID`),
           CONSTRAINT `fk_sale_head_client` FOREIGN KEY (`ClientCod`) REFERENCES `client` (`ClientCod`),
           CONSTRAINT `fk_sale_head_currency` FOREIGN KEY (`CurrencyCod`) REFERENCES `currency` (`CurrencyCod`),
           CONSTRAINT `fk_sale_head_currencySys` FOREIGN KEY (`CurrencyCodSys`) REFERENCES `currency` (`CurrencyCod`),
           CONSTRAINT `fk_sale_head_period` FOREIGN KEY (`PeriodId`) REFERENCES `period` (`PeriodId`),
+          CONSTRAINT `fk_sale_head_cash_session` FOREIGN KEY (`CashSessionID`) REFERENCES `cash_session` (`CashSessionID`),
           CONSTRAINT `fk_sale_head_presale` FOREIGN KEY (`PresaleCod`) REFERENCES `presale_head` (`PresaleCod`),
           CONSTRAINT `fk_sale_head_store` FOREIGN KEY (`StoreCod`) REFERENCES `store` (`StoreCod`),
           CONSTRAINT `chk_sale_head_fiscal_document` CHECK (`HasFiscalDocument` IN ('S', 'N'))
@@ -123,6 +126,36 @@ BEGIN
                   AND sd.`Status` = 'A'
                   AND c.`DocumentType` IN ('01', '03')
             );
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'sale_head'
+              AND column_name = 'CashSessionID'
+        ) THEN
+            ALTER TABLE `sale_head`
+                ADD COLUMN `CashSessionID` bigint DEFAULT NULL
+                    COMMENT 'Sesion de caja del backend al crear la venta'
+                    AFTER `SaleCod`;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.statistics
+            WHERE table_schema = DATABASE() AND table_name = 'sale_head'
+              AND index_name = 'idx_sale_head_cash_session'
+        ) THEN
+            ALTER TABLE `sale_head`
+                ADD KEY `idx_sale_head_cash_session` (`CashSessionID`);
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.referential_constraints
+            WHERE constraint_schema = DATABASE() AND table_name = 'sale_head'
+              AND constraint_name = 'fk_sale_head_cash_session'
+        ) THEN
+            ALTER TABLE `sale_head`
+                ADD CONSTRAINT `fk_sale_head_cash_session`
+                FOREIGN KEY (`CashSessionID`) REFERENCES `cash_session` (`CashSessionID`);
         END IF;
 
         -- Aqui puedes agregar mas bloques IF NOT EXISTS para otros ALTER futuros...

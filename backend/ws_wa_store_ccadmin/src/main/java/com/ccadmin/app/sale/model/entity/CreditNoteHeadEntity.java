@@ -15,6 +15,7 @@ public class CreditNoteHeadEntity extends AuditTableEntity implements Serializab
 
     @Id
     public String CreditNoteCod;
+    public Long CashSessionID;
     public String SaleCod;
     public String StoreCod;
     public String ClientCod;

@@ -21,9 +21,8 @@ public class CashSessionShared {
     private CashSessionItemService itemService;
 
     // Abrir caja
-    public CashSessionEntity open(String registerCod, String storeCod, String currencyCod,
-                                  String commenter, BigDecimal openingFloat) {
-        return cashSessionAdminService.open(norm(registerCod), norm(storeCod), norm(currencyCod), commenter, openingFloat);
+    public CashSessionEntity open(String currencyCod, String commenter, BigDecimal openingFloat) {
+        return cashSessionAdminService.open(norm(currencyCod), commenter, openingFloat);
     }
 
     // Agregar items (denominaciones, pagos, movimientos)
@@ -40,8 +39,16 @@ public class CashSessionShared {
     }
 
     // Cerrar caja
-    public CashSessionEntity close(Long sessionId, String commenter) {
-        return cashSessionAdminService.close(sessionId, commenter);
+    public CashSessionEntity close(String hasCashCount,
+                                   BigDecimal countedCashAmount,
+                                   BigDecimal countedOtherAmount,
+                                   String commenter) {
+        return cashSessionAdminService.close(
+                norm(hasCashCount),
+                countedCashAmount,
+                countedOtherAmount,
+                commenter
+        );
     }
 
     // helpers

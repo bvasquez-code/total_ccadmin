@@ -82,7 +82,6 @@ import { ViewcreditnoteComponent } from './enterprise/sale/pages/viewcreditnote/
 import { ListcashregisterComponent } from './enterprise/cash/pages/listcashregister/listcashregister.component';
 import { CreatecashregisterComponent } from './enterprise/cash/pages/createcashregister/createcashregister.component';
 import { OpencashsessionComponent } from './enterprise/cash/pages/opencashsession/opencashsession.component';
-import { ClosecashsessionComponent } from './enterprise/cash/pages/closecashsession/closecashsession.component';
 import { ViewcashsessionComponent } from './enterprise/cash/pages/viewcashsession/viewcashsession.component';
 import { FormsModule } from '@angular/forms';
 import { ListcounterfoilComponent } from './enterprise/cash/pages/listcounterfoil/listcounterfoil.component';
@@ -197,7 +196,6 @@ import { ViewBulkLoadComponent } from './enterprise/bulkload/pages/viewbulkload/
     ListcashregisterComponent,
     CreatecashregisterComponent,
     OpencashsessionComponent,
-    ClosecashsessionComponent,
     ViewcashsessionComponent,
     ListcounterfoilComponent,
     CreatecounterfoilComponent,

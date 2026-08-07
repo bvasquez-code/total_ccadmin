@@ -13,6 +13,7 @@ public class AppSessionEntity extends AuditTableEntity implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public long SessionID;
+    public Long CashSessionID;
     public String UserCod;
     public String Token;
     public String SessionOjb;
@@ -25,8 +26,14 @@ public class AppSessionEntity extends AuditTableEntity implements Serializable {
 
     public AppSessionEntity(String userCod, String token) {
 
+        this(userCod, token, null);
+    }
+
+    public AppSessionEntity(String userCod, String token, Long cashSessionId) {
+
         addSession(userCod,true);
         UserCod = userCod;
+        CashSessionID = cashSessionId;
         Token = token;
         SessionOjb = "";
         DeleteDate = null;

@@ -5,6 +5,8 @@ DELIMITER $$
 CREATE PROCEDURE `p_manage_app_session`()
 BEGIN
     DECLARE v_table_exists INT DEFAULT 0;
+    DECLARE v_column_exists INT DEFAULT 0;
+    DECLARE v_index_exists INT DEFAULT 0;
 
     -- 1. Verificamos si la tabla existe
     SELECT COUNT(*) INTO v_table_exists
@@ -20,6 +22,7 @@ BEGIN
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `app_session` (
   `SessionID` bigint NOT NULL AUTO_INCREMENT,
+  `CashSessionID` bigint DEFAULT NULL COMMENT 'Sesion de caja activa asociada al token; administrada solo por backend',
   `UserCod` varchar(16) NOT NULL,
   `Token` varchar(256) NOT NULL,
   `SessionOjb` text,
@@ -31,6 +34,7 @@ CREATE TABLE `app_session` (
   `Status` char(1) NOT NULL DEFAULT 'A',
   PRIMARY KEY (`SessionID`),
   KEY `fk_app_session_app_user` (`UserCod`),
+  KEY `idx_app_session_cash_session` (`CashSessionID`),
   KEY `idx_app_session_Token` (`Token`),
   CONSTRAINT `fk_app_session_app_user` FOREIGN KEY (`UserCod`) REFERENCES `app_user` (`UserCod`)
 ) ENGINE=InnoDB AUTO_INCREMENT=178 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -47,9 +51,31 @@ CREATE TABLE `app_session` (
         -- CASO: LA TABLA YA EXISTE -> APLICAR ALTERS
         -- =============================================
         
-        -- Aqui puedes agregar bloques IF NOT EXISTS para futuros ALTERs
-        
-        SELECT 'Tabla app_session ya existe. No se realizaron cambios estructurales.' AS Mensaje;
+        SELECT COUNT(*) INTO v_column_exists
+        FROM information_schema.columns
+        WHERE table_schema = DATABASE()
+          AND table_name = 'app_session'
+          AND column_name = 'CashSessionID';
+
+        IF v_column_exists = 0 THEN
+            ALTER TABLE `app_session`
+                ADD COLUMN `CashSessionID` bigint DEFAULT NULL
+                    COMMENT 'Sesion de caja activa asociada al token; administrada solo por backend'
+                    AFTER `SessionID`;
+        END IF;
+
+        SELECT COUNT(*) INTO v_index_exists
+        FROM information_schema.statistics
+        WHERE table_schema = DATABASE()
+          AND table_name = 'app_session'
+          AND index_name = 'idx_app_session_cash_session';
+
+        IF v_index_exists = 0 THEN
+            ALTER TABLE `app_session`
+                ADD KEY `idx_app_session_cash_session` (`CashSessionID`);
+        END IF;
+
+        SELECT 'Tabla app_session regularizada con el contexto de caja del backend.' AS Mensaje;
 
     END IF;
 

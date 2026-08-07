@@ -27,10 +27,11 @@ BEGIN
           `ExpectedCashAmount` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Importe esperado correspondiente a efectivo',
           `ExpectedOtherAmount` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Importe esperado correspondiente a otros medios de pago',
           `ExpectedTotalAmount` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Importe total esperado al cierre',
-          `CountedCashAmount` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Importe de efectivo contado al cierre',
-          `CountedOtherAmount` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Importe contado de otros medios de pago',
-          `CountedTotalAmount` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Importe total contado al cierre',
-          `DifferenceAmount` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Diferencia entre el importe contado y el esperado',
+          `HasCashCount` char(1) NOT NULL DEFAULT 'N' COMMENT 'Indica si el cierre incluyo arqueo: S=Si, N=No',
+          `CountedCashAmount` decimal(16,2) DEFAULT NULL COMMENT 'Importe de efectivo contado al cierre',
+          `CountedOtherAmount` decimal(16,2) DEFAULT NULL COMMENT 'Importe contado de otros medios de pago',
+          `CountedTotalAmount` decimal(16,2) DEFAULT NULL COMMENT 'Importe total contado al cierre',
+          `DifferenceAmount` decimal(16,2) DEFAULT NULL COMMENT 'Diferencia entre el importe contado y el esperado',
           `SessionStatus` char(1) NOT NULL DEFAULT 'O' COMMENT 'Estado de la sesion: O=Abierta, C=Cerrada, X=Anulada',
           `IsOpen` tinyint NOT NULL DEFAULT '1' COMMENT 'Indicador de apertura: 1=Abierta, 0=No abierta',
           `OpenRegisterCod` varchar(8)
@@ -62,6 +63,29 @@ BEGIN
 
         SELECT 'Tabla cash_session creada desde cero.' AS Mensaje;
     ELSE
+        SELECT COUNT(*) INTO v_column_exists
+        FROM information_schema.columns
+        WHERE table_schema = DATABASE()
+          AND table_name = 'cash_session'
+          AND column_name = 'HasCashCount';
+
+        IF v_column_exists = 0 THEN
+            ALTER TABLE `cash_session`
+                ADD COLUMN `HasCashCount` char(1) NOT NULL DEFAULT 'N'
+                    COMMENT 'Indica si el cierre incluyo arqueo: S=Si, N=No'
+                    AFTER `ExpectedTotalAmount`;
+        END IF;
+
+        ALTER TABLE `cash_session`
+            MODIFY COLUMN `CountedCashAmount` decimal(16,2) DEFAULT NULL
+                COMMENT 'Importe de efectivo contado al cierre',
+            MODIFY COLUMN `CountedOtherAmount` decimal(16,2) DEFAULT NULL
+                COMMENT 'Importe contado de otros medios de pago',
+            MODIFY COLUMN `CountedTotalAmount` decimal(16,2) DEFAULT NULL
+                COMMENT 'Importe total contado al cierre',
+            MODIFY COLUMN `DifferenceAmount` decimal(16,2) DEFAULT NULL
+                COMMENT 'Diferencia entre el importe contado y el esperado';
+
         SELECT COUNT(*) INTO v_old_index_exists
         FROM information_schema.statistics
         WHERE table_schema = DATABASE()

@@ -19,11 +19,12 @@ export class CashSessionEntity extends AuditTableEntity {
     public ExpectedOtherAmount: number;
     public ExpectedTotalAmount: number;
 
-    public CountedCashAmount: number;
-    public CountedOtherAmount: number;
-    public CountedTotalAmount: number;
+    public HasCashCount: string;
+    public CountedCashAmount: number | null;
+    public CountedOtherAmount: number | null;
+    public CountedTotalAmount: number | null;
 
-    public DifferenceAmount: number;
+    public DifferenceAmount: number | null;
 
     public SessionStatus: string; // O/C/X
     public IsOpen: number;        // 1/0
@@ -49,11 +50,12 @@ export class CashSessionEntity extends AuditTableEntity {
         this.ExpectedOtherAmount = 0;
         this.ExpectedTotalAmount = 0;
 
-        this.CountedCashAmount = 0;
-        this.CountedOtherAmount = 0;
-        this.CountedTotalAmount = 0;
+        this.HasCashCount = 'N';
+        this.CountedCashAmount = null;
+        this.CountedOtherAmount = null;
+        this.CountedTotalAmount = null;
 
-        this.DifferenceAmount = 0;
+        this.DifferenceAmount = null;
 
         this.SessionStatus = 'O';
         this.IsOpen = 1;

@@ -1,10 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { OpenRequestDto } from '../../model/dto/OpenRequestDto';
-import { ResponseWsDto } from 'src/app/enterprise/shared/model/dto/ResponseWsDto';
 import { ToastrService } from 'ngx-toastr';
-import { CashsessionService } from '../../service/CashsessionService';
+import { CloseRequestDto } from '../../model/dto/CloseRequestDto';
 import { CurrentCashSessionDto } from '../../model/dto/CurrentCashSessionDto';
+import { OpenRequestDto } from '../../model/dto/OpenRequestDto';
+import { CashSessionEntity } from '../../model/entity/extends AuditTableEntity';
+import { CashsessionService } from '../../service/CashsessionService';
+import { ResponseWsDto } from 'src/app/enterprise/shared/model/dto/ResponseWsDto';
 
 @Component({
   selector: 'app-opencashsession',
@@ -12,8 +14,11 @@ import { CurrentCashSessionDto } from '../../model/dto/CurrentCashSessionDto';
 })
 export class OpencashsessionComponent implements OnInit {
 
-  req: OpenRequestDto = new OpenRequestDto();
-  isReady: boolean = false;
+  openRequest: OpenRequestDto = new OpenRequestDto();
+  closeRequest: CloseRequestDto = new CloseRequestDto();
+  current: CurrentCashSessionDto = new CurrentCashSessionDto();
+  isLoading: boolean = true;
+  lastClosedCashSessionId: number = 0;
 
   constructor(
     private cashSessionService: CashsessionService,
@@ -22,33 +27,68 @@ export class OpencashsessionComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
-    this.loadCurrentCashRegister();
+    this.loadCurrentCashSession();
   }
 
-  private async loadCurrentCashRegister(): Promise<void> {
-    const rpt: ResponseWsDto = await this.cashSessionService.findCurrent();
-    if (rpt.ErrorStatus) return;
-
-    const current: CurrentCashSessionDto = rpt.Data;
-    if (current.IsOpen && current.CashSession) {
-      this.router.navigate(["enterprise/cash/pages/closecashsession"]);
-      return;
-    }
-
-    if (!current.CashRegister) return;
-
-    this.req.RegisterCod = current.CashRegister.RegisterCod;
-    this.req.StoreCod = current.CashRegister.StoreCod;
-    this.isReady = true;
+  get isOpen(): boolean {
+    return this.current.IsOpen && this.current.CashSession !== null;
   }
 
-  async open() {
-    if (!this.isReady) return;
+  get activeCashSession(): CashSessionEntity | null {
+    return this.current.CashSession;
+  }
 
-    const rpt: ResponseWsDto = await this.cashSessionService.open(this.req);
-    if (!rpt.ErrorStatus) {
-      this.toastrService.success("Caja aperturada");
-      this.router.navigate(["enterprise/cash/pages/viewcashsession"], { queryParams: { CashSessionID: rpt.Data.CashSessionID } });
+  private async loadCurrentCashSession(): Promise<void> {
+    this.isLoading = true;
+    const response: ResponseWsDto = await this.cashSessionService.findCurrent();
+    if (!response.ErrorStatus) {
+      this.current = response.Data;
     }
+    this.isLoading = false;
+  }
+
+  async open(): Promise<void> {
+    if (this.isLoading || !this.current.CashRegister) return;
+
+    const response: ResponseWsDto = await this.cashSessionService.open(this.openRequest);
+    if (!response.ErrorStatus) {
+      this.toastrService.success('Caja aperturada');
+      this.openRequest = new OpenRequestDto();
+      await this.loadCurrentCashSession();
+    }
+  }
+
+  onCashCountChange(): void {
+    if (this.closeRequest.HasCashCount !== 'S') {
+      this.closeRequest.CountedCashAmount = null;
+      this.closeRequest.CountedOtherAmount = null;
+    }
+  }
+
+  canClose(): boolean {
+    return this.isOpen && !this.isLoading && (
+      this.closeRequest.HasCashCount !== 'S'
+      || (this.closeRequest.CountedCashAmount !== null
+        && this.closeRequest.CountedOtherAmount !== null)
+    );
+  }
+
+  async close(): Promise<void> {
+    if (!this.canClose()) return;
+
+    const response: ResponseWsDto = await this.cashSessionService.close(this.closeRequest);
+    if (!response.ErrorStatus) {
+      this.lastClosedCashSessionId = response.Data.CashSessionID;
+      this.toastrService.success('Caja cerrada');
+      this.closeRequest = new CloseRequestDto();
+      await this.loadCurrentCashSession();
+    }
+  }
+
+  viewSession(cashSessionId: number): void {
+    this.router.navigate(
+      ['enterprise/cash/pages/viewcashsession'],
+      { queryParams: { CashSessionID: cashSessionId } }
+    );
   }
 }

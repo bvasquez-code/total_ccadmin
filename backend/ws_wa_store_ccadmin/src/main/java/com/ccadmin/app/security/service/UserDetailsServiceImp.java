@@ -1,7 +1,6 @@
 package com.ccadmin.app.security.service;
 
 import com.ccadmin.app.security.model.entity.AppUserEntity;
-import com.ccadmin.app.security.repository.AppSessionRepository;
 import com.ccadmin.app.security.repository.AppUserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,9 +14,6 @@ public class UserDetailsServiceImp implements UserDetailsService {
     @Autowired
     AppUserRepository appUserRepository;
 
-    @Autowired
-    AppSessionRepository appSessionRepository;
-
     @Override
     public UserDetails loadUserByUsername(String UserCod) throws UsernameNotFoundException {
 
@@ -27,7 +23,7 @@ public class UserDetailsServiceImp implements UserDetailsService {
         }
         AppUserEntity appUserEntity = appUserRepository.findById(UserCod).get();
 
-        UserDetailsImp userDetailsImp = new UserDetailsImp(appUserEntity,this.appSessionRepository);
+        UserDetailsImp userDetailsImp = new UserDetailsImp(appUserEntity);
 
         return userDetailsImp;
     }
