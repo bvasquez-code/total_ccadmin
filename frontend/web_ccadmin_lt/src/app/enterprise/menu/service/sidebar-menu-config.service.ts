@@ -55,8 +55,8 @@ export class SidebarMenuConfigService {
             children: [
                 { permission: "CJ000001", label: "Bandeja de Cajas/POS", url: "enterprise/cash/pages/listcashregister" },
                 { permission: "CJ000002", label: "Crear/Editar Caja", url: "enterprise/cash/pages/createcashregister", urlShade: "enterprise/cash/pages/listcashregister", isVisible: false },
-                { permission: "CJ000003", label: "Apertura/Cierre", url: "enterprise/cash/pages/opencashsession", urlShade: "enterprise/cash/pages/listcashregister", isVisible: false },
-                { permission: "CJ000003", label: "Cerrar Caja", url: "enterprise/cash/pages/closecashsession", urlShade: "enterprise/cash/pages/listcashregister", isVisible: false },
+                { permission: "CJ000003", label: "Abrir caja", url: "enterprise/cash/pages/opencashsession" },
+                { permission: "CJ000003", label: "Cerrar Caja", url: "enterprise/cash/pages/closecashsession", urlShade: "enterprise/cash/pages/opencashsession", isVisible: false },
                 { permission: "CJ000003", label: "Ver Sesion Caja", url: "enterprise/cash/pages/viewcashsession", urlShade: "enterprise/cash/pages/listcashregister", isVisible: false },
                 { permission: "CJ000004", label: "Talonarios", url: "enterprise/cash/pages/listcounterfoil" },
                 { permission: "CJ000005", label: "Crear/Editar Talonario", url: "enterprise/cash/pages/createcounterfoil", urlShade: "enterprise/cash/pages/listcounterfoil", isVisible: false }

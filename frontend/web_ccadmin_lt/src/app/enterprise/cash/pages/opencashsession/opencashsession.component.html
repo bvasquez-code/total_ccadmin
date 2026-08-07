@@ -68,10 +68,11 @@
 
                     <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
                         <div class="offset-md-3 col-md-9 text-nowrap">
-                            <a class="btn btn-success btn-bold px-4" type="button" (click)="open()">
+                            <button class="btn btn-success btn-bold px-4" type="button" (click)="open()"
+                                [disabled]="!isReady">
                                 <i class="fa fa-check mr-1"></i>
                                 Aperturar
-                            </a>
+                            </button>
 
                             <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4" type="reset"
                                 href="/enterprise/cash/pages/listcashregister">

@@ -5,19 +5,36 @@ import { ResponseWsDto } from "src/app/enterprise/shared/model/dto/ResponseWsDto
 import { OpenRequestDto } from "../model/dto/OpenRequestDto";
 import { CloseRequestDto } from "../model/dto/CloseRequestDto";
 import { CashSessionItemEntity } from "../model/entity/CashSessionItemEntity";
+import { Subject } from "rxjs";
 
 @Injectable({
     providedIn: 'root'
 })
 export class CashsessionService {
 
+    private readonly cashSessionChangedSource = new Subject<void>();
+    public readonly cashSessionChanged$ = this.cashSessionChangedSource.asObservable();
+
     constructor(private apiService: ApiService) { }
+
+    async findCurrent(): Promise<ResponseWsDto> {
+        let url: string = `${AppSetting.API}/api/v1/cash/session/current`;
+        let RespuestaWS: ResponseWsDto;
+
+        RespuestaWS = await this.apiService.ExecuteGetService(url, {});
+
+        return RespuestaWS;
+    }
 
     async open(req: OpenRequestDto): Promise<ResponseWsDto> {
         let url: string = `${AppSetting.API}/api/v1/cash/session/open`;
         let RespuestaWS: ResponseWsDto;
 
         RespuestaWS = await this.apiService.ExecutePostService(url, req);
+
+        if (!RespuestaWS.ErrorStatus) {
+            this.cashSessionChangedSource.next();
+        }
 
         return RespuestaWS;
     }
@@ -27,6 +44,10 @@ export class CashsessionService {
         let RespuestaWS: ResponseWsDto;
 
         RespuestaWS = await this.apiService.ExecutePostService(url, req);
+
+        if (!RespuestaWS.ErrorStatus) {
+            this.cashSessionChangedSource.next();
+        }
 
         return RespuestaWS;
     }

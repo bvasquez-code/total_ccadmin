@@ -5,6 +5,7 @@ import com.ccadmin.app.shared.interfaceccadmin.CcAdminRepository;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import java.util.List;
+import java.util.Optional;
 
 public interface CashRegisterRepository extends JpaRepository<CashRegisterEntity, String>,
         CcAdminRepository<CashRegisterEntity, String> {
@@ -51,5 +52,18 @@ public interface CashRegisterRepository extends JpaRepository<CashRegisterEntity
         order by r.Name asc
         """, nativeQuery = true)
     List<CashRegisterEntity> findActivesByStore(@Param("storeCod") String storeCod);
+
+    @Query(value = """
+        select r.*
+        from cash_register r
+        where r.UserCod = :userCod
+          and r.StoreCod = :storeCod
+          and r.Status = 'A'
+        limit 1
+        """, nativeQuery = true)
+    Optional<CashRegisterEntity> findActiveByUserAndStore(
+            @Param("userCod") String userCod,
+            @Param("storeCod") String storeCod
+    );
 }
 

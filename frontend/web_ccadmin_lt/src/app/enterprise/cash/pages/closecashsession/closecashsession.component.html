@@ -35,10 +35,11 @@
 
                     <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
                         <div class="offset-md-3 col-md-9 text-nowrap">
-                            <a class="btn btn-danger btn-bold px-4" type="button" (click)="close()">
+                            <button class="btn btn-danger btn-bold px-4" type="button" (click)="close()"
+                                [disabled]="!isReady">
                                 <i class="fa fa-check mr-1"></i>
                                 Cerrar
-                            </a>
+                            </button>
 
                             <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4" type="reset"
                                 [href]="'/enterprise/cash/pages/viewcashsession?CashSessionID=' + req.CashSessionID">

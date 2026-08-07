@@ -1,6 +1,7 @@
 package com.ccadmin.app.cash.controller;
 
 import com.ccadmin.app.cash.model.dto.CloseRequestDto;
+import com.ccadmin.app.cash.model.dto.CurrentCashSessionDto;
 import com.ccadmin.app.cash.model.dto.OpenRequestDto;
 import com.ccadmin.app.cash.model.entity.CashSessionEntity;
 import com.ccadmin.app.cash.model.entity.CashSessionItemEntity;
@@ -24,6 +25,15 @@ public class CashSessionController {
     @Autowired
     private CashSessionItemService itemService;
 
+    @GetMapping("current")
+    public ResponseEntity<ResponseWsDto> findCurrent() {
+        try {
+            CurrentCashSessionDto current = cashSessionAdminService.findCurrent();
+            return new ResponseEntity<>(new ResponseWsDto(current), HttpStatus.OK);
+        } catch (Exception ex) {
+            return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
 
     // ========= Open =========
     @PostMapping("open")

@@ -46,9 +46,6 @@ export class ListcashregisterComponent implements OnInit, ActionTableService<Cas
     const viewStatus = (r: CashRegisterEntity) => r.Status;
 
     const urlCreate = (r: CashRegisterEntity) => `/enterprise/cash/pages/createcashregister?RegisterCod=${r.RegisterCod}`;
-    const urlOpen = (r: CashRegisterEntity) => `/enterprise/cash/pages/opencashsession?RegisterCod=${r.RegisterCod}&StoreCod=${r.StoreCod}`;
-
-    const showOpen = (r: CashRegisterEntity) => (r.Status === 'A');
     const showEnable = (r: CashRegisterEntity) => (r.Status !== 'A');
     const showDisable = (r: CashRegisterEntity) => (r.Status === 'A');
 
@@ -78,8 +75,6 @@ export class ListcashregisterComponent implements OnInit, ActionTableService<Cas
           Id: ["RegisterCod"],
           Options: [
             { Type: "Url", Name: "fa fa-pencil-alt", Url: "#", FunctionUrl: urlCreate, Function: (_) => true },
-            { Type: "Url", Name: "fa fa-door-open", Url: "#", FunctionUrl: urlOpen, Function: showOpen },
-
             { Type: "Modal", Name: "fa fa-check", Url: "#", ID: "modal_enable", Function: showEnable },
             { Type: "Modal", Name: "fa fa-ban", Url: "#", ID: "modal_disable", Function: showDisable },
           ]

@@ -12,6 +12,16 @@ public interface CashSessionRepository extends JpaRepository<CashSessionEntity, 
     @Query(value = """
         select s.*
         from cash_session s
+        where s.CashSessionID = :cashSessionId
+        limit 1
+        """, nativeQuery = true)
+    Optional<CashSessionEntity> findByCashSessionId(
+            @Param("cashSessionId") Long cashSessionId
+    );
+
+    @Query(value = """
+        select s.*
+        from cash_session s
         where s.RegisterCod = :registerCod
           and s.IsOpen = 1
           and s.Status = 'A'

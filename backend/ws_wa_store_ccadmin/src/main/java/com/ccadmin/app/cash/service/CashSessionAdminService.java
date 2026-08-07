@@ -1,6 +1,9 @@
 package com.ccadmin.app.cash.service;
 
+import com.ccadmin.app.cash.model.dto.CurrentCashSessionDto;
+import com.ccadmin.app.cash.model.entity.CashRegisterEntity;
 import com.ccadmin.app.cash.model.entity.CashSessionEntity;
+import com.ccadmin.app.cash.repository.CashRegisterRepository;
 import com.ccadmin.app.cash.repository.CashSessionItemRepository;
 import com.ccadmin.app.cash.repository.CashSessionRepository;
 import com.ccadmin.app.sale.model.idto.IExpectedTotalsDto;
@@ -8,6 +11,7 @@ import com.ccadmin.app.sale.repository.SaleHeadRepository;
 import com.ccadmin.app.shared.service.SessionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -19,20 +23,40 @@ public class CashSessionAdminService extends SessionService {
     private CashSessionRepository sessionRepository;
     @Autowired
     private CashSessionItemRepository itemRepository;
+    @Autowired
+    private CashRegisterRepository cashRegisterRepository;
 
     @Autowired
     private SaleHeadRepository saleHeadRepository;
 
+    @Transactional(readOnly = true)
+    public CurrentCashSessionDto findCurrent() {
+        CashRegisterEntity cashRegister = findCurrentCashRegister();
+        CashSessionEntity cashSession = sessionRepository
+                .findOpenByRegister(cashRegister.RegisterCod)
+                .orElse(null);
+
+        if (cashSession != null && !this.getUserCod().equals(cashSession.UserCod)) {
+            throw new IllegalStateException("La caja se encuentra abierta por otro usuario");
+        }
+
+        return new CurrentCashSessionDto(cashRegister, cashSession);
+    }
+
+    @Transactional
     public CashSessionEntity open(String registerCod, String storeCod, String currencyCod,
                                   String commenter, java.math.BigDecimal openingFloat) {
 
-        sessionRepository.findOpenByRegister(registerCod).ifPresent(s -> {
+        CashRegisterEntity cashRegister = findCurrentCashRegister();
+        validateRequestedCashRegister(registerCod, storeCod, cashRegister);
+
+        sessionRepository.findOpenByRegister(cashRegister.RegisterCod).ifPresent(s -> {
             throw new IllegalStateException("La caja ya tiene una sesión abierta");
         });
 
         CashSessionEntity s = new CashSessionEntity();
-        s.RegisterCod = registerCod;
-        s.StoreCod = storeCod;
+        s.RegisterCod = cashRegister.RegisterCod;
+        s.StoreCod = cashRegister.StoreCod;
         s.UserCod = this.getUserCod();
         s.CurrencyCod = currencyCod;
         s.OpenDate = new Date();
@@ -46,9 +70,17 @@ public class CashSessionAdminService extends SessionService {
     }
 
 
+    @Transactional
     public CashSessionEntity close(Long sessionId, String commenter) {
-        CashSessionEntity s = sessionRepository.findById(sessionId)
+        CashSessionEntity s = sessionRepository.findByCashSessionId(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("Sesión no encontrada"));
+
+        CashRegisterEntity cashRegister = findCurrentCashRegister();
+        if (!this.getUserCod().equals(s.UserCod)
+                || !cashRegister.StoreCod.equals(s.StoreCod)
+                || !cashRegister.RegisterCod.equals(s.RegisterCod)) {
+            throw new IllegalStateException("La sesión de caja no pertenece al usuario y tienda actuales");
+        }
 
         if (s.IsOpen == 0 || s.SessionStatus != 'O')
             throw new IllegalStateException("La sesión ya está cerrada o cancelada");
@@ -98,6 +130,29 @@ public class CashSessionAdminService extends SessionService {
         s.session(this.getUserCod());
 
         return sessionRepository.save(s);
+    }
+
+    private CashRegisterEntity findCurrentCashRegister() {
+        String userCod = this.getUserCod();
+        String storeCod = this.getStoreCod();
+
+        return cashRegisterRepository.findActiveByUserAndStore(userCod, storeCod)
+                .orElseThrow(() -> new IllegalStateException(
+                        "El usuario actual no tiene una caja activa asignada en la tienda " + storeCod
+                ));
+    }
+
+    private void validateRequestedCashRegister(String registerCod, String storeCod,
+                                               CashRegisterEntity cashRegister) {
+        if (registerCod != null && !registerCod.isBlank()
+                && !cashRegister.RegisterCod.equals(registerCod)) {
+            throw new IllegalArgumentException("La caja indicada no pertenece al usuario actual");
+        }
+
+        if (storeCod != null && !storeCod.isBlank()
+                && !cashRegister.StoreCod.equals(storeCod)) {
+            throw new IllegalArgumentException("La tienda indicada no corresponde a la sesión actual");
+        }
     }
 
     private static BigDecimal safe(BigDecimal v) { return v == null ? BigDecimal.ZERO : v; }

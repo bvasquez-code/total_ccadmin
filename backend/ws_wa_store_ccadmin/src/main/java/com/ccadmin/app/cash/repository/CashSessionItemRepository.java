@@ -33,7 +33,7 @@ public interface CashSessionItemRepository extends JpaRepository<CashSessionItem
         where i.CashSessionID = :sessionId
           and i.ItemType = 'P'
           and i.Status = 'A'
-          and pm.IsCash = 0
+          and pm.PaymentMethodType != '1001'
         """, nativeQuery = true)
     BigDecimal sumCountedOther(@Param("sessionId") Long sessionId);
 
@@ -44,7 +44,7 @@ public interface CashSessionItemRepository extends JpaRepository<CashSessionItem
         where i.CashSessionID = :sessionId
           and i.ItemType = 'P'
           and i.Status = 'A'
-          and pm.IsCash = 1
+          and pm.PaymentMethodType = '1001'
         """, nativeQuery = true)
     BigDecimal sumCountedCashFromPayments(@Param("sessionId") Long sessionId);
 
