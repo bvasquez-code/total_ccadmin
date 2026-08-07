@@ -36,23 +36,6 @@ public class CreditNoteDetWarehouseEntity extends AuditTableEntity implements Se
     public CreditNoteDetWarehouseEntity() {
     }
 
-    public CreditNoteDetWarehouseEntity(String creditNoteCod, int itemNumber, String productCod, String variant, String warehouseCod, Integer numUnit, String lotNumber, Date expirationDate) {
-        CreditNoteCod = creditNoteCod;
-        ItemNumber = itemNumber;
-        ProductCod = productCod;
-        Variant = variant;
-        WarehouseCod = warehouseCod;
-        NumUnit = numUnit;
-        LotNumber = lotNumber;
-        ExpirationDate = expirationDate;
-    }
-
-    public CreditNoteDetWarehouseEntity(String creditNoteCod, int itemNumber, String productCod, String variant, String warehouseCod, Integer numUnit, String ProductUnitName, int ProductUnitFactor, String lotNumber, Date expirationDate) {
-        this(creditNoteCod, itemNumber, productCod, variant, warehouseCod, numUnit, lotNumber, expirationDate);
-        ProductUnitName = ProductUnitName;
-        ProductUnitFactor = ProductUnitFactor;
-    }
-
     /**
      * Método de validación de negocio:
      * Verifica que la cantidad de unidades no sea nula ni negativa.

@@ -9,15 +9,4 @@ public class SaleDetailSplitLineDto {
     public String LotNumber;
     public Date ExpirationDate;
 
-    public SaleDetailSplitLineDto(
-            int itemNumber,
-            int numUnit,
-            String lotNumber,
-            Date expirationDate
-    ) {
-        this.ItemNumber = itemNumber;
-        this.NumUnit = numUnit;
-        this.LotNumber = lotNumber;
-        this.ExpirationDate = expirationDate;
-    }
 }

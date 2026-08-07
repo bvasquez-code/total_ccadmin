@@ -6,9 +6,11 @@ import com.ccadmin.app.product.repository.KardexZoneRepository;
 import com.ccadmin.app.sale.exception.SaleException;
 import com.ccadmin.app.sale.model.constants.SaleConstants;
 import com.ccadmin.app.sale.model.dto.PresaleCancellationDetailDto;
+import com.ccadmin.app.sale.model.dto.SaleDetailDto;
 import com.ccadmin.app.sale.model.entity.PresaleHeadEntity;
 import com.ccadmin.app.sale.model.entity.SaleDetWarehouseEntity;
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
+import com.ccadmin.app.sale.model.factory.PresaleCancellationDetailDtoFactory;
 import com.ccadmin.app.sale.repository.PresaleHeadRepository;
 import com.ccadmin.app.sale.repository.SaleDetWarehouseRepository;
 import com.ccadmin.app.sale.repository.SaleDocumentRepository;
@@ -20,6 +22,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
@@ -49,15 +52,21 @@ public class ExpiredSaleCancellationService extends SessionService {
         PresaleHeadEntity presaleHead = this.presaleHeadRepository.findById(presaleCod)
                 .orElseThrow(() -> new SaleException("No existe la preventa " + presaleCod));
 
-        PresaleCancellationDetailDto detail = new PresaleCancellationDetailDto();
-        detail.Headboard = presaleHead;
-        detail.HasStockReservation = this.hasStockReservation(presaleCod);
-
-        this.saleHeadRepository.findByPresaleCod(presaleCod).ifPresent(saleHead -> {
-            detail.SaleDetail = this.saleSearchService.findById(saleHead.SaleCod);
-            detail.PendingPaymentAmount = this.pendingPaymentAmount(saleHead.SaleCod);
-        });
-        return detail;
+        boolean hasStockReservation = this.hasStockReservation(presaleCod);
+        SaleDetailDto saleDetail = null;
+        BigDecimal pendingPaymentAmount = BigDecimal.ZERO;
+        var saleOptional = this.saleHeadRepository.findByPresaleCod(presaleCod);
+        if (saleOptional.isPresent()) {
+            SaleHeadEntity saleHead = saleOptional.get();
+            saleDetail = this.saleSearchService.findById(saleHead.SaleCod);
+            pendingPaymentAmount = this.pendingPaymentAmount(saleHead.SaleCod);
+        }
+        return PresaleCancellationDetailDtoFactory.fromPresale(
+                presaleHead,
+                hasStockReservation,
+                saleDetail,
+                pendingPaymentAmount
+        );
     }
 
     @Transactional

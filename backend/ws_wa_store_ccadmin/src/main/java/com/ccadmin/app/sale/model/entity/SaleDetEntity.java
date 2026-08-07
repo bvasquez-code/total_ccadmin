@@ -48,48 +48,6 @@ public class SaleDetEntity extends AuditTableEntity implements Serializable {
 
     }
 
-    public SaleDetEntity(PresaleDetEntity presaleDet,String SaleCod)
-    {
-        this.SaleCod = SaleCod;
-        this.ItemNumber = presaleDet.ItemNumber;
-        this.ProductCod = presaleDet.ProductCod;
-        this.Variant = presaleDet.Variant;
-        this.NumUnit = presaleDet.NumUnit;
-        this.NumUnitPrice = presaleDet.NumUnitPrice;
-        this.NumDiscount = presaleDet.NumDiscount;
-        this.NumUnitPriceSale = presaleDet.NumUnitPriceSale;
-        this.NumTotalPrice = presaleDet.NumTotalPrice;
-        this.NumPriceSubTotal = BigDecimal.ZERO;
-        this.NumTotalTax = BigDecimal.ZERO;
-        this.ProductUnitName = presaleDet.ProductUnitName;
-        this.ProductUnitFactor = presaleDet.ProductUnitFactor;
-        this.IsDigital = presaleDet.IsDigital;
-        this.IsAppliedTax = "S";
-        this.LotNumber = presaleDet.LotNumber;
-        this.ExpirationDate = presaleDet.ExpirationDate;
-    }
-
-    public SaleDetEntity build(PresaleDetEntity presaleDet,String SaleCod){
-        this.ProductCod = presaleDet.ProductCod;
-        this.ItemNumber = presaleDet.ItemNumber;
-        this.Variant = presaleDet.Variant;
-        this.NumUnit = presaleDet.NumUnit;
-        this.NumUnitPrice = presaleDet.NumUnitPrice;
-        this.NumDiscount = presaleDet.NumDiscount;
-        this.NumUnitPriceSale = presaleDet.NumUnitPriceSale;
-        this.NumTotalPrice = presaleDet.NumTotalPrice;
-        this.NumPriceSubTotal = BigDecimal.ZERO;
-        this.NumTotalTax = BigDecimal.ZERO;
-        this.ProductUnitName = presaleDet.ProductUnitName;
-        this.ProductUnitFactor = presaleDet.ProductUnitFactor;
-        this.IsDigital = presaleDet.IsDigital;
-        this.IsAppliedTax = "S";
-        this.SaleCod = SaleCod;
-        this.LotNumber = presaleDet.LotNumber;
-        this.ExpirationDate = presaleDet.ExpirationDate;
-        return this;
-    }
-
     public SaleDetEntity tax(BigDecimal NumPriceSubTotal, BigDecimal NumTotalTax) {
         this.NumPriceSubTotal = NumPriceSubTotal;
         this.NumTotalTax = NumTotalTax;

@@ -6,9 +6,15 @@ import com.ccadmin.app.product.shared.ProductShared;
 import com.ccadmin.app.sale.model.dto.CreditNoteDetDto;
 import com.ccadmin.app.sale.model.dto.CreditNoteDetailDto;
 import com.ccadmin.app.sale.model.dto.CreditNoteHeadDto;
-import com.ccadmin.app.sale.model.entity.CreditNoteDocumentEntity;
+import com.ccadmin.app.sale.model.entity.CreditNoteApplicationEntity;
 import com.ccadmin.app.sale.model.entity.CreditNoteDetTaxEntity;
+import com.ccadmin.app.sale.model.entity.CreditNoteDocumentEntity;
 import com.ccadmin.app.sale.model.entity.CreditNoteHeadEntity;
+import com.ccadmin.app.sale.model.entity.SaleDocumentEntity;
+import com.ccadmin.app.sale.model.entity.SalePaymentEntity;
+import com.ccadmin.app.sale.model.factory.CreditNoteDetDtoFactory;
+import com.ccadmin.app.sale.model.factory.CreditNoteDetailDtoFactory;
+import com.ccadmin.app.sale.model.factory.CreditNoteHeadDtoFactory;
 import com.ccadmin.app.sale.repository.*;
 import com.ccadmin.app.shared.model.dto.ResponsePageSearchT;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
@@ -80,42 +86,57 @@ public class CreditNoteSearchService {
 
             CreditNoteDocumentEntity creditNoteDocument = this.creditNoteDocumentRepository.findByCreditNoteCod( CreditNoteHead.CreditNoteCod );
 
-            return new CreditNoteHeadDto(CreditNoteHead,client,creditNoteDocument);
+            return CreditNoteHeadDtoFactory.fromEntities(
+                    CreditNoteHead,
+                    client,
+                    creditNoteDocument
+            );
         }).toList();
 
         return new ResponsePageSearchT<CreditNoteHeadDto>().clone(creditNoteHeadList,responsePage);
     }
 
     public CreditNoteDetailDto findById(String CreditNoteCod){
-        CreditNoteDetailDto creditNoteDetail = new CreditNoteDetailDto();
-
-        creditNoteDetail.Headboard = this.creditNoteHeadRepository.findById(CreditNoteCod).orElse(null);
+        CreditNoteHeadEntity creditNoteHead = this.creditNoteHeadRepository.findById(CreditNoteCod).orElse(null);
         Map<Integer, List<CreditNoteDetTaxEntity>> taxDetailByItem = this.creditNoteDetTaxRepository.findByCreditNoteCod(CreditNoteCod)
                 .stream()
                 .collect(Collectors.groupingBy(item -> item.ItemNumber));
-        creditNoteDetail.DetailList = this.creditNoteDetRepository.findByCreditNoteCod(CreditNoteCod)
+        List<CreditNoteDetDto> creditNoteDetailList = this.creditNoteDetRepository.findByCreditNoteCod(CreditNoteCod)
                 .stream()
                 .map( creditNoteDet -> {
-                    CreditNoteDetDto creditNoteDetDto = new CreditNoteDetDto();
                     creditNoteDet.TaxDetailList = taxDetailByItem.getOrDefault(creditNoteDet.ItemNumber, List.of());
-                    creditNoteDetDto.CreditNoteDet = creditNoteDet;
-                    creditNoteDetDto.Product = this.productShared.findById(creditNoteDet.ProductCod);
-                    return creditNoteDetDto;
+                    return CreditNoteDetDtoFactory.fromEntities(
+                            creditNoteDet,
+                            this.productShared.findById(creditNoteDet.ProductCod)
+                    );
                 } )
                 .toList();
-        if(creditNoteDetail.Headboard.ClientCod != null && !creditNoteDetail.Headboard.ClientCod.isEmpty()){
-            creditNoteDetail.Client = this.clientShared.findById(creditNoteDetail.Headboard.ClientCod);
+        ClientEntity client = null;
+        if (creditNoteHead.ClientCod != null && !creditNoteHead.ClientCod.isEmpty()) {
+            client = this.clientShared.findById(creditNoteHead.ClientCod);
         }
-        creditNoteDetail.DetailPayment = this.salePaymentRepository.findByCreditNoteCod(creditNoteDetail.Headboard.CreditNoteCod);
-        creditNoteDetail.ApplicationList =
-                this.creditNoteApplicationSearchService.findActiveByCreditNoteCod(CreditNoteCod);
-        creditNoteDetail.NumAvailableBalance =
-                this.creditNoteApplicationSearchService.findAvailableBalance(creditNoteDetail.Headboard);
-        creditNoteDetail.Document = this.creditNoteDocumentRepository.findByCreditNoteCod(creditNoteDetail.Headboard.CreditNoteCod);
-        creditNoteDetail.DocumentReference = this.saleDocumentRepository.findFiscalBySaleCod(
-                creditNoteDetail.Headboard.SaleCod
+        List<SalePaymentEntity> paymentList = this.salePaymentRepository.findByCreditNoteCod(
+                creditNoteHead.CreditNoteCod
         );
-        return creditNoteDetail;
+        List<CreditNoteApplicationEntity> applicationList =
+                this.creditNoteApplicationSearchService.findActiveByCreditNoteCod(CreditNoteCod);
+        var availableBalance = this.creditNoteApplicationSearchService.findAvailableBalance(creditNoteHead);
+        CreditNoteDocumentEntity document = this.creditNoteDocumentRepository.findByCreditNoteCod(
+                creditNoteHead.CreditNoteCod
+        );
+        SaleDocumentEntity documentReference = this.saleDocumentRepository.findFiscalBySaleCod(
+                creditNoteHead.SaleCod
+        );
+        return CreditNoteDetailDtoFactory.fromEntities(
+                creditNoteHead,
+                client,
+                creditNoteDetailList,
+                paymentList,
+                applicationList,
+                availableBalance,
+                document,
+                documentReference
+        );
     }
 
     public CreditNoteDetailDto findBySaleCod(String SaleCod){

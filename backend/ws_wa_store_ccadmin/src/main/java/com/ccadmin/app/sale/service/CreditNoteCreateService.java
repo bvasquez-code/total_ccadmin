@@ -15,6 +15,9 @@ import com.ccadmin.app.sale.model.dto.CreditNoteReturnPaymentRegisterDto;
 import com.ccadmin.app.sale.model.dto.CreditNoteTaxCalculationResultDto;
 import com.ccadmin.app.sale.model.dto.SalePaymentDto;
 import com.ccadmin.app.sale.model.entity.*;
+import com.ccadmin.app.sale.model.factory.CreditNoteDetWarehouseEntityFactory;
+import com.ccadmin.app.sale.model.factory.CreditNoteHeadEntityFactory;
+import com.ccadmin.app.sale.model.factory.SalePaymentEntityFactory;
 import com.ccadmin.app.sale.repository.*;
 import com.ccadmin.app.shared.service.GenericQueuedService;
 import com.ccadmin.app.shared.service.SessionService;
@@ -148,8 +151,11 @@ public class CreditNoteCreateService extends SessionService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(2, RoundingMode.HALF_UP);
 
-        creditNoteRegister.Headboard
-                .build(saleHead, SaleConstants.PENDING)
+        CreditNoteHeadEntityFactory.fromSale(
+                        creditNoteRegister.Headboard,
+                        saleHead,
+                        SaleConstants.PENDING
+                )
                 .tax(numTotalPriceNoTax, numTotalTax)
                 .validate()
                 .session(getUserCod());
@@ -279,16 +285,18 @@ public class CreditNoteCreateService extends SessionService {
         SalePaymentDto originalSalePayment = this.findOriginalPayment(salePaymentList, trxPayment.ReversalOfTrxPaymentId);
 
         int PaymentNumber = salePaymentList.size() + 1;
-        SalePaymentEntity salePayment = SalePaymentEntity.buildReversal(originalSalePayment.SalePayment,trxPayment,getUserCod(),PaymentNumber);
+        SalePaymentEntity salePayment = SalePaymentEntityFactory.fromReversal(
+                originalSalePayment.SalePayment,
+                trxPayment,
+                getUserCod(),
+                PaymentNumber
+        );
         salePayment = salePaymentCreateService.save(salePayment);
 
         BigDecimal newTotalReturned = totalReturned.add(salePayment.NumAmountPaid.negate());
         if(newTotalReturned.doubleValue() >= creditNoteHead.NumTotalPrice.doubleValue()){
             creditNoteHead.IsPaid = "S";
             this.creditNoteHeadRepository.save(creditNoteHead);
-            // CreditNoteRegisterDto creditNoteRegister = new CreditNoteRegisterDto();
-            // creditNoteRegister.Headboard = creditNoteHead;
-            // this.confirm(creditNoteRegister);
         }
 
         return salePayment;
@@ -322,17 +330,9 @@ public class CreditNoteCreateService extends SessionService {
 
         List<CreditNoteDetWarehouseEntity> creditNoteDetWarehouseList = creditNoteDetList.stream()
                 .filter(e -> e.NumUnitStockReturned != null && e.NumUnitStockReturned > 0)
-                .map(e -> new CreditNoteDetWarehouseEntity(
-                        e.CreditNoteCod,
-                        e.ItemNumber,
-                        e.ProductCod,
-                        e.Variant,
-                        warehouseDefault.WarehouseCod,
-                        e.NumUnitStockReturned,
-                        e.ProductUnitName,
-                        e.ProductUnitFactor,
-                        e.LotNumber,
-                        e.ExpirationDate
+                .map(e -> CreditNoteDetWarehouseEntityFactory.fromReturnedDetail(
+                        e,
+                        warehouseDefault.WarehouseCod
                 ).session(getUserCod()))
                 .toList();
 
@@ -438,7 +438,12 @@ public class CreditNoteCreateService extends SessionService {
                 PaymentNumber++;
                 TrxPaymentEntity trxPayment = TrxPaymentEntity.buildReversal(salePaymentDto.TrxPayment,getUserCod());
                 trxPayment = this.trxPaymentShared.save(trxPayment);
-                SalePaymentEntity salePayment = SalePaymentEntity.buildReversal(salePaymentDto.SalePayment,trxPayment,getUserCod(),PaymentNumber);
+                SalePaymentEntity salePayment = SalePaymentEntityFactory.fromReversal(
+                        salePaymentDto.SalePayment,
+                        trxPayment,
+                        getUserCod(),
+                        PaymentNumber
+                );
                 salePayment = salePaymentCreateService.save(salePayment);
             }
         }else if(creditNoteHead.TypeCreditNote.equals("P")){
@@ -466,7 +471,12 @@ public class CreditNoteCreateService extends SessionService {
 
                 PaymentNumber++;
                 trxPayment = this.trxPaymentShared.save(trxPayment);
-                SalePaymentEntity salePayment = SalePaymentEntity.buildReversal(salePaymentDto.SalePayment,trxPayment,getUserCod(),PaymentNumber);
+                SalePaymentEntity salePayment = SalePaymentEntityFactory.fromReversal(
+                        salePaymentDto.SalePayment,
+                        trxPayment,
+                        getUserCod(),
+                        PaymentNumber
+                );
                 salePayment = salePaymentCreateService.save(salePayment);
 
                 NumTotalReturn = NumTotalReturn.add(trxPayment.AmountPaid.negate());

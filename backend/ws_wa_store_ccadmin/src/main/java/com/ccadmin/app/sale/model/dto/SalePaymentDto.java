@@ -8,8 +8,4 @@ public class SalePaymentDto {
     public SalePaymentEntity SalePayment;
     public TrxPaymentEntity TrxPayment;
 
-    public SalePaymentDto(SalePaymentEntity salePayment, TrxPaymentEntity trxPayment) {
-        SalePayment = salePayment;
-        TrxPayment = trxPayment;
-    }
 }

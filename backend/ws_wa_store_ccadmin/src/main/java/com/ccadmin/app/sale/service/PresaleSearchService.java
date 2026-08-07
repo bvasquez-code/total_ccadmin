@@ -4,7 +4,9 @@ import com.ccadmin.app.client.model.entity.ClientEntity;
 import com.ccadmin.app.client.shared.ClientShared;
 import com.ccadmin.app.product.shared.ProductShared;
 import com.ccadmin.app.sale.model.dto.PresaleDetailDto;
+import com.ccadmin.app.sale.model.entity.PresaleDetEntity;
 import com.ccadmin.app.sale.model.entity.PresaleHeadEntity;
+import com.ccadmin.app.sale.model.factory.PresaleDetailDtoFactory;
 import com.ccadmin.app.sale.repository.PresaleDetRepository;
 import com.ccadmin.app.sale.repository.PresaleDetWarehouseRepository;
 import com.ccadmin.app.sale.repository.PresaleHeadRepository;
@@ -82,23 +84,21 @@ public class PresaleSearchService {
     }
 
     public PresaleDetailDto findById(String PresaleCod) {
-        PresaleDetailDto  presaleDetail = new PresaleDetailDto();
+        PresaleHeadEntity presaleHead = this.presaleHeadRepository.findById(PresaleCod).get();
+        List<PresaleDetEntity> presaleDetailList = this.presaleDetRepository.findByPresaleCod(PresaleCod);
 
-        presaleDetail.Headboard = this.presaleHeadRepository.findById(PresaleCod).get();
-        presaleDetail.DetailList = this.presaleDetRepository.findByPresaleCod(PresaleCod);
-
-        if( presaleDetail.Headboard.existClient() )
+        if (presaleHead.existClient())
         {
-            presaleDetail.Headboard.Client = this.clientShared.findById(presaleDetail.Headboard.ClientCod);
+            presaleHead.Client = this.clientShared.findById(presaleHead.ClientCod);
         }
 
-        for(var item : presaleDetail.DetailList)
+        for (var item : presaleDetailList)
         {
             item.DetailWarehouse = this.presaleDetWarehouseRepository.findByItemNumber(item.PresaleCod,item.ItemNumber);
             item.Product = this.productShared.findById(item.ProductCod);
         }
 
-        return presaleDetail;
+        return PresaleDetailDtoFactory.fromEntities(presaleHead, presaleDetailList);
     }
 
     public ResponseWsDto findDataForm(String PresaleCod) {

@@ -12,8 +12,4 @@ public class PresaleDetWarehouseID implements Serializable {
 
     }
 
-    public PresaleDetWarehouseID(String presaleCod, int itemNumber) {
-        PresaleCod = presaleCod;
-        ItemNumber = itemNumber;
-    }
 }

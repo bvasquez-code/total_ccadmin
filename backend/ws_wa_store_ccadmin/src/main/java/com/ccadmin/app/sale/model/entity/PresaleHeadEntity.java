@@ -3,7 +3,6 @@ package com.ccadmin.app.sale.model.entity;
 import com.ccadmin.app.client.model.entity.ClientEntity;
 import com.ccadmin.app.sale.exception.PresaleBuildException;
 import com.ccadmin.app.shared.model.entity.AuditTableEntity;
-import com.ccadmin.app.system.model.entity.CurrencyEntity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -52,27 +51,6 @@ public class PresaleHeadEntity extends AuditTableEntity implements Serializable 
         return (this.ClientCod != null && !this.ClientCod.isEmpty());
     }
 
-    public PresaleHeadEntity build(
-             PeriodEntity period
-            ,CurrencyEntity currencySystem
-            ,CurrencyEntity currencyPucharse
-            ,String StoreCod
-            ,String SaleStatus)
-    {
-        this.PeriodId = period.PeriodId;
-        this.CurrencyCodSys = currencySystem.CurrencyCod;
-        this.NumExchangevalue = new BigDecimal(1);
-        if(!this.CurrencyCodSys.equals(this.CurrencyCod))
-        {
-            this.NumExchangevalue = currencyPucharse.NumExchangevalue;
-        }
-        this.StoreCod = StoreCod;
-        this.SaleStatus = SaleStatus;
-        if(!this.existClient()){
-            this.ClientCod = null;
-        }
-        return this;
-    }
     public PresaleHeadEntity validate() throws PresaleBuildException {
 
         if(this.PresaleCod==null || this.PresaleCod.isEmpty()){

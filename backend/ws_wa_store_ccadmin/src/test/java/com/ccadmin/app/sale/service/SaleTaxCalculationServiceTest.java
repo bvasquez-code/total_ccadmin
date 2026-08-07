@@ -1,11 +1,11 @@
 package com.ccadmin.app.sale.service;
 
 import com.ccadmin.app.sale.model.dto.CreditNoteTaxCalculationResultDto;
-import com.ccadmin.app.sale.model.dto.SaleDetailSplitLineDto;
 import com.ccadmin.app.sale.model.dto.SaleTaxCalculationResultDto;
 import com.ccadmin.app.sale.model.entity.CreditNoteDetEntity;
 import com.ccadmin.app.sale.model.entity.SaleDetEntity;
 import com.ccadmin.app.sale.model.entity.SaleDetTaxEntity;
+import com.ccadmin.app.sale.model.factory.SaleDetailSplitLineDtoFactory;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -26,8 +26,8 @@ class SaleTaxCalculationServiceTest {
                 originDetail,
                 List.of(originTax),
                 List.of(
-                        new SaleDetailSplitLineDto(1, 1, "L-01", null),
-                        new SaleDetailSplitLineDto(2, 2, "L-02", null)
+                        SaleDetailSplitLineDtoFactory.fromPicking(1, 1, "L-01", null),
+                        SaleDetailSplitLineDtoFactory.fromPicking(2, 2, "L-02", null)
                 ),
                 "ADMIN"
         );

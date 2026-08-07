@@ -10,14 +10,4 @@ public class CreditNoteHeadDto {
     public ClientEntity Client;
     public CreditNoteDocumentEntity CreditNoteDocument;
 
-    public CreditNoteHeadDto(){
-
-    }
-
-    public CreditNoteHeadDto(CreditNoteHeadEntity CreditNoteHead,ClientEntity Client,CreditNoteDocumentEntity CreditNoteDocument){
-        this.CreditNoteHead = CreditNoteHead;
-        this.Client = Client;
-        this.CreditNoteDocument = CreditNoteDocument;
-    }
-
 }

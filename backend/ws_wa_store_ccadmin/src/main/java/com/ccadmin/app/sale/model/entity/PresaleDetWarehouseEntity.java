@@ -3,7 +3,6 @@ package com.ccadmin.app.sale.model.entity;
 import com.ccadmin.app.sale.exception.PresaleBuildException;
 import com.ccadmin.app.sale.model.entity.id.PresaleDetWarehouseID;
 import com.ccadmin.app.shared.model.entity.AuditTableEntity;
-import com.ccadmin.app.store.model.entity.WarehouseEntity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.IdClass;
@@ -32,20 +31,6 @@ public class PresaleDetWarehouseEntity extends AuditTableEntity implements Seria
 
     public PresaleDetWarehouseEntity(){
 
-    }
-
-    public PresaleDetWarehouseEntity build(PresaleDetEntity presaleDet,WarehouseEntity warehouseDefault){
-        this.PresaleCod = presaleDet.PresaleCod;
-        this.ItemNumber = presaleDet.ItemNumber;
-        this.ProductCod = presaleDet.ProductCod;
-        this.Variant = presaleDet.Variant;
-        this.NumUnit = presaleDet.NumUnit;
-        this.ProductUnitName = presaleDet.ProductUnitName;
-        this.ProductUnitFactor = presaleDet.ProductUnitFactor;
-        this.WarehouseCod = warehouseDefault.WarehouseCod;
-        this.LotNumber = presaleDet.LotNumber;
-        this.ExpirationDate = presaleDet.ExpirationDate;
-        return this;
     }
 
     public PresaleDetWarehouseEntity validate() throws PresaleBuildException {

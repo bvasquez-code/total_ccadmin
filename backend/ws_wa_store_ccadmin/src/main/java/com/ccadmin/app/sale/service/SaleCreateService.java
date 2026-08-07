@@ -11,6 +11,9 @@ import com.ccadmin.app.sale.model.dto.PresaleDetailDto;
 import com.ccadmin.app.sale.model.dto.SaleDetailDto;
 import com.ccadmin.app.sale.model.dto.SaleTaxCalculationResultDto;
 import com.ccadmin.app.sale.model.entity.*;
+import com.ccadmin.app.sale.model.factory.SaleAppliedTaxEntityFactory;
+import com.ccadmin.app.sale.model.factory.SaleDetWarehouseEntityFactory;
+import com.ccadmin.app.sale.model.factory.SaleHeadEntityFactory;
 import com.ccadmin.app.sale.repository.*;
 import com.ccadmin.app.shared.model.constants.BusinessConfigConstants;
 import com.ccadmin.app.shared.model.myconst.StatusConst;
@@ -99,8 +102,12 @@ public class SaleCreateService extends SessionService {
         String SaleCod = this.saleHeadRepository.getSaleCod(getStoreCod());
         PeriodEntity period = this.periodRepository.findPeriodActuality();
 
-        SaleHeadEntity saleHead = new SaleHeadEntity()
-                .build(presaleDetail.Headboard,period,SaleCod,StatusConst.PENDING)
+        SaleHeadEntity saleHead = SaleHeadEntityFactory.fromPresale(
+                        presaleDetail.Headboard,
+                        period,
+                        SaleCod,
+                        StatusConst.PENDING
+                )
                 .session(getUserCod())
                 .validate();
 
@@ -135,8 +142,10 @@ public class SaleCreateService extends SessionService {
                             "Cada item de preventa debe tener una unica asignacion de almacen"
                     );
                 }
-                SaleDetWarehouseEntity detailWarehouse = new SaleDetWarehouseEntity()
-                        .build(item.DetailWarehouse.get(0), saleHead.SaleCod)
+                SaleDetWarehouseEntity detailWarehouse = SaleDetWarehouseEntityFactory.fromPresale(
+                                item.DetailWarehouse.get(0),
+                                saleHead.SaleCod
+                        )
                         .session(getUserCod())
                         .validate();
                 detailSaleWarehouse.add(detailWarehouse);
@@ -151,8 +160,11 @@ public class SaleCreateService extends SessionService {
 
     public List<SaleAppliedTaxEntity> createSaleAppliedTaxEntitiesFromCatalog(SaleHeadEntity saleHead, List<TaxEntity> taxList){
         List<SaleAppliedTaxEntity> SaleAppliedTaxList = taxList.stream()
-                .map( e -> new SaleAppliedTaxEntity()
-                        .build(e.TaxCod,saleHead.SaleCod,e.TaxRateValue)
+                .map(e -> SaleAppliedTaxEntityFactory.fromTax(
+                                e.TaxCod,
+                                saleHead.SaleCod,
+                                e.TaxRateValue
+                        )
                         .session(getUserCod())
                         .validate() )
                 .toList();
@@ -168,8 +180,11 @@ public class SaleCreateService extends SessionService {
             taxRateByTaxCod.putIfAbsent(taxLine.TaxCod, taxLine.TaxRateValue == null ? BigDecimal.ZERO : taxLine.TaxRateValue);
         }
         return taxRateByTaxCod.entrySet().stream()
-                .map(entry -> new SaleAppliedTaxEntity()
-                        .build(entry.getKey(), saleHead.SaleCod, entry.getValue())
+                .map(entry -> SaleAppliedTaxEntityFactory.fromTax(
+                                entry.getKey(),
+                                saleHead.SaleCod,
+                                entry.getValue()
+                        )
                         .session(getUserCod())
                         .validate())
                 .toList();

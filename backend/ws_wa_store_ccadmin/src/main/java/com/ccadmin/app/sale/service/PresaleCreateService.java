@@ -16,7 +16,9 @@ import com.ccadmin.app.sale.model.entity.PeriodEntity;
 import com.ccadmin.app.sale.model.entity.PresaleDetEntity;
 import com.ccadmin.app.sale.model.entity.PresaleDetWarehouseEntity;
 import com.ccadmin.app.sale.model.entity.PresaleHeadEntity;
-import com.ccadmin.app.sale.model.entity.id.PresaleDetWarehouseID;
+import com.ccadmin.app.sale.model.factory.PresaleDetWarehouseEntityFactory;
+import com.ccadmin.app.sale.model.factory.PresaleDetWarehouseIdFactory;
+import com.ccadmin.app.sale.model.factory.PresaleHeadEntityFactory;
 import com.ccadmin.app.sale.repository.PeriodRepository;
 import com.ccadmin.app.sale.repository.PresaleDetRepository;
 import com.ccadmin.app.sale.repository.PresaleDetWarehouseRepository;
@@ -204,20 +206,15 @@ public class PresaleCreateService extends SessionService {
 
         for(var product : presaleRegister.DetailList)
         {
-            PresaleDetWarehouseEntity detWarehouse = new PresaleDetWarehouseEntity();
-
             Optional<PresaleDetWarehouseEntity> detWarehouseOp = this.presaleDetWarehouseRepository.findById(
-                    new PresaleDetWarehouseID(
-                            product.PresaleCod,
-                            product.ItemNumber
-                    )
+                    PresaleDetWarehouseIdFactory.fromDetail(product)
             );
 
-            if(detWarehouseOp.isPresent()){
-                detWarehouse = detWarehouseOp.get();
-            }
-
-            detWarehouse.build(product,warehouseDefault)
+            PresaleDetWarehouseEntity detWarehouse = PresaleDetWarehouseEntityFactory.fromDetail(
+                            product,
+                            warehouseDefault,
+                            detWarehouseOp.orElse(null)
+                    )
                     .session(getUserCod())
                     .validate();
 
@@ -241,7 +238,14 @@ public class PresaleCreateService extends SessionService {
             presaleHead.PresaleCod = presaleHeadRepository.getPresaleCod(getStoreCod());
         }
 
-        presaleHead.build(period,currencySystem,currencyPucharse,getStoreCod(),StatusConst.PENDING)
+        PresaleHeadEntityFactory.fromSaveRequest(
+                        presaleHead,
+                        period,
+                        currencySystem,
+                        currencyPucharse,
+                        getStoreCod(),
+                        StatusConst.PENDING
+                )
                 .session(getUserCod())
                 .validate();
 

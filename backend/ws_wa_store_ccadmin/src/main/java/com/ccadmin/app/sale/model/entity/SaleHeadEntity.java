@@ -44,74 +44,9 @@ public class SaleHeadEntity extends AuditTableEntity implements Serializable {
 
     }
 
-    public SaleHeadEntity(PresaleHeadEntity presaleHead)
-    {
-        PresaleCod = presaleHead.PresaleCod;
-        StoreCod = presaleHead.StoreCod;
-        ClientCod = presaleHead.ClientCod;
-        NumPriceSubTotal = presaleHead.NumPriceSubTotal;
-        NumDiscount = presaleHead.NumDiscount;
-        NumTotalPrice = presaleHead.NumTotalPrice;
-        NumTotalPriceNoTax = presaleHead.NumTotalPriceNoTax;
-        NumTotalTax = presaleHead.NumTotalTax;
-        Commenter = presaleHead.Commenter;
-        PeriodId = presaleHead.PeriodId;
-        SaleStatus = "P";
-        CurrencyCod = presaleHead.CurrencyCod;
-        CurrencyCodSys = presaleHead.CurrencyCodSys;
-        NumExchangevalue = presaleHead.NumExchangevalue;
-        IsPaid = presaleHead.IsPaid;
-        HasFiscalDocument = "N";
-        IsPickingConfirmed = "N";
-    }
-
-    public SaleHeadEntity(String saleCod, String presaleCod, String storeCod, String clientCod, BigDecimal numPriceSubTotal, BigDecimal numDiscount, BigDecimal numTotalPrice, BigDecimal numTotalPriceNoTax, BigDecimal numTotalTax, String commenter, int periodId, String saleStatus, String currencyCod, String currencyCodSys, BigDecimal numExchangevalue, String isPaid) {
-        SaleCod = saleCod;
-        PresaleCod = presaleCod;
-        StoreCod = storeCod;
-        ClientCod = clientCod;
-        NumPriceSubTotal = numPriceSubTotal;
-        NumDiscount = numDiscount;
-        NumTotalPrice = numTotalPrice;
-        NumTotalPriceNoTax = numTotalPriceNoTax;
-        NumTotalTax = numTotalTax;
-        Commenter = commenter;
-        PeriodId = periodId;
-        SaleStatus = saleStatus;
-        CurrencyCod = currencyCod;
-        CurrencyCodSys = currencyCodSys;
-        NumExchangevalue = numExchangevalue;
-        IsPaid = isPaid;
-    }
-
     public SaleHeadEntity tax(BigDecimal NumTotalPriceNoTax,BigDecimal NumTotalTax){
         this.NumTotalPriceNoTax = NumTotalPriceNoTax;
         this.NumTotalTax = NumTotalTax;
-        return this;
-    }
-
-
-
-    public SaleHeadEntity build(PresaleHeadEntity presaleHead,PeriodEntity period,String SaleCod,String SaleStatus){
-        this.SaleCod = SaleCod;
-        this.PresaleCod = presaleHead.PresaleCod;
-        this.StoreCod = presaleHead.StoreCod;
-        this.ClientCod = presaleHead.ClientCod;
-        this.NumPriceSubTotal = presaleHead.NumPriceSubTotal;
-        this.NumDiscount = presaleHead.NumDiscount;
-        this.NumTotalPrice = presaleHead.NumTotalPrice;
-        this.NumTotalPriceNoTax = presaleHead.NumTotalPriceNoTax;
-        this.NumTotalTax = presaleHead.NumTotalTax;
-        this.Commenter = presaleHead.Commenter;
-        this.SaleStatus = SaleStatus;
-        this.CurrencyCod = presaleHead.CurrencyCod;
-        this.CurrencyCodSys = presaleHead.CurrencyCodSys;
-        this.NumExchangevalue = presaleHead.NumExchangevalue;
-        this.IsPaid = presaleHead.IsPaid;
-        this.PeriodId = period.PeriodId;
-        this.HasCreditNote = "N";
-        this.HasFiscalDocument = "N";
-        this.IsPickingConfirmed = "N";
         return this;
     }
 

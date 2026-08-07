@@ -8,7 +8,6 @@ import jakarta.persistence.Table;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.Date;
 
 @Entity
 @Table(name = "credit_note_head")
@@ -35,17 +34,6 @@ public class CreditNoteHeadEntity extends AuditTableEntity implements Serializab
 
     public CreditNoteHeadEntity(){
 
-    }
-
-    public CreditNoteHeadEntity build(SaleHeadEntity saleHead,String CreditNoteStatus){
-        this.SaleCod = saleHead.SaleCod;
-        this.ClientCod = saleHead.ClientCod;
-        this.CurrencyCod = saleHead.CurrencyCod;
-        this.CurrencyCodSys = saleHead.CurrencyCodSys;
-        this.PeriodId = saleHead.PeriodId;
-        this.NumExchangevalue = saleHead.NumExchangevalue;
-        this.CreditNoteStatus = CreditNoteStatus;
-        return this;
     }
 
     public CreditNoteHeadEntity validate(){

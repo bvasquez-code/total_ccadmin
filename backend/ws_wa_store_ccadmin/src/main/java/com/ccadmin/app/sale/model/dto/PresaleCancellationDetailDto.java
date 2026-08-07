@@ -11,7 +11,4 @@ public class PresaleCancellationDetailDto {
     public boolean HasStockReservation;
     public BigDecimal PendingPaymentAmount;
 
-    public PresaleCancellationDetailDto() {
-        this.PendingPaymentAmount = BigDecimal.ZERO;
-    }
 }

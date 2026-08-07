@@ -14,6 +14,11 @@ import com.ccadmin.app.sale.model.entity.SaleDetEntity;
 import com.ccadmin.app.sale.model.entity.SaleDetTaxEntity;
 import com.ccadmin.app.sale.model.entity.TaxAffectationEntity;
 import com.ccadmin.app.sale.model.entity.TaxEntity;
+import com.ccadmin.app.sale.model.factory.CreditNoteDetTaxEntityFactory;
+import com.ccadmin.app.sale.model.factory.CreditNoteTaxCalculationResultDtoFactory;
+import com.ccadmin.app.sale.model.factory.SaleDetEntityFactory;
+import com.ccadmin.app.sale.model.factory.SaleDetTaxEntityFactory;
+import com.ccadmin.app.sale.model.factory.SaleTaxCalculationResultDtoFactory;
 import com.ccadmin.app.sale.repository.TaxAffectationRepository;
 import com.ccadmin.app.sale.repository.TaxRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,7 +48,8 @@ public class SaleTaxCalculationService {
             String storeCod,
             String userCod
     ) {
-        SaleTaxCalculationResultDto result = new SaleTaxCalculationResultDto();
+        List<SaleDetEntity> saleDetailList = new ArrayList<>();
+        List<SaleDetTaxEntity> saleDetailTaxList = new ArrayList<>();
 
         for (PresaleDetEntity presaleDet : presaleDetailList) {
             List<ProductTaxConfigEntity> configList = this.findProductTaxConfigList(presaleDet, storeCod);
@@ -60,11 +66,14 @@ public class SaleTaxCalculationService {
             );
             SaleDetEntity saleDet = this.createSaleDetEntity(presaleDet, saleCod, taxDetailList, userCod);
 
-            result.addLine(saleDet, taxDetailList);
+            saleDetailList.add(saleDet);
+            saleDetailTaxList.addAll(taxDetailList);
         }
 
-        result.recalculateTotals();
-        return result;
+        return SaleTaxCalculationResultDtoFactory.fromLines(
+                saleDetailList,
+                saleDetailTaxList
+        );
     }
 
     public SaleTaxCalculationResultDto splitExistingSaleDetail(
@@ -76,7 +85,6 @@ public class SaleTaxCalculationService {
         this.validateSplit(originDetail, splitLineList);
 
         int originQuantity = originDetail.NumUnit;
-        BigDecimal unitDiscount = originDetail.NumDiscount;
         List<BigDecimal> totalPriceList = this.distributeExact(
                 originDetail.NumTotalPrice, splitLineList, originQuantity, 2
         );
@@ -105,33 +113,37 @@ public class SaleTaxCalculationService {
             );
             for (int index = 0; index < splitLineList.size(); index++) {
                 SaleDetailSplitLineDto splitLine = splitLineList.get(index);
-                SaleDetTaxEntity splitTax = this.copySaleDetailTax(originTax, splitLine.ItemNumber);
-                splitTax.ItemNumber = splitLine.ItemNumber;
-                splitTax.TaxBaseAmount = baseAmountList.get(index);
-                splitTax.TaxQuantity = taxQuantityList.get(index);
-                splitTax.TaxAmount = taxAmountList.get(index);
+                SaleDetTaxEntity splitTax = SaleDetTaxEntityFactory.fromSplit(
+                        originTax,
+                        splitLine.ItemNumber,
+                        baseAmountList.get(index),
+                        taxQuantityList.get(index),
+                        taxAmountList.get(index)
+                );
                 splitTax.session(userCod).validate();
                 taxListBySplit.get(index).add(splitTax);
             }
         }
 
-        SaleTaxCalculationResultDto result = new SaleTaxCalculationResultDto();
+        List<SaleDetEntity> splitDetailList = new ArrayList<>();
+        List<SaleDetTaxEntity> splitTaxList = new ArrayList<>();
         for (int index = 0; index < splitLineList.size(); index++) {
             SaleDetailSplitLineDto splitLine = splitLineList.get(index);
-            SaleDetEntity splitDetail = this.copySaleDetail(originDetail, splitLine.ItemNumber);
-            splitDetail.ItemNumber = splitLine.ItemNumber;
-            splitDetail.NumUnit = splitLine.NumUnit;
-            splitDetail.NumDiscount = unitDiscount;
-            splitDetail.NumTotalPrice = totalPriceList.get(index);
-            splitDetail.NumPriceSubTotal = subtotalList.get(index);
-            splitDetail.NumTotalTax = totalTaxList.get(index);
-            splitDetail.LotNumber = splitLine.LotNumber;
-            splitDetail.ExpirationDate = splitLine.ExpirationDate;
+            SaleDetEntity splitDetail = SaleDetEntityFactory.fromSplit(
+                    originDetail,
+                    splitLine,
+                    totalPriceList.get(index),
+                    subtotalList.get(index),
+                    totalTaxList.get(index)
+            );
             splitDetail.session(userCod).validate();
-            result.addLine(splitDetail, taxListBySplit.get(index));
+            splitDetailList.add(splitDetail);
+            splitTaxList.addAll(taxListBySplit.get(index));
         }
-        result.recalculateTotals();
-        return result;
+        return SaleTaxCalculationResultDtoFactory.fromLines(
+                splitDetailList,
+                splitTaxList
+        );
     }
 
     public SaleTaxCalculationResultDto renumberExistingSaleDetail(
@@ -144,30 +156,24 @@ public class SaleTaxCalculationService {
             throw new SaleBuildException("El detalle de venta que se conservara no es valido");
         }
 
-        SaleDetEntity detail = this.copySaleDetail(originDetail, itemNumber);
-        detail.NumUnit = originDetail.NumUnit;
-        detail.NumTotalPrice = originDetail.NumTotalPrice;
-        detail.NumPriceSubTotal = originDetail.NumPriceSubTotal;
-        detail.NumTotalTax = originDetail.NumTotalTax;
-        detail.LotNumber = originDetail.LotNumber;
-        detail.ExpirationDate = originDetail.ExpirationDate;
+        SaleDetEntity detail = SaleDetEntityFactory.copyForItem(originDetail, itemNumber);
         detail.session(userCod).validate();
 
         List<SaleDetTaxEntity> taxList = (originTaxList == null ? List.<SaleDetTaxEntity>of() : originTaxList)
                 .stream()
                 .map(originTax -> {
-                    SaleDetTaxEntity tax = this.copySaleDetailTax(originTax, itemNumber);
-                    tax.TaxBaseAmount = originTax.TaxBaseAmount;
-                    tax.TaxQuantity = originTax.TaxQuantity;
-                    tax.TaxAmount = originTax.TaxAmount;
+                    SaleDetTaxEntity tax = SaleDetTaxEntityFactory.copyForItem(
+                            originTax,
+                            itemNumber
+                    );
                     return tax.session(userCod).validate();
                 })
                 .toList();
 
-        SaleTaxCalculationResultDto result = new SaleTaxCalculationResultDto();
-        result.addLine(detail, taxList);
-        result.recalculateTotals();
-        return result;
+        return SaleTaxCalculationResultDtoFactory.fromLines(
+                List.of(detail),
+                taxList
+        );
     }
 
     public CreditNoteTaxCalculationResultDto buildCreditNoteTaxResult(
@@ -177,23 +183,27 @@ public class SaleTaxCalculationService {
             List<SaleDetTaxEntity> originTaxList,
             String userCod
     ) {
-        CreditNoteTaxCalculationResultDto result = new CreditNoteTaxCalculationResultDto();
-        result.TaxDetailList = this.buildCreditNoteTaxLines(
+        List<CreditNoteDetTaxEntity> taxDetailList = this.buildCreditNoteTaxLines(
                 creditNoteCod, creditNoteDetail, originDetail, originTaxList, userCod
         );
-        result.NumTotalTax = result.TaxDetailList.isEmpty()
+        BigDecimal totalTax = taxDetailList.isEmpty()
                 ? this.prorateAmount(originDetail.NumTotalTax, creditNoteDetail.NumUnit, originDetail.NumUnit)
-                : result.TaxDetailList.stream()
+                : taxDetailList.stream()
                         .map(tax -> amount(tax.TaxAmount))
                         .reduce(BigDecimal.ZERO, BigDecimal::add)
                         .setScale(2, RoundingMode.HALF_UP);
-        result.NumPriceSubTotal = amount(creditNoteDetail.NumTotalPrice)
-                .subtract(result.NumTotalTax)
+        BigDecimal priceSubtotal = amount(creditNoteDetail.NumTotalPrice)
+                .subtract(totalTax)
                 .setScale(2, RoundingMode.HALF_UP);
-        result.IsAppliedTax = result.NumTotalTax.compareTo(BigDecimal.ZERO) > 0
+        String isAppliedTax = totalTax.compareTo(BigDecimal.ZERO) > 0
                 ? SaleTaxConstants.YES
                 : SaleTaxConstants.NO;
-        return result;
+        return CreditNoteTaxCalculationResultDtoFactory.fromCalculation(
+                taxDetailList,
+                totalTax,
+                priceSubtotal,
+                isAppliedTax
+        );
     }
 
     private List<CreditNoteDetTaxEntity> buildCreditNoteTaxLines(
@@ -295,80 +305,32 @@ public class SaleTaxCalculationService {
                 .divide(BigDecimal.valueOf(originUnits), 8, RoundingMode.HALF_UP);
     }
 
-    private SaleDetEntity copySaleDetail(SaleDetEntity source, int itemNumber) {
-        SaleDetEntity target = new SaleDetEntity();
-        target.SaleCod = source.SaleCod;
-        target.ItemNumber = itemNumber;
-        target.ProductCod = source.ProductCod;
-        target.Variant = source.Variant;
-        target.NumUnitPrice = source.NumUnitPrice;
-        target.NumDiscount = source.NumDiscount;
-        target.NumUnitPriceSale = source.NumUnitPriceSale;
-        target.ProductUnitName = source.ProductUnitName;
-        target.ProductUnitFactor = source.ProductUnitFactor;
-        target.IsDigital = source.IsDigital;
-        target.IsAppliedTax = source.IsAppliedTax;
-        target.CreationUser = source.CreationUser;
-        target.CreationDate = source.CreationDate;
-        target.ModifyUser = source.ModifyUser;
-        target.ModifyDate = source.ModifyDate;
-        target.Status = source.Status;
-        return target;
-    }
-
-    private SaleDetTaxEntity copySaleDetailTax(SaleDetTaxEntity source, int itemNumber) {
-        SaleDetTaxEntity target = new SaleDetTaxEntity();
-        target.SaleCod = source.SaleCod;
-        target.ItemNumber = itemNumber;
-        target.TaxLineNumber = source.TaxLineNumber;
-        target.TaxCod = source.TaxCod;
-        target.SunatTaxCod = source.SunatTaxCod;
-        target.TaxName = source.TaxName;
-        target.TaxAffectationCod = source.TaxAffectationCod;
-        target.TaxAffectationName = source.TaxAffectationName;
-        target.TaxCalculationType = source.TaxCalculationType;
-        target.IsInformative = source.IsInformative;
-        target.TaxRateValue = source.TaxRateValue;
-        target.FixedUnitAmount = source.FixedUnitAmount;
-        target.CalculationOrder = source.CalculationOrder;
-        target.CreationUser = source.CreationUser;
-        target.CreationDate = source.CreationDate;
-        target.ModifyUser = source.ModifyUser;
-        target.ModifyDate = source.ModifyDate;
-        target.Status = source.Status;
-        return target;
-    }
-
     private CreditNoteDetTaxEntity buildCreditNoteTaxLine(
             String creditNoteCod,
             CreditNoteDetEntity creditNoteDetail,
             SaleDetEntity originDetail,
             SaleDetTaxEntity originTax
     ) {
-        CreditNoteDetTaxEntity tax = new CreditNoteDetTaxEntity();
-        tax.CreditNoteCod = creditNoteCod;
-        tax.ItemNumber = creditNoteDetail.ItemNumber;
-        tax.TaxLineNumber = originTax.TaxLineNumber;
-        tax.TaxCod = originTax.TaxCod;
-        tax.SunatTaxCod = originTax.SunatTaxCod;
-        tax.TaxName = originTax.TaxName;
-        tax.TaxAffectationCod = originTax.TaxAffectationCod;
-        tax.TaxAffectationName = originTax.TaxAffectationName;
-        tax.TaxCalculationType = originTax.TaxCalculationType;
-        tax.IsInformative = originTax.IsInformative;
-        tax.TaxRateValue = originTax.TaxRateValue;
-        tax.FixedUnitAmount = originTax.FixedUnitAmount;
-        tax.TaxBaseAmount = this.prorateAmount(
-                originTax.TaxBaseAmount, creditNoteDetail.NumUnit, originDetail.NumUnit
+        return CreditNoteDetTaxEntityFactory.fromSaleTax(
+                creditNoteCod,
+                creditNoteDetail,
+                originTax,
+                this.prorateAmount(
+                        originTax.TaxBaseAmount,
+                        creditNoteDetail.NumUnit,
+                        originDetail.NumUnit
+                ),
+                this.prorateQuantity(
+                        originTax.TaxQuantity,
+                        creditNoteDetail.NumUnit,
+                        originDetail.NumUnit
+                ),
+                this.prorateAmount(
+                        originTax.TaxAmount,
+                        creditNoteDetail.NumUnit,
+                        originDetail.NumUnit
+                )
         );
-        tax.TaxQuantity = this.prorateQuantity(
-                originTax.TaxQuantity, creditNoteDetail.NumUnit, originDetail.NumUnit
-        );
-        tax.TaxAmount = this.prorateAmount(
-                originTax.TaxAmount, creditNoteDetail.NumUnit, originDetail.NumUnit
-        );
-        tax.CalculationOrder = originTax.CalculationOrder;
-        return tax;
     }
 
     private List<ProductTaxConfigEntity> findProductTaxConfigList(PresaleDetEntity presaleDet, String storeCod) {
@@ -614,10 +576,15 @@ public class SaleTaxCalculationService {
                 .setScale(2, RoundingMode.HALF_UP);
         BigDecimal detailSubTotal = total.subtract(totalTax).setScale(2, RoundingMode.HALF_UP);
 
-        SaleDetEntity saleDet = new SaleDetEntity()
-                .build(presaleDet, saleCod)
-                .tax(detailSubTotal, totalTax);
-        saleDet.IsAppliedTax = totalTax.compareTo(BigDecimal.ZERO) > 0 ? SaleTaxConstants.YES : SaleTaxConstants.NO;
+        SaleDetEntity saleDet = SaleDetEntityFactory.fromPresale(
+                presaleDet,
+                saleCod,
+                detailSubTotal,
+                totalTax,
+                totalTax.compareTo(BigDecimal.ZERO) > 0
+                        ? SaleTaxConstants.YES
+                        : SaleTaxConstants.NO
+        );
         return saleDet.session(userCod).validate();
     }
 
@@ -659,22 +626,18 @@ public class SaleTaxCalculationService {
             BigDecimal taxAmount,
             String userCod
     ) {
-        SaleDetTaxEntity line = new SaleDetTaxEntity();
-        line.SaleCod = saleCod;
-        line.ItemNumber = presaleDet.ItemNumber;
-        line.TaxCod = config.TaxCod;
-        line.SunatTaxCod = tax.SunatTaxCod;
-        line.TaxName = tax.Name;
-        line.TaxAffectationCod = affectation == null ? null : affectation.TaxAffectationCod;
-        line.TaxAffectationName = affectation == null ? null : affectation.Name;
-        line.TaxCalculationType = config.TaxCalculationType;
-        line.IsInformative = config.IsInformative;
-        line.TaxRateValue = effectiveTaxRateValue(config).setScale(4, RoundingMode.HALF_UP);
-        line.FixedUnitAmount = valueOrZero(config.FixedUnitAmount).setScale(4, RoundingMode.HALF_UP);
-        line.TaxBaseAmount = amount(taxBaseAmount);
-        line.TaxQuantity = valueOrZero(taxQuantity).setScale(4, RoundingMode.HALF_UP);
-        line.TaxAmount = amount(taxAmount);
-        line.CalculationOrder = config.CalculationOrder;
+        SaleDetTaxEntity line = SaleDetTaxEntityFactory.fromTaxConfiguration(
+                presaleDet,
+                saleCod,
+                config,
+                tax,
+                affectation,
+                effectiveTaxRateValue(config).setScale(4, RoundingMode.HALF_UP),
+                valueOrZero(config.FixedUnitAmount).setScale(4, RoundingMode.HALF_UP),
+                amount(taxBaseAmount),
+                valueOrZero(taxQuantity).setScale(4, RoundingMode.HALF_UP),
+                amount(taxAmount)
+        );
         line.session(userCod);
         return line;
     }

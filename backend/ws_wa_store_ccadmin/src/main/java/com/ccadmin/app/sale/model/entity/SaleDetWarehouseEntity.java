@@ -33,34 +33,6 @@ public class SaleDetWarehouseEntity extends AuditTableEntity implements Serializ
 
     }
 
-    public SaleDetWarehouseEntity(PresaleDetWarehouseEntity detWarehouse,String SaleCod)
-    {
-        this.SaleCod = SaleCod;
-        this.ItemNumber = detWarehouse.ItemNumber;
-        this.ProductCod = detWarehouse.ProductCod;
-        this.Variant = detWarehouse.Variant;
-        this.WarehouseCod = detWarehouse.WarehouseCod;
-        this.NumUnit = detWarehouse.NumUnit;
-        this.ProductUnitName = detWarehouse.ProductUnitName;
-        this.ProductUnitFactor = detWarehouse.ProductUnitFactor;
-        this.LotNumber = detWarehouse.LotNumber;
-        this.ExpirationDate = detWarehouse.ExpirationDate;
-    }
-
-    public SaleDetWarehouseEntity build(PresaleDetWarehouseEntity detWarehouse,String SaleCod)
-    {
-        this.SaleCod = SaleCod;
-        this.ItemNumber = detWarehouse.ItemNumber;
-        this.ProductCod = detWarehouse.ProductCod;
-        this.Variant = detWarehouse.Variant;
-        this.WarehouseCod = detWarehouse.WarehouseCod;
-        this.NumUnit = detWarehouse.NumUnit;
-        this.ProductUnitName = detWarehouse.ProductUnitName;
-        this.ProductUnitFactor = detWarehouse.ProductUnitFactor;
-        this.LotNumber = detWarehouse.LotNumber;
-        this.ExpirationDate = detWarehouse.ExpirationDate;
-        return this;
-    }
     public SaleDetWarehouseEntity validate() throws SaleBuildException {
         if(this.SaleCod==null || this.SaleCod.isEmpty()){
             throw new SaleBuildException("Código de venta esta vacío");

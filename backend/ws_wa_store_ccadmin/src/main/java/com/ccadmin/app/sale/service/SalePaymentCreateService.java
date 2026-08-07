@@ -6,6 +6,7 @@ import com.ccadmin.app.sale.exception.SalePaymentException;
 import com.ccadmin.app.sale.model.dto.SalePaymentRegisterDto;
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
 import com.ccadmin.app.sale.model.entity.SalePaymentEntity;
+import com.ccadmin.app.sale.model.factory.SalePaymentEntityFactory;
 import com.ccadmin.app.sale.repository.SaleHeadRepository;
 import com.ccadmin.app.sale.repository.SalePaymentRepository;
 import com.ccadmin.app.shared.model.myconst.StatusConst;
@@ -49,13 +50,13 @@ public class SalePaymentCreateService extends SessionService {
         BigDecimal NumAmountPaid = trxPayment.AmountPaid.multiply(saleHead.NumExchangevalue);
         BigDecimal NumAmountReturned = TotalPayment.add(NumAmountPaid).subtract(saleHead.NumTotalPrice);
 
-        SalePaymentEntity salePayment = new SalePaymentEntity(
-                 saleHead
-                ,trxPayment
-                ,this.salePaymentRepository.countTotalPayment(payment.SaleCod)
-                ,NumAmountPaid
-                ,NumAmountReturned
-        ).build();
+        SalePaymentEntity salePayment = SalePaymentEntityFactory.fromTransaction(
+                saleHead,
+                trxPayment,
+                this.salePaymentRepository.countTotalPayment(payment.SaleCod),
+                NumAmountPaid,
+                NumAmountReturned
+        );
         salePayment.addSession(getUserCod());
 
         salePaymentRepository.save(salePayment);
@@ -111,7 +112,7 @@ public class SalePaymentCreateService extends SessionService {
             throw new SalePaymentException("El monto de reversa supera el saldo del pago original");
         }
 
-        SalePaymentEntity salePayment = SalePaymentEntity.buildReversal(
+        SalePaymentEntity salePayment = SalePaymentEntityFactory.fromReversal(
                 originalPayment,
                 reversal,
                 getUserCod(),

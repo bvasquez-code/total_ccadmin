@@ -10,6 +10,8 @@ import com.ccadmin.app.sale.model.entity.CreditNoteDocumentEntity;
 import com.ccadmin.app.sale.model.entity.CreditNoteHeadEntity;
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
 import com.ccadmin.app.sale.model.entity.SalePaymentEntity;
+import com.ccadmin.app.sale.model.factory.CreditNoteApplicationEntityFactory;
+import com.ccadmin.app.sale.model.factory.SalePaymentRegisterDtoFactory;
 import com.ccadmin.app.sale.repository.CreditNoteApplicationRepository;
 import com.ccadmin.app.sale.repository.CreditNoteDocumentRepository;
 import com.ccadmin.app.sale.repository.CreditNoteHeadRepository;
@@ -86,16 +88,18 @@ public class CreditNoteApplicationCreateService extends SessionService {
         );
         trxPayment = this.trxPaymentShared.saveCreditNoteApplication(trxPayment);
 
-        SalePaymentRegisterDto salePaymentRegister = new SalePaymentRegisterDto();
-        salePaymentRegister.SaleCod = saleHead.SaleCod;
-        salePaymentRegister.TrxPaymentId = trxPayment.TrxPaymentId;
+        SalePaymentRegisterDto salePaymentRegister = SalePaymentRegisterDtoFactory.fromTransaction(
+                saleHead.SaleCod,
+                trxPayment.TrxPaymentId
+        );
         this.salePaymentCreateService.save(salePaymentRegister);
 
-        CreditNoteApplicationEntity application = new CreditNoteApplicationEntity();
-        application.CreditNoteCod = creditNoteCod;
-        application.SaleCod = saleHead.SaleCod;
-        application.TrxPaymentId = trxPayment.TrxPaymentId;
-        application.AmountApplied = availableBalance;
+        CreditNoteApplicationEntity application = CreditNoteApplicationEntityFactory.fromApplication(
+                creditNoteCod,
+                saleHead.SaleCod,
+                trxPayment.TrxPaymentId,
+                availableBalance
+        );
         application.session(getUserCod());
         application = this.creditNoteApplicationRepository.save(application);
 

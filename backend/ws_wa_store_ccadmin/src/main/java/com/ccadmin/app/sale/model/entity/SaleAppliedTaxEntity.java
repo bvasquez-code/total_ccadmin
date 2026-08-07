@@ -25,19 +25,6 @@ public class SaleAppliedTaxEntity extends AuditTableEntity implements Serializab
     public SaleAppliedTaxEntity() {
     }
 
-    public SaleAppliedTaxEntity(String taxCod, String saleCod, BigDecimal taxRateValue) {
-        TaxCod = taxCod;
-        SaleCod = saleCod;
-        TaxRateValue = taxRateValue;
-    }
-
-    public SaleAppliedTaxEntity build(String taxCod, String saleCod, BigDecimal taxRateValue) {
-        TaxCod = taxCod;
-        SaleCod = saleCod;
-        TaxRateValue = taxRateValue;
-        return this;
-    }
-
     public SaleAppliedTaxEntity validate() {
         if(this.TaxCod == null || this.TaxCod.isEmpty()){
             throw new SaleBuildException("Código de impuesto no puede ser vacío");

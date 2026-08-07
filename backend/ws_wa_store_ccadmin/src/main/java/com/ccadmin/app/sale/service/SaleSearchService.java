@@ -4,11 +4,15 @@ import com.ccadmin.app.client.model.entity.ClientEntity;
 import com.ccadmin.app.client.shared.ClientShared;
 import com.ccadmin.app.payment.shared.TrxPaymentShared;
 import com.ccadmin.app.product.shared.ProductShared;
+import com.ccadmin.app.sale.model.dto.CreditNoteDetailDto;
 import com.ccadmin.app.sale.model.dto.SaleDetailDto;
+import com.ccadmin.app.sale.model.entity.SaleDetEntity;
 import com.ccadmin.app.sale.model.entity.SaleDocumentEntity;
 import com.ccadmin.app.sale.model.entity.SaleDetTaxEntity;
 import com.ccadmin.app.sale.model.entity.SaleDetWarehouseEntity;
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
+import com.ccadmin.app.sale.model.entity.SalePaymentEntity;
+import com.ccadmin.app.sale.model.factory.SaleDetailDtoFactory;
 import com.ccadmin.app.sale.repository.SaleDetRepository;
 import com.ccadmin.app.sale.repository.SaleDetWarehouseRepository;
 import com.ccadmin.app.sale.repository.SaleDetTaxRepository;
@@ -100,11 +104,9 @@ public class SaleSearchService extends SessionService {
     }
 
     public SaleDetailDto findById(String SaleCod) {
-        SaleDetailDto saleDetail = new SaleDetailDto();
-
-        saleDetail.Headboard = this.saleHeadRepository.findById(SaleCod)
+        SaleHeadEntity saleHead = this.saleHeadRepository.findById(SaleCod)
                 .orElseThrow(() -> new IllegalArgumentException("No existe la venta " + SaleCod));
-        saleDetail.DetailList = this.saleDetRepository.findBySaleCod(SaleCod);
+        List<SaleDetEntity> saleDetailList = this.saleDetRepository.findBySaleCod(SaleCod);
         Map<Integer, List<SaleDetWarehouseEntity>> warehouseDetailByItem =
                 this.saleDetWarehouseRepository.findBySaleCod(SaleCod)
                         .stream()
@@ -112,30 +114,35 @@ public class SaleSearchService extends SessionService {
         Map<Integer, List<SaleDetTaxEntity>> taxDetailByItem = this.saleDetTaxRepository.findBySaleCod(SaleCod)
                 .stream()
                 .collect(Collectors.groupingBy(item -> item.ItemNumber));
-        saleDetail.DetailPayment = this.salePaymentRepository.findBySaleCod(SaleCod);
-        saleDetail.SaleDocumentList = this.saleDocumentRepository.findBySaleCod(SaleCod);
-        this.loadDocumentClients(saleDetail.SaleDocumentList);
-        saleDetail.SaleDocument = saleDetail.SaleDocumentList.stream().findFirst().orElse(null);
-        saleDetail.CreditNoteDetail = this.creditNoteSearchService.findBySaleCod(SaleCod);
+        List<SalePaymentEntity> salePaymentList = this.salePaymentRepository.findBySaleCod(SaleCod);
+        List<SaleDocumentEntity> saleDocumentList = this.saleDocumentRepository.findBySaleCod(SaleCod);
+        this.loadDocumentClients(saleDocumentList);
+        CreditNoteDetailDto creditNoteDetail = this.creditNoteSearchService.findBySaleCod(SaleCod);
 
-        if(saleDetail.Headboard.existClient())
+        if (saleHead.existClient())
         {
-            saleDetail.Headboard.Client = this.clientShared.findById(saleDetail.Headboard.ClientCod);
+            saleHead.Client = this.clientShared.findById(saleHead.ClientCod);
         }
 
-        for(var DetailSale : saleDetail.DetailList)
+        for (var DetailSale : saleDetailList)
         {
             DetailSale.Product = this.productShared.findById(DetailSale.ProductCod);
             DetailSale.TaxDetailList = taxDetailByItem.getOrDefault(DetailSale.ItemNumber, List.of());
             DetailSale.DetailWarehouse = warehouseDetailByItem.getOrDefault(DetailSale.ItemNumber, List.of());
         }
 
-        for(var Payment : saleDetail.DetailPayment)
+        for (var Payment : salePaymentList)
         {
             Payment.TrxPayment = this.trxPaymentShared.findById(Payment.TrxPaymentId);
         }
 
-        return saleDetail;
+        return SaleDetailDtoFactory.fromEntities(
+                saleHead,
+                saleDetailList,
+                salePaymentList,
+                saleDocumentList,
+                creditNoteDetail
+        );
     }
 
     public ResponsePageSearchT<SaleHeadEntity> findAll(String Query, int Page, String StoreCod,String a){

@@ -12,6 +12,8 @@ import com.ccadmin.app.sale.model.entity.SaleDetEntity;
 import com.ccadmin.app.sale.model.entity.SaleDetTaxEntity;
 import com.ccadmin.app.sale.model.entity.SaleDetWarehouseEntity;
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
+import com.ccadmin.app.sale.model.factory.SaleDetailSplitLineDtoFactory;
+import com.ccadmin.app.sale.model.factory.SaleDetWarehouseEntityFactory;
 import com.ccadmin.app.sale.repository.SaleDetRepository;
 import com.ccadmin.app.sale.repository.SaleDetTaxRepository;
 import com.ccadmin.app.sale.repository.SaleDetWarehouseRepository;
@@ -168,10 +170,7 @@ public class SalePickingCreateService extends SessionService {
                 }
                 SaleDetWarehouseEntity currentWarehouse = currentItemWarehouseList.get(0);
                 SaleDetWarehouseEntity preservedWarehouse =
-                        this.copyWarehouse(currentWarehouse, preservedItemNumber);
-                preservedWarehouse.NumUnit = currentWarehouse.NumUnit;
-                preservedWarehouse.LotNumber = currentWarehouse.LotNumber;
-                preservedWarehouse.ExpirationDate = currentWarehouse.ExpirationDate;
+                        SaleDetWarehouseEntityFactory.copyForItem(currentWarehouse, preservedItemNumber);
                 preservedWarehouse.session(getUserCod()).validate();
                 pickedWarehouseList.add(preservedWarehouse);
                 continue;
@@ -188,7 +187,7 @@ public class SalePickingCreateService extends SessionService {
             SaleDetWarehouseEntity baseWarehouse = currentItemWarehouseList.get(0);
             List<SaleDetailSplitLineDto> splitLineList = new ArrayList<>();
             for (SalePickingLineDto pickingLine : pickingLineList) {
-                splitLineList.add(new SaleDetailSplitLineDto(
+                splitLineList.add(SaleDetailSplitLineDtoFactory.fromPicking(
                         nextItemNumber++,
                         pickingLine.NumUnit,
                         this.normalizeLotNumber(pickingLine.LotNumber),
@@ -207,17 +206,12 @@ public class SalePickingCreateService extends SessionService {
             for (int index = 0; index < splitLineList.size(); index++) {
                 SaleDetailSplitLineDto splitLine = splitLineList.get(index);
                 SaleDetEntity pickedDetail = splitResult.DetailList.get(index);
-                SaleDetWarehouseEntity pickedWarehouse = this.copyWarehouse(baseWarehouse, splitLine.ItemNumber);
-                pickedWarehouse.SaleCod = saleDetail.SaleCod;
-                pickedWarehouse.ItemNumber = splitLine.ItemNumber;
-                pickedWarehouse.ProductCod = pickedDetail.ProductCod;
-                pickedWarehouse.Variant = pickedDetail.Variant;
-                pickedWarehouse.WarehouseCod = baseWarehouse.WarehouseCod;
-                pickedWarehouse.NumUnit = splitLine.NumUnit;
-                pickedWarehouse.ProductUnitName = pickedDetail.ProductUnitName;
-                pickedWarehouse.ProductUnitFactor = pickedDetail.ProductUnitFactor;
-                pickedWarehouse.LotNumber = splitLine.LotNumber;
-                pickedWarehouse.ExpirationDate = splitLine.ExpirationDate;
+                SaleDetWarehouseEntity pickedWarehouse =
+                        SaleDetWarehouseEntityFactory.fromPickedDetail(
+                                baseWarehouse,
+                                pickedDetail,
+                                splitLine
+                        );
                 pickedWarehouse.session(getUserCod()).validate();
                 pickedWarehouseList.add(pickedWarehouse);
             }
@@ -227,23 +221,6 @@ public class SalePickingCreateService extends SessionService {
                 List.copyOf(pickedWarehouseList),
                 List.copyOf(pickedTaxList)
         );
-    }
-
-    private SaleDetWarehouseEntity copyWarehouse(SaleDetWarehouseEntity source, int itemNumber) {
-        SaleDetWarehouseEntity target = new SaleDetWarehouseEntity();
-        target.SaleCod = source.SaleCod;
-        target.ItemNumber = itemNumber;
-        target.ProductCod = source.ProductCod;
-        target.Variant = source.Variant;
-        target.WarehouseCod = source.WarehouseCod;
-        target.ProductUnitName = source.ProductUnitName;
-        target.ProductUnitFactor = source.ProductUnitFactor;
-        target.CreationUser = source.CreationUser;
-        target.CreationDate = source.CreationDate;
-        target.ModifyUser = source.ModifyUser;
-        target.ModifyDate = source.ModifyDate;
-        target.Status = source.Status;
-        return target;
     }
 
     private void validatePickingLines(

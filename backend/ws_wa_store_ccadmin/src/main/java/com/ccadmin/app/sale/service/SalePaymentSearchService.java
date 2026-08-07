@@ -4,6 +4,7 @@ import com.ccadmin.app.payment.model.entity.TrxPaymentEntity;
 import com.ccadmin.app.payment.shared.TrxPaymentShared;
 import com.ccadmin.app.sale.model.dto.SalePaymentDto;
 import com.ccadmin.app.sale.model.entity.SalePaymentEntity;
+import com.ccadmin.app.sale.model.factory.SalePaymentDtoFactory;
 import com.ccadmin.app.sale.repository.SalePaymentRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -31,7 +32,10 @@ public class SalePaymentSearchService {
                     .filter( e -> e.TrxPaymentId == SalePayment.TrxPaymentId)
                     .findFirst().get();
 
-            SalePaymentDto salePaymentDto = new SalePaymentDto(SalePayment,trxPayment);
+            SalePaymentDto salePaymentDto = SalePaymentDtoFactory.fromEntities(
+                    SalePayment,
+                    trxPayment
+            );
             SalePaymentDtoList.add(salePaymentDto);
         }
         return SalePaymentDtoList;
