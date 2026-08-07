@@ -8,8 +8,8 @@ BEGIN
     
     -- 1. Verificamos si la tabla existe
     SELECT COUNT(*) INTO v_table_exists
-    FROM information_schema.tables 
-    WHERE table_schema = DATABASE() 
+    FROM information_schema.tables
+    WHERE table_schema = DATABASE()
     AND table_name = 'table_sequence';
 
     IF v_table_exists = 0 THEN
@@ -37,9 +37,9 @@ BEGIN
         
         -- Verificamos si existe la columna UsePrefix
         IF NOT EXISTS (
-            SELECT * FROM information_schema.columns 
-            WHERE table_schema = DATABASE() 
-            AND table_name = 'table_sequence' 
+            SELECT * FROM information_schema.columns
+            WHERE table_schema = DATABASE()
+            AND table_name = 'table_sequence'
             AND column_name = 'UsePrefix'
         ) THEN
             ALTER TABLE `table_sequence` ADD COLUMN `UsePrefix` CHAR(1) NOT NULL DEFAULT 'S' COMMENT 'Usar prefijo (S/N)';
@@ -54,4 +54,15 @@ DELIMITER ;
 
 -- Ejecutar y limpiar
 CALL `p_manage_table_sequence`();
+
+INSERT INTO `table_sequence` (
+    `SequenceTrx`, `Prefix`, `SequenceTableType`, `length`, `UsePrefix`
+)
+SELECT 0, '', 'cash_register', 8, 'N'
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM `table_sequence`
+    WHERE `SequenceTableType` = 'cash_register'
+);
+
 DROP PROCEDURE `p_manage_table_sequence`;

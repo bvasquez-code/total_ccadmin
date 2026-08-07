@@ -16,7 +16,9 @@ public interface AppUserRepository extends JpaRepository<AppUserEntity,String>, 
             select COUNT(1) from app_user au
             inner join person p on au.PersonCod = p.PersonCod
             where
-            au.UserCod = :id or CONCAT(p.Names,p.LastNames) like %:query%
+            au.UserCod = :id
+            or p.DocumentNum like concat('%', :query, '%')
+            or concat_ws(' ', p.Names, p.LastNames) like concat('%', :query, '%')
             """, nativeQuery = true)
     public int countByQueryText(
             @Param("id") String id,
@@ -28,7 +30,14 @@ public interface AppUserRepository extends JpaRepository<AppUserEntity,String>, 
             select au.* from app_user au
             inner join person p on au.PersonCod = p.PersonCod
             where
-            au.UserCod = :id or CONCAT(p.Names,p.LastNames) like %:query%
+            au.UserCod = :id
+            or p.DocumentNum like concat('%', :query, '%')
+            or concat_ws(' ', p.Names, p.LastNames) like concat('%', :query, '%')
+            order by case
+                when au.UserCod = :id then 0
+                when p.DocumentNum = :query then 1
+                else 2
+            end, au.CreationDate desc, au.UserCod
             limit :init,:limit
             """, nativeQuery = true)
     public List<AppUserEntity> findByQueryText(

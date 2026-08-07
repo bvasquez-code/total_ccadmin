@@ -9,7 +9,8 @@ import { DataSesionService } from '../../compartido/service/datasesion.service';
 
 @Component({
   selector: 'app-menusidebar',
-  templateUrl: './menusidebar.component.html'
+  templateUrl: './menusidebar.component.html',
+  styleUrls: ['./menusidebar.component.css']
 })
 export class MenusidebarComponent implements OnInit {
 

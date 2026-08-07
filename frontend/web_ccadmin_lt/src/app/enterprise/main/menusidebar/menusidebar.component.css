@@ -1,0 +1,7 @@
+.sidebar .nav-text,
+.sidebar .nav-text > span {
+  min-width: 0;
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: break-word;
+}

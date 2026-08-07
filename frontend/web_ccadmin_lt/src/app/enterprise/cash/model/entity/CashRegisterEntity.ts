@@ -4,6 +4,7 @@ export class CashRegisterEntity extends AuditTableEntity {
 
     public RegisterCod: string;
     public StoreCod: string;
+    public UserCod: string | null;
     public Name: string;
     public Description: string;
     public SerialNumber: string;
@@ -12,6 +13,7 @@ export class CashRegisterEntity extends AuditTableEntity {
         super();
         this.RegisterCod = '';
         this.StoreCod = '';
+        this.UserCod = null;
         this.Name = '';
         this.Description = '';
         this.SerialNumber = '';

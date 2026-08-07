@@ -44,7 +44,7 @@ export class ListuserComponent implements OnInit,ActionTableService<AppUserEntit
         { Name :  "Codigo" , key : "UserCod" } ,
         { Name :  "Nombres" , key : "Names" } ,
         { Name :  "Email" , key : "Email"} ,
-        { Name :  "Modificación", key : "ModifyDate" , IsDate : true },
+        { Name :  "Creación", key : "CreationDate" , IsDate : true },
         { Name :  "Estado" , 
           key : "Status" , 
           IsStatus : true,

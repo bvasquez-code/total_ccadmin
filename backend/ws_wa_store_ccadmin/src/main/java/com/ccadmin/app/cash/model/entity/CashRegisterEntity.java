@@ -11,6 +11,7 @@ public class CashRegisterEntity extends AuditTableEntity implements Serializable
     @Id
     public String RegisterCod;   // VARCHAR(8)
     public String StoreCod;      // VARCHAR(4)
+    public String UserCod;       // VARCHAR(16), nullable para cajas generales
     public String Name;          // VARCHAR(32)
     public String Description;   // VARCHAR(128)
     public String SerialNumber;  // VARCHAR(64)

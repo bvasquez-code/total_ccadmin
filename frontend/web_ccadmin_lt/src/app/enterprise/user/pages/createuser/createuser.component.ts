@@ -9,6 +9,8 @@ import { StoreEntity } from 'src/app/enterprise/shared/model/entity/StoreEntity'
 import { UserStoreEntity } from '../../model/entity/UserStoreEntity';
 import { ToastrService } from 'ngx-toastr';
 import { ValidationHelper } from 'src/app/enterprise/shared/helper/ValidationHelper';
+import { SearchDto } from 'src/app/enterprise/shared/model/dto/SearchDto';
+import { ResponsePageSearch } from 'src/app/enterprise/shared/model/dto/ResponsePageSearch';
 
 @Component({
   selector: 'app-createuser',
@@ -28,6 +30,9 @@ export class CreateuserComponent implements OnInit {
   AppUser: AppUserEntity = new AppUserEntity();
   ProfileList: AppProfileEntity[] = [];
   StoreList: StoreEntity[] = [];
+  IsEditMode: boolean = false;
+
+  private OriginalUserCod: string = '';
 
   constructor(
     private appUserService: AppUserService,
@@ -36,7 +41,9 @@ export class CreateuserComponent implements OnInit {
   ) {
 
     let urlTree: any = this.router.parseUrl(this.router.url);
-    this.AppUser.UserCod = urlTree.queryParams['UserCod'];
+    this.OriginalUserCod = (urlTree.queryParams['UserCod'] || '').trim();
+    this.IsEditMode = this.OriginalUserCod.length > 0;
+    this.AppUser.UserCod = this.OriginalUserCod;
     this.findDataForm(this.AppUser.UserCod);
 
   }
@@ -72,17 +79,45 @@ export class CreateuserComponent implements OnInit {
   async save() {
     if (!this.AppUser) this.AppUser = new AppUserEntity();
 
-    this.AppUser.UserCod = this.txtUserCod.nativeElement.value;
+    this.AppUser.UserCod = (this.IsEditMode
+      ? this.OriginalUserCod
+      : this.txtUserCod.nativeElement.value).trim();
     this.AppUser.PasswordDecoded = this.txtPassword.nativeElement.value;
 
     this.AppUser.Person.DocumentType = this.cboDocumentType.nativeElement.value;
-    this.AppUser.Person.DocumentNum = this.txtDocumentNum.nativeElement.value;
+    this.AppUser.Person.DocumentNum = this.txtDocumentNum.nativeElement.value.trim();
     this.AppUser.Person.Names = this.txtNames.nativeElement.value;
     this.AppUser.Person.LastNames = this.txtLastNames.nativeElement.value;
     this.AppUser.Person.CellPhone = this.txtCellPhone.nativeElement.value;
     this.AppUser.Person.Email = this.txtEmail.nativeElement.value;
 
     if (!this.validate(this.AppUser)) return;
+
+    let userWithSameDocument: AppUserEntity | null;
+    let userWithSameCode: AppUserEntity | null = null;
+    try {
+      [userWithSameDocument, userWithSameCode] = await Promise.all([
+        this.findUserWithDocumentNumber(this.AppUser.Person.DocumentNum),
+        this.IsEditMode
+          ? Promise.resolve(null)
+          : this.findUserWithUserCode(this.AppUser.UserCod)
+      ]);
+    } catch (error: any) {
+      this.toastrService.error(error.message || 'No se pudo validar el usuario');
+      return;
+    }
+    if (userWithSameCode) {
+      this.toastrService.error(`El usuario ${this.AppUser.UserCod} ya existe.`);
+      this.txtUserCod.nativeElement.focus();
+      return;
+    }
+    if (userWithSameDocument) {
+      this.toastrService.error(
+        `El número de documento ya está asignado al usuario ${userWithSameDocument.UserCod}.`
+      );
+      this.txtDocumentNum.nativeElement.focus();
+      return;
+    }
 
     const rpt: ResponseWsDto = await this.appUserService.save(this.AppUser);
 
@@ -91,6 +126,45 @@ export class CreateuserComponent implements OnInit {
       this.router.navigate(['/enterprise/user/pages/listuser']);
     }
 
+  }
+
+  private async findUserWithDocumentNumber(documentNumber: string): Promise<AppUserEntity | null> {
+    const normalizedDocumentNumber = this.normalizeDocumentNumber(documentNumber);
+    const userList = await this.findUsers(normalizedDocumentNumber);
+    return userList.find(user =>
+        this.normalizeUserCode(user.UserCod) !== this.normalizeUserCode(this.OriginalUserCod)
+        && this.normalizeDocumentNumber(user.Person?.DocumentNum) === normalizedDocumentNumber
+      ) || null;
+  }
+
+  private async findUserWithUserCode(userCode: string): Promise<AppUserEntity | null> {
+    const normalizedUserCode = this.normalizeUserCode(userCode);
+    const userList = await this.findUsers(normalizedUserCode);
+    return userList.find(user =>
+      this.normalizeUserCode(user.UserCod) === normalizedUserCode
+    ) || null;
+  }
+
+  private async findUsers(query: string): Promise<AppUserEntity[]> {
+    const search = new SearchDto();
+    search.Page = 1;
+    search.Query = query;
+
+    const response = await this.appUserService.findAll(search);
+    if (response.ErrorStatus) {
+      throw new Error(response.Message || 'No se pudo validar el usuario');
+    }
+
+    const pageSearch = response.Data as ResponsePageSearch<AppUserEntity>;
+    return pageSearch?.resultSearch || [];
+  }
+
+  private normalizeDocumentNumber(documentNumber: string | null | undefined): string {
+    return (documentNumber || '').trim().toUpperCase();
+  }
+
+  private normalizeUserCode(userCode: string | null | undefined): string {
+    return (userCode || '').trim().toUpperCase();
   }
 
   validate(appUser: AppUserEntity): boolean {
