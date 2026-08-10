@@ -14,6 +14,14 @@ public interface StoreVirtualConfigRepository extends JpaRepository<StoreVirtual
     @Query(value = """
             select svc.*
             from store_virtual_config svc
+            where svc.StoreCod = :storeCod
+            limit 1
+            """, nativeQuery = true)
+    Optional<StoreVirtualConfigEntity> findByStoreCod(@Param("storeCod") String storeCod);
+
+    @Query(value = """
+            select svc.*
+            from store_virtual_config svc
             inner join store s on s.StoreCod = svc.StoreCod
             where svc.StoreCod = :storeCod
               and svc.Status = 'A'

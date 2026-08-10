@@ -113,6 +113,7 @@ export class SidebarMenuConfigService {
                 { permission: "SI000002", label: "Creacion de menus", url: "enterprise/menu/pages/createmenu", urlShade: "enterprise/menu/pages/listmenu", isVisible: false },
                 { permission: "SI000003", label: "Bandeja de Tiendas", url: "enterprise/store/pages/liststore" },
                 { permission: "SI000004", label: "Creacion de Tiendas", url: "enterprise/store/pages/createstore", urlShade: "enterprise/store/pages/liststore", isVisible: false },
+                { permission: "SI000003", label: "Configurar tienda virtual", url: "enterprise/store/pages/createstorevirtualconfig", urlShade: "enterprise/store/pages/liststore", isVisible: false },
                 { permission: "SI000005", label: "Monedas", url: "enterprise/system/pages/listcurrency" },
                 { permission: "SI000006", label: "Crear moneda", url: "enterprise/system/pages/createcurrency", urlShade: "enterprise/system/pages/listcurrency", isVisible: false },
                 { permission: "SI000007", label: "Metodos de pago", url: "enterprise/system/pages/listpaymentmethod" },

@@ -4,6 +4,7 @@ import com.ccadmin.app.shared.interfaceccadmin.CcAdminRepository;
 import com.ccadmin.app.store.model.entity.StoreEntity;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -11,6 +12,14 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface StoreRepository extends JpaRepository<StoreEntity,String>, CcAdminRepository<StoreEntity,String> {
+
+    @Query(value = """
+            select s.*
+            from store s
+            where s.StoreCod = :storeCod
+            limit 1
+            """, nativeQuery = true)
+    Optional<StoreEntity> findByStoreCod(@Param("storeCod") String storeCod);
 
     @Query(value = """
             select s.* from store s where s.Status = 'A' order by s.StoreCod

@@ -60,7 +60,18 @@ export class ListstoreComponent implements OnInit, ActionTableService<StoreEntit
           ColumnAction: true,
           Id: ["StoreCod"],
           Options: [
-            { Type: "Url", Name: "fa fa-pencil-alt", Url: "/enterprise/store/pages/createstore?StoreCod={StoreCod}" }
+            {
+              Type: "Url",
+              Name: "fa fa-pencil-alt",
+              Title: "Editar tienda",
+              Url: "/enterprise/store/pages/createstore?StoreCod={StoreCod}"
+            },
+            {
+              Type: "Url",
+              Name: "fa fa-globe-americas",
+              Title: "Configurar tienda virtual",
+              Url: "/enterprise/store/pages/createstorevirtualconfig?StoreCod={StoreCod}"
+            }
           ]
         }
       ],

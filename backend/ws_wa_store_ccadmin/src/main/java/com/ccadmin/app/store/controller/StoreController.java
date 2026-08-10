@@ -1,6 +1,7 @@
 package com.ccadmin.app.store.controller;
 
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
+import com.ccadmin.app.store.model.dto.StoreVirtualConfigRegisterDto;
 import com.ccadmin.app.store.model.entity.StoreEntity;
 import com.ccadmin.app.store.service.StoreService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -70,6 +71,16 @@ public class StoreController {
         }
     }
 
+    @GetMapping("findVirtualConfig")
+    public ResponseEntity<ResponseWsDto> findVirtualConfig(@RequestParam String StoreCod) {
+        try {
+            return new ResponseEntity<ResponseWsDto>(
+                    new ResponseWsDto(this.storeService.findVirtualConfig(StoreCod)), HttpStatus.OK);
+        } catch (Exception ex) {
+            return new ResponseEntity<ResponseWsDto>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+
     @PostMapping("initializeStoreAutomation")
     public ResponseEntity<ResponseWsDto> initializeStoreAutomation(@RequestBody StoreEntity store) {
         try {
@@ -85,6 +96,16 @@ public class StoreController {
         try {
             return new ResponseEntity<ResponseWsDto>(
                     new ResponseWsDto(this.storeService.save(store)), HttpStatus.OK);
+        } catch (Exception ex) {
+            return new ResponseEntity<ResponseWsDto>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("saveVirtualConfig")
+    public ResponseEntity<ResponseWsDto> saveVirtualConfig(@RequestBody StoreVirtualConfigRegisterDto register) {
+        try {
+            return new ResponseEntity<ResponseWsDto>(
+                    new ResponseWsDto(this.storeService.saveVirtualConfig(register)), HttpStatus.OK);
         } catch (Exception ex) {
             return new ResponseEntity<ResponseWsDto>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
         }

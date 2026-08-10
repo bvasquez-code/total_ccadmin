@@ -7,6 +7,10 @@ export class StoreEntity extends AuditTableEntity {
     public Description: string;
     public Address: string;
     public UbigeoCod: string;
+    public SunatAddressTypeCode: string;
+    public IsVirtualStoreEnabled: string;
+    public Latitude: number | null;
+    public Longitude: number | null;
 
     constructor() {
         super();
@@ -15,5 +19,9 @@ export class StoreEntity extends AuditTableEntity {
         this.Description = '';
         this.Address = '';
         this.UbigeoCod = '';
+        this.SunatAddressTypeCode = '0000';
+        this.IsVirtualStoreEnabled = 'N';
+        this.Latitude = null;
+        this.Longitude = null;
     }
 }

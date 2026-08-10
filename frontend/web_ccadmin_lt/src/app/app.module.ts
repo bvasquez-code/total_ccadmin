@@ -96,6 +96,7 @@ import { DirecttransferComponent } from './enterprise/transfer/pages/directtrans
 import { ViewpucharseComponent } from './enterprise/pucharse/pages/viewpucharse/viewpucharse.component';
 import { ListstoreComponent } from './enterprise/store/pages/liststore/liststore.component';
 import { CreatestoreComponent } from './enterprise/store/pages/createstore/createstore.component';
+import { CreatestorevirtualconfigComponent } from './enterprise/store/pages/createstorevirtualconfig/createstorevirtualconfig.component';
 import { ListbusinessconfiggroupComponent } from './enterprise/businessconfiggroup/pages/listbusinessconfiggroup/listbusinessconfiggroup.component';
 import { CreatebusinessconfiggroupComponent } from './enterprise/businessconfiggroup/pages/createbusinessconfiggroup/createbusinessconfiggroup.component';
 import { CreatebusinessconfigComponent } from './enterprise/businessconfiggroup/pages/createbusinessconfig/createbusinessconfig.component';
@@ -209,6 +210,7 @@ import { ViewBulkLoadComponent } from './enterprise/bulkload/pages/viewbulkload/
     ViewpucharseComponent,
     ListstoreComponent,
     CreatestoreComponent,
+    CreatestorevirtualconfigComponent,
     ListbusinessconfiggroupComponent,
     CreatebusinessconfiggroupComponent,
     CreatebusinessconfigComponent,

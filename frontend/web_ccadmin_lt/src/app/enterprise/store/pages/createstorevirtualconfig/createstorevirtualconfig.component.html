@@ -1,0 +1,212 @@
+<div role="main" class="main-content">
+  <div class="page-content container container-plus">
+    <div class="card acard mt-2 mt-lg-3">
+      <div class="card-header">
+        <h3 class="card-title text-125 text-primary-d2">
+          <i class="fa fa-globe-americas text-dark-l3 mr-1"></i>
+          Configurar tienda virtual
+        </h3>
+      </div>
+
+      <div class="card-body px-3 pb-1">
+        <div class="alert bgc-blue-l4 border-none border-l-4 brc-blue-m1 text-dark-tp2 mb-4">
+          <strong>{{ StoreCod }}{{ Store.Name ? ' - ' + Store.Name : '' }}</strong>
+          <div class="mt-1">
+            Selecciona un alcance sugerido como punto de partida. Todos los valores pueden modificarse antes de guardar.
+          </div>
+        </div>
+
+        <form class="mt-lg-3" autocomplete="off">
+          <h4 class="text-primary-d2 text-110 border-b-1 brc-grey-l2 pb-2 mb-4">
+            Datos de la tienda virtual
+          </h4>
+
+          <div class="form-group row">
+            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+              <label class="mb-0">Usar en tienda virtual</label>
+            </div>
+            <div class="col-sm-9">
+              <select class="form-control col-sm-5 col-md-3"
+                [(ngModel)]="Store.IsVirtualStoreEnabled"
+                name="IsVirtualStoreEnabled">
+                <option value="S">Activa</option>
+                <option value="N">Inactiva</option>
+              </select>
+              <small class="form-text text-muted col-sm-9 col-md-7 px-0">
+                Al desactivarla se conserva la configuracion, pero la tienda no participara en la venta virtual.
+              </small>
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+              <label class="mb-0">Direccion</label>
+            </div>
+            <div class="col-sm-9">
+              <input type="text" class="form-control col-sm-9 col-md-7"
+                maxlength="128"
+                [(ngModel)]="Store.Address"
+                name="Address">
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+              <label class="mb-0">Ubigeo</label>
+            </div>
+            <div class="col-sm-9">
+              <input type="text" class="form-control col-sm-7 col-md-5"
+                maxlength="12"
+                [(ngModel)]="Store.UbigeoCod"
+                name="UbigeoCod">
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+              <label class="mb-0">Coordenadas</label>
+            </div>
+            <div class="col-sm-9 d-md-flex px-sm-3">
+              <div class="input-group col-md-4 px-0 mr-md-2">
+                <div class="input-group-prepend"><span class="input-group-text">Latitud</span></div>
+                <input type="number" class="form-control"
+                  min="-90" max="90" step="0.00000001"
+                  [(ngModel)]="Store.Latitude"
+                  name="Latitude">
+              </div>
+              <div class="input-group col-md-4 px-0 mt-2 mt-md-0">
+                <div class="input-group-prepend"><span class="input-group-text">Longitud</span></div>
+                <input type="number" class="form-control"
+                  min="-180" max="180" step="0.00000001"
+                  [(ngModel)]="Store.Longitude"
+                  name="Longitude">
+              </div>
+            </div>
+          </div>
+
+          <div *ngIf="!deliveryOptionsEnabled"
+            class="alert bgc-yellow-l4 border-none border-l-4 brc-warning-m1 text-dark-tp2 mt-4">
+            Activa la tienda virtual y completa direccion, ubigeo, latitud y longitud para habilitar las opciones de delivery.
+          </div>
+
+          <fieldset class="border-0 p-0 m-0 w-100" [disabled]="!deliveryOptionsEnabled">
+            <h4 class="text-primary-d2 text-110 border-b-1 brc-grey-l2 pb-2 mt-5 mb-4">
+              Opciones de delivery y recojo
+            </h4>
+
+          <div class="form-group row">
+            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+              <label class="mb-0">Alcance sugerido</label>
+            </div>
+            <div class="col-sm-9">
+              <select class="form-control col-sm-9 col-md-7"
+                [(ngModel)]="SelectedPreset"
+                name="SelectedPreset"
+                (change)="applySelectedPreset()">
+                <option value="CUSTOM">Configuracion personalizada</option>
+                <option *ngFor="let preset of ReachPresets" [value]="preset.Code">
+                  {{ preset.Name }}
+                </option>
+              </select>
+              <small class="form-text text-muted col-sm-9 col-md-7 px-0">
+                El delivery automatico se mantiene cercano; el alcance programado cubre envios coordinados, courier o agencia.
+              </small>
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+              <label class="mb-0">Delivery automatico</label>
+            </div>
+            <div class="col-sm-9 d-sm-flex px-sm-3">
+              <select class="form-control col-sm-3 mr-sm-2"
+                [(ngModel)]="Config.AllowsAutomaticDelivery"
+                name="AllowsAutomaticDelivery"
+                (change)="markAsCustom()">
+                <option value="S">Permitido</option>
+                <option value="N">No permitido</option>
+              </select>
+              <div class="input-group col-sm-5 px-0 mt-2 mt-sm-0">
+                <input type="number" class="form-control"
+                  min="0" step="0.01"
+                  [disabled]="Config.AllowsAutomaticDelivery !== 'S'"
+                  [(ngModel)]="Config.AutomaticDeliveryRadiusKm"
+                  name="AutomaticDeliveryRadiusKm"
+                  (ngModelChange)="markAsCustom()">
+                <div class="input-group-append"><span class="input-group-text">km</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+              <label class="mb-0">Entrega programada</label>
+            </div>
+            <div class="col-sm-9 d-sm-flex px-sm-3">
+              <select class="form-control col-sm-3 mr-sm-2"
+                [(ngModel)]="Config.AllowsScheduledDelivery"
+                name="AllowsScheduledDelivery"
+                (change)="markAsCustom()">
+                <option value="S">Permitida</option>
+                <option value="N">No permitida</option>
+              </select>
+              <div class="input-group col-sm-5 px-0 mt-2 mt-sm-0">
+                <input type="number" class="form-control"
+                  min="0" step="0.01"
+                  [disabled]="Config.AllowsScheduledDelivery !== 'S'"
+                  [(ngModel)]="Config.ScheduledDeliveryMaxRadiusKm"
+                  name="ScheduledDeliveryMaxRadiusKm"
+                  (ngModelChange)="markAsCustom()">
+                <div class="input-group-append"><span class="input-group-text">km</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+              <label class="mb-0">Recojo en tienda</label>
+            </div>
+            <div class="col-sm-9">
+              <select class="form-control col-sm-5 col-md-3"
+                [(ngModel)]="Config.AllowsStorePickup"
+                name="AllowsStorePickup"
+                (change)="markAsCustom()">
+                <option value="S">Permitido</option>
+                <option value="N">No permitido</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group row">
+            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+              <label class="mb-0">Tiempo de preparacion</label>
+            </div>
+            <div class="col-sm-9">
+              <div class="input-group col-sm-5 col-md-4 px-0">
+                <input type="number" class="form-control"
+                  min="0" step="1"
+                  [(ngModel)]="Config.PreparationTimeMinutes"
+                  name="PreparationTimeMinutes"
+                  (ngModelChange)="markAsCustom()">
+                <div class="input-group-append"><span class="input-group-text">minutos</span></div>
+              </div>
+            </div>
+          </div>
+          </fieldset>
+
+          <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
+            <div class="offset-md-3 col-md-9 text-nowrap">
+              <button class="btn btn-info btn-bold px-4" type="button" (click)="save()">
+                <i class="fa fa-check mr-1"></i>Guardar
+              </button>
+              <button class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4"
+                type="button" (click)="returnToList()">
+                <i class="fa fa-undo mr-1"></i>Volver
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

@@ -3,6 +3,7 @@ import { AppSetting } from "src/app/config/app.setting";
 import { ApiService } from "../../compartido/service/api.service";
 import { ResponseWsDto } from "../../shared/model/dto/ResponseWsDto";
 import { StoreEntity } from "../../shared/model/entity/StoreEntity";
+import { StoreVirtualConfigRegisterDto } from "../model/dto/StoreVirtualConfigRegisterDto";
 
 @Injectable({
     providedIn: 'root'
@@ -57,6 +58,15 @@ export class StoreService {
         return RespuestaWS;
     }
 
+    async FindVirtualConfig(StoreCod: string) {
+        let url: string = `${AppSetting.API}/api/v1/store/findVirtualConfig`;
+        let RespuestaWS: ResponseWsDto;
+
+        RespuestaWS = await this.apiService.ExecuteGetService(url, { StoreCod: StoreCod });
+
+        return RespuestaWS;
+    }
+
     async InitializeStoreAutomation(store: StoreEntity) {
         let url: string = `${AppSetting.API}/api/v1/store/initializeStoreAutomation`;
         let RespuestaWS: ResponseWsDto;
@@ -71,6 +81,15 @@ export class StoreService {
         let RespuestaWS: ResponseWsDto;
 
         RespuestaWS = await this.apiService.ExecutePostService(url, store);
+
+        return RespuestaWS;
+    }
+
+    async SaveVirtualConfig(register: StoreVirtualConfigRegisterDto) {
+        let url: string = `${AppSetting.API}/api/v1/store/saveVirtualConfig`;
+        let RespuestaWS: ResponseWsDto;
+
+        RespuestaWS = await this.apiService.ExecutePostService(url, register);
 
         return RespuestaWS;
     }
