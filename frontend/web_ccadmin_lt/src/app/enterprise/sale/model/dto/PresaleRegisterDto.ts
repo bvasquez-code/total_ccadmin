@@ -1,16 +1,19 @@
 import { PresaleDetEntity } from "../entity/PresaleDetEntity";
+import { PresaleChannelEntity } from "../entity/PresaleChannelEntity";
 import { PresaleHeadEntity } from "../entity/PresaleHeadEntity";
 
 export class PresaleRegisterDto
 {
     public Headboard : PresaleHeadEntity = new PresaleHeadEntity();
     public DetailList : PresaleDetEntity[] = [];
+    public PresaleChannel : PresaleChannelEntity = new PresaleChannelEntity();
     public CreditNoteCod: string = "";
 
     public constructor()
     {
         this.Headboard = new PresaleHeadEntity();
         this.DetailList = [];
+        this.PresaleChannel = new PresaleChannelEntity();
         this.CreditNoteCod = "";
     }
 
@@ -50,6 +53,10 @@ export class PresaleRegisterDto
     SetDataSession( DataSession : any )
     {
         this.Headboard.SetDataSession( DataSession.Headboard );
+        this.PresaleChannel = Object.assign(
+            new PresaleChannelEntity(),
+            DataSession.PresaleChannel ?? {}
+        );
         this.CreditNoteCod = DataSession.CreditNoteCod ?? "";
 
         for(let Item of DataSession.DetailList)

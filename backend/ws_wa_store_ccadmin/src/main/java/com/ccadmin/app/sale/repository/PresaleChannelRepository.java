@@ -14,6 +14,14 @@ public interface PresaleChannelRepository extends JpaRepository<PresaleChannelEn
     @Query(value = """
             select pc.*
             from presale_channel pc
+            where pc.PresaleCod = :presaleCod
+            limit 1
+            """, nativeQuery = true)
+    Optional<PresaleChannelEntity> findByPresaleCod(@Param("presaleCod") String presaleCod);
+
+    @Query(value = """
+            select pc.*
+            from presale_channel pc
             inner join commercial_channel cc on cc.ChannelCod = pc.ChannelCod
             where pc.PresaleCod = :presaleCod
               and pc.Status = 'A'

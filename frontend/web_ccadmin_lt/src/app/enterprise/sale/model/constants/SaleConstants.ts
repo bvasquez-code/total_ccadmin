@@ -1,5 +1,8 @@
 export class SaleConstants {
 
+    public static COMMERCIAL_CHANNEL_IN_PERSON : string = "IN_PERSON";
+    public static COMMERCIAL_CHANNEL_WEB : string = "WEB";
+
     public static PENDING : string = "P";
     public static CONFIRMED : string = "C";
     public static REJECTED : string = "R";

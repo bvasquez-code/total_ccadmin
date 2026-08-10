@@ -1,5 +1,6 @@
 package com.ccadmin.app.sale.model.dto;
 
+import com.ccadmin.app.sale.model.entity.PresaleChannelEntity;
 import com.ccadmin.app.sale.model.entity.PresaleDetEntity;
 import com.ccadmin.app.sale.model.entity.PresaleHeadEntity;
 
@@ -11,5 +12,6 @@ public class PresaleDetailDto {
 
     public List<PresaleDetEntity> DetailList;
 
+    public PresaleChannelEntity PresaleChannel;
 
 }

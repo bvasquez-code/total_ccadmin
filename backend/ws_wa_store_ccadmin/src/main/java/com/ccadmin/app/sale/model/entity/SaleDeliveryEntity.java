@@ -1,5 +1,6 @@
 package com.ccadmin.app.sale.model.entity;
 
+import com.ccadmin.app.sale.model.constants.SaleConstants;
 import com.ccadmin.app.shared.model.entity.AuditTableEntity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -16,7 +17,7 @@ public class SaleDeliveryEntity extends AuditTableEntity implements Serializable
     @Id
     public String SaleCod;
     public String DeliveryTypeCod;
-    public String DeliveryStatus = "PENDING";
+    public String DeliveryStatus = SaleConstants.DELIVERY_STATUS_PENDING;
     public Long ClientAddressID;
     public String IsThirdParty = "N";
     public String Names;

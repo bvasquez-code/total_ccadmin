@@ -15,6 +15,14 @@ public interface CommercialChannelRepository extends JpaRepository<CommercialCha
     @Query(value = """
             select cc.*
             from commercial_channel cc
+            where cc.ChannelCod = :channelCod
+            limit 1
+            """, nativeQuery = true)
+    Optional<CommercialChannelEntity> findByChannelCod(@Param("channelCod") String channelCod);
+
+    @Query(value = """
+            select cc.*
+            from commercial_channel cc
             where cc.Status = 'A'
             order by cc.Name, cc.ChannelCod
             """, nativeQuery = true)

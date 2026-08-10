@@ -5,6 +5,7 @@ DELIMITER $$
 CREATE PROCEDURE `p_manage_sale_delivery`()
 BEGIN
     DECLARE v_table_exists INT DEFAULT 0;
+    DECLARE v_constraint_exists INT DEFAULT 0;
 
     SELECT COUNT(*) INTO v_table_exists
     FROM information_schema.tables
@@ -15,7 +16,7 @@ BEGIN
         CREATE TABLE `sale_delivery` (
           `SaleCod` varchar(16) NOT NULL COMMENT 'Codigo de la venta relacionada',
           `DeliveryTypeCod` varchar(24) NOT NULL COMMENT 'Codigo de la modalidad de entrega o recojo',
-          `DeliveryStatus` varchar(24) NOT NULL DEFAULT 'PENDING' COMMENT 'Estado operativo de la entrega (PENDING, SCHEDULED, PREPARING, READY_FOR_PICKUP, DISPATCHED, DELIVERED, CANCELLED o FAILED_DELIVERY)',
+          `DeliveryStatus` char(1) NOT NULL DEFAULT 'P' COMMENT 'Estado operativo de la entrega (P:Pendiente, S:Programada, R:En preparacion, L:Lista para recojo, D:Despachada, E:Entregada, X:Cancelada, F:Entrega fallida)',
           `ClientAddressID` bigint DEFAULT NULL COMMENT 'Direccion reutilizable del cliente que origino la fotografia de entrega',
           `IsThirdParty` char(1) NOT NULL DEFAULT 'N' COMMENT 'Indica si quien recibe o recoge es distinto del comprador (S/N)',
           `Names` varchar(256) NOT NULL COMMENT 'Nombres de la persona que recibira o recogera el pedido',
@@ -59,12 +60,43 @@ BEGIN
           CONSTRAINT `chk_sale_delivery_longitude` CHECK (`Longitude` IS NULL OR (`Longitude` BETWEEN -180 AND 180)),
           CONSTRAINT `chk_sale_delivery_distance` CHECK (`EstimatedDistanceKm` IS NULL OR `EstimatedDistanceKm` >= 0),
           CONSTRAINT `chk_sale_delivery_schedule` CHECK (`ScheduledFrom` IS NULL OR `ScheduledTo` IS NULL OR `ScheduledTo` >= `ScheduledFrom`),
+          CONSTRAINT `chk_sale_delivery_status_value` CHECK (`DeliveryStatus` IN ('P','S','R','L','D','E','X','F')),
           CONSTRAINT `chk_sale_delivery_status` CHECK (`Status` IN ('A','I'))
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
         SELECT 'Tabla sale_delivery creada desde cero.' AS Mensaje;
     ELSE
-        SELECT 'Tabla sale_delivery ya existe. No se realizaron cambios estructurales.' AS Mensaje;
+        SELECT COUNT(*) INTO v_constraint_exists
+        FROM information_schema.table_constraints
+        WHERE constraint_schema = DATABASE()
+          AND table_name = 'sale_delivery'
+          AND constraint_name = 'chk_sale_delivery_status_value';
+
+        IF v_constraint_exists > 0 THEN
+            ALTER TABLE `sale_delivery`
+                DROP CHECK `chk_sale_delivery_status_value`;
+        END IF;
+
+        UPDATE `sale_delivery`
+        SET `DeliveryStatus` = CASE `DeliveryStatus`
+            WHEN 'PENDING' THEN 'P'
+            WHEN 'SCHEDULED' THEN 'S'
+            WHEN 'PREPARING' THEN 'R'
+            WHEN 'READY_FOR_PICKUP' THEN 'L'
+            WHEN 'DISPATCHED' THEN 'D'
+            WHEN 'DELIVERED' THEN 'E'
+            WHEN 'CANCELLED' THEN 'X'
+            WHEN 'FAILED_DELIVERY' THEN 'F'
+            ELSE `DeliveryStatus`
+        END;
+
+        ALTER TABLE `sale_delivery`
+            MODIFY COLUMN `DeliveryStatus` char(1) NOT NULL DEFAULT 'P'
+                COMMENT 'Estado operativo de la entrega (P:Pendiente, S:Programada, R:En preparacion, L:Lista para recojo, D:Despachada, E:Entregada, X:Cancelada, F:Entrega fallida)',
+            ADD CONSTRAINT `chk_sale_delivery_status_value`
+                CHECK (`DeliveryStatus` IN ('P','S','R','L','D','E','X','F'));
+
+        SELECT 'Tabla sale_delivery actualizada con estados operativos de un caracter.' AS Mensaje;
     END IF;
 END $$
 

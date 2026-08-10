@@ -6,19 +6,9 @@ import com.ccadmin.app.payment.shared.TrxPaymentShared;
 import com.ccadmin.app.product.shared.ProductShared;
 import com.ccadmin.app.sale.model.dto.CreditNoteDetailDto;
 import com.ccadmin.app.sale.model.dto.SaleDetailDto;
-import com.ccadmin.app.sale.model.entity.SaleDetEntity;
-import com.ccadmin.app.sale.model.entity.SaleDocumentEntity;
-import com.ccadmin.app.sale.model.entity.SaleDetTaxEntity;
-import com.ccadmin.app.sale.model.entity.SaleDetWarehouseEntity;
-import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
-import com.ccadmin.app.sale.model.entity.SalePaymentEntity;
+import com.ccadmin.app.sale.model.entity.*;
 import com.ccadmin.app.sale.model.factory.SaleDetailDtoFactory;
-import com.ccadmin.app.sale.repository.SaleDetRepository;
-import com.ccadmin.app.sale.repository.SaleDetWarehouseRepository;
-import com.ccadmin.app.sale.repository.SaleDetTaxRepository;
-import com.ccadmin.app.sale.repository.SaleDocumentRepository;
-import com.ccadmin.app.sale.repository.SaleHeadRepository;
-import com.ccadmin.app.sale.repository.SalePaymentRepository;
+import com.ccadmin.app.sale.repository.*;
 import com.ccadmin.app.shared.model.dto.ResponsePageSearch;
 import com.ccadmin.app.shared.model.dto.ResponsePageSearchT;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
@@ -52,6 +42,8 @@ public class SaleSearchService extends SessionService {
     private SaleDetWarehouseRepository saleDetWarehouseRepository;
     @Autowired
     private SaleDetTaxRepository saleDetTaxRepository;
+    @Autowired
+    private SaleChannelRepository saleChannelRepository;
     @Autowired
     private SalePaymentRepository salePaymentRepository;
     @Autowired
@@ -118,6 +110,7 @@ public class SaleSearchService extends SessionService {
         List<SaleDocumentEntity> saleDocumentList = this.saleDocumentRepository.findBySaleCod(SaleCod);
         this.loadDocumentClients(saleDocumentList);
         CreditNoteDetailDto creditNoteDetail = this.creditNoteSearchService.findBySaleCod(SaleCod);
+        SaleChannelEntity saleChannel = this.saleChannelRepository.findById(SaleCod).orElse(null);
 
         if (saleHead.existClient())
         {
@@ -141,7 +134,8 @@ public class SaleSearchService extends SessionService {
                 saleDetailList,
                 salePaymentList,
                 saleDocumentList,
-                creditNoteDetail
+                creditNoteDetail,
+                saleChannel
         );
     }
 

@@ -17,7 +17,7 @@ public interface VirtualCartRepository extends JpaRepository<VirtualCartEntity, 
             select vc.*
             from virtual_cart vc
             where vc.CartCod = :cartCod
-              and vc.CartStatus = 'ACTIVE'
+              and vc.CartStatus = 'A'
               and vc.ExpiresDate > now()
               and vc.Status = 'A'
             limit 1
@@ -28,7 +28,7 @@ public interface VirtualCartRepository extends JpaRepository<VirtualCartEntity, 
             select vc.*
             from virtual_cart vc
             where vc.ClientCod = :clientCod
-              and vc.CartStatus = 'ACTIVE'
+              and vc.CartStatus = 'A'
               and vc.ExpiresDate > now()
               and vc.Status = 'A'
             order by vc.ModifyDate desc, vc.CreationDate desc
@@ -38,7 +38,7 @@ public interface VirtualCartRepository extends JpaRepository<VirtualCartEntity, 
     @Query(value = """
             select vc.*
             from virtual_cart vc
-            where vc.CartStatus = 'ACTIVE'
+            where vc.CartStatus = 'A'
               and vc.ExpiresDate <= :expirationDate
               and vc.Status = 'A'
             order by vc.ExpiresDate, vc.CartCod

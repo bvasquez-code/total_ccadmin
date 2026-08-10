@@ -8,6 +8,8 @@ public final class SaleConstants {
     public static final String DOCUMENT_ROLE_INTERNAL = "I";
     public static final String DOCUMENT_ROLE_FISCAL = "F";
     public static final String DOCUMENT_ROLE_OTHER = "O";
+    public static final String COMMERCIAL_CHANNEL_IN_PERSON = "IN_PERSON";
+    public static final String COMMERCIAL_CHANNEL_WEB = "WEB";
 
     public static final String KARDEX_ZONE_SOURCE_PRESALE = "presale_head";
     public static final String KARDEX_ZONE_EVENT_RESERVATION = "PRESALE_RESERVATION";
@@ -18,6 +20,20 @@ public final class SaleConstants {
     public static final String KARDEX_ZONE_EVENT_CREDIT_NOTE_CONFIRMATION = "CREDIT_NOTE_CONFIRMATION";
     public static final String KARDEX_ZONE_EVENT_CREDIT_NOTE_ACCEPTED_RETURN = "CREDIT_NOTE_ACCEPTED_RETURN";
     public static final String KARDEX_ZONE_EVENT_CREDIT_NOTE_REJECTED_STOCK_EXIT = "CREDIT_NOTE_REJECTED_STOCK_EXIT";
+
+    public static final String DELIVERY_STATUS_PENDING = "P";
+    public static final String DELIVERY_STATUS_SCHEDULED = "S";
+    public static final String DELIVERY_STATUS_PREPARING = "R";
+    public static final String DELIVERY_STATUS_READY_FOR_PICKUP = "L";
+    public static final String DELIVERY_STATUS_DISPATCHED = "D";
+    public static final String DELIVERY_STATUS_DELIVERED = "E";
+    public static final String DELIVERY_STATUS_CANCELLED = "X";
+    public static final String DELIVERY_STATUS_FAILED = "F";
+
+    public static final String CART_STATUS_ACTIVE = "A";
+    public static final String CART_STATUS_CONVERTED = "C";
+    public static final String CART_STATUS_ABANDONED = "B";
+    public static final String CART_STATUS_EXPIRED = "E";
 
     /**
      * Status: Pending

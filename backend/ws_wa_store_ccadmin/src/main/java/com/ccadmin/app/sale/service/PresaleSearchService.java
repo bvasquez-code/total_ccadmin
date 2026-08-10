@@ -4,13 +4,11 @@ import com.ccadmin.app.client.model.entity.ClientEntity;
 import com.ccadmin.app.client.shared.ClientShared;
 import com.ccadmin.app.product.shared.ProductShared;
 import com.ccadmin.app.sale.model.dto.PresaleDetailDto;
+import com.ccadmin.app.sale.model.entity.PresaleChannelEntity;
 import com.ccadmin.app.sale.model.entity.PresaleDetEntity;
 import com.ccadmin.app.sale.model.entity.PresaleHeadEntity;
 import com.ccadmin.app.sale.model.factory.PresaleDetailDtoFactory;
-import com.ccadmin.app.sale.repository.PresaleDetRepository;
-import com.ccadmin.app.sale.repository.PresaleDetWarehouseRepository;
-import com.ccadmin.app.sale.repository.PresaleHeadRepository;
-import com.ccadmin.app.sale.repository.SaleHeadRepository;
+import com.ccadmin.app.sale.repository.*;
 import com.ccadmin.app.shared.model.dto.ResponsePageSearchT;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import com.ccadmin.app.shared.model.dto.SearchDto;
@@ -37,6 +35,8 @@ public class PresaleSearchService {
     private PresaleDetRepository presaleDetRepository;
     @Autowired
     private PresaleDetWarehouseRepository presaleDetWarehouseRepository;
+    @Autowired
+    private PresaleChannelRepository presaleChannelRepository;
     @Autowired
     private ProductShared productShared;
     @Autowired
@@ -86,6 +86,7 @@ public class PresaleSearchService {
     public PresaleDetailDto findById(String PresaleCod) {
         PresaleHeadEntity presaleHead = this.presaleHeadRepository.findById(PresaleCod).get();
         List<PresaleDetEntity> presaleDetailList = this.presaleDetRepository.findByPresaleCod(PresaleCod);
+        PresaleChannelEntity presaleChannel = this.presaleChannelRepository.findById(PresaleCod).get();
 
         if (presaleHead.existClient())
         {
@@ -98,7 +99,7 @@ public class PresaleSearchService {
             item.Product = this.productShared.findById(item.ProductCod);
         }
 
-        return PresaleDetailDtoFactory.fromEntities(presaleHead, presaleDetailList);
+        return PresaleDetailDtoFactory.fromEntities(presaleHead, presaleDetailList,presaleChannel);
     }
 
     public ResponseWsDto findDataForm(String PresaleCod) {

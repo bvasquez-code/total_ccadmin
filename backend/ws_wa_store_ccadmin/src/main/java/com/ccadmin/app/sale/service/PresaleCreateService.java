@@ -13,13 +13,16 @@ import com.ccadmin.app.sale.model.dto.PresaleDetailDto;
 import com.ccadmin.app.sale.model.dto.PresaleRegisterDto;
 import com.ccadmin.app.sale.model.dto.SaleDetailDto;
 import com.ccadmin.app.sale.model.entity.PeriodEntity;
+import com.ccadmin.app.sale.model.entity.PresaleChannelEntity;
 import com.ccadmin.app.sale.model.entity.PresaleDetEntity;
 import com.ccadmin.app.sale.model.entity.PresaleDetWarehouseEntity;
 import com.ccadmin.app.sale.model.entity.PresaleHeadEntity;
 import com.ccadmin.app.sale.model.factory.PresaleDetWarehouseEntityFactory;
 import com.ccadmin.app.sale.model.factory.PresaleDetWarehouseIdFactory;
 import com.ccadmin.app.sale.model.factory.PresaleHeadEntityFactory;
+import com.ccadmin.app.sale.repository.CommercialChannelRepository;
 import com.ccadmin.app.sale.repository.PeriodRepository;
+import com.ccadmin.app.sale.repository.PresaleChannelRepository;
 import com.ccadmin.app.sale.repository.PresaleDetRepository;
 import com.ccadmin.app.sale.repository.PresaleDetWarehouseRepository;
 import com.ccadmin.app.sale.repository.PresaleHeadRepository;
@@ -48,6 +51,10 @@ public class PresaleCreateService extends SessionService {
 
     @Autowired
     private PresaleHeadRepository presaleHeadRepository;
+    @Autowired
+    private CommercialChannelRepository commercialChannelRepository;
+    @Autowired
+    private PresaleChannelRepository presaleChannelRepository;
     @Autowired
     private PresaleDetRepository presaleDetRepository;
     @Autowired
@@ -93,8 +100,10 @@ public class PresaleCreateService extends SessionService {
         presaleRegister.DetailList = this.recalculateAmountPresaleDet(presaleRegister);
         presaleRegister.Headboard = this.recalculateAmountPresaleHead(presaleRegister);
         List<PresaleDetWarehouseEntity> presaleDetWarehouseList = this.createDetailWarehouseDefault(presaleRegister);
+        presaleRegister.PresaleChannel = this.createPresaleChannel(presaleRegister);
 
         this.presaleHeadRepository.save(presaleRegister.Headboard);
+        this.presaleChannelRepository.save(presaleRegister.PresaleChannel);
         this.presaleDetRepository.saveAll(presaleRegister.DetailList);
         this.presaleDetWarehouseRepository.saveAll(presaleDetWarehouseList);
         PresaleDetailDto  presaleDetail = presaleSearchService.findById(presaleRegister.Headboard.PresaleCod);
@@ -251,6 +260,27 @@ public class PresaleCreateService extends SessionService {
         presaleHead.CashSessionID = getCashSessionID();
 
         return presaleHead;
+    }
+
+    private PresaleChannelEntity createPresaleChannel(PresaleRegisterDto presaleRegister) {
+        String channelCod = presaleRegister.PresaleChannel == null
+                ? null
+                : presaleRegister.PresaleChannel.ChannelCod;
+
+        if (channelCod == null || channelCod.isBlank()
+                || this.commercialChannelRepository.findByChannelCod(channelCod).isEmpty()) {
+            throw new PresaleBuildException("El canal de venta indicado no existe");
+        }
+
+        PresaleChannelEntity presaleChannel = this.presaleChannelRepository
+                .findByPresaleCod(presaleRegister.Headboard.PresaleCod)
+                .orElseGet(PresaleChannelEntity::new);
+        presaleChannel.PresaleCod = presaleRegister.Headboard.PresaleCod;
+        presaleChannel.ChannelCod = channelCod;
+        presaleChannel.Status = "A";
+        presaleChannel.addSession(getUserCod());
+
+        return presaleChannel;
     }
 
     private void inactiveStatusDetailPresale(String PresaleCod){

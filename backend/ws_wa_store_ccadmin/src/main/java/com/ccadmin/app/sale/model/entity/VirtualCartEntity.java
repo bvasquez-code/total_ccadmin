@@ -1,5 +1,6 @@
 package com.ccadmin.app.sale.model.entity;
 
+import com.ccadmin.app.sale.model.constants.SaleConstants;
 import com.ccadmin.app.shared.model.entity.AuditTableEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -21,7 +22,7 @@ public class VirtualCartEntity extends AuditTableEntity implements Serializable 
     public String SaleCod;
     @Column(columnDefinition = "json")
     public String CartData;
-    public String CartStatus = "ACTIVE";
+    public String CartStatus = SaleConstants.CART_STATUS_ACTIVE;
     public Date ExpiresDate;
 
     public VirtualCartEntity() {

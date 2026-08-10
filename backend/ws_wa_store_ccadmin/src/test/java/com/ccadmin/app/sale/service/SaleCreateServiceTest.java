@@ -6,10 +6,14 @@ import com.ccadmin.app.product.service.ProductRankingService;
 import com.ccadmin.app.product.shared.KardexShared;
 import com.ccadmin.app.sale.model.constants.SaleConstants;
 import com.ccadmin.app.sale.model.dto.SaleDetailDto;
+import com.ccadmin.app.sale.model.entity.PresaleChannelEntity;
+import com.ccadmin.app.sale.model.entity.SaleChannelEntity;
 import com.ccadmin.app.sale.model.entity.SaleDetWarehouseEntity;
 import com.ccadmin.app.sale.model.entity.SaleDocumentEntity;
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
 import com.ccadmin.app.sale.exception.SaleException;
+import com.ccadmin.app.sale.repository.PresaleChannelRepository;
+import com.ccadmin.app.sale.repository.SaleChannelRepository;
 import com.ccadmin.app.sale.repository.SaleDetWarehouseRepository;
 import com.ccadmin.app.sale.repository.SaleHeadRepository;
 import com.ccadmin.app.shared.model.constants.BusinessConfigConstants;
@@ -37,6 +41,10 @@ class SaleCreateServiceTest {
     @Mock
     private SaleHeadRepository saleHeadRepository;
     @Mock
+    private PresaleChannelRepository presaleChannelRepository;
+    @Mock
+    private SaleChannelRepository saleChannelRepository;
+    @Mock
     private SaleDetWarehouseRepository saleDetWarehouseRepository;
     @Mock
     private SaleSearchService saleSearchService;
@@ -52,6 +60,7 @@ class SaleCreateServiceTest {
     private CatalogSearchShared catalogSearchShared;
     @InjectMocks
     private SaleCreateService saleCreateService;
+
 
     @Test
     void confirmsProformaWithoutSchedulingSunat() throws Exception {

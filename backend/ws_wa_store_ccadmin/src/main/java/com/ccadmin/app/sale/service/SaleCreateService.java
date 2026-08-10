@@ -39,6 +39,10 @@ public class SaleCreateService extends SessionService {
     @Autowired
     private SaleHeadRepository saleHeadRepository;
     @Autowired
+    private PresaleChannelRepository presaleChannelRepository;
+    @Autowired
+    private SaleChannelRepository saleChannelRepository;
+    @Autowired
     private SaleDetRepository saleDetRepository;
     @Autowired
     private SaleDetWarehouseRepository saleDetWarehouseRepository;
@@ -88,8 +92,10 @@ public class SaleCreateService extends SessionService {
         List<SaleDetTaxEntity> detailTaxSale = taxCalculation.TaxDetailList;
         List<SaleDetWarehouseEntity> detailSaleWarehouse = this.createSaleDetWarehouseEntities(presaleDetail,saleHead);
         List<SaleAppliedTaxEntity> SaleAppliedTaxList = this.createSaleAppliedTaxEntities(saleHead, detailTaxSale);
+        SaleChannelEntity saleChannel = this.createSaleChannel(presaleDetail.PresaleChannel,saleHead);
 
         this.saleHeadRepository.save(saleHead);
+        this.saleChannelRepository.save(saleChannel);
         this.saleDetRepository.saveAll(detailSale);
         this.saleDetWarehouseRepository.saveAll(detailSaleWarehouse);
         this.saleDetTaxRepository.saveAll(detailTaxSale);
@@ -117,6 +123,15 @@ public class SaleCreateService extends SessionService {
 
     public SaleHeadEntity createSaleHead(PresaleDetailDto presaleDetail, List<TaxEntity> taxList) throws SaleBuildException {
         return createSaleHead(presaleDetail);
+    }
+
+    public SaleChannelEntity createSaleChannel(PresaleChannelEntity presaleChannel,SaleHeadEntity saleHead) {
+        SaleChannelEntity saleChannel = new SaleChannelEntity();
+        saleChannel.SaleCod = saleHead.SaleCod;
+        saleChannel.ChannelCod = presaleChannel.ChannelCod;
+        saleChannel.addSession(getUserCod());
+
+        return saleChannel;
     }
 
     public List<SaleDetEntity> createSaleDetEntities(PresaleDetailDto presaleDetail,SaleHeadEntity saleHead) throws SaleBuildException {
