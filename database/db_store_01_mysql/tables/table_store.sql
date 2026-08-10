@@ -25,6 +25,9 @@ CREATE TABLE `store` (
   `Address` varchar(128) DEFAULT NULL COMMENT 'direccion',
   `UbigeoCod` varchar(12) DEFAULT NULL COMMENT 'codigo de ubigeo',
   `SunatAddressTypeCode` varchar(4) NOT NULL DEFAULT '0000' COMMENT 'Codigo SUNAT de local anexo del emisor. 0000 corresponde al domicilio fiscal/principal.',
+  `IsVirtualStoreEnabled` char(1) NOT NULL DEFAULT 'N' COMMENT 'Indica si la tienda participa en la tienda virtual y publica su stock (S/N)',
+  `Latitude` decimal(10,8) DEFAULT NULL COMMENT 'Latitud geografica de la tienda para calcular cercania y cobertura',
+  `Longitude` decimal(11,8) DEFAULT NULL COMMENT 'Longitud geografica de la tienda para calcular cercania y cobertura',
   `CreationUser` varchar(16) NOT NULL,
   `CreationDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `ModifyUser` varchar(16) DEFAULT NULL,
@@ -33,7 +36,10 @@ CREATE TABLE `store` (
   `CompanyCod` varchar(4) DEFAULT NULL COMMENT 'CÃ³digo legible de la empresa (FK => company.CompanyCod).',
   PRIMARY KEY (`StoreCod`),
   KEY `idx_store_companycod` (`CompanyCod`),
-  CONSTRAINT `fk_store_company` FOREIGN KEY (`CompanyCod`) REFERENCES `company` (`CompanyCod`)
+  CONSTRAINT `fk_store_company` FOREIGN KEY (`CompanyCod`) REFERENCES `company` (`CompanyCod`),
+  CONSTRAINT `chk_store_virtual_enabled` CHECK (`IsVirtualStoreEnabled` IN ('S','N')),
+  CONSTRAINT `chk_store_latitude` CHECK (`Latitude` IS NULL OR (`Latitude` BETWEEN -90 AND 90)),
+  CONSTRAINT `chk_store_longitude` CHECK (`Longitude` IS NULL OR (`Longitude` BETWEEN -180 AND 180))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -56,6 +62,69 @@ CREATE TABLE `store` (
             ALTER TABLE `store`
                 ADD COLUMN `SunatAddressTypeCode` varchar(4) NOT NULL DEFAULT '0000' COMMENT 'Codigo SUNAT de local anexo del emisor. 0000 corresponde al domicilio fiscal/principal.' AFTER `UbigeoCod`;
             SELECT 'Columna SunatAddressTypeCode agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'store'
+              AND column_name = 'IsVirtualStoreEnabled'
+        ) THEN
+            ALTER TABLE `store`
+                ADD COLUMN `IsVirtualStoreEnabled` char(1) NOT NULL DEFAULT 'N'
+                    COMMENT 'Indica si la tienda participa en la tienda virtual y publica su stock (S/N)'
+                    AFTER `SunatAddressTypeCode`;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'store'
+              AND column_name = 'Latitude'
+        ) THEN
+            ALTER TABLE `store`
+                ADD COLUMN `Latitude` decimal(10,8) DEFAULT NULL
+                    COMMENT 'Latitud geografica de la tienda para calcular cercania y cobertura'
+                    AFTER `IsVirtualStoreEnabled`;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'store'
+              AND column_name = 'Longitude'
+        ) THEN
+            ALTER TABLE `store`
+                ADD COLUMN `Longitude` decimal(11,8) DEFAULT NULL
+                    COMMENT 'Longitud geografica de la tienda para calcular cercania y cobertura'
+                    AFTER `Latitude`;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.table_constraints
+            WHERE table_schema = DATABASE() AND table_name = 'store'
+              AND constraint_name = 'chk_store_virtual_enabled'
+        ) THEN
+            ALTER TABLE `store`
+                ADD CONSTRAINT `chk_store_virtual_enabled`
+                CHECK (`IsVirtualStoreEnabled` IN ('S','N'));
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.table_constraints
+            WHERE table_schema = DATABASE() AND table_name = 'store'
+              AND constraint_name = 'chk_store_latitude'
+        ) THEN
+            ALTER TABLE `store`
+                ADD CONSTRAINT `chk_store_latitude`
+                CHECK (`Latitude` IS NULL OR (`Latitude` BETWEEN -90 AND 90));
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.table_constraints
+            WHERE table_schema = DATABASE() AND table_name = 'store'
+              AND constraint_name = 'chk_store_longitude'
+        ) THEN
+            ALTER TABLE `store`
+                ADD CONSTRAINT `chk_store_longitude`
+                CHECK (`Longitude` IS NULL OR (`Longitude` BETWEEN -180 AND 180));
         END IF;
         
         SELECT 'Tabla store ya existe. Validacion de estructura completada.' AS Mensaje;

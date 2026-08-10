@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "store")
@@ -18,5 +19,8 @@ public class StoreEntity extends AuditTableEntity implements Serializable {
     public String Address;
     public String UbigeoCod;
     public String SunatAddressTypeCode = "0000";
+    public String IsVirtualStoreEnabled = "N";
+    public BigDecimal Latitude;
+    public BigDecimal Longitude;
     public String CompanyCod;
 }
