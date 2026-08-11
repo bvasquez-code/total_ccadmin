@@ -1,7 +1,10 @@
 package com.ccadmin.app.delivery.service;
 
+import com.ccadmin.app.delivery.model.dto.DeliveryCoverageDto;
+import com.ccadmin.app.delivery.model.dto.DeliveryCoverageRequestDto;
 import com.ccadmin.app.delivery.model.dto.StoreDeliveryContextDto;
 import com.ccadmin.app.delivery.model.dto.StoreLocationRequestDto;
+import com.ccadmin.app.sale.model.constants.SaleConstants;
 import com.ccadmin.app.sale.model.entity.StoreVirtualConfigEntity;
 import com.ccadmin.app.sale.repository.StoreVirtualConfigRepository;
 import com.ccadmin.app.store.model.entity.StoreEntity;
@@ -49,6 +52,68 @@ public class StoreDeliverySearchService {
                 ));
 
         return buildContext(request, selected);
+    }
+
+    public DeliveryCoverageDto validateCoverage(DeliveryCoverageRequestDto request) {
+        if (request == null || request.StoreCod == null || request.StoreCod.isBlank()
+                || request.DeliveryTypeCod == null || request.DeliveryTypeCod.isBlank()) {
+            throw new IllegalArgumentException("La tienda y modalidad de entrega son obligatorias");
+        }
+
+        StoreVirtualConfigEntity config = validateVirtualStore(request.StoreCod);
+        StoreEntity store = storeRepository.findByStoreCod(request.StoreCod)
+                .orElseThrow(() -> new IllegalArgumentException("La tienda indicada no existe"));
+
+        DeliveryCoverageDto result = new DeliveryCoverageDto();
+        result.StoreCod = request.StoreCod;
+        result.DeliveryTypeCod = request.DeliveryTypeCod;
+
+        if (SaleConstants.DELIVERY_TYPE_STORE_PICKUP.equals(request.DeliveryTypeCod)) {
+            result.IsAvailable = isEnabled(config.AllowsStorePickup) ? "S" : "N";
+            result.Message = "S".equals(result.IsAvailable)
+                    ? "Recojo disponible en " + store.Name
+                    : "Esta tienda no tiene habilitado el recojo en tienda";
+            return result;
+        }
+
+        validateCoordinates(request.Latitude, request.Longitude);
+        result.DistanceKm = calculateDistance(store, request.Latitude, request.Longitude);
+
+        if (SaleConstants.DELIVERY_TYPE_AUTOMATIC.equals(request.DeliveryTypeCod)) {
+            result.MaximumDistanceKm = config.AutomaticDeliveryRadiusKm;
+            result.IsAvailable = enabledWithinRadius(
+                    config.AllowsAutomaticDelivery,
+                    config.AutomaticDeliveryRadiusKm,
+                    result.DistanceKm.doubleValue()
+            ) ? "S" : "N";
+            result.Message = isEnabled(config.AllowsAutomaticDelivery)
+                    ? buildCoverageMessage(
+                            result,
+                            "Delivery disponible para esta dirección",
+                            "Esta dirección está fuera del radio de delivery"
+                    )
+                    : "La tienda no tiene habilitado el delivery automático";
+            return result;
+        }
+
+        if (SaleConstants.DELIVERY_TYPE_SCHEDULED.equals(request.DeliveryTypeCod)) {
+            result.MaximumDistanceKm = config.ScheduledDeliveryMaxRadiusKm;
+            result.IsAvailable = enabledWithinRadius(
+                    config.AllowsScheduledDelivery,
+                    config.ScheduledDeliveryMaxRadiusKm,
+                    result.DistanceKm.doubleValue()
+            ) ? "S" : "N";
+            result.Message = isEnabled(config.AllowsScheduledDelivery)
+                    ? buildCoverageMessage(
+                            result,
+                            "Entrega programada disponible para esta dirección",
+                            "Esta dirección está fuera del radio de entrega programada"
+                    )
+                    : "La tienda no tiene habilitada la entrega programada";
+            return result;
+        }
+
+        throw new IllegalArgumentException("La modalidad de entrega indicada no es válida");
     }
 
     public StoreVirtualConfigEntity validateVirtualStore(String storeCod) {
@@ -153,14 +218,39 @@ public class StoreDeliverySearchService {
         return "La compra puede recogerse en " + context.Store.Name;
     }
 
+    private String buildCoverageMessage(
+            DeliveryCoverageDto coverage,
+            String availableMessage,
+            String unavailableMessage
+    ) {
+        String distanceMessage = " (distancia aproximada: "
+                + coverage.DistanceKm.stripTrailingZeros().toPlainString() + " km)";
+        if ("S".equals(coverage.IsAvailable)) {
+            return availableMessage + distanceMessage;
+        }
+        if (coverage.MaximumDistanceKm == null) {
+            return unavailableMessage + ": la modalidad no está habilitada en la tienda";
+        }
+        return unavailableMessage + ". Máximo permitido: "
+                + coverage.MaximumDistanceKm.stripTrailingZeros().toPlainString()
+                + " km" + distanceMessage;
+    }
+
     private void validateCoordinates(StoreLocationRequestDto request) {
         if (request == null || request.Latitude == null || request.Longitude == null) {
             throw new IllegalArgumentException("La latitud y longitud son obligatorias");
         }
-        if (request.Latitude.compareTo(BigDecimal.valueOf(-90)) < 0
-                || request.Latitude.compareTo(BigDecimal.valueOf(90)) > 0
-                || request.Longitude.compareTo(BigDecimal.valueOf(-180)) < 0
-                || request.Longitude.compareTo(BigDecimal.valueOf(180)) > 0) {
+        validateCoordinates(request.Latitude, request.Longitude);
+    }
+
+    private void validateCoordinates(BigDecimal latitude, BigDecimal longitude) {
+        if (latitude == null || longitude == null) {
+            throw new IllegalArgumentException("La latitud y longitud son obligatorias");
+        }
+        if (latitude.compareTo(BigDecimal.valueOf(-90)) < 0
+                || latitude.compareTo(BigDecimal.valueOf(90)) > 0
+                || longitude.compareTo(BigDecimal.valueOf(-180)) < 0
+                || longitude.compareTo(BigDecimal.valueOf(180)) > 0) {
             throw new IllegalArgumentException("Las coordenadas indicadas no son válidas");
         }
     }

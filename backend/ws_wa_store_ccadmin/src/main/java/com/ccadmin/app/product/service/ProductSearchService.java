@@ -5,6 +5,7 @@ import com.ccadmin.app.product.model.dto.ProductRegisterDto;
 import com.ccadmin.app.product.model.entity.ProductBarcodeEntity;
 import com.ccadmin.app.product.model.entity.ProductConfigEntity;
 import com.ccadmin.app.product.model.entity.ProductEntity;
+import com.ccadmin.app.product.model.entity.ProductPictureEntity;
 import com.ccadmin.app.product.model.entity.id.ProductConfigID;
 import com.ccadmin.app.product.repository.*;
 import com.ccadmin.app.shared.model.dto.ResponsePageSearchT;
@@ -100,18 +101,22 @@ public class ProductSearchService extends SessionService {
             ProductConfigEntity config = this.productConfigRepository.findById(new ProductConfigID(ProductCod, getStoreCod()))
                     .orElseGet(() -> this.productConfigRepository.findAnyByProductCod(ProductCod));
             productRegister.config = config;
-            productRegister.pictureList = this.productPictureRepository.findAllByProductCod(ProductCod);
+            productRegister.pictureList = this.findPictureList(ProductCod);
             productRegister.productBarcode = this.productBarcodeRepository.findByProductCod(ProductCod);
-
-            for(var image : productRegister.pictureList){
-                image.appFile = this.appFileShared.findById(image.FileCod);
-            }
             rpt.AddResponseAdditional("product",productRegister);
         }
         rpt.AddResponseAdditional("brandList",this.brandRepository.findAllActive());
         rpt.AddResponseAdditional("categoryList",this.categoryRepository.findAllActiveNoDad());
 
         return rpt;
+    }
+
+    public List<ProductPictureEntity> findPictureList(String ProductCod) {
+        List<ProductPictureEntity> pictureList = this.productPictureRepository.findAllByProductCod(ProductCod);
+        for (ProductPictureEntity picture : pictureList) {
+            picture.appFile = this.appFileShared.findById(picture.FileCod);
+        }
+        return pictureList;
     }
 
     public ProductEntity findByBarCode(String BarCode){

@@ -2,6 +2,7 @@ package com.ccadmin.app.sale.repository;
 
 import com.ccadmin.app.sale.model.entity.ClientAddressEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -32,5 +33,20 @@ public interface ClientAddressRepository extends JpaRepository<ClientAddressEnti
     Optional<ClientAddressEntity> findActiveByClientAddressIdAndClientCod(
             @Param("clientAddressId") Long clientAddressId,
             @Param("clientCod") String clientCod
+    );
+
+    @Modifying
+    @Query(value = """
+            update client_address
+            set IsDefault = 'N',
+                ModifyUser = :userCod,
+                ModifyDate = current_timestamp
+            where ClientCod = :clientCod
+              and Status = 'A'
+              and IsDefault = 'S'
+            """, nativeQuery = true)
+    int clearDefaultByClientCod(
+            @Param("clientCod") String clientCod,
+            @Param("userCod") String userCod
     );
 }

@@ -19,4 +19,9 @@ export class ProductDeliverySearchService {
     const url = `${AppSetting.API}/api/v1/delivery/productSearch/findAvailability`;
     return this.apiService.ExecuteGetService(url, { ProductCod, StoreCod });
   }
+
+  public findDetail(ProductCod: string, StoreCod: string): Promise<ResponseWsDto> {
+    const url = `${AppSetting.API}/api/v1/delivery/productSearch/findDetail`;
+    return this.apiService.ExecuteGetService(url, { ProductCod, StoreCod });
+  }
 }

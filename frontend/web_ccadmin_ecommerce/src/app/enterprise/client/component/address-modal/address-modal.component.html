@@ -1,0 +1,80 @@
+<div class="address-overlay" *ngIf="Visible" (click)="close()">
+  <section class="address-dialog" role="dialog" aria-modal="true" aria-labelledby="address-modal-title"
+    (click)="$event.stopPropagation()">
+    <header class="address-header">
+      <div>
+        <span>Nueva dirección</span>
+        <h2 id="address-modal-title">Ubica el punto exacto de entrega</h2>
+        <p>Haz clic en el mapa, mueve el marcador o usa tu ubicación actual.</p>
+      </div>
+      <button type="button" class="close-button" aria-label="Cerrar" (click)="close()">
+        <i class="fa fa-times"></i>
+      </button>
+    </header>
+
+    <div class="address-body">
+      <div class="address-fields">
+        <div class="form-row">
+          <div class="form-group col-md-4">
+            <label for="address-alias">Alias</label>
+            <input id="address-alias" class="form-control" name="Alias" maxlength="64"
+              [(ngModel)]="Address.Alias" placeholder="Casa, oficina...">
+          </div>
+          <div class="form-group col-md-8">
+            <label for="address-text">Dirección</label>
+            <input id="address-text" class="form-control" name="Address" maxlength="256"
+              [(ngModel)]="Address.Address" placeholder="Av., calle, número, urbanización y ciudad">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="address-reference">Referencia</label>
+          <input id="address-reference" class="form-control" name="Reference" maxlength="256"
+            [(ngModel)]="Address.Reference" placeholder="Fachada, piso, punto cercano...">
+        </div>
+        <div class="form-row">
+          <div class="form-group col-md-7">
+            <label for="address-contact">Persona de contacto</label>
+            <input id="address-contact" class="form-control" name="Names" maxlength="256"
+              [(ngModel)]="Address.Names">
+          </div>
+          <div class="form-group col-md-5">
+            <label for="address-phone">Teléfono</label>
+            <input id="address-phone" class="form-control" name="Phone" maxlength="20"
+              [(ngModel)]="Address.Phone">
+          </div>
+        </div>
+        <div class="custom-control custom-checkbox">
+          <input id="address-default" type="checkbox" class="custom-control-input"
+            [checked]="Address.IsDefault === 'S'"
+            (change)="Address.IsDefault = Address.IsDefault === 'S' ? 'N' : 'S'">
+          <label class="custom-control-label" for="address-default">Usar como dirección predeterminada</label>
+        </div>
+      </div>
+
+      <div class="map-panel">
+        <div class="map-toolbar">
+          <div>
+            <strong>Punto de entrega</strong>
+            <small>La cobertura se validará después contra la tienda del pedido.</small>
+          </div>
+          <button type="button" class="btn btn-outline-primary btn-sm" [disabled]="IsLocating"
+            (click)="useCurrentLocation()">
+            <i class="fa fa-crosshairs mr-1"></i>{{ IsLocating ? 'Ubicando...' : 'Mi ubicación' }}
+          </button>
+        </div>
+        <div #mapContainer class="client-address-map" aria-label="Mapa para seleccionar la dirección"></div>
+        <div class="coordinates">
+          <span>Lat. {{ Address.Latitude | number:'1.6-6' }}</span>
+          <span>Lng. {{ Address.Longitude | number:'1.6-6' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <footer class="address-footer">
+      <button type="button" class="btn btn-light" [disabled]="IsSaving" (click)="close()">Cancelar</button>
+      <button type="button" class="btn btn-primary" [disabled]="IsSaving" (click)="save()">
+        <i class="fa fa-map-marker-alt mr-2"></i>{{ IsSaving ? 'Guardando...' : 'Guardar dirección' }}
+      </button>
+    </footer>
+  </section>
+</div>

@@ -1,8 +1,13 @@
 package com.ccadmin.app.delivery.service;
 
+import com.ccadmin.app.delivery.model.dto.DeliveryCoverageDto;
+import com.ccadmin.app.delivery.model.dto.DeliveryCoverageRequestDto;
 import com.ccadmin.app.delivery.model.dto.StoreDeliveryContextDto;
 import com.ccadmin.app.delivery.model.dto.StoreLocationRequestDto;
+import com.ccadmin.app.sale.model.constants.SaleConstants;
+import com.ccadmin.app.sale.model.entity.StoreVirtualConfigEntity;
 import com.ccadmin.app.sale.repository.StoreVirtualConfigRepository;
+import com.ccadmin.app.store.model.entity.StoreEntity;
 import com.ccadmin.app.store.model.idto.IStoreVirtualCandidateDto;
 import com.ccadmin.app.store.repository.StoreRepository;
 import org.junit.jupiter.api.Test;
@@ -13,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
@@ -66,6 +72,34 @@ class StoreDeliverySearchServiceTest {
         assertEquals("S", result.AllowsAutomaticDelivery);
         assertEquals("S", result.AllowsScheduledDelivery);
         assertEquals("S", result.AllowsStorePickup);
+    }
+
+    @Test
+    void validatesSelectedAddressAgainstTheOrderStoreWithoutChangingIt() {
+        StoreVirtualConfigEntity config = new StoreVirtualConfigEntity();
+        config.StoreCod = "T001";
+        config.AllowsAutomaticDelivery = "S";
+        config.AutomaticDeliveryRadiusKm = new BigDecimal("5");
+        StoreEntity store = new StoreEntity();
+        store.StoreCod = "T001";
+        store.Name = "Tienda Centro";
+        store.Latitude = new BigDecimal("-6.7714");
+        store.Longitude = new BigDecimal("-79.8409");
+        when(storeVirtualConfigRepository.findActiveByStoreCod("T001"))
+                .thenReturn(Optional.of(config));
+        when(storeRepository.findByStoreCod("T001")).thenReturn(Optional.of(store));
+
+        DeliveryCoverageRequestDto request = new DeliveryCoverageRequestDto();
+        request.StoreCod = "T001";
+        request.DeliveryTypeCod = SaleConstants.DELIVERY_TYPE_AUTOMATIC;
+        request.Latitude = new BigDecimal("-6.7812");
+        request.Longitude = new BigDecimal("-79.8423");
+
+        DeliveryCoverageDto result = storeDeliverySearchService.validateCoverage(request);
+
+        assertEquals("T001", result.StoreCod);
+        assertEquals("S", result.IsAvailable);
+        assertEquals(new BigDecimal("5"), result.MaximumDistanceKm);
     }
 
     private IStoreVirtualCandidateDto candidate(

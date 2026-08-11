@@ -117,7 +117,7 @@
     <div class="checkout-layout">
       <div class="checkout-forms">
         <section class="checkout-card">
-          <div class="card-heading"><span>1</span><div><h2>Modalidad de entrega</h2><p>Opciones disponibles para tu ubicación.</p></div></div>
+          <div class="card-heading"><span>1</span><div><h2>Modalidad de entrega</h2><p>Selecciona una modalidad; si requiere dirección validaremos su cobertura.</p></div></div>
           <div class="delivery-options">
             <button type="button" *ngFor="let option of availableOptions()"
               [class.selected]="Delivery.DeliveryTypeCod === option.Code" (click)="selectDelivery(option.Code)">
@@ -147,10 +147,57 @@
         </section>
 
         <section class="checkout-card" *ngIf="requiresAddress()">
-          <div class="card-heading"><span>3</span><div><h2>Dirección de entrega</h2><p>Antes de confirmar se validará contra la tienda seleccionada.</p></div></div>
-          <div class="map-placeholder"><i class="fa fa-map-marked-alt"></i><div><strong>Ubicación exacta del pedido</strong><small>El mapa interactivo se conectará al servicio de geolocalización.</small></div></div>
-          <div class="form-group"><label for="delivery-address-checkout">Dirección</label><input id="delivery-address-checkout" class="form-control" name="Address" maxlength="256" [(ngModel)]="Delivery.Address"></div>
-          <div class="form-group"><label for="delivery-reference">Referencia</label><input id="delivery-reference" class="form-control" name="Reference" maxlength="256" [(ngModel)]="Delivery.Reference" placeholder="Color de fachada, piso, punto cercano..."></div>
+          <div class="card-heading address-heading">
+            <span>3</span>
+            <div><h2>Dirección de entrega</h2><p>Elige una dirección guardada; validaremos su cobertura contra esta tienda.</p></div>
+            <button type="button" class="btn btn-outline-primary btn-sm" (click)="openAddressModal()">
+              <i class="fa fa-plus mr-1"></i>Nueva dirección
+            </button>
+          </div>
+
+          <div class="address-loading" *ngIf="IsLoadingAddresses">
+            <i class="fa fa-spinner fa-spin"></i> Consultando tus direcciones...
+          </div>
+
+          <div class="empty-addresses" *ngIf="!IsLoadingAddresses && AddressList.length === 0">
+            <i class="fa fa-map-marked-alt"></i>
+            <div>
+              <strong>Aún no tienes direcciones guardadas</strong>
+              <p>Registra una y marca el punto exacto para comprobar si esta modalidad está disponible.</p>
+              <button type="button" class="btn btn-primary btn-sm" (click)="openAddressModal()">
+                Registrar mi primera dirección
+              </button>
+            </div>
+          </div>
+
+          <div class="saved-addresses" *ngIf="AddressList.length > 0">
+            <button type="button" class="address-card" *ngFor="let address of AddressList"
+              [class.selected]="isSelectedAddress(address)" (click)="selectAddress(address)">
+              <i class="fa fa-map-marker-alt"></i>
+              <span>
+                <strong>{{ address.Alias || 'Dirección de entrega' }}</strong>
+                <small>{{ address.Address }}</small>
+                <small *ngIf="address.Reference">Ref. {{ address.Reference }}</small>
+              </span>
+              <span class="default-badge" *ngIf="address.IsDefault === 'S'">Principal</span>
+              <i class="fa fa-check-circle address-check"></i>
+            </button>
+          </div>
+
+          <div class="coverage-result checking" *ngIf="IsValidatingCoverage">
+            <i class="fa fa-spinner fa-spin"></i> Validando distancia y cobertura...
+          </div>
+          <div class="coverage-result" *ngIf="!IsValidatingCoverage && Coverage"
+            [class.available]="Coverage.IsAvailable === 'S'"
+            [class.unavailable]="Coverage.IsAvailable !== 'S'">
+            <i class="fa" [class.fa-check-circle]="Coverage.IsAvailable === 'S'"
+              [class.fa-exclamation-circle]="Coverage.IsAvailable !== 'S'"></i>
+            <div>
+              <strong>{{ Coverage.IsAvailable === 'S' ? 'Modalidad disponible' : 'Modalidad no disponible' }}</strong>
+              <span>{{ Coverage.Message }}</span>
+            </div>
+          </div>
+
           <div class="form-group"><label for="delivery-instructions">Indicaciones adicionales</label><textarea id="delivery-instructions" class="form-control" name="Instructions" rows="2" maxlength="256" [(ngModel)]="Delivery.Instructions"></textarea></div>
           <div class="form-row" *ngIf="requiresSchedule()">
             <div class="form-group col-md-6"><label for="scheduled-from">Desde</label><input id="scheduled-from" type="datetime-local" class="form-control" name="ScheduledFrom" [(ngModel)]="Delivery.ScheduledFrom"></div>
@@ -164,7 +211,8 @@
         <div class="summary-line"><span>Productos</span><strong>{{ cartService.getCurrent().Items.length }}</strong></div>
         <div class="summary-line total"><span>Total productos</span><strong>{{ subtotal() | currency:currency():'symbol-narrow':'1.2-2' }}</strong></div>
         <small>El costo de envío se calculará en backend con la ubicación confirmada.</small>
-        <button type="button" class="btn btn-primary btn-lg btn-block" [disabled]="IsSubmitting || availableOptions().length === 0" (click)="confirm()">
+        <button type="button" class="btn btn-primary btn-lg btn-block"
+          [disabled]="IsSubmitting || availableOptions().length === 0 || !canConfirmOrder()" (click)="confirm()">
           {{ IsSubmitting ? 'Registrando pedido...' : 'Confirmar pedido' }}
         </button>
         <p class="secure-note"><i class="fa fa-lock"></i>Precios, unidades y stock serán validados por el servidor.</p>
@@ -172,3 +220,13 @@
     </div>
   </ng-container>
 </main>
+
+<app-address-modal
+  [Visible]="IsAddressModalVisible"
+  [InitialLatitude]="StoreContext?.Latitude ?? StoreContext?.Store?.Latitude ?? null"
+  [InitialLongitude]="StoreContext?.Longitude ?? StoreContext?.Store?.Longitude ?? null"
+  [DefaultNames]="Delivery.Names"
+  [DefaultPhone]="Delivery.Phone"
+  (Closed)="closeAddressModal()"
+  (Saved)="addressSaved($event)">
+</app-address-modal>

@@ -1,0 +1,94 @@
+<main class="container product-detail-page">
+  <nav class="product-breadcrumb" aria-label="Navegación">
+    <a routerLink="/catalog"><i class="fa fa-arrow-left"></i> Volver al catálogo</a>
+  </nav>
+
+  <section class="location-required" *ngIf="!StoreContext">
+    <i class="fa fa-map-marked-alt"></i>
+    <div>
+      <h2>Indícanos dónde deseas comprar</h2>
+      <p>Necesitamos seleccionar una tienda para mostrarte el precio y stock disponibles.</p>
+    </div>
+    <button type="button" class="btn btn-primary" (click)="selectLocation()">Elegir ubicación</button>
+  </section>
+
+  <section class="product-not-found" *ngIf="StoreContext && HasLoadError">
+    <i class="fa fa-box-open"></i>
+    <h1>Este producto no está disponible</h1>
+    <p>Puede que no tenga stock en la tienda seleccionada o ya no forme parte del catálogo.</p>
+    <a routerLink="/catalog" class="btn btn-primary">Ver otros productos</a>
+  </section>
+
+  <ng-container *ngIf="Product as product">
+    <section class="detail-layout">
+      <div class="product-gallery">
+        <div class="thumbnail-list" *ngIf="ImageRoutes.length > 1">
+          <button type="button" *ngFor="let route of ImageRoutes" [class.active]="route === SelectedImageRoute"
+            (click)="selectImage(route)" [attr.aria-label]="'Ver imagen de ' + product.ProductName">
+            <img [src]="route" [alt]="product.ProductName">
+          </button>
+        </div>
+        <div class="main-image">
+          <img *ngIf="SelectedImageRoute" [src]="SelectedImageRoute" [alt]="product.ProductName">
+          <div class="image-placeholder" *ngIf="!SelectedImageRoute">
+            <i class="fa fa-box-open"></i>
+            <span>Imagen no disponible</span>
+          </div>
+        </div>
+      </div>
+
+      <section class="product-information">
+        <div class="product-labels">
+          <span>{{ product.CategoryName || 'Producto' }}</span>
+          <span class="digital-label" *ngIf="isDigital()"><i class="fa fa-infinity"></i> Digital</span>
+          <span class="cart-label" *ngIf="isInCart()"><i class="fa fa-check"></i> En carrito</span>
+        </div>
+        <small class="product-code">Código: {{ product.ProductCod }}</small>
+        <h1>{{ product.ProductName }}</h1>
+        <p class="brand-name" *ngIf="product.BrandName">Marca: <strong>{{ product.BrandName }}</strong></p>
+        <p class="product-description">{{ product.ProductDesc || 'Consulta la disponibilidad y agrega este producto a tu pedido.' }}</p>
+
+        <div class="availability" [class.digital]="isDigital()">
+          <i class="fa" [class.fa-infinity]="isDigital()" [class.fa-cubes]="!isDigital()"></i>
+          <div>
+            <strong>{{ isDigital() ? 'Disponibilidad inmediata' : visibleStock() + ' ' + product.ProductUnitName + ' disponibles' }}</strong>
+            <small>Atendido por {{ StoreContext?.Store?.Name }}</small>
+          </div>
+        </div>
+
+        <div class="purchase-panel">
+          <div class="price-block">
+            <small>Precio por {{ product.ProductUnitName }}</small>
+            <strong>{{ visiblePrice() | currency:(product.CurrencyCod || 'PEN'):'symbol-narrow':'1.2-2' }}</strong>
+          </div>
+          <div class="quantity-block">
+            <label>Cantidad</label>
+            <div class="quantity-control">
+              <button type="button" aria-label="Reducir cantidad" [disabled]="Quantity <= 1"
+                (click)="decreaseQuantity()">−</button>
+              <strong aria-live="polite">{{ Quantity }}</strong>
+              <button type="button" aria-label="Aumentar cantidad" [disabled]="!canIncreaseQuantity()"
+                (click)="increaseQuantity()">+</button>
+            </div>
+          </div>
+          <div class="line-total">
+            <span>Total</span>
+            <strong>{{ visiblePrice() * Quantity | currency:(product.CurrencyCod || 'PEN'):'symbol-narrow':'1.2-2' }}</strong>
+          </div>
+          <button type="button" class="btn btn-primary btn-lg add-detail-button" (click)="addToCart()">
+            <i class="fa fa-shopping-cart"></i> Agregar al carrito
+          </button>
+          <button type="button" class="go-cart-button" *ngIf="isInCart()" (click)="goToCart()">
+            Ver mi carrito <i class="fa fa-arrow-right"></i>
+          </button>
+        </div>
+      </section>
+    </section>
+
+    <section class="purchase-benefits">
+      <div><i class="fa fa-store"></i><span><strong>Stock de tu tienda</strong>Disponibilidad verificada antes de agregar</span></div>
+      <div><i class="fa fa-truck"></i><span><strong>Entrega flexible</strong>Delivery, recojo o entrega programada</span></div>
+      <div><i class="fa fa-lock"></i><span><strong>Compra protegida</strong>El stock se validará al confirmar el pedido</span></div>
+    </section>
+  </ng-container>
+</main>

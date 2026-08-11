@@ -48,4 +48,19 @@ public class ProductDeliverySearchController {
             return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
         }
     }
+
+    @GetMapping("findDetail")
+    public ResponseEntity<ResponseWsDto> findDetail(
+            @RequestParam String ProductCod,
+            @RequestParam String StoreCod
+    ) {
+        try {
+            return new ResponseEntity<>(
+                    new ResponseWsDto(productDeliverySearchService.findDetail(ProductCod, StoreCod)),
+                    HttpStatus.OK
+            );
+        } catch (Exception ex) {
+            return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
 }

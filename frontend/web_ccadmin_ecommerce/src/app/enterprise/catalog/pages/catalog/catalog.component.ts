@@ -1,6 +1,8 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { Subscription } from 'rxjs';
+import { CartItemDto } from '../../../cart/model/dto/CartItemDto';
 import { CartService } from '../../../cart/service/cart.service';
 import { ResponsePageSearch } from '../../../shared/model/dto/ResponsePageSearch';
 import { StoreContextDto } from '../../../store/model/dto/StoreContextDto';
@@ -22,6 +24,8 @@ export class CatalogComponent implements OnInit, OnDestroy {
   public SortOption: string = 'trend';
   public IsLoading: boolean = false;
   public HasAttemptedSearch: boolean = false;
+  public SelectedProductCod: string = '';
+  public IsCartModalOpen: boolean = false;
 
   private contextSubscription?: Subscription;
 
@@ -29,7 +33,8 @@ export class CatalogComponent implements OnInit, OnDestroy {
     private productDeliverySearchService: ProductDeliverySearchService,
     private storeContextService: StoreContextService,
     private cartService: CartService,
-    private toastrService: ToastrService
+    private toastrService: ToastrService,
+    private router: Router
   ) {
   }
 
@@ -100,10 +105,44 @@ export class CatalogComponent implements OnInit, OnDestroy {
     try {
       const availableProduct = Object.assign(new ProductSearchEntity(), response.Data);
       this.cartService.add(availableProduct);
-      this.toastrService.success(`${product.ProductName} se agregó al carrito.`);
+      this.SelectedProductCod = availableProduct.ProductCod;
+      this.IsCartModalOpen = true;
     } catch (error: any) {
       this.toastrService.warning(error.message);
     }
+  }
+
+  public selectedCartItem(): CartItemDto | null {
+    return this.cartService.getCurrent().Items.find(
+      item => item.ProductCod === this.SelectedProductCod
+    ) || null;
+  }
+
+  public decreaseSelectedQuantity(): void {
+    const item = this.selectedCartItem();
+    if (!item || item.Quantity <= 1) return;
+    this.updateSelectedQuantity(item.Quantity - 1);
+  }
+
+  public increaseSelectedQuantity(): void {
+    const item = this.selectedCartItem();
+    if (!item) return;
+    this.updateSelectedQuantity(item.Quantity + 1);
+  }
+
+  public closeCartModal(): void {
+    this.IsCartModalOpen = false;
+    this.SelectedProductCod = '';
+  }
+
+  public goToCart(): void {
+    this.closeCartModal();
+    void this.router.navigate(['/cart']);
+  }
+
+  @HostListener('document:keydown.escape')
+  public closeCartModalWithEscape(): void {
+    if (this.IsCartModalOpen) this.closeCartModal();
   }
 
   public isInCart(ProductCod: string): boolean {
@@ -148,5 +187,14 @@ export class CatalogComponent implements OnInit, OnDestroy {
 
   private money(value: number): number {
     return Math.round(value * 100) / 100;
+  }
+
+  private updateSelectedQuantity(quantity: number): void {
+    if (!this.SelectedProductCod) return;
+    try {
+      this.cartService.updateQuantity(this.SelectedProductCod, quantity);
+    } catch (error: any) {
+      this.toastrService.warning(error.message);
+    }
   }
 }

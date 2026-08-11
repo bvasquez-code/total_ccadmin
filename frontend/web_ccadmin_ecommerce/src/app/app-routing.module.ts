@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { CartComponent } from './enterprise/cart/pages/cart/cart.component';
 import { CatalogComponent } from './enterprise/catalog/pages/catalog/catalog.component';
+import { ProductDetailComponent } from './enterprise/catalog/pages/product-detail/product-detail.component';
 import { LoginComponent } from './enterprise/client/pages/login/login.component';
 import { RegisterComponent } from './enterprise/client/pages/register/register.component';
 import { ClientAuthGuard } from './enterprise/client/service/client-auth.guard';
@@ -11,6 +12,7 @@ import { OrdersComponent } from './enterprise/sale/pages/orders/orders.component
 const routes: Routes = [
   { path: '', redirectTo: 'catalog', pathMatch: 'full' },
   { path: 'catalog', component: CatalogComponent },
+  { path: 'product/:productCode', component: ProductDetailComponent },
   { path: 'cart', component: CartComponent },
   { path: 'login', component: LoginComponent },
   { path: 'register', component: RegisterComponent },

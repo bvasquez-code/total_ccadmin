@@ -1,0 +1,47 @@
+.address-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2100;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(19, 45, 66, 0.62);
+  backdrop-filter: blur(3px);
+}
+
+.address-dialog {
+  width: min(100%, 940px);
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow: 0 1.5rem 4rem rgba(7, 35, 57, 0.34);
+}
+
+.address-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.4rem 1rem;
+  border-bottom: 1px solid #dfe8ed;
+}
+
+.address-header span { color: #2a9e77; font-size: 0.74rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.address-header h2 { margin: 0.1rem 0; color: #173d59; font-size: 1.4rem; font-weight: 700; }
+.address-header p { margin: 0; color: #718896; font-size: 0.82rem; }
+.close-button { flex: 0 0 2.25rem; height: 2.25rem; color: #647b8c; background: #f2f6f9; border: 0; border-radius: 50%; }
+.address-body { display: grid; grid-template-columns: minmax(300px, 0.85fr) minmax(360px, 1.15fr); gap: 1.25rem; padding: 1.3rem 1.4rem; }
+.address-fields { padding-top: 0.2rem; }
+.map-panel { overflow: hidden; border: 1px solid #d7e3ea; border-radius: 0.7rem; }
+.map-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 0.7rem; padding: 0.75rem; background: #f5f9fb; }
+.map-toolbar > div { display: flex; flex-direction: column; }
+.map-toolbar strong { color: #294c64; font-size: 0.9rem; }
+.map-toolbar small { color: #78909f; font-size: 0.7rem; }
+.client-address-map { position: relative; isolation: isolate; width: 100%; height: 350px; overflow: hidden; background: #e8eef2; }
+.coordinates { display: flex; justify-content: space-between; padding: 0.5rem 0.75rem; color: #60798a; background: #f8fafb; font-family: monospace; font-size: 0.75rem; }
+.address-footer { display: flex; justify-content: flex-end; gap: 0.65rem; padding: 0.9rem 1.4rem; background: #f5f8fa; border-top: 1px solid #dfe8ed; }
+
+@media (max-width: 780px) {
+  .address-body { grid-template-columns: 1fr; }
+  .client-address-map { height: 300px; }
+}

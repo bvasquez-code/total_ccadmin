@@ -29,7 +29,9 @@ public interface ProductPictureRepository extends JpaRepository<ProductPictureEn
     );
 
     @Query( value = """
-            select pp.* from product_picture pp where pp.ProductCod = :ProductCod and pp.Status = 'A' order by pp.CreationDate desc
+            select pp.* from product_picture pp
+            where pp.ProductCod = :ProductCod and pp.Status = 'A'
+            order by pp.IsPrincipal desc, pp.CreationDate desc
             """, nativeQuery = true)
     public List<ProductPictureEntity> findAllByProductCod(@Param("ProductCod") String ProductCod);
 }

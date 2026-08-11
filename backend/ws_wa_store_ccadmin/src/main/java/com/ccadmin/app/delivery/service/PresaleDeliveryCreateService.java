@@ -3,6 +3,8 @@ package com.ccadmin.app.delivery.service;
 import com.ccadmin.app.delivery.model.dto.CheckoutDeliveryDto;
 import com.ccadmin.app.delivery.model.dto.CheckoutConfirmationDto;
 import com.ccadmin.app.delivery.model.dto.CheckoutRegisterDto;
+import com.ccadmin.app.delivery.model.dto.DeliveryCoverageDto;
+import com.ccadmin.app.delivery.model.dto.DeliveryCoverageRequestDto;
 import com.ccadmin.app.product.model.entity.ProductConfigEntity;
 import com.ccadmin.app.product.model.entity.ProductSearchEntity;
 import com.ccadmin.app.product.service.ProductFindSearchService;
@@ -11,15 +13,14 @@ import com.ccadmin.app.sale.model.constants.SaleConstants;
 import com.ccadmin.app.sale.model.dto.PresaleDetailDto;
 import com.ccadmin.app.sale.model.dto.PresaleRegisterDto;
 import com.ccadmin.app.sale.model.dto.SaleDetailDto;
+import com.ccadmin.app.sale.model.entity.ClientAddressEntity;
 import com.ccadmin.app.sale.model.entity.PresaleDetEntity;
-import com.ccadmin.app.sale.model.entity.StoreVirtualConfigEntity;
 import com.ccadmin.app.sale.model.entity.VirtualCartEntity;
 import com.ccadmin.app.sale.repository.ChannelDeliveryTypeRepository;
 import com.ccadmin.app.sale.repository.VirtualCartRepository;
 import com.ccadmin.app.sale.service.PresaleCreateService;
 import com.ccadmin.app.shared.model.constants.AuditUserConstants;
 import com.ccadmin.app.shared.model.dto.ClientSessionDto;
-import com.ccadmin.app.store.model.entity.StoreEntity;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
@@ -42,6 +43,7 @@ public class PresaleDeliveryCreateService {
     private static final long CONVERTED_CART_RETENTION_MILLISECONDS = 30L * 24L * 60L * 60L * 1000L;
 
     private final ClientDeliveryContextService clientDeliveryContextService;
+    private final ClientAddressDeliverySearchService clientAddressDeliverySearchService;
     private final StoreDeliverySearchService storeDeliverySearchService;
     private final ProductFindSearchService productFindSearchService;
     private final ProductOperationConfigShared productOperationConfigShared;
@@ -53,6 +55,7 @@ public class PresaleDeliveryCreateService {
 
     public PresaleDeliveryCreateService(
             ClientDeliveryContextService clientDeliveryContextService,
+            ClientAddressDeliverySearchService clientAddressDeliverySearchService,
             StoreDeliverySearchService storeDeliverySearchService,
             ProductFindSearchService productFindSearchService,
             ProductOperationConfigShared productOperationConfigShared,
@@ -63,6 +66,7 @@ public class PresaleDeliveryCreateService {
             SaleDeliveryAccessTokenService saleDeliveryAccessTokenService
     ) {
         this.clientDeliveryContextService = clientDeliveryContextService;
+        this.clientAddressDeliverySearchService = clientAddressDeliverySearchService;
         this.storeDeliverySearchService = storeDeliverySearchService;
         this.productFindSearchService = productFindSearchService;
         this.productOperationConfigShared = productOperationConfigShared;
@@ -105,9 +109,8 @@ public class PresaleDeliveryCreateService {
         validateRequest(request);
         String storeCod = request.Headboard.StoreCod.trim();
 
-        StoreEntity store = storeDeliverySearchService.findActiveVirtualStore(storeCod);
-        StoreVirtualConfigEntity storeConfig = storeDeliverySearchService.validateVirtualStore(storeCod);
-        validateDelivery(request.Delivery, store, storeConfig);
+        storeDeliverySearchService.findActiveVirtualStore(storeCod);
+        validateDelivery(request.Delivery, storeCod, clientSession.ClientCod);
         validateDetails(request, storeCod);
 
         request.Headboard.ClientCod = clientSession.ClientCod;
@@ -214,8 +217,8 @@ public class PresaleDeliveryCreateService {
 
     private void validateDelivery(
             CheckoutDeliveryDto delivery,
-            StoreEntity store,
-            StoreVirtualConfigEntity config
+            String storeCod,
+            String clientCod
     ) {
         channelDeliveryTypeRepository.findActiveByChannelAndDeliveryType(
                 SaleConstants.COMMERCIAL_CHANNEL_WEB,
@@ -235,39 +238,29 @@ public class PresaleDeliveryCreateService {
         }
 
         if (SaleConstants.DELIVERY_TYPE_STORE_PICKUP.equals(delivery.DeliveryTypeCod)) {
-            if (!"S".equals(config.AllowsStorePickup)) {
-                throw new IllegalArgumentException("La tienda no permite recojo en tienda");
-            }
-            return;
+            clearDeliveryAddress(delivery);
+        } else {
+            ClientAddressEntity address = clientAddressDeliverySearchService.findActiveById(
+                    clientCod,
+                    delivery.ClientAddressID
+            );
+            applyAddressSnapshot(delivery, address);
         }
 
-        if (isBlank(delivery.Address) || delivery.Latitude == null || delivery.Longitude == null) {
-            throw new IllegalArgumentException("La dirección y coordenadas de entrega son obligatorias");
-        }
-        BigDecimal distance = storeDeliverySearchService.calculateDistance(
-                store,
-                delivery.Latitude,
-                delivery.Longitude
+        DeliveryCoverageDto coverage = storeDeliverySearchService.validateCoverage(
+                buildCoverageRequest(storeCod, delivery)
         );
-        delivery.EstimatedDistanceKm = distance;
+        if (!"S".equals(coverage.IsAvailable)) {
+            throw new IllegalArgumentException(coverage.Message);
+        }
+        delivery.EstimatedDistanceKm = coverage.DistanceKm;
 
         if (SaleConstants.DELIVERY_TYPE_AUTOMATIC.equals(delivery.DeliveryTypeCod)) {
-            validateRadius(
-                    config.AllowsAutomaticDelivery,
-                    config.AutomaticDeliveryRadiusKm,
-                    distance,
-                    "La dirección está fuera del radio de delivery automático"
-            );
-            return;
+            delivery.ScheduledFrom = null;
+            delivery.ScheduledTo = null;
         }
 
         if (SaleConstants.DELIVERY_TYPE_SCHEDULED.equals(delivery.DeliveryTypeCod)) {
-            validateRadius(
-                    config.AllowsScheduledDelivery,
-                    config.ScheduledDeliveryMaxRadiusKm,
-                    distance,
-                    "La dirección está fuera del radio de entrega programada"
-            );
             Date scheduledFrom = parseDate(delivery.ScheduledFrom, "inicio");
             Date scheduledTo = parseDate(delivery.ScheduledTo, "fin");
             if (scheduledTo.before(scheduledFrom)) {
@@ -280,15 +273,40 @@ public class PresaleDeliveryCreateService {
         }
     }
 
-    private void validateRadius(
-            String indicator,
-            BigDecimal maximumRadius,
-            BigDecimal distance,
-            String errorMessage
+    private DeliveryCoverageRequestDto buildCoverageRequest(
+            String storeCod,
+            CheckoutDeliveryDto delivery
     ) {
-        if (!"S".equals(indicator) || maximumRadius == null || distance.compareTo(maximumRadius) > 0) {
-            throw new IllegalArgumentException(errorMessage);
-        }
+        DeliveryCoverageRequestDto request = new DeliveryCoverageRequestDto();
+        request.StoreCod = storeCod;
+        request.DeliveryTypeCod = delivery.DeliveryTypeCod;
+        request.Latitude = delivery.Latitude;
+        request.Longitude = delivery.Longitude;
+        return request;
+    }
+
+    private void applyAddressSnapshot(
+            CheckoutDeliveryDto delivery,
+            ClientAddressEntity address
+    ) {
+        delivery.ClientAddressID = address.ClientAddressID;
+        delivery.Address = address.Address;
+        delivery.Reference = address.Reference;
+        delivery.UbigeoCod = address.UbigeoCod;
+        delivery.Latitude = address.Latitude;
+        delivery.Longitude = address.Longitude;
+    }
+
+    private void clearDeliveryAddress(CheckoutDeliveryDto delivery) {
+        delivery.ClientAddressID = null;
+        delivery.Address = null;
+        delivery.Reference = null;
+        delivery.UbigeoCod = null;
+        delivery.Latitude = null;
+        delivery.Longitude = null;
+        delivery.EstimatedDistanceKm = null;
+        delivery.ScheduledFrom = null;
+        delivery.ScheduledTo = null;
     }
 
     private Date parseDate(String value, String fieldName) {

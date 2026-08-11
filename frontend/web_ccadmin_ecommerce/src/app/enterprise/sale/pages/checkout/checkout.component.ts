@@ -4,6 +4,10 @@ import { ToastrService } from 'ngx-toastr';
 import Swal from 'sweetalert2';
 import { CartService } from '../../../cart/service/cart.service';
 import { ClientSessionService } from '../../../client/service/client-session.service';
+import { ClientAddressService } from '../../../client/service/client-address.service';
+import { DeliveryCoverageDto } from '../../../client/model/dto/DeliveryCoverageDto';
+import { DeliveryCoverageRequestDto } from '../../../client/model/dto/DeliveryCoverageRequestDto';
+import { ClientAddressEntity } from '../../../client/model/entity/ClientAddressEntity';
 import { StoreContextDto } from '../../../store/model/dto/StoreContextDto';
 import { StoreContextService } from '../../../store/service/store-context.service';
 import { CheckoutDeliveryDto } from '../../model/dto/CheckoutDeliveryDto';
@@ -41,6 +45,11 @@ export class CheckoutComponent implements OnInit {
   public SelectedPaymentMethodCod: string = '';
   public IsSavingPayment: boolean = false;
   public OrderLoadError: boolean = false;
+  public AddressList: ClientAddressEntity[] = [];
+  public Coverage: DeliveryCoverageDto | null = null;
+  public IsLoadingAddresses: boolean = false;
+  public IsValidatingCoverage: boolean = false;
+  public IsAddressModalVisible: boolean = false;
 
   private pendingConfirmationRequest: PresaleRegisterDto | null = null;
 
@@ -54,6 +63,7 @@ export class CheckoutComponent implements OnInit {
     public cartService: CartService,
     private storeContextService: StoreContextService,
     private clientSessionService: ClientSessionService,
+    private clientAddressService: ClientAddressService,
     private checkoutService: CheckoutService,
     private activatedRoute: ActivatedRoute,
     private router: Router,
@@ -66,20 +76,73 @@ export class CheckoutComponent implements OnInit {
   }
 
   public availableOptions(): DeliveryOption[] {
-    if (!this.StoreContext) return [];
-    return this.DeliveryOptions.filter(option => {
-      if (option.Code === 'DELIVERY') return this.StoreContext?.AllowsAutomaticDelivery === 'S';
-      if (option.Code === 'STORE_PICKUP') return this.StoreContext?.AllowsStorePickup === 'S';
-      return this.StoreContext?.AllowsScheduledDelivery === 'S';
-    });
+    return this.StoreContext ? this.DeliveryOptions : [];
   }
 
-  public selectDelivery(code: string): void {
+  public async selectDelivery(code: string): Promise<void> {
     this.Delivery.DeliveryTypeCod = code;
+    this.Coverage = null;
+    if (code === 'STORE_PICKUP') {
+      this.Delivery.ClientAddressID = null;
+      return;
+    }
+
+    if (this.AddressList.length === 0) {
+      this.IsAddressModalVisible = true;
+      return;
+    }
+
+    const selected = this.AddressList.find(
+      address => address.ClientAddressID === this.Delivery.ClientAddressID
+    ) || this.AddressList[0];
+    await this.selectAddress(selected);
+  }
+
+  public openAddressModal(): void {
+    this.IsAddressModalVisible = true;
+  }
+
+  public closeAddressModal(): void {
+    this.IsAddressModalVisible = false;
+  }
+
+  public async addressSaved(address: ClientAddressEntity): Promise<void> {
+    this.IsAddressModalVisible = false;
+    await this.loadAddresses(address.ClientAddressID);
+  }
+
+  public async selectAddress(address: ClientAddressEntity): Promise<void> {
+    if (!address.ClientAddressID) return;
+    this.Delivery.ClientAddressID = address.ClientAddressID;
+    this.Delivery.Address = address.Address;
+    this.Delivery.Reference = address.Reference || '';
+    this.Delivery.UbigeoCod = address.UbigeoCod || '';
+    this.Delivery.Latitude = address.Latitude;
+    this.Delivery.Longitude = address.Longitude;
+    this.Delivery.Instructions = address.Instructions || '';
+    if (this.Delivery.IsThirdParty !== 'S') {
+      this.Delivery.Names = address.Names || this.Delivery.Names;
+      this.Delivery.Phone = address.Phone || this.Delivery.Phone;
+    }
+    await this.validateSelectedAddressCoverage();
+  }
+
+  public isSelectedAddress(address: ClientAddressEntity): boolean {
+    return !!address.ClientAddressID && address.ClientAddressID === this.Delivery.ClientAddressID;
+  }
+
+  public canConfirmOrder(): boolean {
+    if (!this.Delivery.DeliveryTypeCod) return false;
+    if (!this.requiresAddress()) return true;
+    return !!this.Delivery.ClientAddressID
+      && this.Coverage?.DeliveryTypeCod === this.Delivery.DeliveryTypeCod
+      && this.Coverage?.IsAvailable === 'S'
+      && !this.IsValidatingCoverage;
   }
 
   public requiresAddress(): boolean {
-    return this.Delivery.DeliveryTypeCod !== 'STORE_PICKUP';
+    return this.Delivery.DeliveryTypeCod === 'DELIVERY'
+      || this.Delivery.DeliveryTypeCod === 'SCHEDULED_DELIVERY';
   }
 
   public requiresSchedule(): boolean {
@@ -248,10 +311,60 @@ export class CheckoutComponent implements OnInit {
     const session = this.clientSessionService.getCurrent();
     this.Delivery.Names = session?.Names || '';
     this.Delivery.Email = session?.Email || '';
-    this.Delivery.Address = this.StoreContext.Address || '';
-    this.Delivery.Latitude = this.StoreContext.Latitude;
-    this.Delivery.Longitude = this.StoreContext.Longitude;
-    this.Delivery.DeliveryTypeCod = this.availableOptions()[0]?.Code || '';
+    await this.loadAddresses();
+
+    const options = this.availableOptions();
+    const initialOption = options.find(option => option.Code === 'STORE_PICKUP') || options[0];
+    if (initialOption) await this.selectDelivery(initialOption.Code);
+  }
+
+  private async loadAddresses(preferredAddressId: number | null = null): Promise<void> {
+    this.IsLoadingAddresses = true;
+    try {
+      const response = await this.clientAddressService.findAll();
+      if (response.ErrorStatus) {
+        this.AddressList = [];
+        this.toastrService.error(response.Message || 'No se pudieron consultar tus direcciones.');
+        return;
+      }
+      this.AddressList = (response.Data || []).map(
+        (item: ClientAddressEntity) => Object.assign(new ClientAddressEntity(), item)
+      );
+
+      if (!this.requiresAddress()) return;
+      const selected = this.AddressList.find(
+        address => address.ClientAddressID === preferredAddressId
+      ) || this.AddressList.find(address => address.IsDefault === 'S') || this.AddressList[0];
+      if (selected) await this.selectAddress(selected);
+    } finally {
+      this.IsLoadingAddresses = false;
+    }
+  }
+
+  private async validateSelectedAddressCoverage(): Promise<void> {
+    if (!this.requiresAddress() || !this.Delivery.ClientAddressID) {
+      this.Coverage = null;
+      return;
+    }
+
+    const request = new DeliveryCoverageRequestDto();
+    request.StoreCod = this.StoreContext?.Store.StoreCod || '';
+    request.DeliveryTypeCod = this.Delivery.DeliveryTypeCod;
+    request.Latitude = this.Delivery.Latitude;
+    request.Longitude = this.Delivery.Longitude;
+
+    this.IsValidatingCoverage = true;
+    try {
+      const response = await this.clientAddressService.validateCoverage(request);
+      if (response.ErrorStatus || !response.Data) {
+        this.Coverage = null;
+        this.toastrService.error(response.Message || 'No se pudo validar la cobertura de esta dirección.');
+        return;
+      }
+      this.Coverage = Object.assign(new DeliveryCoverageDto(), response.Data);
+    } finally {
+      this.IsValidatingCoverage = false;
+    }
   }
 
   private async createPresale(): Promise<PresaleRegisterDto | null> {
@@ -391,7 +504,17 @@ export class CheckoutComponent implements OnInit {
       return false;
     }
     if (this.requiresAddress() && !this.Delivery.Address.trim()) {
-      this.toastrService.warning('Ingresa la dirección de entrega.');
+      this.toastrService.warning('Selecciona una dirección de entrega.');
+      return false;
+    }
+    if (this.requiresAddress() && !this.Delivery.ClientAddressID) {
+      this.toastrService.warning('Selecciona una de tus direcciones o registra una nueva.');
+      return false;
+    }
+    if (this.requiresAddress() && this.Coverage?.IsAvailable !== 'S') {
+      this.toastrService.warning(
+        this.Coverage?.Message || 'La dirección todavía no tiene una cobertura válida para esta modalidad.'
+      );
       return false;
     }
     if (this.requiresSchedule() && (!this.Delivery.ScheduledFrom || !this.Delivery.ScheduledTo)) {
@@ -409,4 +532,5 @@ export class CheckoutComponent implements OnInit {
   private money(value: number): number {
     return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
   }
+
 }

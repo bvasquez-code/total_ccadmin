@@ -1,0 +1,59 @@
+<div class="cart-modal-backdrop" *ngIf="IsOpen && Item" (click)="Close.emit()">
+  <section class="cart-modal" role="dialog" aria-modal="true" aria-labelledby="cart-modal-title"
+    (click)="$event.stopPropagation()">
+    <button type="button" class="cart-modal-close" aria-label="Cerrar" (click)="Close.emit()">
+      <i class="fa fa-times"></i>
+    </button>
+
+    <div class="cart-modal-heading">
+      <span class="cart-modal-success"><i class="fa fa-check"></i></span>
+      <div>
+        <span class="modal-eyebrow">Producto agregado</span>
+        <h2 id="cart-modal-title">Ya está en tu carrito</h2>
+      </div>
+    </div>
+
+    <div class="cart-modal-product">
+      <div class="cart-modal-image">
+        <img *ngIf="Item.FileRoute" [src]="Item.FileRoute" [alt]="Item.ProductName">
+        <i class="fa fa-box-open" *ngIf="!Item.FileRoute" aria-hidden="true"></i>
+      </div>
+      <div class="cart-modal-detail">
+        <small>#{{ Item.ProductCod }}</small>
+        <h3>{{ Item.ProductName }}</h3>
+        <strong>{{ Item.UnitPrice | currency:(Item.CurrencyCod || 'PEN'):'symbol-narrow':'1.2-2' }} c/u</strong>
+        <span *ngIf="Item.IsDigital !== 'S'">
+          {{ Item.AvailableQuantity }} {{ Item.ProductUnitName }} disponibles
+        </span>
+        <span class="digital-availability" *ngIf="Item.IsDigital === 'S'">
+          <i class="fa fa-infinity"></i> Disponibilidad inmediata
+        </span>
+      </div>
+    </div>
+
+    <div class="cart-modal-quantity">
+      <div>
+        <span>Cantidad</span>
+        <small>Elige cuántas unidades deseas llevar</small>
+      </div>
+      <div class="quantity-control" aria-label="Cantidad del producto">
+        <button type="button" aria-label="Reducir cantidad" [disabled]="Item.Quantity <= 1"
+          (click)="Decrease.emit()">−</button>
+        <strong aria-live="polite">{{ Item.Quantity }}</strong>
+        <button type="button" aria-label="Aumentar cantidad" (click)="Increase.emit()">+</button>
+      </div>
+    </div>
+
+    <div class="cart-modal-total">
+      <span>Total del producto</span>
+      <strong>{{ Item.UnitPrice * Item.Quantity | currency:(Item.CurrencyCod || 'PEN'):'symbol-narrow':'1.2-2' }}</strong>
+    </div>
+
+    <div class="cart-modal-actions">
+      <button type="button" class="btn continue-button" (click)="Close.emit()">Seguir comprando</button>
+      <button type="button" class="btn btn-primary" (click)="NavigateToCart.emit()">
+        <i class="fa fa-shopping-cart"></i> Ir al carrito
+      </button>
+    </div>
+  </section>
+</div>

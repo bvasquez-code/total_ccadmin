@@ -8,9 +8,12 @@ import { ToastrModule } from 'ngx-toastr';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { CartComponent } from './enterprise/cart/pages/cart/cart.component';
+import { CartProductModalComponent } from './enterprise/catalog/component/cart-product-modal/cart-product-modal.component';
 import { CatalogComponent } from './enterprise/catalog/pages/catalog/catalog.component';
+import { ProductDetailComponent } from './enterprise/catalog/pages/product-detail/product-detail.component';
 import { LoginComponent } from './enterprise/client/pages/login/login.component';
 import { RegisterComponent } from './enterprise/client/pages/register/register.component';
+import { AddressModalComponent } from './enterprise/client/component/address-modal/address-modal.component';
 import { StorefrontFooterComponent } from './enterprise/main/footer/storefront-footer.component';
 import { StorefrontHeaderComponent } from './enterprise/main/header/storefront-header.component';
 import { CheckoutComponent } from './enterprise/sale/pages/checkout/checkout.component';
@@ -27,9 +30,12 @@ import { LoadingInterceptor } from './interceptors/LoadingInterceptor';
     LocationSelectorComponent,
     LoadingComponent,
     CatalogComponent,
+    CartProductModalComponent,
+    ProductDetailComponent,
     CartComponent,
     LoginComponent,
     RegisterComponent,
+    AddressModalComponent,
     CheckoutComponent,
     OrdersComponent
   ],

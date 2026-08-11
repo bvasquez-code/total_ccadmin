@@ -3,6 +3,7 @@ package com.ccadmin.app.delivery.service;
 import com.ccadmin.app.delivery.model.dto.CheckoutDeliveryDto;
 import com.ccadmin.app.delivery.model.dto.CheckoutRegisterDto;
 import com.ccadmin.app.delivery.model.dto.CheckoutConfirmationDto;
+import com.ccadmin.app.delivery.model.dto.DeliveryCoverageDto;
 import com.ccadmin.app.product.model.entity.ProductConfigEntity;
 import com.ccadmin.app.product.model.entity.ProductSearchEntity;
 import com.ccadmin.app.product.service.ProductFindSearchService;
@@ -12,10 +13,10 @@ import com.ccadmin.app.sale.model.dto.PresaleDetailDto;
 import com.ccadmin.app.sale.model.dto.PresaleRegisterDto;
 import com.ccadmin.app.sale.model.dto.SaleDetailDto;
 import com.ccadmin.app.sale.model.entity.ChannelDeliveryTypeEntity;
+import com.ccadmin.app.sale.model.entity.ClientAddressEntity;
 import com.ccadmin.app.sale.model.entity.PresaleChannelEntity;
 import com.ccadmin.app.sale.model.entity.PresaleDetEntity;
 import com.ccadmin.app.sale.model.entity.PresaleHeadEntity;
-import com.ccadmin.app.sale.model.entity.StoreVirtualConfigEntity;
 import com.ccadmin.app.sale.repository.ChannelDeliveryTypeRepository;
 import com.ccadmin.app.sale.repository.VirtualCartRepository;
 import com.ccadmin.app.sale.service.PresaleCreateService;
@@ -42,6 +43,7 @@ import static org.mockito.Mockito.when;
 class PresaleDeliveryCreateServiceTest {
 
     @Mock private ClientDeliveryContextService clientDeliveryContextService;
+    @Mock private ClientAddressDeliverySearchService clientAddressDeliverySearchService;
     @Mock private StoreDeliverySearchService storeDeliverySearchService;
     @Mock private ProductFindSearchService productFindSearchService;
     @Mock private ProductOperationConfigShared productOperationConfigShared;
@@ -56,6 +58,7 @@ class PresaleDeliveryCreateServiceTest {
     void setUp() {
         service = new PresaleDeliveryCreateService(
                 clientDeliveryContextService,
+                clientAddressDeliverySearchService,
                 storeDeliverySearchService,
                 productFindSearchService,
                 productOperationConfigShared,
@@ -75,13 +78,23 @@ class PresaleDeliveryCreateServiceTest {
         );
         when(storeDeliverySearchService.findActiveVirtualStore("T001"))
                 .thenReturn(new StoreEntity());
-        StoreVirtualConfigEntity storeConfig = new StoreVirtualConfigEntity();
-        storeConfig.AllowsStorePickup = "S";
-        when(storeDeliverySearchService.validateVirtualStore("T001")).thenReturn(storeConfig);
+        DeliveryCoverageDto coverage = new DeliveryCoverageDto();
+        coverage.IsAvailable = "S";
+        coverage.DistanceKm = new BigDecimal("1.250");
+        when(storeDeliverySearchService.validateCoverage(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(coverage);
         when(channelDeliveryTypeRepository.findActiveByChannelAndDeliveryType(
                 SaleConstants.COMMERCIAL_CHANNEL_WEB,
-                SaleConstants.DELIVERY_TYPE_STORE_PICKUP
+                SaleConstants.DELIVERY_TYPE_AUTOMATIC
         )).thenReturn(Optional.of(new ChannelDeliveryTypeEntity()));
+        ClientAddressEntity address = new ClientAddressEntity();
+        address.ClientAddressID = 20L;
+        address.Address = "Av. Principal 123";
+        address.Reference = "Frente al parque";
+        address.Latitude = new BigDecimal("-6.7812");
+        address.Longitude = new BigDecimal("-79.8423");
+        when(clientAddressDeliverySearchService.findActiveById("CL001", 20L))
+                .thenReturn(address);
 
         ProductSearchEntity availability = new ProductSearchEntity();
         availability.ProductName = "Producto";
@@ -114,6 +127,8 @@ class PresaleDeliveryCreateServiceTest {
         assertEquals(SaleConstants.COMMERCIAL_CHANNEL_WEB, delegated.PresaleChannel.ChannelCod);
         assertEquals(6, delegated.DetailList.get(0).NumUnit);
         assertEquals(new BigDecimal("12.50"), delegated.DetailList.get(0).NumUnitPrice);
+        assertEquals("Av. Principal 123", request.Delivery.Address);
+        assertEquals(new BigDecimal("1.250"), request.Delivery.EstimatedDistanceKm);
         verify(virtualCartRepository).save(org.mockito.ArgumentMatchers.any());
     }
 
@@ -163,7 +178,8 @@ class PresaleDeliveryCreateServiceTest {
         item.IsDigital = "N";
 
         CheckoutDeliveryDto delivery = new CheckoutDeliveryDto();
-        delivery.DeliveryTypeCod = SaleConstants.DELIVERY_TYPE_STORE_PICKUP;
+        delivery.DeliveryTypeCod = SaleConstants.DELIVERY_TYPE_AUTOMATIC;
+        delivery.ClientAddressID = 20L;
         delivery.IsThirdParty = "N";
         delivery.Names = "Cliente";
         delivery.Phone = "999999999";

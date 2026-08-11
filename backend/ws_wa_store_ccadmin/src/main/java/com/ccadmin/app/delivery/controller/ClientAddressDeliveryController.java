@@ -1,0 +1,72 @@
+package com.ccadmin.app.delivery.controller;
+
+import com.ccadmin.app.delivery.model.dto.DeliveryCoverageRequestDto;
+import com.ccadmin.app.delivery.service.ClientAddressDeliveryCreateService;
+import com.ccadmin.app.delivery.service.ClientAddressDeliverySearchService;
+import com.ccadmin.app.delivery.service.StoreDeliverySearchService;
+import com.ccadmin.app.sale.model.entity.ClientAddressEntity;
+import com.ccadmin.app.shared.model.dto.ResponseWsDto;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("api/v1/delivery/clientAddress")
+public class ClientAddressDeliveryController {
+
+    private final ClientAddressDeliveryCreateService clientAddressDeliveryCreateService;
+    private final ClientAddressDeliverySearchService clientAddressDeliverySearchService;
+    private final StoreDeliverySearchService storeDeliverySearchService;
+
+    public ClientAddressDeliveryController(
+            ClientAddressDeliveryCreateService clientAddressDeliveryCreateService,
+            ClientAddressDeliverySearchService clientAddressDeliverySearchService,
+            StoreDeliverySearchService storeDeliverySearchService
+    ) {
+        this.clientAddressDeliveryCreateService = clientAddressDeliveryCreateService;
+        this.clientAddressDeliverySearchService = clientAddressDeliverySearchService;
+        this.storeDeliverySearchService = storeDeliverySearchService;
+    }
+
+    @GetMapping("findAll")
+    public ResponseEntity<ResponseWsDto> findAll() {
+        try {
+            return new ResponseEntity<>(
+                    new ResponseWsDto(clientAddressDeliverySearchService.findAll()),
+                    HttpStatus.OK
+            );
+        } catch (Exception ex) {
+            return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("save")
+    public ResponseEntity<ResponseWsDto> save(@RequestBody ClientAddressEntity request) {
+        try {
+            return new ResponseEntity<>(
+                    new ResponseWsDto(clientAddressDeliveryCreateService.save(request)),
+                    HttpStatus.OK
+            );
+        } catch (Exception ex) {
+            return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("validateCoverage")
+    public ResponseEntity<ResponseWsDto> validateCoverage(
+            @RequestBody DeliveryCoverageRequestDto request
+    ) {
+        try {
+            return new ResponseEntity<>(
+                    new ResponseWsDto(storeDeliverySearchService.validateCoverage(request)),
+                    HttpStatus.OK
+            );
+        } catch (Exception ex) {
+            return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+}

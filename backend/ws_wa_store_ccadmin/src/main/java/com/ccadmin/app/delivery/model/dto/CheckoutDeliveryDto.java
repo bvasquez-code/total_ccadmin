@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 public class CheckoutDeliveryDto {
 
     public String DeliveryTypeCod;
+    public Long ClientAddressID;
     public String IsThirdParty = "N";
     public String Names;
     public String DocumentType;

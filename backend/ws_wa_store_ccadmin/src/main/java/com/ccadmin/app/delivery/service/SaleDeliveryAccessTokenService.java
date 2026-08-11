@@ -180,7 +180,14 @@ public class SaleDeliveryAccessTokenService {
     }
 
     private byte[] decodeUrl(String value) {
-        return Base64.getUrlDecoder().decode(value);
+        if (isBlank(value) || value.contains("=")) {
+            throw invalidTokenException();
+        }
+        byte[] decodedValue = Base64.getUrlDecoder().decode(value);
+        if (!encodeUrl(decodedValue).equals(value)) {
+            throw invalidTokenException();
+        }
+        return decodedValue;
     }
 
     private IllegalArgumentException invalidTokenException() {

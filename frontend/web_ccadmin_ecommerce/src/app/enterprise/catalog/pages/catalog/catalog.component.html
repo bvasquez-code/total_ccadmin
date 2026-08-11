@@ -75,17 +75,17 @@
 
     <div class="product-grid" *ngIf="Products.length > 0">
       <article class="product-card" *ngFor="let product of Products">
-        <div class="product-media">
+        <a class="product-media" [routerLink]="['/product', product.ProductCod]">
           <img *ngIf="imageRoute(product) as image" [src]="image" [alt]="product.ProductName">
           <div class="image-placeholder" *ngIf="!imageRoute(product)">
             <i class="fa fa-box-open"></i><span>Imagen no disponible</span>
           </div>
           <span class="digital-badge" *ngIf="isDigital(product)"><i class="fa fa-infinity"></i> Digital</span>
           <span class="cart-badge" *ngIf="isInCart(product.ProductCod)"><i class="fa fa-check"></i> En carrito</span>
-        </div>
+        </a>
         <div class="product-body">
           <span class="product-category">{{ product.CategoryName || 'Producto' }}</span>
-          <h3>{{ product.ProductName }}</h3>
+          <h3><a [routerLink]="['/product', product.ProductCod]">{{ product.ProductName }}</a></h3>
           <p>{{ product.ProductDesc || 'Consulta sus características y disponibilidad.' }}</p>
           <div class="product-stock" [class.digital]="isDigital(product)">
             <i class="fa" [class.fa-infinity]="isDigital(product)" [class.fa-cubes]="!isDigital(product)"></i>
@@ -120,3 +120,12 @@
     </nav>
   </ng-container>
 </main>
+
+<app-cart-product-modal
+  [IsOpen]="IsCartModalOpen"
+  [Item]="selectedCartItem()"
+  (Close)="closeCartModal()"
+  (Decrease)="decreaseSelectedQuantity()"
+  (Increase)="increaseSelectedQuantity()"
+  (NavigateToCart)="goToCart()">
+</app-cart-product-modal>

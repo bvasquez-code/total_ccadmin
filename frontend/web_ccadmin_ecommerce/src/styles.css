@@ -1,3 +1,5 @@
+@import 'leaflet/dist/leaflet.css';
+
 :root {
   --store-primary: #2878bd;
   --store-primary-dark: #185681;
@@ -6,6 +8,21 @@
   --store-muted: #718694;
   --store-border: #dfe8ed;
   --store-background: #f5f8fa;
+}
+
+.client-address-map .address-map-label {
+  padding: 3px 7px;
+  color: #173d59;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #bdd2de;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(17, 52, 77, 0.2);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.client-address-map .address-map-label::before {
+  border-top-color: #bdd2de;
 }
 
 * {

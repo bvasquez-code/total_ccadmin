@@ -21,10 +21,31 @@
 .selected .selection-check { display: block; }
 .delivery-warning { padding: 1rem; color: #9d4c3f; background: #fff1ef; border-radius: 0.5rem; }
 .delivery-warning i { margin-right: 0.6rem; }
-.map-placeholder { display: flex; align-items: center; gap: 0.9rem; margin-bottom: 1rem; padding: 1rem; color: #567388; background: #eef6fb; border: 1px dashed #9fc7df; border-radius: 0.55rem; }
-.map-placeholder > i { color: #2878bd; font-size: 1.8rem; }
-.map-placeholder div { display: flex; flex-direction: column; }
-.map-placeholder small { color: #748b9a; }
+.address-heading { align-items: center; }
+.address-heading > div { flex: 1; }
+.address-loading { padding: 1rem; color: #60798a; text-align: center; }
+.empty-addresses { display: flex; align-items: flex-start; gap: 1rem; padding: 1rem; color: #60798a; background: #f6f9fb; border: 1px dashed #afc8d7; border-radius: 0.6rem; }
+.empty-addresses > i { color: #2878bd; font-size: 1.7rem; }
+.empty-addresses strong { color: #294c64; }
+.empty-addresses p { margin: 0.2rem 0 0.7rem; font-size: 0.82rem; }
+.saved-addresses { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; margin-bottom: 1rem; }
+.address-card { position: relative; display: flex; align-items: flex-start; gap: 0.7rem; min-height: 105px; padding: 0.9rem; color: #60798a; text-align: left; background: #f8fafb; border: 1px solid #d7e2e9; border-radius: 0.6rem; }
+.address-card > i:first-child { margin-top: 0.1rem; color: #2878bd; font-size: 1.2rem; }
+.address-card > span:not(.default-badge) { display: flex; flex-direction: column; padding-right: 1.1rem; }
+.address-card strong { color: #294c64; font-size: 0.88rem; }
+.address-card small { margin-top: 0.2rem; line-height: 1.25; }
+.address-card.selected { background: #edf7fd; border-color: #2878bd; box-shadow: inset 0 0 0 1px #2878bd; }
+.address-check { position: absolute; top: 0.65rem; right: 0.65rem; display: none; color: #2aa176 !important; }
+.address-card.selected .address-check { display: block; }
+.default-badge { position: absolute; right: 0.55rem; bottom: 0.55rem; padding: 0.18rem 0.4rem; color: #2878bd; background: #dceefa; border-radius: 0.8rem; font-size: 0.62rem; font-weight: 700; }
+.coverage-result { display: flex; align-items: flex-start; gap: 0.7rem; margin-bottom: 1rem; padding: 0.85rem; border: 1px solid #d5e2e9; border-radius: 0.55rem; }
+.coverage-result > i { margin-top: 0.1rem; font-size: 1.2rem; }
+.coverage-result > div { display: flex; flex-direction: column; }
+.coverage-result strong { font-size: 0.85rem; }
+.coverage-result span { font-size: 0.78rem; }
+.coverage-result.checking { color: #60798a; background: #f5f9fb; }
+.coverage-result.available { color: #267254; background: #edf8f3; border-color: #bce1d1; }
+.coverage-result.unavailable { color: #9d4c3f; background: #fff1ef; border-color: #efc7c0; }
 .checkout-summary { position: sticky; top: 94px; }
 .checkout-summary > span { color: #778d9b; font-size: 0.75rem; }
 .checkout-summary h2 { margin: 0.15rem 0; color: #24465f; font-size: 1.15rem; font-weight: 700; }
@@ -63,4 +84,4 @@
 .order-loading i { color: #2878bd; font-size: 2rem; }
 @media (max-width: 1000px) { .checkout-layout { grid-template-columns: 1fr; } .checkout-summary { position: static; } }
 @media (max-width: 1000px) { .payment-layout { grid-template-columns: 1fr; } .payment-summary { position: static; } }
-@media (max-width: 700px) { .checkout-heading { align-items: flex-start; flex-direction: column; gap: 0.7rem; } .delivery-options { grid-template-columns: 1fr; } .delivery-options button { min-height: 0; } .order-state-banner { align-items: flex-start; flex-wrap: wrap; } .state-badges { width: 100%; margin-left: 0; } }
+@media (max-width: 700px) { .checkout-heading { align-items: flex-start; flex-direction: column; gap: 0.7rem; } .delivery-options, .saved-addresses { grid-template-columns: 1fr; } .delivery-options button { min-height: 0; } .address-heading { align-items: flex-start; flex-wrap: wrap; } .address-heading .btn { margin-left: 2.8rem; } .order-state-banner { align-items: flex-start; flex-wrap: wrap; } .state-badges { width: 100%; margin-left: 0; } }
