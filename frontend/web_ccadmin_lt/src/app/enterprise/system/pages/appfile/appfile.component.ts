@@ -32,7 +32,7 @@ export class AppfileComponent {
 
     if (files && file) {
 
-      this.appFileSelect.extension = file.name.split(".")[1];
+      this.appFileSelect.extension = file.name.split(".").pop() || "";
       this.appFileSelect.type = "data:"+file.type+";base64,";
 
       const reader = new FileReader();

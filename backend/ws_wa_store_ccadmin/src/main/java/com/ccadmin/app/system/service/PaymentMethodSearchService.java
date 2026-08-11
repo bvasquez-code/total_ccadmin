@@ -22,6 +22,9 @@ public class PaymentMethodSearchService {
     @Autowired
     private CatalogSearchShared catalogSearchShared;
 
+    @Autowired
+    private AppFilePublicUrlService appFilePublicUrlService;
+
     private SearchTService<PaymentMethodEntity> searchTService;
 
     @Autowired
@@ -30,15 +33,21 @@ public class PaymentMethodSearchService {
     }
 
     public ResponsePageSearchT<PaymentMethodEntity> findAll(String query, int page) {
-        return this.searchTService.findAll(new SearchDto(query, page), 10);
+        ResponsePageSearchT<PaymentMethodEntity> response = this.searchTService.findAll(new SearchDto(query, page), 10);
+        applyPublicRoutes(response.resultSearch);
+        return response;
     }
 
     public PaymentMethodEntity findById(String paymentMethodCod) {
-        return this.paymentMethodRepository.findById(paymentMethodCod).orElse(null);
+        return appFilePublicUrlService.applyPublicRoute(
+                this.paymentMethodRepository.findById(paymentMethodCod).orElse(null)
+        );
     }
 
     public List<PaymentMethodEntity> findAllActive() {
-        return this.paymentMethodRepository.findAllActive();
+        List<PaymentMethodEntity> paymentMethodList = this.paymentMethodRepository.findAllActive();
+        applyPublicRoutes(paymentMethodList);
+        return paymentMethodList;
     }
 
     public ResponseWsDto findDataForm(String paymentMethodCod) {
@@ -50,5 +59,11 @@ public class PaymentMethodSearchService {
         rpt.AddResponseAdditional("paymentMethodType", this.catalogSearchShared.getPaymentMethodType());
 
         return rpt;
+    }
+
+    private void applyPublicRoutes(List<PaymentMethodEntity> paymentMethodList) {
+        if (paymentMethodList != null) {
+            paymentMethodList.forEach(appFilePublicUrlService::applyPublicRoute);
+        }
     }
 }

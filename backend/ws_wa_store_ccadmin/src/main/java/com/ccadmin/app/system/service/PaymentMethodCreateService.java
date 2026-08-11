@@ -13,6 +13,8 @@ public class PaymentMethodCreateService extends SessionService {
 
     @Autowired
     private PaymentMethodRepository paymentMethodRepository;
+    @Autowired
+    private AppFilePublicUrlService appFilePublicUrlService;
 
     public PaymentMethodEntity save(PaymentMethodEntity paymentMethod) {
         if (paymentMethod == null) {
@@ -20,7 +22,9 @@ public class PaymentMethodCreateService extends SessionService {
         }
         paymentMethod.validate();
         paymentMethod.addSession(this.getUserCod(), !this.paymentMethodRepository.existsById(paymentMethod.PaymentMethodCod));
-        return this.paymentMethodRepository.save(paymentMethod);
+        paymentMethod.Route = null;
+        PaymentMethodEntity savedPaymentMethod = this.paymentMethodRepository.save(paymentMethod);
+        return appFilePublicUrlService.applyPublicRoute(savedPaymentMethod);
     }
 
     public List<PaymentMethodEntity> saveAll(List<PaymentMethodEntity> paymentMethodList) {
@@ -30,8 +34,11 @@ public class PaymentMethodCreateService extends SessionService {
         paymentMethodList.forEach(paymentMethod -> {
             paymentMethod.validate();
             paymentMethod.addSession(this.getUserCod(), !this.paymentMethodRepository.existsById(paymentMethod.PaymentMethodCod));
+            paymentMethod.Route = null;
         });
-        return this.paymentMethodRepository.saveAll(paymentMethodList);
+        List<PaymentMethodEntity> savedPaymentMethodList = this.paymentMethodRepository.saveAll(paymentMethodList);
+        savedPaymentMethodList.forEach(appFilePublicUrlService::applyPublicRoute);
+        return savedPaymentMethodList;
     }
 
     public PaymentMethodEntity enable(PaymentMethodEntity request) {

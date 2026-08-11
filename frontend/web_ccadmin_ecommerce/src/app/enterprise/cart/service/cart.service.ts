@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { AppSetting } from '../../../config/app.setting';
 import { ProductInfoDto } from '../../catalog/model/dto/ProductInfoDto';
 import { ProductSearchEntity } from '../../catalog/model/entity/ProductSearchEntity';
 import { StorageConstants } from '../../shared/model/constants/StorageConstants';
@@ -116,6 +117,7 @@ export class CartService {
     const item = Object.assign(new CartItemDto(), value);
     if (value.ProductInfo?.Config?.ProductCod) {
       item.ProductInfo = Object.assign(new ProductInfoDto(), value.ProductInfo);
+      this.normalizeLegacyFileRoute(item);
       return item;
     }
 
@@ -135,6 +137,15 @@ export class CartService {
     product.CurrencySymbol = item.CurrencySymbol;
     product.FileRoute = item.FileRoute;
     item.ProductInfo = ProductInfoDto.fromProductSearch(product);
+    this.normalizeLegacyFileRoute(item);
     return item;
+  }
+
+  private normalizeLegacyFileRoute(item: CartItemDto): void {
+    const fileCod = item.ProductInfo?.Picture?.FileCod || '';
+    const usesLegacyRoute = (item.FileRoute || '').includes('/assets/public/');
+    if (!fileCod || (!usesLegacyRoute && item.FileRoute)) return;
+    const baseUrl = AppSetting.API.replace(/\/$/, '');
+    item.FileRoute = `${baseUrl}/api/v1/public/appFile/${encodeURIComponent(fileCod)}`;
   }
 }

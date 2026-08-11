@@ -12,14 +12,20 @@ public class PaymentMethodService {
 
     @Autowired
     private PaymentMethodRepository paymentMethodRepository;
+    @Autowired
+    private AppFilePublicUrlService appFilePublicUrlService;
 
     public PaymentMethodEntity findById(String PaymentMethodCod)
     {
-        return this.paymentMethodRepository.findById(PaymentMethodCod).get();
+        return appFilePublicUrlService.applyPublicRoute(
+                this.paymentMethodRepository.findById(PaymentMethodCod).get()
+        );
     }
     public List<PaymentMethodEntity> findAllActive()
     {
-        return this.paymentMethodRepository.findAllActive();
+        List<PaymentMethodEntity> paymentMethodList = this.paymentMethodRepository.findAllActive();
+        paymentMethodList.forEach(appFilePublicUrlService::applyPublicRoute);
+        return paymentMethodList;
     }
 
 }

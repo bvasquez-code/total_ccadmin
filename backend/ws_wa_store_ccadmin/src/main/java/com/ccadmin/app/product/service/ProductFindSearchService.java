@@ -7,6 +7,7 @@ import com.ccadmin.app.product.repository.ProductBarcodeRepository;
 import com.ccadmin.app.product.repository.ProductSearchRepository;
 import com.ccadmin.app.shared.model.dto.ResponsePageSearchT;
 import com.ccadmin.app.shared.service.GenericQueuedService;
+import com.ccadmin.app.system.service.AppFilePublicUrlService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,8 @@ public class ProductFindSearchService {
     private ProductRankingService productRankingService;
     @Autowired
     private GenericQueuedService genericQueuedService;
+    @Autowired
+    private AppFilePublicUrlService appFilePublicUrlService;
 
     public ResponsePageSearchT<ProductSearchEntity> query(ProductSearchDto productSearch)
     {
@@ -62,6 +65,7 @@ public class ProductFindSearchService {
                 productSearch.Init,
                 productSearch.Limit
         ) : new ArrayList<>();
+        applyPublicFileRoutes(productSearchList);
 
         ResponsePageSearchT<ProductSearchEntity> rpt = new ResponsePageSearchT<>(
                 productSearchList,
@@ -92,9 +96,21 @@ public class ProductFindSearchService {
         if (storeCod == null || storeCod.isBlank()) {
             throw new IllegalArgumentException("La tienda es obligatoria");
         }
-        return productSearchRepository.findAvailableProduct(productCod, storeCod)
+        ProductSearchEntity product = productSearchRepository.findAvailableProduct(productCod, storeCod)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "El producto no está disponible en la tienda seleccionada"
                 ));
+        applyPublicFileRoute(product);
+        return product;
+    }
+
+    private void applyPublicFileRoutes(List<ProductSearchEntity> productList) {
+        productList.forEach(this::applyPublicFileRoute);
+    }
+
+    private void applyPublicFileRoute(ProductSearchEntity product) {
+        if (product != null && product.FileCod != null && !product.FileCod.isBlank()) {
+            product.FileRoute = appFilePublicUrlService.buildPublicRoute(product.FileCod);
+        }
     }
 }

@@ -50,7 +50,7 @@ public class WebSecurityConfig {
                 // 3) Rutas públicas y preflight
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/login", "/public/**").permitAll()
+                        .requestMatchers("/login", "/public/**", "/api/v1/public/**").permitAll()
                         .requestMatchers(
                                 "/api/v1/delivery/store/**",
                                 "/api/v1/delivery/productSearch/**",

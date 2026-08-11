@@ -22,7 +22,7 @@ CREATE TABLE `app_file` (
   `FileCod` varchar(20) NOT NULL,
   `Name` varchar(32) NOT NULL,
   `Description` varchar(64) DEFAULT NULL,
-  `Route` varchar(500) DEFAULT NULL,
+  `Route` varchar(500) DEFAULT NULL COMMENT 'Ruta relativa dentro del almacenamiento de archivos configurado',
   `FileType` varchar(16) DEFAULT NULL,
   `CreationUser` varchar(16) NOT NULL,
   `CreationDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -50,6 +50,16 @@ CREATE TABLE `app_file` (
         SELECT 'Tabla app_file ya existe. No se realizaron cambios estructurales.' AS Mensaje;
 
     END IF;
+
+    -- Convierte rutas antiguas del frontend en claves relativas del almacenamiento.
+    -- Es idempotente: una ruta ya normalizada como image/archivo.jpg no se modifica.
+    UPDATE app_file
+       SET Route = SUBSTRING(
+               CONCAT('/', REPLACE(Route, CHAR(92), '/')),
+               LOCATE('/assets/public/', CONCAT('/', REPLACE(Route, CHAR(92), '/')))
+                   + LENGTH('/assets/public/')
+           )
+     WHERE LOCATE('/assets/public/', CONCAT('/', REPLACE(Route, CHAR(92), '/'))) > 0;
 
 END $$
 
