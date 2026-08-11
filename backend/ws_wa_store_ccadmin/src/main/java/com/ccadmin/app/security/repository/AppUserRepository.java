@@ -7,9 +7,21 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface AppUserRepository extends JpaRepository<AppUserEntity,String>, CcAdminRepository<AppUserEntity,String> {
 
+    @Query(value = """
+            select au.*
+            from app_user au
+            where au.UserCod = :UserCod
+              and au.UserCod <> :TechnicalUserCod
+            limit 1
+            """, nativeQuery = true)
+    Optional<AppUserEntity> findForAuthentication(
+            @Param("UserCod") String UserCod,
+            @Param("TechnicalUserCod") String TechnicalUserCod
+    );
 
     @Override
     @Query( value = """

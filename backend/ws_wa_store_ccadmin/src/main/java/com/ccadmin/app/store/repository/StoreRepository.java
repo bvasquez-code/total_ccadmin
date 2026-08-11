@@ -2,6 +2,7 @@ package com.ccadmin.app.store.repository;
 
 import com.ccadmin.app.shared.interfaceccadmin.CcAdminRepository;
 import com.ccadmin.app.store.model.entity.StoreEntity;
+import com.ccadmin.app.store.model.idto.IStoreVirtualCandidateDto;
 
 import java.util.List;
 import java.util.Optional;
@@ -20,6 +21,32 @@ public interface StoreRepository extends JpaRepository<StoreEntity,String>, CcAd
             limit 1
             """, nativeQuery = true)
     Optional<StoreEntity> findByStoreCod(@Param("storeCod") String storeCod);
+
+    @Query(value = """
+            select
+                s.StoreCod as StoreCod,
+                s.Name as Name,
+                s.Description as Description,
+                s.Address as Address,
+                s.UbigeoCod as UbigeoCod,
+                s.Latitude as Latitude,
+                s.Longitude as Longitude,
+                svc.AllowsAutomaticDelivery as AllowsAutomaticDelivery,
+                svc.AutomaticDeliveryRadiusKm as AutomaticDeliveryRadiusKm,
+                svc.AllowsScheduledDelivery as AllowsScheduledDelivery,
+                svc.ScheduledDeliveryMaxRadiusKm as ScheduledDeliveryMaxRadiusKm,
+                svc.AllowsStorePickup as AllowsStorePickup,
+                svc.PreparationTimeMinutes as PreparationTimeMinutes
+            from store s
+            inner join store_virtual_config svc on svc.StoreCod = s.StoreCod
+            where s.Status = 'A'
+              and s.IsVirtualStoreEnabled = 'S'
+              and svc.Status = 'A'
+              and s.Latitude is not null
+              and s.Longitude is not null
+            order by s.StoreCod
+            """, nativeQuery = true)
+    List<IStoreVirtualCandidateDto> findAllActiveVirtualCandidates();
 
     @Query(value = """
             select s.* from store s where s.Status = 'A' order by s.StoreCod

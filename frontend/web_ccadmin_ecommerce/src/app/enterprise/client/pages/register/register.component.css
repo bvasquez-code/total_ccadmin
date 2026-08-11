@@ -1,0 +1,24 @@
+.register-panel {
+  width: min(100%, 760px);
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+.register-panel .back-link {
+  margin-bottom: 1.5rem;
+}
+
+.register-panel .form-group {
+  margin-bottom: 1rem;
+}
+
+.register-panel label {
+  color: #36566d;
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .register-panel {
+    padding: 2rem 1.25rem;
+  }
+}

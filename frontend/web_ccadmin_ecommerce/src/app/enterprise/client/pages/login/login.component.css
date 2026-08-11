@@ -1,0 +1,122 @@
+.auth-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.8fr);
+  min-height: calc(100vh - 134px);
+  background: #f5f8fa;
+}
+
+.auth-panel {
+  width: min(100%, 540px);
+  margin: auto;
+  padding: 3rem 2rem;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 2.5rem;
+  color: #637b8d;
+  font-weight: 600;
+}
+
+.auth-eyebrow {
+  color: #2878bd;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.auth-panel h1 {
+  margin: 0.35rem 0 0.75rem;
+  color: #173d59;
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  font-weight: 700;
+}
+
+.auth-description {
+  margin-bottom: 2rem;
+  color: #6b7f8e;
+  font-size: 1.02rem;
+}
+
+.input-icon {
+  position: relative;
+}
+
+.input-icon > i {
+  position: absolute;
+  top: 50%;
+  left: 1rem;
+  z-index: 1;
+  color: #7790a2;
+  transform: translateY(-50%);
+}
+
+.input-icon input {
+  padding-left: 2.7rem;
+}
+
+.password-input input {
+  padding-right: 3rem;
+}
+
+.password-input button {
+  position: absolute;
+  top: 50%;
+  right: 0.75rem;
+  color: #60798b;
+  background: transparent;
+  border: 0;
+  transform: translateY(-50%);
+}
+
+.auth-register {
+  display: flex;
+  flex-direction: column;
+  margin-top: 2rem;
+  padding: 1rem;
+  color: #557083;
+  background: #eaf4fb;
+  border-radius: 0.6rem;
+}
+
+.auth-benefits {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 4rem;
+  color: #fff;
+  background: linear-gradient(145deg, #164f7b 0%, #2878bd 62%, #35a37c 140%);
+}
+
+.benefit-brand {
+  margin-bottom: 2rem;
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.auth-benefits h2 {
+  max-width: 520px;
+  font-size: clamp(2rem, 4vw, 3.25rem);
+  font-weight: 700;
+}
+
+.auth-benefits ul {
+  padding: 0;
+  margin: 2rem 0 0;
+  list-style: none;
+}
+
+.auth-benefits li {
+  margin-bottom: 1rem;
+}
+
+.auth-benefits li i {
+  margin-right: 0.7rem;
+  color: #a8f0d3;
+}
+
+@media (max-width: 900px) {
+  .auth-page { grid-template-columns: 1fr; }
+  .auth-benefits { display: none; }
+}

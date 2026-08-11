@@ -18,6 +18,11 @@ public class PersonShared {
         return this.personService.save(person);
     }
 
+    public PersonEntity saveWeb(PersonEntity person, String auditUserCod)
+    {
+        return this.personService.saveWeb(person, auditUserCod);
+    }
+
     public PersonEntity findById(String PersonCod)
     {
         return this.personService.findById(PersonCod);

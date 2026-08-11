@@ -48,4 +48,14 @@ public interface VirtualCartRepository extends JpaRepository<VirtualCartEntity, 
             @Param("expirationDate") Date expirationDate,
             @Param("limit") int limit
     );
+
+    @Query(value = """
+            select vc.*
+            from virtual_cart vc
+            where vc.PresaleCod = :presaleCod
+              and vc.CartStatus = 'C'
+              and vc.Status = 'A'
+            limit 1
+            """, nativeQuery = true)
+    Optional<VirtualCartEntity> findConvertedByPresaleCod(@Param("presaleCod") String presaleCod);
 }

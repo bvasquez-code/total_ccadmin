@@ -1,0 +1,93 @@
+<div class="auth-page register-page">
+  <div class="auth-panel register-panel">
+    <a routerLink="/" class="back-link"><i class="fa fa-arrow-left mr-2"></i>Volver a la tienda</a>
+    <span class="auth-eyebrow">Nueva cuenta</span>
+    <h1>Crea tu cuenta</h1>
+    <p class="auth-description">Regístrate una sola vez y continúa con tus compras.</p>
+
+    <form (ngSubmit)="submit()" novalidate>
+      <div class="form-row">
+        <div class="form-group col-md-5">
+          <label for="register-document-type">Tipo de documento</label>
+          <select id="register-document-type" class="form-control form-control-lg" name="DocumentType"
+            [(ngModel)]="Register.DocumentType">
+            <option value="01">DNI</option>
+            <option value="04">Carnet de extranjería</option>
+          </select>
+        </div>
+        <div class="form-group col-md-7">
+          <label for="register-document-number">Número de documento</label>
+          <input id="register-document-number" class="form-control form-control-lg" name="DocumentNumber"
+            [attr.maxlength]="documentMaxLength()" [(ngModel)]="Register.DocumentNumber"
+            autocomplete="off" placeholder="Documento de identidad">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group col-md-6">
+          <label for="register-names">Nombres</label>
+          <input id="register-names" class="form-control form-control-lg" name="Names" maxlength="128"
+            [(ngModel)]="Register.Names" autocomplete="given-name">
+        </div>
+        <div class="form-group col-md-6">
+          <label for="register-last-names">Apellidos</label>
+          <input id="register-last-names" class="form-control form-control-lg" name="LastNames" maxlength="128"
+            [(ngModel)]="Register.LastNames" autocomplete="family-name">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group col-md-5">
+          <label for="register-phone">Celular</label>
+          <input id="register-phone" type="tel" class="form-control form-control-lg" name="Phone" maxlength="20"
+            [(ngModel)]="Register.Phone" autocomplete="tel" placeholder="999999999">
+        </div>
+        <div class="form-group col-md-7">
+          <label for="register-email">Correo electrónico</label>
+          <input id="register-email" type="email" class="form-control form-control-lg" name="Email" maxlength="32"
+            [(ngModel)]="Register.Email" autocomplete="email" placeholder="tu@correo.com">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group col-md-6">
+          <label for="register-password">Contraseña</label>
+          <div class="password-input">
+            <input id="register-password" [type]="ShowPassword ? 'text' : 'password'"
+              class="form-control form-control-lg" name="Password" maxlength="72"
+              [(ngModel)]="Register.Password" autocomplete="new-password">
+            <button type="button" aria-label="Mostrar u ocultar contraseña" (click)="ShowPassword = !ShowPassword">
+              <i class="fa" [class.fa-eye]="!ShowPassword" [class.fa-eye-slash]="ShowPassword"></i>
+            </button>
+          </div>
+          <small class="form-text text-muted">Mínimo 8 caracteres.</small>
+        </div>
+        <div class="form-group col-md-6">
+          <label for="register-confirm-password">Confirmar contraseña</label>
+          <input id="register-confirm-password" [type]="ShowPassword ? 'text' : 'password'"
+            class="form-control form-control-lg" name="ConfirmPassword" maxlength="72"
+            [(ngModel)]="Register.ConfirmPassword" autocomplete="new-password">
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-lg btn-block mt-3" [disabled]="IsSubmitting">
+        {{ IsSubmitting ? 'Creando cuenta...' : 'Crear cuenta y continuar' }}
+      </button>
+    </form>
+
+    <div class="auth-register">
+      <strong>¿Ya tienes una cuenta?</strong>
+      <a [routerLink]="['/login']" [queryParams]="{ returnUrl: ReturnUrl }">Inicia sesión aquí</a>
+    </div>
+  </div>
+
+  <aside class="auth-benefits">
+    <div class="benefit-brand"><i class="fa fa-leaf"></i> AceApp</div>
+    <h2>Tu cuenta lista para comprar.</h2>
+    <ul>
+      <li><i class="fa fa-check"></i> Registro inmediato, sin pasos adicionales</li>
+      <li><i class="fa fa-check"></i> Stock validado en la tienda seleccionada</li>
+      <li><i class="fa fa-check"></i> Delivery, recojo o entrega programada</li>
+    </ul>
+  </aside>
+</div>

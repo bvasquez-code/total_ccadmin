@@ -1,0 +1,60 @@
+<div class="location-overlay" *ngIf="Visible" (click)="close()">
+  <section class="location-dialog" role="dialog" aria-modal="true" aria-labelledby="location-title"
+    (click)="$event.stopPropagation()">
+    <header class="location-header">
+      <div>
+        <span class="eyebrow">Tu compra, en la tienda correcta</span>
+        <h2 id="location-title">¿Dónde deseas comprar?</h2>
+      </div>
+      <button type="button" class="close-button" aria-label="Cerrar" (click)="close()">
+        <i class="fa fa-times"></i>
+      </button>
+    </header>
+
+    <div class="mode-tabs" role="tablist">
+      <button type="button" [class.active]="Mode === 'automatic'" (click)="Mode = 'automatic'">
+        <i class="fa fa-location-arrow"></i> Detectar ubicación
+      </button>
+      <button type="button" [class.active]="Mode === 'manual'" (click)="Mode = 'manual'">
+        <i class="fa fa-map-marker-alt"></i> Otra ubicación
+      </button>
+    </div>
+
+    <div class="location-body" *ngIf="Mode === 'automatic'">
+      <div class="location-illustration"><i class="fa fa-store"></i></div>
+      <h3>Te mostraremos los productos de la tienda más cercana</h3>
+      <p>Solo solicitaremos tu ubicación para elegir la tienda y calcular las modalidades de entrega disponibles.</p>
+      <button type="button" class="btn btn-primary btn-lg btn-block" [disabled]="IsLocating"
+        (click)="detectByBrowser()">
+        <i class="fa fa-crosshairs mr-2"></i>{{ IsLocating ? 'Buscando tienda...' : 'Usar mi ubicación actual' }}
+      </button>
+    </div>
+
+    <form class="location-body text-left" *ngIf="Mode === 'manual'" (ngSubmit)="useManualLocation()">
+      <p class="text-muted mb-3">Puedes comprar para otra ciudad o programar una entrega futura.</p>
+      <div class="form-group">
+        <label for="delivery-address">Dirección o referencia</label>
+        <input id="delivery-address" class="form-control" name="Address" maxlength="256"
+          [(ngModel)]="ManualLocation.Address" placeholder="Ej. Av. Principal 123, Chiclayo">
+      </div>
+      <div class="form-row">
+        <div class="form-group col-sm-6">
+          <label for="delivery-latitude">Latitud</label>
+          <input id="delivery-latitude" type="number" class="form-control" name="Latitude"
+            [(ngModel)]="ManualLocation.Latitude" placeholder="-6.7714">
+        </div>
+        <div class="form-group col-sm-6">
+          <label for="delivery-longitude">Longitud</label>
+          <input id="delivery-longitude" type="number" class="form-control" name="Longitude"
+            [(ngModel)]="ManualLocation.Longitude" placeholder="-79.8409">
+        </div>
+      </div>
+      <small class="form-text text-muted mb-3">
+        El mapa interactivo se conectará en la etapa de ubicación exacta del checkout.
+      </small>
+      <button type="submit" class="btn btn-primary btn-lg btn-block" [disabled]="IsLocating">
+        <i class="fa fa-search-location mr-2"></i>{{ IsLocating ? 'Buscando tienda...' : 'Buscar tienda cercana' }}
+      </button>
+    </form>
+  </section>
+</div>

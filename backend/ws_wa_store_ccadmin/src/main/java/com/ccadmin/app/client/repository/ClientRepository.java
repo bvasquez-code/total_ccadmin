@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ClientRepository extends JpaRepository<ClientEntity,String>, CcAdminRepository<ClientEntity,String> {
 
@@ -14,6 +15,22 @@ public interface ClientRepository extends JpaRepository<ClientEntity,String>, Cc
             select * from client c where c.PersonCod = :PersonCod and c.Status = 'A'
             """,nativeQuery = true)
     public ClientEntity findByPersonCod(@Param("PersonCod") String PersonCod);
+
+    @Query(value = """
+            select c.*
+            from client c
+            where c.ClientCod = :clientCod
+              and c.Status = 'A'
+            limit 1
+            """, nativeQuery = true)
+    Optional<ClientEntity> findActiveByClientCod(@Param("clientCod") String clientCod);
+
+    @Query(value = """
+            select count(1)
+            from client c
+            where c.ClientCod = :clientCod
+            """, nativeQuery = true)
+    int countByClientCod(@Param("clientCod") String clientCod);
 
     @Override
     @Query(value = """

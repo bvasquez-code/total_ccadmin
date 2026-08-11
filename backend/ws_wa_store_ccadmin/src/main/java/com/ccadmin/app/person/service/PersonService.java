@@ -16,14 +16,25 @@ public class PersonService extends SessionService {
 
     public PersonEntity save(PersonEntity person)
     {
+        return this.save(person, getUserCod());
+    }
+
+    public PersonEntity saveWeb(PersonEntity person, String auditUserCod)
+    {
+        return this.save(person, auditUserCod);
+    }
+
+    private PersonEntity save(PersonEntity person, String auditUserCod)
+    {
         person.PersonCod = person.DocumentNum;
-        person.addSession(getUserCod(),!this.personRepository.existsById(person.PersonCod));
+        person.addSession(auditUserCod, this.personRepository.countByPersonCod(person.PersonCod) == 0);
         return this.personRepository.save(person);
     }
 
     public PersonEntity findById(String PersonCod)
     {
-        return this.personRepository.findById(PersonCod).get();
+        return this.personRepository.findActiveByPersonCod(PersonCod)
+                .orElseThrow(() -> new IllegalArgumentException("No existe la persona " + PersonCod));
     }
 
     public PersonEntity findByDocumentNum(String DocumentType,String DocumentNum)

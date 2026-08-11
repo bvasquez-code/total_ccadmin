@@ -1,0 +1,112 @@
+<main class="container orders-page">
+  <header class="orders-heading">
+    <div>
+      <span>Tu cuenta</span>
+      <h1>Mis pedidos</h1>
+      <p>Revisa tus compras, retoma pagos pendientes y consulta el avance de cada entrega.</p>
+    </div>
+    <a routerLink="/catalog"><i class="fa fa-arrow-left mr-2"></i>Seguir comprando</a>
+  </header>
+
+  <section class="orders-loading" *ngIf="IsLoading && OrderPage.resultSearch.length === 0">
+    <i class="fa fa-spinner fa-spin"></i>
+    <span>Cargando tus pedidos...</span>
+  </section>
+
+  <section class="orders-empty" *ngIf="!IsLoading && OrderPage.resultSearch.length === 0">
+    <div><i class="fa fa-shopping-bag"></i></div>
+    <h2>Aún no tienes pedidos</h2>
+    <p>Cuando realices una compra podrás consultar aquí su pago y seguimiento.</p>
+    <a routerLink="/catalog" class="btn btn-primary">Explorar productos</a>
+  </section>
+
+  <section class="order-list" *ngIf="OrderPage.resultSearch.length > 0">
+    <article class="order-card" *ngFor="let order of OrderPage.resultSearch">
+      <header class="order-card-heading">
+        <div class="order-code">
+          <span>Pedido</span>
+          <strong>{{ order.SaleCod }}</strong>
+          <small>{{ order.CreationDate | date:'dd/MM/yyyy, h:mm a' }}</small>
+        </div>
+        <div class="order-badges">
+          <span class="status-badge" [ngClass]="paymentStatusClass(order)">
+            <i class="fa" [class.fa-check-circle]="order.IsPaid === 'S'"
+              [class.fa-clock]="order.IsPaid !== 'S'"></i>
+            {{ paymentStatus(order) }}
+          </span>
+          <span class="status-badge status-neutral">{{ saleStatus(order) }}</span>
+        </div>
+      </header>
+
+      <div class="order-content">
+        <div class="order-information">
+          <div class="information-item">
+            <i class="fa fa-store"></i>
+            <span><small>Atendido por</small><strong>{{ order.StoreName }}</strong></span>
+          </div>
+          <div class="information-item">
+            <i class="fa fa-truck"></i>
+            <span><small>Modalidad</small><strong>{{ order.DeliveryTypeName || 'Por coordinar' }}</strong></span>
+          </div>
+          <div class="information-item" *ngIf="order.Address">
+            <i class="fa fa-map-marker-alt"></i>
+            <span><small>Destino</small><strong>{{ order.Address }}</strong></span>
+          </div>
+          <div class="information-item" *ngIf="order.ScheduledFrom">
+            <i class="fa fa-calendar-alt"></i>
+            <span>
+              <small>Entrega programada</small>
+              <strong>{{ order.ScheduledFrom | date:'dd/MM/yyyy, h:mm a' }}</strong>
+            </span>
+          </div>
+          <div class="information-item" *ngIf="order.TrackingNumber">
+            <i class="fa fa-barcode"></i>
+            <span><small>Código de seguimiento</small><strong>{{ order.TrackingNumber }}</strong></span>
+          </div>
+        </div>
+
+        <aside class="order-total">
+          <small>Total del pedido</small>
+          <strong>{{ order.NumTotalPrice | currency:order.CurrencyCod:'symbol-narrow':'1.2-2' }}</strong>
+          <span *ngIf="order.NumTotalPaid > 0">
+            Pagado: {{ order.NumTotalPaid | currency:order.CurrencyCod:'symbol-narrow':'1.2-2' }}
+          </span>
+        </aside>
+      </div>
+
+      <div class="order-tracking" [ngClass]="deliveryStatusClass(order)">
+        <div class="tracking-heading">
+          <span><i class="fa fa-route"></i>Seguimiento</span>
+          <strong>{{ deliveryStatus(order) }}</strong>
+        </div>
+        <div class="tracking-bar" role="progressbar" [attr.aria-valuenow]="trackingProgress(order)"
+          aria-valuemin="0" aria-valuemax="100">
+          <span [style.width.%]="trackingProgress(order)"></span>
+        </div>
+      </div>
+
+      <footer class="order-card-footer" *ngIf="order.CanResumePayment">
+        <div>
+          <i class="fa fa-info-circle"></i>
+          Tu pedido está reservado y todavía puedes completar el pago.
+        </div>
+        <button type="button" class="btn btn-primary" (click)="resumePayment(order)">
+          <i class="fa fa-credit-card mr-2"></i>Completar pago
+        </button>
+      </footer>
+    </article>
+  </section>
+
+  <nav class="orders-pagination" aria-label="Paginación de pedidos" *ngIf="OrderPage.TotalPages > 1">
+    <button type="button" class="btn btn-light" [disabled]="OrderPage.Page <= 1 || IsLoading"
+      (click)="loadPage(OrderPage.Page - 1)">
+      <i class="fa fa-chevron-left mr-2"></i>Anterior
+    </button>
+    <span>Página {{ OrderPage.Page }} de {{ OrderPage.TotalPages }}</span>
+    <button type="button" class="btn btn-light"
+      [disabled]="OrderPage.Page >= OrderPage.TotalPages || IsLoading"
+      (click)="loadPage(OrderPage.Page + 1)">
+      Siguiente<i class="fa fa-chevron-right ml-2"></i>
+    </button>
+  </nav>
+</main>

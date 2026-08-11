@@ -29,10 +29,21 @@ public class ClientService extends SessionService {
     @Transactional
     public ClientEntity save(ClientEntity Client)
     {
-        this.personShared.save(Client.Person);
+        return this.save(Client, getUserCod());
+    }
+
+    @Transactional
+    public ClientEntity saveWeb(ClientEntity Client, String auditUserCod)
+    {
+        return this.save(Client, auditUserCod);
+    }
+
+    private ClientEntity save(ClientEntity Client, String auditUserCod)
+    {
+        this.personShared.saveWeb(Client.Person, auditUserCod);
         Client.PersonCod = Client.Person.PersonCod;
         Client.ClientCod = Client.Person.PersonCod;
-        Client.addSession(getUserCod(),!this.clientRepository.existsById(Client.PersonCod));
+        Client.addSession(auditUserCod, this.clientRepository.countByClientCod(Client.PersonCod) == 0);
         this.clientRepository.save(Client);
         return findById(Client.ClientCod);
     }
@@ -88,7 +99,8 @@ public class ClientService extends SessionService {
 
     public ClientEntity findById(String ClientCod)
     {
-        ClientEntity Client = this.clientRepository.findById(ClientCod).get();
+        ClientEntity Client = this.clientRepository.findActiveByClientCod(ClientCod)
+                .orElseThrow(() -> new IllegalArgumentException("No existe el cliente " + ClientCod));
         Client.Person = this.personShared.findById(Client.PersonCod);
         return Client;
     }

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ProductSearchRepository extends JpaRepository<ProductSearchEntity, ProductSearchID>, CcAdminRepository<ProductSearchEntity, ProductSearchID> {
 
@@ -89,6 +90,20 @@ public interface ProductSearchRepository extends JpaRepository<ProductSearchEnti
     public ProductSearchEntity findResumeProduct(
              @Param("ProductCod") String ProductCod
             ,@Param("StoreCod") String StoreCod
+    );
+
+    @Query(value = """
+            select ps.*
+            from product_search ps
+            where ps.ProductCod = :productCod
+              and ps.StoreCod = :storeCod
+              and ps.Status = 'A'
+              and (ps.IsDigital = 'S' or ps.NumPhysicalStock >= greatest(1, ps.ProductUnitFactor))
+            limit 1
+            """, nativeQuery = true)
+    Optional<ProductSearchEntity> findAvailableProduct(
+            @Param("productCod") String productCod,
+            @Param("storeCod") String storeCod
     );
 
 

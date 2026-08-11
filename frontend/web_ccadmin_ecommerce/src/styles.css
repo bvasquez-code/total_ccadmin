@@ -1,0 +1,102 @@
+:root {
+  --store-primary: #2878bd;
+  --store-primary-dark: #185681;
+  --store-success: #2ca279;
+  --store-text: #24465f;
+  --store-muted: #718694;
+  --store-border: #dfe8ed;
+  --store-background: #f5f8fa;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+  color: var(--store-text);
+  background: var(--store-background);
+  font-family: 'Open Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(40, 120, 189, 0.25);
+  outline-offset: 2px;
+}
+
+.btn-primary {
+  background-color: var(--store-primary);
+  border-color: var(--store-primary);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  background-color: var(--store-primary-dark);
+  border-color: var(--store-primary-dark);
+}
+
+.form-control {
+  color: var(--store-text);
+  border-color: #ccd9e1;
+}
+
+.form-control:focus {
+  border-color: #6eb0dd;
+  box-shadow: 0 0 0 0.2rem rgba(40, 120, 189, 0.14);
+}
+
+.toast-container .ngx-toastr {
+  border-radius: 0.55rem;
+  box-shadow: 0 0.8rem 2rem rgba(17, 52, 77, 0.2);
+}
+
+.swal2-popup.store-payment-confirmation {
+  width: min(31rem, calc(100vw - 2rem));
+  padding: 1.8rem;
+  border: 1px solid var(--store-border);
+  border-radius: 1rem;
+  box-shadow: 0 1.5rem 4rem rgba(17, 52, 77, 0.22);
+  font-family: 'Open Sans', sans-serif;
+}
+
+.store-payment-confirmation .swal2-title {
+  padding-top: 0.4rem;
+  color: var(--store-text);
+  font-size: 1.45rem;
+}
+
+.store-payment-confirmation .swal2-html-container {
+  color: var(--store-muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.store-payment-confirmation .swal2-actions {
+  gap: 0.6rem;
+  margin-top: 1.4rem;
+}
+
+.store-payment-confirmation .swal2-styled {
+  min-width: 9rem;
+  margin: 0;
+  padding: 0.7rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 700;
+}

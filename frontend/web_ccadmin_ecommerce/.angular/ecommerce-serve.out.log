@@ -1,0 +1,46 @@
+
+> web-ccadmin-ecommerce@0.1.0 start
+> ng serve --port 4300 --host 127.0.0.1
+
+
+Initial Chunk Files   | Names         |  Raw Size
+vendor.js             | vendor        |   2.63 MB |
+styles.css, styles.js | styles        | 542.56 kB |
+main.js               | main          | 299.69 kB |
+polyfills.js          | polyfills     | 234.37 kB |
+runtime.js            | runtime       |   6.52 kB |
+
+| Initial Total |   3.69 MB
+
+Build at: 2026-08-10T19:37:26.591Z - Hash: 2efcc3915af3cb89 - Time: 9876ms
+
+** Angular Live Development Server is listening on 127.0.0.1:4300, open your browser on http://127.0.0.1:4300/ **
+
+
+√ Compiled successfully.
+
+Initial Chunk Files | Names   |  Raw Size
+main.js             | main    | 299.66 kB |
+runtime.js          | runtime |   6.52 kB |
+
+3 unchanged chunks
+
+Build at: 2026-08-10T19:39:27.746Z - Hash: a38b4f33027c0301 - Time: 2242ms
+
+√ Compiled successfully.
+
+Initial Chunk Files | Names   |  Raw Size
+main.js             | main    | 299.67 kB |
+runtime.js          | runtime |   6.52 kB |
+
+3 unchanged chunks
+
+Build at: 2026-08-10T19:39:47.930Z - Hash: ccaa7a4cc55e9c0f - Time: 828ms
+
+√ Compiled successfully.
+
+5 unchanged chunks
+
+Build at: 2026-08-10T19:41:13.647Z - Hash: ccaa7a4cc55e9c0f - Time: 570ms
+
+√ Compiled successfully.

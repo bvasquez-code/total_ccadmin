@@ -1,0 +1,412 @@
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { ToastrService } from 'ngx-toastr';
+import Swal from 'sweetalert2';
+import { CartService } from '../../../cart/service/cart.service';
+import { ClientSessionService } from '../../../client/service/client-session.service';
+import { StoreContextDto } from '../../../store/model/dto/StoreContextDto';
+import { StoreContextService } from '../../../store/service/store-context.service';
+import { CheckoutDeliveryDto } from '../../model/dto/CheckoutDeliveryDto';
+import { CheckoutRegisterDto } from '../../model/dto/CheckoutRegisterDto';
+import { CheckoutConfirmationDto } from '../../model/dto/CheckoutConfirmationDto';
+import { PresaleRegisterDto } from '../../model/dto/PresaleRegisterDto';
+import { SaleDetailDto } from '../../model/dto/SaleDetailDto';
+import { SalePaymentDeliveryRegisterDto } from '../../model/dto/SalePaymentDeliveryRegisterDto';
+import { PaymentMethodEntity } from '../../model/entity/PaymentMethodEntity';
+import { PresaleDetEntity } from '../../model/entity/PresaleDetEntity';
+import { TrxPaymentEntity } from '../../model/entity/TrxPaymentEntity';
+import { CheckoutService } from '../../service/checkout.service';
+
+interface DeliveryOption {
+  Code: string;
+  Name: string;
+  Description: string;
+  Icon: string;
+}
+
+@Component({
+  selector: 'app-checkout',
+  templateUrl: './checkout.component.html',
+  styleUrls: ['./checkout.component.css']
+})
+export class CheckoutComponent implements OnInit {
+  public StoreContext: StoreContextDto | null = null;
+  public Delivery = new CheckoutDeliveryDto();
+  public IsSubmitting: boolean = false;
+  public PresaleCod: string = '';
+  public SaleCod: string = '';
+  public OrderToken: string = '';
+  public SaleDetail: SaleDetailDto | null = null;
+  public PaymentMethodList: PaymentMethodEntity[] = [];
+  public SelectedPaymentMethodCod: string = '';
+  public IsSavingPayment: boolean = false;
+  public OrderLoadError: boolean = false;
+
+  private pendingConfirmationRequest: PresaleRegisterDto | null = null;
+
+  public readonly DeliveryOptions: DeliveryOption[] = [
+    { Code: 'DELIVERY', Name: 'Delivery cercano', Description: 'Envío directo desde la tienda.', Icon: 'fa-motorcycle' },
+    { Code: 'STORE_PICKUP', Name: 'Recojo en tienda', Description: 'Te avisaremos cuando esté listo.', Icon: 'fa-store' },
+    { Code: 'SCHEDULED_DELIVERY', Name: 'Entrega programada', Description: 'Coordinaremos fecha y operador.', Icon: 'fa-calendar-alt' }
+  ];
+
+  public constructor(
+    public cartService: CartService,
+    private storeContextService: StoreContextService,
+    private clientSessionService: ClientSessionService,
+    private checkoutService: CheckoutService,
+    private activatedRoute: ActivatedRoute,
+    private router: Router,
+    private toastrService: ToastrService
+  ) {
+  }
+
+  public ngOnInit(): void {
+    void this.initialize();
+  }
+
+  public availableOptions(): DeliveryOption[] {
+    if (!this.StoreContext) return [];
+    return this.DeliveryOptions.filter(option => {
+      if (option.Code === 'DELIVERY') return this.StoreContext?.AllowsAutomaticDelivery === 'S';
+      if (option.Code === 'STORE_PICKUP') return this.StoreContext?.AllowsStorePickup === 'S';
+      return this.StoreContext?.AllowsScheduledDelivery === 'S';
+    });
+  }
+
+  public selectDelivery(code: string): void {
+    this.Delivery.DeliveryTypeCod = code;
+  }
+
+  public requiresAddress(): boolean {
+    return this.Delivery.DeliveryTypeCod !== 'STORE_PICKUP';
+  }
+
+  public requiresSchedule(): boolean {
+    return this.Delivery.DeliveryTypeCod === 'SCHEDULED_DELIVERY';
+  }
+
+  public subtotal(): number {
+    return this.cartService.subtotal();
+  }
+
+  public currency(): string {
+    return this.cartService.getCurrent().Items[0]?.CurrencyCod || 'PEN';
+  }
+
+  public async confirm(): Promise<void> {
+    if (!this.validate()) return;
+
+    this.IsSubmitting = true;
+    try {
+      if (!this.pendingConfirmationRequest) {
+        const request = await this.createPresale();
+        if (!request) return;
+        this.pendingConfirmationRequest = request;
+      }
+
+      const response = await this.checkoutService.confirm(this.pendingConfirmationRequest);
+      if (response.ErrorStatus) {
+        this.toastrService.error(
+          response.Message || 'La preventa fue registrada, pero no se pudo convertir en una venta pendiente.'
+        );
+        return;
+      }
+
+      const confirmation = response.Data as CheckoutConfirmationDto;
+      const saleDetail = confirmation?.SaleDetail;
+      if (!confirmation?.OrderToken
+        || !saleDetail?.Headboard?.SaleCod
+        || saleDetail.Headboard.SaleStatus !== 'P') {
+        this.toastrService.error('El servidor no devolvió una venta pendiente válida.');
+        return;
+      }
+
+      this.OrderToken = confirmation.OrderToken;
+      this.SaleCod = saleDetail.Headboard.SaleCod;
+      this.PresaleCod = saleDetail.Headboard.PresaleCod;
+      this.SaleDetail = saleDetail;
+      this.pendingConfirmationRequest = null;
+      this.cartService.clear();
+      await this.router.navigate(['/checkout'], {
+        queryParams: { order: this.OrderToken },
+        replaceUrl: true
+      });
+      await this.loadSaleData();
+      this.toastrService.success('Pedido creado. Ahora puedes completar los pagos pendientes.');
+    } finally {
+      this.IsSubmitting = false;
+    }
+  }
+
+  public async addPayment(): Promise<void> {
+    const paymentMethod = this.selectedPaymentMethod();
+    const amount = this.outstandingBalance();
+
+    if (!this.SaleDetail || !paymentMethod) {
+      this.toastrService.warning('Selecciona el medio de pago.');
+      return;
+    }
+    if (this.hasRegisteredPayment() || amount <= 0) {
+      await this.loadSaleData();
+      return;
+    }
+
+    const confirmation = await Swal.fire({
+      title: `Confirmar pago de ${this.paymentAmountLabel()}`,
+      text: `Método seleccionado: ${this.paymentMethodName(paymentMethod.PaymentMethodCod)}. Al continuar se procesará el pago del pedido.`,
+      icon: 'question',
+      showCancelButton: true,
+      reverseButtons: true,
+      focusCancel: true,
+      confirmButtonColor: '#2878bd',
+      cancelButtonColor: '#718694',
+      confirmButtonText: 'Sí, realizar pago',
+      cancelButtonText: 'Volver',
+      heightAuto: false,
+      customClass: {
+        popup: 'store-payment-confirmation'
+      }
+    });
+    if (!confirmation.isConfirmed) {
+      return;
+    }
+
+    const request = new SalePaymentDeliveryRegisterDto();
+    request.OrderToken = this.OrderToken;
+    request.TrxPayment = this.buildPayment(paymentMethod, amount);
+
+    this.IsSavingPayment = true;
+    try {
+      const response = await this.checkoutService.addPayment(request);
+      if (response.ErrorStatus) {
+        this.toastrService.error(response.Message || 'No se pudo registrar el pago.');
+        return;
+      }
+
+      await this.loadSaleData();
+      this.toastrService.success('Pago completado. El pedido continúa pendiente de confirmación por la tienda.');
+    } finally {
+      this.IsSavingPayment = false;
+    }
+  }
+
+  public totalPaid(): number {
+    return this.money((this.SaleDetail?.DetailPayment || [])
+      .filter(payment => payment.Status === 'A')
+      .reduce((total, payment) => total + Number(payment.NumAmountPaid || 0), 0));
+  }
+
+  public outstandingBalance(): number {
+    const total = Number(this.SaleDetail?.Headboard?.NumTotalPrice || 0);
+    return Math.max(0, this.money(total - this.totalPaid()));
+  }
+
+  public isPaymentComplete(): boolean {
+    return this.SaleDetail?.Headboard?.IsPaid === 'S' || this.outstandingBalance() <= 0;
+  }
+
+  public hasRegisteredPayment(): boolean {
+    return this.SaleDetail?.Headboard?.IsPaid === 'S'
+      || (this.SaleDetail?.DetailPayment || []).length > 0;
+  }
+
+  public paymentAmountLabel(): string {
+    const currencyCod = this.SaleDetail?.Headboard?.CurrencyCod || 'PEN';
+    return `${currencyCod} ${this.outstandingBalance().toFixed(2)}`;
+  }
+
+  public selectedPaymentMethod(): PaymentMethodEntity | undefined {
+    return this.PaymentMethodList.find(item => item.PaymentMethodCod === this.SelectedPaymentMethodCod);
+  }
+
+  public paymentMethodName(paymentMethodCod: string): string {
+    const paymentMethod = this.PaymentMethodList.find(item => item.PaymentMethodCod === paymentMethodCod);
+    return paymentMethod?.Description || paymentMethod?.Name || paymentMethodCod;
+  }
+
+  private async initialize(): Promise<void> {
+    const orderToken = this.activatedRoute.snapshot.queryParamMap.get('order') || '';
+    if (orderToken) {
+      this.OrderToken = orderToken;
+      await this.loadSaleData();
+      return;
+    }
+
+    if (this.cartService.getCurrent().Items.length === 0) {
+      void this.router.navigate(['/cart']);
+      return;
+    }
+
+    this.StoreContext = this.storeContextService.getCurrent();
+    if (!this.StoreContext || this.StoreContext.Store.StoreCod !== this.cartService.getCurrent().StoreCod) {
+      this.toastrService.warning('Selecciona nuevamente la ubicación de la tienda antes de continuar.');
+      void this.router.navigate(['/catalog']);
+      return;
+    }
+
+    const session = this.clientSessionService.getCurrent();
+    this.Delivery.Names = session?.Names || '';
+    this.Delivery.Email = session?.Email || '';
+    this.Delivery.Address = this.StoreContext.Address || '';
+    this.Delivery.Latitude = this.StoreContext.Latitude;
+    this.Delivery.Longitude = this.StoreContext.Longitude;
+    this.Delivery.DeliveryTypeCod = this.availableOptions()[0]?.Code || '';
+  }
+
+  private async createPresale(): Promise<PresaleRegisterDto | null> {
+    const storeCod = this.StoreContext?.Store.StoreCod || '';
+    const codeResponse = await this.checkoutService.createCode(storeCod);
+    if (codeResponse.ErrorStatus || !codeResponse.Data) {
+      this.toastrService.error(codeResponse.Message || 'No se pudo generar el código del pedido.');
+      return null;
+    }
+
+    const request = new CheckoutRegisterDto();
+    const clientSession = this.clientSessionService.getCurrent();
+    request.Headboard.PresaleCod = String(codeResponse.Data);
+    request.Headboard.StoreCod = storeCod;
+    request.Headboard.ClientCod = clientSession?.ClientCod || '';
+    request.Headboard.CurrencyCod = this.currency();
+    request.Headboard.IsPaid = 'N';
+    request.Headboard.Client.ClientCod = clientSession?.ClientCod || '';
+    request.Headboard.Client.PersonCod = clientSession?.ClientCod || '';
+    request.Headboard.Client.Person.PersonCod = clientSession?.ClientCod || '';
+    request.Headboard.Client.Person.Names = clientSession?.Names || '';
+    request.Headboard.Client.Person.Email = clientSession?.Email || '';
+
+    request.PresaleChannel.PresaleCod = request.Headboard.PresaleCod;
+    request.PresaleChannel.ChannelCod = 'WEB';
+    request.Delivery = Object.assign(new CheckoutDeliveryDto(), this.Delivery);
+    request.DetailList = this.cartService.getCurrent().Items.map((item, index) => {
+      const detail = new PresaleDetEntity();
+      const factor = Math.max(1, Number(item.ProductUnitFactor || 1));
+      const configuredPrice = Number(item.ProductInfo?.Config?.NumPrice);
+      detail.PresaleCod = request.Headboard.PresaleCod;
+      detail.ItemNumber = index + 1;
+      detail.ProductCod = item.ProductCod;
+      detail.Variant = '0000';
+      detail.NumUnit = item.Quantity * factor;
+      detail.NumUnitPrice = Number.isFinite(configuredPrice)
+        ? configuredPrice
+        : this.money(item.UnitPrice / factor);
+      detail.NumDiscount = 0;
+      detail.ProductUnitName = item.ProductUnitName || 'NIU';
+      detail.ProductUnitFactor = factor;
+      detail.IsDigital = item.IsDigital || 'N';
+      detail.ProductInfo = item.ProductInfo;
+      detail.recalculate();
+      return detail;
+    });
+    request.rebuild();
+
+    const response = await this.checkoutService.save(request);
+    if (response.ErrorStatus) {
+      this.toastrService.error(response.Message || 'No se pudo registrar el pedido.');
+      return null;
+    }
+
+    const confirmation = new PresaleRegisterDto();
+    confirmation.Headboard = response.Data?.Headboard || request.Headboard;
+    confirmation.DetailList = response.Data?.DetailList || request.DetailList;
+    confirmation.PresaleChannel = response.Data?.PresaleChannel || request.PresaleChannel;
+    confirmation.CreditNoteCod = '';
+    return confirmation;
+  }
+
+  private async loadSaleData(): Promise<void> {
+    this.OrderLoadError = false;
+    const response = await this.checkoutService.findSaleData(this.OrderToken);
+    if (response.ErrorStatus) {
+      this.OrderLoadError = true;
+      this.toastrService.error(response.Message || 'No se pudo consultar el pedido.');
+      return;
+    }
+
+    this.SaleDetail = (response.DataAdditional.find(
+      item => item.Name === 'SaleDetail'
+    )?.Data as SaleDetailDto) || null;
+    this.PaymentMethodList = (response.DataAdditional.find(
+      item => item.Name === 'PaymentMethodList'
+    )?.Data as PaymentMethodEntity[]) || [];
+    this.PresaleCod = this.SaleDetail?.Headboard?.PresaleCod || '';
+    this.SaleCod = this.SaleDetail?.Headboard?.SaleCod || '';
+
+    if (!this.SelectedPaymentMethodCod
+      || !this.PaymentMethodList.some(item => item.PaymentMethodCod === this.SelectedPaymentMethodCod)) {
+      this.SelectedPaymentMethodCod = this.PaymentMethodList[0]?.PaymentMethodCod || '';
+    }
+  }
+
+  private buildPayment(
+    paymentMethod: PaymentMethodEntity,
+    amount: number
+  ): TrxPaymentEntity {
+    const payment = new TrxPaymentEntity();
+    payment.PaymentMethodCod = paymentMethod.PaymentMethodCod;
+    payment.PaymentPlatform = this.isCash(paymentMethod)
+      ? 'FISICO'
+      : (this.isCard(paymentMethod) ? 'POS' : 'WEB');
+    payment.PaymentStatus = 'OK';
+    payment.CurrencyCod = this.SaleDetail?.Headboard?.CurrencyCod || 'PEN';
+    payment.NumExchangevalue = Number(this.SaleDetail?.Headboard?.NumExchangevalue || 1);
+    payment.AmountPaid = amount;
+    payment.AmountReturned = 0;
+    payment.TypeMovement = 'I';
+
+    if (this.isCard(paymentMethod)) {
+      payment.CardNumber = '4578************';
+      payment.CardHolderName = 'Cliente web';
+    }
+    if (!this.isCash(paymentMethod)) {
+      payment.TransactionId = this.generateTransactionId();
+    }
+    return payment;
+  }
+
+  private isCash(paymentMethod: PaymentMethodEntity): boolean {
+    return paymentMethod.PaymentMethodType === '1001';
+  }
+
+  private isCard(paymentMethod: PaymentMethodEntity): boolean {
+    return paymentMethod.PaymentMethodType === '1002' || paymentMethod.PaymentMethodType === '1003';
+  }
+
+  private generateTransactionId(): string {
+    const now = new Date();
+    return `WEB_${now.getTime()}_${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+  }
+
+  private validate(): boolean {
+    if (!this.Delivery.DeliveryTypeCod) {
+      this.toastrService.warning('No hay una modalidad de entrega disponible para esta ubicación.');
+      return false;
+    }
+    if (!this.Delivery.Names.trim() || !this.Delivery.Phone.trim()) {
+      this.toastrService.warning('Ingresa el nombre y teléfono de quien recibirá o recogerá el pedido.');
+      return false;
+    }
+    if (this.Delivery.IsThirdParty === 'S' && !this.Delivery.DocumentNumber.trim()) {
+      this.toastrService.warning('Ingresa el documento de la persona autorizada.');
+      return false;
+    }
+    if (this.requiresAddress() && !this.Delivery.Address.trim()) {
+      this.toastrService.warning('Ingresa la dirección de entrega.');
+      return false;
+    }
+    if (this.requiresSchedule() && (!this.Delivery.ScheduledFrom || !this.Delivery.ScheduledTo)) {
+      this.toastrService.warning('Indica el rango de fecha y hora para la entrega programada.');
+      return false;
+    }
+    if (this.Delivery.ScheduledFrom && this.Delivery.ScheduledTo
+      && new Date(this.Delivery.ScheduledTo) < new Date(this.Delivery.ScheduledFrom)) {
+      this.toastrService.warning('El final de la entrega programada no puede ser anterior al inicio.');
+      return false;
+    }
+    return true;
+  }
+
+  private money(value: number): number {
+    return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+  }
+}

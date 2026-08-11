@@ -1,0 +1,30 @@
+.storefront-header { position: sticky; top: 0; z-index: 1030; color: #fff; background: #2878bd; box-shadow: 0 0.2rem 0.8rem rgba(16, 61, 93, 0.2); }
+.header-row { display: flex; align-items: stretch; min-height: 72px; }
+.brand { display: flex; align-items: center; flex: 0 0 auto; padding-right: 1.5rem; color: #fff; font-size: 1.55rem; font-weight: 600; }
+.brand:hover { color: #fff; text-decoration: none; }
+.brand i { margin-right: 0.2rem; }
+.brand small { align-self: center; margin: 0.35rem 0 0 0.4rem; padding: 0.15rem 0.35rem; color: #1c659b; background: #fff; border-radius: 0.25rem; font-size: 0.6rem; font-weight: 700; text-transform: uppercase; }
+
+.location-button { display: flex; align-items: center; gap: 0.65rem; min-width: 210px; padding: 0 1.15rem; color: #fff; text-align: left; background: rgba(16, 79, 127, 0.34); border: 0; border-right: 1px solid rgba(255, 255, 255, 0.12); border-left: 1px solid rgba(255, 255, 255, 0.12); }
+.location-button > i:first-child { color: #b9f1da; }
+.location-button > i:last-child { margin-left: auto; font-size: 0.7rem; }
+.location-button span { display: flex; flex-direction: column; max-width: 170px; }
+.location-button small { color: #d5eafb; font-size: 0.68rem; }
+.location-button strong { overflow: hidden; font-size: 0.82rem; text-overflow: ellipsis; white-space: nowrap; }
+
+.desktop-nav { display: flex; align-items: stretch; margin-left: 1rem; }
+.desktop-nav a { display: flex; align-items: center; padding: 0 0.9rem; color: #e4f1fa; font-size: 0.86rem; font-weight: 600; border-bottom: 3px solid transparent; }
+.desktop-nav a:hover, .desktop-nav a.active { color: #fff; text-decoration: none; border-bottom-color: #b9f1da; }
+.header-actions { display: flex; align-items: stretch; margin-left: auto; }
+.account-action, .cart-action, .mobile-menu { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0 0.9rem; color: #fff; background: transparent; border: 0; border-left: 1px solid rgba(255, 255, 255, 0.12); }
+.account-action:hover, .cart-action:hover { color: #fff; text-decoration: none; background: rgba(17, 77, 120, 0.25); }
+.account-action span { display: block; max-width: 125px; overflow: hidden; font-size: 0.78rem; text-overflow: ellipsis; white-space: nowrap; }
+.account-action i, .cart-action i { font-size: 1.2rem; }
+.cart-action { position: relative; min-width: 56px; }
+.cart-action span { position: absolute; top: 12px; right: 8px; display: grid; place-items: center; min-width: 1.15rem; height: 1.15rem; padding: 0 0.2rem; color: #fff; background: #e45e49; border: 2px solid #2878bd; border-radius: 1rem; font-size: 0.6rem; font-weight: 700; }
+.mobile-menu { display: none; min-width: 52px; }
+.mobile-nav { display: none; padding: 0.5rem 1rem 1rem; background: #236ca8; }
+.mobile-nav a, .mobile-nav button { display: block; width: 100%; padding: 0.7rem; color: #fff; text-align: left; background: transparent; border: 0; border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
+
+@media (max-width: 950px) { .desktop-nav { display: none; } .mobile-menu { display: flex; } .mobile-nav { display: block; } }
+@media (max-width: 690px) { .header-row { min-height: 64px; } .brand { padding-right: 0.65rem; font-size: 1.2rem; } .brand small { display: none; } .location-button { min-width: 0; flex: 1; padding: 0 0.65rem; } .location-button span { max-width: 130px; } .account-action { display: none; } }

@@ -1,0 +1,59 @@
+<main class="container cart-page">
+  <header class="page-heading">
+    <div><span>Tu selección</span><h1>Carrito de compras</h1></div>
+    <a routerLink="/" class="continue-link"><i class="fa fa-arrow-left mr-2"></i>Seguir comprando</a>
+  </header>
+
+  <section class="cart-empty" *ngIf="Cart.Items.length === 0">
+    <div><i class="fa fa-shopping-basket"></i></div>
+    <h2>Tu carrito aún está vacío</h2>
+    <p>Explora el catálogo de tu tienda y agrega los productos que necesites.</p>
+    <a routerLink="/" class="btn btn-primary btn-lg">Ver productos</a>
+  </section>
+
+  <div class="cart-layout" *ngIf="Cart.Items.length > 0">
+    <section class="cart-items">
+      <div class="store-note" *ngIf="StoreContext">
+        <i class="fa fa-store"></i>
+        <span>Este pedido será atendido por <strong>{{ StoreContext.Store.Name }}</strong></span>
+      </div>
+
+      <article class="cart-item" *ngFor="let item of Cart.Items">
+        <div class="item-image">
+          <img *ngIf="item.FileRoute" [src]="item.FileRoute" [alt]="item.ProductName">
+          <i *ngIf="!item.FileRoute" class="fa fa-box-open"></i>
+        </div>
+        <div class="item-info">
+          <small>#{{ item.ProductCod }}</small>
+          <h2>{{ item.ProductName }}</h2>
+          <span [class.digital]="item.IsDigital === 'S'">
+            {{ item.IsDigital === 'S' ? 'Producto digital' : item.AvailableQuantity + ' ' + item.ProductUnitName + ' disponibles' }}
+          </span>
+        </div>
+        <div class="quantity-control">
+          <button type="button" (click)="changeQuantity(item, -1)" aria-label="Quitar una unidad">−</button>
+          <input type="number" min="1" [max]="item.AvailableQuantity" [value]="item.Quantity"
+            (change)="setQuantity(item, $event)" [attr.aria-label]="'Cantidad de ' + item.ProductName">
+          <button type="button" (click)="changeQuantity(item, 1)" aria-label="Agregar una unidad">+</button>
+        </div>
+        <div class="item-price">
+          <small>{{ item.UnitPrice | currency:(item.CurrencyCod || 'PEN'):'symbol-narrow':'1.2-2' }} c/u</small>
+          <strong>{{ lineTotal(item) | currency:(item.CurrencyCod || 'PEN'):'symbol-narrow':'1.2-2' }}</strong>
+        </div>
+        <button type="button" class="remove-button" (click)="remove(item.ProductCod)" aria-label="Eliminar producto">
+          <i class="fa fa-trash-alt"></i>
+        </button>
+      </article>
+    </section>
+
+    <aside class="order-summary">
+      <h2>Resumen del pedido</h2>
+      <div><span>Productos</span><strong>{{ Cart.Items.length }}</strong></div>
+      <div><span>Subtotal</span><strong>{{ subtotal() | currency:currency():'symbol-narrow':'1.2-2' }}</strong></div>
+      <div class="delivery-row"><span>Entrega</span><small>Se calculará con tu modalidad</small></div>
+      <div class="total-row"><span>Total productos</span><strong>{{ subtotal() | currency:currency():'symbol-narrow':'1.2-2' }}</strong></div>
+      <a routerLink="/checkout" class="btn btn-primary btn-lg btn-block">Continuar pedido</a>
+      <p><i class="fa fa-shield-alt mr-2"></i>El stock se verificará nuevamente antes de confirmar.</p>
+    </aside>
+  </div>
+</main>

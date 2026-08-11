@@ -1,7 +1,9 @@
 package com.ccadmin.app.security.config;
 
+import com.ccadmin.app.security.model.constants.SecurityAuthorityConstants;
 import com.ccadmin.app.security.service.JWTAuthenticationFilterService;
 import com.ccadmin.app.security.service.JWTAuthorizationFilterService;
+import com.ccadmin.app.security.service.ClientJWTAuthorizationFilterService;
 import com.ccadmin.app.security.service.SecurityService;
 import com.ccadmin.app.security.service.UserDetailsServiceImp;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,7 @@ import java.util.List;
 public class WebSecurityConfig {
 
     private final JWTAuthorizationFilterService jwtAuthorizationFilter;
+    private final ClientJWTAuthorizationFilterService clientJWTAuthorizationFilter;
     private final UserDetailsServiceImp userDetailsService;
     private final SecurityService securityService;
 
@@ -48,12 +51,22 @@ public class WebSecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/login", "/public/**").permitAll()
-                        .anyRequest().authenticated()
+                        .requestMatchers(
+                                "/api/v1/delivery/store/**",
+                                "/api/v1/delivery/productSearch/**",
+                                "/api/v1/delivery/clientAccount/login",
+                                "/api/v1/delivery/clientAccount/register"
+                        ).permitAll()
+                        .requestMatchers("/api/v1/delivery/**")
+                        .hasAuthority(SecurityAuthorityConstants.CLIENT)
+                        .anyRequest()
+                        .hasAuthority(SecurityAuthorityConstants.ADMIN_APPLICATION)
                 )
                 // 4) Stateless
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 // 5) Filtros JWT
                 .addFilter(jwtAuthenticationFilter)
+                .addFilterBefore(clientJWTAuthorizationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthorizationFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

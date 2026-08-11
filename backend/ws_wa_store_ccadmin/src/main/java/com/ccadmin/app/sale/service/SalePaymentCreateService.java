@@ -4,6 +4,7 @@ import com.ccadmin.app.payment.model.entity.TrxPaymentEntity;
 import com.ccadmin.app.payment.shared.TrxPaymentShared;
 import com.ccadmin.app.sale.exception.SalePaymentException;
 import com.ccadmin.app.sale.model.dto.SalePaymentRegisterDto;
+import com.ccadmin.app.sale.model.dto.SalesContextDto;
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
 import com.ccadmin.app.sale.model.entity.SalePaymentEntity;
 import com.ccadmin.app.sale.model.factory.SalePaymentEntityFactory;
@@ -29,13 +30,28 @@ public class SalePaymentCreateService extends SessionService {
     @Autowired
     private TrxPaymentShared trxPaymentShared;
     @Autowired
-    private SaleCreateService saleCreateService;
+    private SalesContextService salesContextService;
 
     @Transactional
     public SalePaymentEntity save(SalePaymentRegisterDto payment) throws Exception {
+        return save(payment, salesContextService.getInternalContext());
+    }
 
+    @Transactional
+    public SalePaymentEntity saveWeb(SalePaymentRegisterDto payment, String storeCod) throws Exception {
+        return save(payment, salesContextService.getWebContext(storeCod));
+    }
+
+    private SalePaymentEntity save(
+            SalePaymentRegisterDto payment,
+            SalesContextDto salesContext
+    ) throws Exception {
         SaleHeadEntity saleHead = this.saleHeadRepository.findByIdForUpdate(payment.SaleCod)
                 .orElseThrow(() -> new SalePaymentException("Sale does not exist"));
+
+        if (!salesContext.StoreCod.equals(saleHead.StoreCod)) {
+            throw new SalePaymentException("La venta no pertenece a la tienda indicada");
+        }
 
         if(!StatusConst.PENDING.equals(saleHead.SaleStatus)){
             throw new SalePaymentException("Sale is no longer pending");
@@ -57,13 +73,13 @@ public class SalePaymentCreateService extends SessionService {
                 NumAmountPaid,
                 NumAmountReturned
         );
-        salePayment.addSession(getUserCod());
+        salePayment.addSession(salesContext.UserCod);
 
         salePaymentRepository.save(salePayment);
         if( TotalPayment.add(salePayment.NumAmountPaid).doubleValue() >= saleHead.NumTotalPrice.doubleValue() ){
 
             saleHead.IsPaid = "S";
-            saleHead.addSession(getUserCod());
+            saleHead.addSession(salesContext.UserCod);
             this.saleHeadRepository.save(saleHead);
 
             // this.saleCreateService.confirm(payment.SaleCod,payment.DocumentType,payment.CounterfoilCod);

@@ -2,6 +2,7 @@ package com.ccadmin.app.sale.repository;
 
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
 import com.ccadmin.app.sale.model.idto.IExpectedTotalsDto;
+import com.ccadmin.app.sale.model.idto.ISaleDeliveryOrderDto;
 import com.ccadmin.app.shared.interfaceccadmin.CcAdminRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -21,6 +22,98 @@ public interface SaleHeadRepository extends JpaRepository<SaleHeadEntity,String>
             for update
             """, nativeQuery = true)
     Optional<SaleHeadEntity> findByIdForUpdate(@Param("SaleCod") String saleCod);
+
+    @Query(value = """
+            select sh.*
+            from sale_head sh
+            inner join sale_channel sc on sc.SaleCod = sh.SaleCod
+            where sh.SaleCod = :SaleCod
+              and sh.ClientCod = :ClientCod
+              and sc.ChannelCod = 'WEB'
+              and sh.Status = 'A'
+              and sc.Status = 'A'
+            """, nativeQuery = true)
+    Optional<SaleHeadEntity> findWebSale(
+            @Param("SaleCod") String saleCod,
+            @Param("ClientCod") String clientCod
+    );
+
+    @Query(value = """
+            select sh.*
+            from sale_head sh
+            inner join sale_channel sc on sc.SaleCod = sh.SaleCod
+            where sh.SaleCod = :SaleCod
+              and sh.ClientCod = :ClientCod
+              and sc.ChannelCod = 'WEB'
+              and sh.Status = 'A'
+              and sc.Status = 'A'
+            for update
+            """, nativeQuery = true)
+    Optional<SaleHeadEntity> findWebSaleForUpdate(
+            @Param("SaleCod") String saleCod,
+            @Param("ClientCod") String clientCod
+    );
+
+    @Query(value = """
+            select count(1)
+            from sale_head sh
+            inner join sale_channel sc on sc.SaleCod = sh.SaleCod
+            where sh.ClientCod = :ClientCod
+              and sc.ChannelCod = 'WEB'
+              and sh.Status = 'A'
+              and sc.Status = 'A'
+            """, nativeQuery = true)
+    int countWebSalesByClientCod(@Param("ClientCod") String clientCod);
+
+    @Query(value = """
+            select
+                sh.SaleCod as SaleCod,
+                sh.PresaleCod as PresaleCod,
+                sh.StoreCod as StoreCod,
+                s.Name as StoreName,
+                sh.CreationDate as CreationDate,
+                sh.NumTotalPrice as NumTotalPrice,
+                coalesce(ps.NumTotalPaid, 0) as NumTotalPaid,
+                coalesce(ps.PaymentCount, 0) as PaymentCount,
+                sh.CurrencyCod as CurrencyCod,
+                sh.SaleStatus as SaleStatus,
+                sh.IsPaid as IsPaid,
+                sd.DeliveryTypeCod as DeliveryTypeCod,
+                coalesce(dt.Name, sd.DeliveryTypeCod) as DeliveryTypeName,
+                sd.DeliveryStatus as DeliveryStatus,
+                sd.Address as Address,
+                sd.ScheduledFrom as ScheduledFrom,
+                sd.ScheduledTo as ScheduledTo,
+                sd.TrackingNumber as TrackingNumber
+            from sale_head sh
+            inner join sale_channel sc on sc.SaleCod = sh.SaleCod
+            inner join store s on s.StoreCod = sh.StoreCod
+            left join sale_delivery sd
+                on sd.SaleCod = sh.SaleCod
+                and sd.Status = 'A'
+            left join delivery_type dt
+                on dt.DeliveryTypeCod = sd.DeliveryTypeCod
+                and dt.Status = 'A'
+            left join (
+                select
+                    sp.SaleCod,
+                    sum(case when sp.Status = 'A' then sp.NumAmountPaid else 0 end) as NumTotalPaid,
+                    count(1) as PaymentCount
+                from sale_payments sp
+                group by sp.SaleCod
+            ) ps on ps.SaleCod = sh.SaleCod
+            where sh.ClientCod = :ClientCod
+              and sc.ChannelCod = 'WEB'
+              and sh.Status = 'A'
+              and sc.Status = 'A'
+            order by sh.CreationDate desc, sh.SaleCod desc
+            limit :Init, :Limit
+            """, nativeQuery = true)
+    List<ISaleDeliveryOrderDto> findWebSalesByClientCod(
+            @Param("ClientCod") String clientCod,
+            @Param("Init") int init,
+            @Param("Limit") int limit
+    );
 
     @Query(value = """
             select * from sale_head

@@ -1,0 +1,10 @@
+.storefront-footer { color: #cfdfeb; background: #173d59; }
+.footer-grid { display: grid; grid-template-columns: 1.5fr repeat(3, 1fr); gap: 2rem; padding-top: 3rem; padding-bottom: 2.5rem; }
+.footer-brand > div { color: #fff; font-size: 1.45rem; font-weight: 700; }
+.footer-brand p { margin-top: 0.5rem; color: #9fb6c6; }
+.footer-grid > div:not(.footer-brand) { display: flex; flex-direction: column; gap: 0.55rem; }
+.footer-grid strong { margin-bottom: 0.25rem; color: #fff; }
+.footer-grid a, .footer-grid span { color: #b9cbd7; font-size: 0.85rem; }
+.footer-grid a:hover { color: #fff; }
+.footer-bottom { display: flex; justify-content: space-between; padding-top: 1rem; padding-bottom: 1rem; color: #8fa8b9; border-top: 1px solid rgba(255, 255, 255, 0.1); font-size: 0.75rem; }
+@media (max-width: 700px) { .footer-grid { grid-template-columns: repeat(2, 1fr); } .footer-brand { grid-column: 1 / -1; } }

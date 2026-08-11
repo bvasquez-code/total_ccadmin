@@ -1,0 +1,122 @@
+<section class="hero-section">
+  <div class="container hero-content">
+    <div class="hero-copy">
+      <span class="hero-eyebrow"><i class="fa fa-leaf mr-2"></i>Compra local, recibe mejor</span>
+      <h1>Todo lo que necesitas, desde tu tienda más cercana.</h1>
+      <p>Revisa stock real, elige cómo recibir tu pedido y compra con tranquilidad.</p>
+      <button type="button" class="location-pill" (click)="selectLocation()">
+        <i class="fa fa-map-marker-alt"></i>
+        <span *ngIf="StoreContext; else noStore">
+          <small>Comprando en</small>
+          <strong>{{ StoreContext.Store.Name }}</strong>
+        </span>
+        <ng-template #noStore>
+          <span><small>Primero indícanos</small><strong>¿Dónde deseas comprar?</strong></span>
+        </ng-template>
+        <i class="fa fa-chevron-right"></i>
+      </button>
+    </div>
+    <div class="hero-visual" aria-hidden="true">
+      <div class="visual-card card-main"><i class="fa fa-shopping-bag"></i></div>
+      <div class="visual-card card-delivery"><i class="fa fa-truck"></i><span>Delivery cercano</span></div>
+      <div class="visual-card card-store"><i class="fa fa-store"></i><span>Recojo en tienda</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="benefits-strip">
+  <div class="container benefits-grid">
+    <div><i class="fa fa-box-open"></i><span><strong>Stock de tu tienda</strong>Disponibilidad antes de agregar</span></div>
+    <div><i class="fa fa-route"></i><span><strong>Entrega flexible</strong>Delivery, recojo o programado</span></div>
+    <div><i class="fa fa-headset"></i><span><strong>Compra acompañada</strong>Información clara en cada paso</span></div>
+  </div>
+</section>
+
+<main class="container catalog-section">
+  <div class="catalog-heading">
+    <div>
+      <span class="section-eyebrow">Catálogo</span>
+      <h2>Encuentra algo especial</h2>
+      <p *ngIf="StoreContext">Productos disponibles en {{ StoreContext.Store.Name }}</p>
+    </div>
+    <div class="result-count" *ngIf="StoreContext && Page.TotalResult > 0">
+      <strong>{{ Page.TotalResult }}</strong> productos
+    </div>
+  </div>
+
+  <section class="location-empty" *ngIf="!StoreContext">
+    <div class="empty-icon"><i class="fa fa-map-marked-alt"></i></div>
+    <div>
+      <h3>El catálogo depende de tu ubicación</h3>
+      <p>Elegiremos una sola tienda para mostrarte sus productos y stock; nunca combinaremos existencias.</p>
+    </div>
+    <button type="button" class="btn btn-primary" (click)="selectLocation()">Elegir ubicación</button>
+  </section>
+
+  <ng-container *ngIf="StoreContext">
+    <form class="search-toolbar" (ngSubmit)="submitSearch()">
+      <div class="search-box">
+        <i class="fa fa-search"></i>
+        <input type="search" name="Query" [(ngModel)]="Search.Query"
+          placeholder="Buscar por nombre o código de producto" aria-label="Buscar productos">
+        <button type="submit" class="btn btn-primary">Buscar</button>
+      </div>
+      <div class="sort-box">
+        <label for="catalog-sort">Ordenar por</label>
+        <select id="catalog-sort" class="form-control" name="SortedBy"
+          [(ngModel)]="SortOption" (change)="changeSort()">
+          <option value="trend">Más relevantes</option>
+          <option value="date">Más recientes</option>
+          <option value="price">Menor precio</option>
+          <option value="price_desc">Mayor precio</option>
+        </select>
+      </div>
+    </form>
+
+    <div class="product-grid" *ngIf="Products.length > 0">
+      <article class="product-card" *ngFor="let product of Products">
+        <div class="product-media">
+          <img *ngIf="imageRoute(product) as image" [src]="image" [alt]="product.ProductName">
+          <div class="image-placeholder" *ngIf="!imageRoute(product)">
+            <i class="fa fa-box-open"></i><span>Imagen no disponible</span>
+          </div>
+          <span class="digital-badge" *ngIf="isDigital(product)"><i class="fa fa-infinity"></i> Digital</span>
+          <span class="cart-badge" *ngIf="isInCart(product.ProductCod)"><i class="fa fa-check"></i> En carrito</span>
+        </div>
+        <div class="product-body">
+          <span class="product-category">{{ product.CategoryName || 'Producto' }}</span>
+          <h3>{{ product.ProductName }}</h3>
+          <p>{{ product.ProductDesc || 'Consulta sus características y disponibilidad.' }}</p>
+          <div class="product-stock" [class.digital]="isDigital(product)">
+            <i class="fa" [class.fa-infinity]="isDigital(product)" [class.fa-cubes]="!isDigital(product)"></i>
+            {{ isDigital(product) ? 'Disponibilidad inmediata' : visibleStock(product) + ' ' + product.ProductUnitName + ' disponibles' }}
+          </div>
+          <div class="product-footer">
+            <div class="product-price">
+              <small>Precio</small>
+              <strong>{{ visiblePrice(product) | currency:(product.CurrencyCod || 'PEN'):'symbol-narrow':'1.2-2' }}</strong>
+            </div>
+            <button type="button" class="btn btn-primary add-button" (click)="addProduct(product)">
+              <i class="fa fa-shopping-cart"></i><span>Agregar</span>
+            </button>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <section class="catalog-empty" *ngIf="HasAttemptedSearch && !IsLoading && Products.length === 0">
+      <i class="fa fa-search"></i>
+      <h3>No encontramos productos</h3>
+      <p>Prueba con otro término o revisa nuevamente dentro de unos minutos.</p>
+    </section>
+
+    <nav class="catalog-pagination" aria-label="Páginas del catálogo" *ngIf="Page.TotalPages > 1">
+      <button type="button" [disabled]="Search.Page <= 1" (click)="goToPage(Search.Page - 1)"
+        aria-label="Página anterior"><i class="fa fa-chevron-left"></i></button>
+      <button type="button" *ngFor="let page of pageNumbers()" [class.active]="page === Search.Page"
+        (click)="goToPage(page)">{{ page }}</button>
+      <button type="button" [disabled]="Search.Page >= Page.TotalPages" (click)="goToPage(Search.Page + 1)"
+        aria-label="Página siguiente"><i class="fa fa-chevron-right"></i></button>
+    </nav>
+  </ng-container>
+</main>

@@ -3,6 +3,7 @@ package com.ccadmin.app.payment.service;
 import com.ccadmin.app.payment.exception.TrxPaymentBuildException;
 import com.ccadmin.app.payment.model.entity.TrxPaymentEntity;
 import com.ccadmin.app.payment.repository.TrxPaymentRepository;
+import com.ccadmin.app.shared.model.constants.AuditUserConstants;
 import com.ccadmin.app.shared.service.SessionService;
 import com.ccadmin.app.system.model.entity.CurrencyEntity;
 import com.ccadmin.app.system.shared.CurrencyShared;
@@ -21,8 +22,20 @@ public class TrxPaymentCreateService extends SessionService {
     private CurrencyShared currencyShared;
 
     public TrxPaymentEntity save(TrxPaymentEntity trxPayment) {
+        return this.save(trxPayment, getUserCod(), getCashSessionID());
+    }
+
+    public TrxPaymentEntity saveWeb(TrxPaymentEntity trxPayment) {
+        return this.save(trxPayment, AuditUserConstants.USER_WEB, null);
+    }
+
+    private TrxPaymentEntity save(
+            TrxPaymentEntity trxPayment,
+            String userCod,
+            Long cashSessionID
+    ) {
         rejectManualCreditNotePayment(trxPayment);
-        prepareForSave(trxPayment);
+        prepareForSave(trxPayment, userCod, cashSessionID);
         validatePaymentCreditNote(trxPayment);
         return this.trxPaymentRepository.save(trxPayment);
     }
@@ -30,7 +43,7 @@ public class TrxPaymentCreateService extends SessionService {
     public List<TrxPaymentEntity> saveAll(List<TrxPaymentEntity> trxPaymentList) {
         trxPaymentList.forEach(trxPayment -> {
             rejectManualCreditNotePayment(trxPayment);
-            prepareForSave(trxPayment);
+            prepareForSave(trxPayment, getUserCod(), getCashSessionID());
             validatePaymentCreditNote(trxPayment);
         });
         return this.trxPaymentRepository.saveAll(trxPaymentList);
@@ -42,7 +55,7 @@ public class TrxPaymentCreateService extends SessionService {
                     "La transaccion interna debe corresponder a una aplicacion de nota de credito"
             );
         }
-        prepareForSave(trxPayment);
+        prepareForSave(trxPayment, getUserCod(), getCashSessionID());
         validatePaymentCreditNote(trxPayment);
         return this.trxPaymentRepository.save(trxPayment);
     }
@@ -64,9 +77,13 @@ public class TrxPaymentCreateService extends SessionService {
         return this.trxPaymentRepository.save(trxPayment);
     }
 
-    private void prepareForSave(TrxPaymentEntity trxPayment) {
-        trxPayment.CashSessionID = getCashSessionID();
-        trxPayment.addSession(getUserCod());
+    private void prepareForSave(
+            TrxPaymentEntity trxPayment,
+            String userCod,
+            Long cashSessionID
+    ) {
+        trxPayment.CashSessionID = cashSessionID;
+        trxPayment.addSession(userCod);
         trxPayment.validate();
 
         CurrencyEntity currencySystem = currencyShared.findCurrencySystem();

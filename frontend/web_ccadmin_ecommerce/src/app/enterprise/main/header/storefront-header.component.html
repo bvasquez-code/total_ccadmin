@@ -1,0 +1,50 @@
+<header class="storefront-header">
+  <div class="container header-row">
+    <a routerLink="/" class="brand" aria-label="Ir al inicio">
+      <i class="fa fa-leaf"></i><span>AceApp</span><small>Tienda</small>
+    </a>
+
+    <button type="button" class="location-button" (click)="openLocation()">
+      <i class="fa fa-map-marker-alt"></i>
+      <span>
+        <small>{{ StoreContext ? 'Comprando en' : 'Selecciona' }}</small>
+        <strong>{{ StoreContext?.Store?.Name || 'Tu ubicación' }}</strong>
+      </span>
+      <i class="fa fa-chevron-down"></i>
+    </button>
+
+    <nav class="desktop-nav" aria-label="Navegación principal">
+      <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Productos</a>
+      <a routerLink="/cart" routerLinkActive="active">Mi carrito</a>
+      <a routerLink="/orders" routerLinkActive="active" *ngIf="ClientSession">Mis pedidos</a>
+    </nav>
+
+    <div class="header-actions">
+      <a routerLink="/login" class="account-action" *ngIf="!ClientSession">
+        <i class="fa fa-user-circle"></i><span>Ingresar</span>
+      </a>
+      <button type="button" class="account-action" *ngIf="ClientSession" (click)="logout()">
+        <i class="fa fa-user-circle"></i><span>{{ ClientSession.Names || ClientSession.Email }}</span>
+      </button>
+      <a routerLink="/cart" class="cart-action" aria-label="Abrir carrito">
+        <i class="fa fa-shopping-bag"></i><span *ngIf="CartCount > 0">{{ CartCount }}</span>
+      </a>
+      <button type="button" class="mobile-menu" aria-label="Abrir menú" (click)="MobileMenuOpen = !MobileMenuOpen">
+        <i class="fa" [class.fa-bars]="!MobileMenuOpen" [class.fa-times]="MobileMenuOpen"></i>
+      </button>
+    </div>
+  </div>
+
+  <nav class="mobile-nav" *ngIf="MobileMenuOpen">
+    <a routerLink="/" (click)="MobileMenuOpen = false">Productos</a>
+    <a routerLink="/cart" (click)="MobileMenuOpen = false">Mi carrito</a>
+    <a routerLink="/orders" *ngIf="ClientSession" (click)="MobileMenuOpen = false">Mis pedidos</a>
+    <button type="button" (click)="openLocation()">Cambiar ubicación</button>
+  </nav>
+</header>
+
+<app-location-selector
+  [Visible]="ShowLocationModal"
+  (Closed)="ShowLocationModal = false"
+  (StoreChanged)="applyStore($event)">
+</app-location-selector>

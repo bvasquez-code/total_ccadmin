@@ -40,4 +40,21 @@ public interface ChannelDeliveryTypeRepository extends JpaRepository<ChannelDeli
             limit 1
             """, nativeQuery = true)
     Optional<ChannelDeliveryTypeEntity> findDefaultByChannelCod(@Param("channelCod") String channelCod);
+
+    @Query(value = """
+            select cdt.*
+            from channel_delivery_type cdt
+            inner join commercial_channel cc on cc.ChannelCod = cdt.ChannelCod
+            inner join delivery_type dt on dt.DeliveryTypeCod = cdt.DeliveryTypeCod
+            where cdt.ChannelCod = :channelCod
+              and cdt.DeliveryTypeCod = :deliveryTypeCod
+              and cdt.Status = 'A'
+              and cc.Status = 'A'
+              and dt.Status = 'A'
+            limit 1
+            """, nativeQuery = true)
+    Optional<ChannelDeliveryTypeEntity> findActiveByChannelAndDeliveryType(
+            @Param("channelCod") String channelCod,
+            @Param("deliveryTypeCod") String deliveryTypeCod
+    );
 }

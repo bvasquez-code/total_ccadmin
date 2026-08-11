@@ -1,0 +1,14 @@
+/.angular/cache
+/.idea
+/.vscode/*
+!/.vscode/extensions.json
+!/.vscode/launch.json
+!/.vscode/tasks.json
+/dist
+/node_modules
+/tmp
+/out-tsc
+coverage
+.DS_Store
+npm-debug.log
+yarn-error.log

@@ -27,6 +27,9 @@ public final class PresaleHeadEntityFactory {
         }
         source.StoreCod = storeCod;
         source.SaleStatus = saleStatus;
+        if (source.IsPaid == null || source.IsPaid.isBlank()) {
+            source.IsPaid = "N";
+        }
         if (!source.existClient()) {
             source.ClientCod = null;
         }

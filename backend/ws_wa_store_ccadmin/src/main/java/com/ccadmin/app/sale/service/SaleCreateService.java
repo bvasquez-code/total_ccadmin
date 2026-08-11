@@ -10,6 +10,7 @@ import com.ccadmin.app.sale.model.constants.SaleConstants;
 import com.ccadmin.app.sale.model.dto.PresaleDetailDto;
 import com.ccadmin.app.sale.model.dto.SaleDetailDto;
 import com.ccadmin.app.sale.model.dto.SaleTaxCalculationResultDto;
+import com.ccadmin.app.sale.model.dto.SalesContextDto;
 import com.ccadmin.app.sale.model.entity.*;
 import com.ccadmin.app.sale.model.factory.SaleAppliedTaxEntityFactory;
 import com.ccadmin.app.sale.model.factory.SaleDetWarehouseEntityFactory;
@@ -66,9 +67,27 @@ public class SaleCreateService extends SessionService {
     private SaleDocumentCreateService saleDocumentCreateService;
     @Autowired
     private CatalogSearchShared catalogSearchShared;
+    @Autowired
+    private SaleDeliveryCreateService saleDeliveryCreateService;
+    @Autowired
+    private SalesContextService salesContextService;
 
     @Transactional
     public SaleDetailDto save(PresaleDetailDto presaleDetail) throws SaleException, SaleBuildException {
+
+        return this.save(presaleDetail, salesContextService.getInternalContext());
+    }
+
+    @Transactional
+    public SaleDetailDto saveWeb(PresaleDetailDto presaleDetail, String storeCod)
+            throws SaleException, SaleBuildException {
+        return this.save(presaleDetail, salesContextService.getWebContext(storeCod));
+    }
+
+    private SaleDetailDto save(
+            PresaleDetailDto presaleDetail,
+            SalesContextDto salesContext
+    ) throws SaleException, SaleBuildException {
 
         if(presaleDetail.Headboard == null){
             throw new SaleException("No existe cabecera de venta.");
@@ -77,22 +96,34 @@ public class SaleCreateService extends SessionService {
             throw new SaleException("Detalle de venta esta vacío.");
         }
 
-        SaleHeadEntity saleHead = this.createSaleHead(presaleDetail);
+        SaleHeadEntity saleHead = this.createSaleHead(presaleDetail, salesContext);
         SaleTaxCalculationResultDto taxCalculation = this.saleTaxCalculationService.buildSaleDetails(
                 presaleDetail.DetailList,
                 saleHead.SaleCod,
                 saleHead.StoreCod,
-                getUserCod()
+                salesContext.UserCod
         );
         saleHead.NumTotalPrice = taxCalculation.NumTotalPrice;
         saleHead.tax(taxCalculation.NumTotalPriceNoTax, taxCalculation.NumTotalTax)
-                .session(getUserCod())
+                .session(salesContext.UserCod)
                 .validate();
         List<SaleDetEntity> detailSale = taxCalculation.DetailList;
         List<SaleDetTaxEntity> detailTaxSale = taxCalculation.TaxDetailList;
-        List<SaleDetWarehouseEntity> detailSaleWarehouse = this.createSaleDetWarehouseEntities(presaleDetail,saleHead);
-        List<SaleAppliedTaxEntity> SaleAppliedTaxList = this.createSaleAppliedTaxEntities(saleHead, detailTaxSale);
-        SaleChannelEntity saleChannel = this.createSaleChannel(presaleDetail.PresaleChannel,saleHead);
+        List<SaleDetWarehouseEntity> detailSaleWarehouse = this.createSaleDetWarehouseEntities(
+                presaleDetail,
+                saleHead,
+                salesContext.UserCod
+        );
+        List<SaleAppliedTaxEntity> SaleAppliedTaxList = this.createSaleAppliedTaxEntities(
+                saleHead,
+                detailTaxSale,
+                salesContext.UserCod
+        );
+        SaleChannelEntity saleChannel = this.createSaleChannel(
+                presaleDetail.PresaleChannel,
+                saleHead,
+                salesContext.UserCod
+        );
 
         this.saleHeadRepository.save(saleHead);
         this.saleChannelRepository.save(saleChannel);
@@ -100,12 +131,24 @@ public class SaleCreateService extends SessionService {
         this.saleDetWarehouseRepository.saveAll(detailSaleWarehouse);
         this.saleDetTaxRepository.saveAll(detailTaxSale);
         this.saleAppliedTaxRepository.saveAll(SaleAppliedTaxList);
+        this.saleDeliveryCreateService.createFromConvertedCart(
+                presaleDetail.Headboard.PresaleCod,
+                saleHead.SaleCod,
+                salesContext.UserCod
+        );
 
         return this.saleSearchService.findById(saleHead.SaleCod);
     }
 
     public SaleHeadEntity createSaleHead(PresaleDetailDto presaleDetail) throws SaleBuildException {
-        String SaleCod = this.saleHeadRepository.getSaleCod(getStoreCod());
+        return this.createSaleHead(presaleDetail, salesContextService.getInternalContext());
+    }
+
+    private SaleHeadEntity createSaleHead(
+            PresaleDetailDto presaleDetail,
+            SalesContextDto salesContext
+    ) throws SaleBuildException {
+        String SaleCod = this.saleHeadRepository.getSaleCod(salesContext.StoreCod);
         PeriodEntity period = this.periodRepository.findPeriodActuality();
 
         SaleHeadEntity saleHead = SaleHeadEntityFactory.fromPresale(
@@ -114,9 +157,9 @@ public class SaleCreateService extends SessionService {
                         SaleCod,
                         StatusConst.PENDING
                 )
-                .session(getUserCod())
+                .session(salesContext.UserCod)
                 .validate();
-        saleHead.CashSessionID = getCashSessionID();
+        saleHead.CashSessionID = salesContext.CashSessionID;
 
         return saleHead;
     }
@@ -126,10 +169,18 @@ public class SaleCreateService extends SessionService {
     }
 
     public SaleChannelEntity createSaleChannel(PresaleChannelEntity presaleChannel,SaleHeadEntity saleHead) {
+        return this.createSaleChannel(presaleChannel, saleHead, getUserCod());
+    }
+
+    private SaleChannelEntity createSaleChannel(
+            PresaleChannelEntity presaleChannel,
+            SaleHeadEntity saleHead,
+            String userCod
+    ) {
         SaleChannelEntity saleChannel = new SaleChannelEntity();
         saleChannel.SaleCod = saleHead.SaleCod;
         saleChannel.ChannelCod = presaleChannel.ChannelCod;
-        saleChannel.addSession(getUserCod());
+        saleChannel.addSession(userCod);
 
         return saleChannel;
     }
@@ -148,6 +199,14 @@ public class SaleCreateService extends SessionService {
     }
 
     public List<SaleDetWarehouseEntity> createSaleDetWarehouseEntities(PresaleDetailDto presaleDetail,SaleHeadEntity saleHead) {
+        return this.createSaleDetWarehouseEntities(presaleDetail, saleHead, getUserCod());
+    }
+
+    private List<SaleDetWarehouseEntity> createSaleDetWarehouseEntities(
+            PresaleDetailDto presaleDetail,
+            SaleHeadEntity saleHead,
+            String userCod
+    ) {
         List<SaleDetWarehouseEntity> detailSaleWarehouse = new ArrayList<>();
         for( var item : presaleDetail.DetailList )
         {
@@ -162,7 +221,7 @@ public class SaleCreateService extends SessionService {
                                 item.DetailWarehouse.get(0),
                                 saleHead.SaleCod
                         )
-                        .session(getUserCod())
+                        .session(userCod)
                         .validate();
                 detailSaleWarehouse.add(detailWarehouse);
             }
@@ -188,6 +247,14 @@ public class SaleCreateService extends SessionService {
     }
 
     public List<SaleAppliedTaxEntity> createSaleAppliedTaxEntities(SaleHeadEntity saleHead, List<SaleDetTaxEntity> taxLineList){
+        return this.createSaleAppliedTaxEntities(saleHead, taxLineList, getUserCod());
+    }
+
+    private List<SaleAppliedTaxEntity> createSaleAppliedTaxEntities(
+            SaleHeadEntity saleHead,
+            List<SaleDetTaxEntity> taxLineList,
+            String userCod
+    ) {
         Map<String, BigDecimal> taxRateByTaxCod = new LinkedHashMap<>();
         for (SaleDetTaxEntity taxLine : taxLineList) {
             if ("S".equals(taxLine.IsInformative) || amount(taxLine.TaxAmount).compareTo(BigDecimal.ZERO) <= 0) {
@@ -201,7 +268,7 @@ public class SaleCreateService extends SessionService {
                                 saleHead.SaleCod,
                                 entry.getValue()
                         )
-                        .session(getUserCod())
+                        .session(userCod)
                         .validate())
                 .toList();
     }

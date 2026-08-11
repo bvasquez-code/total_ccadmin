@@ -1,0 +1,98 @@
+.location-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(20, 46, 68, 0.58);
+  backdrop-filter: blur(3px);
+}
+
+.location-dialog {
+  width: min(100%, 590px);
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 1rem;
+  box-shadow: 0 1.5rem 4rem rgba(7, 35, 57, 0.3);
+}
+
+.location-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.5rem 1.5rem 1rem;
+}
+
+.location-header h2 {
+  margin: 0.2rem 0 0;
+  color: #173d59;
+  font-size: 1.55rem;
+  font-weight: 700;
+}
+
+.eyebrow {
+  color: #2878bd;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.close-button {
+  width: 2.25rem;
+  height: 2.25rem;
+  color: #647b8c;
+  background: #f2f6f9;
+  border: 0;
+  border-radius: 50%;
+}
+
+.mode-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 0 1.5rem;
+  border-bottom: 1px solid #dce7ee;
+}
+
+.mode-tabs button {
+  padding: 0.9rem 0.5rem;
+  color: #62798a;
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  font-weight: 600;
+}
+
+.mode-tabs button.active {
+  color: #2878bd;
+  border-bottom-color: #2878bd;
+}
+
+.location-body {
+  padding: 1.5rem;
+  text-align: center;
+}
+
+.location-body h3 {
+  color: #24465f;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.location-body p {
+  color: #6a7f8e;
+}
+
+.location-illustration {
+  display: grid;
+  place-items: center;
+  width: 5rem;
+  height: 5rem;
+  margin: 0 auto 1rem;
+  color: #2878bd;
+  background: #eaf5fd;
+  border-radius: 50%;
+  font-size: 2rem;
+}

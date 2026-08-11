@@ -1,0 +1,53 @@
+<div class="auth-page">
+  <div class="auth-panel">
+    <a routerLink="/" class="back-link"><i class="fa fa-arrow-left mr-2"></i>Volver a la tienda</a>
+    <span class="auth-eyebrow">Tu cuenta</span>
+    <h1>Qué bueno tenerte de vuelta</h1>
+    <p class="auth-description">Inicia sesión para confirmar tu pedido, guardar tus datos y revisar tus compras.</p>
+
+    <form (ngSubmit)="submit()" novalidate>
+      <div class="form-group">
+        <label for="client-email">Correo electrónico</label>
+        <div class="input-icon">
+          <i class="fa fa-envelope"></i>
+          <input id="client-email" type="email" class="form-control form-control-lg" name="Email"
+            autocomplete="email" [(ngModel)]="Login.Email" placeholder="tu@correo.com">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="client-password">Contraseña</label>
+        <div class="input-icon password-input">
+          <i class="fa fa-lock"></i>
+          <input id="client-password" [type]="ShowPassword ? 'text' : 'password'"
+            class="form-control form-control-lg" name="Password" autocomplete="current-password"
+            [(ngModel)]="Login.Password" placeholder="Tu contraseña">
+          <button type="button" aria-label="Mostrar u ocultar contraseña" (click)="ShowPassword = !ShowPassword">
+            <i class="fa" [class.fa-eye]="!ShowPassword" [class.fa-eye-slash]="ShowPassword"></i>
+          </button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-lg btn-block mt-4" [disabled]="IsSubmitting">
+        {{ IsSubmitting ? 'Ingresando...' : 'Ingresar' }}
+      </button>
+    </form>
+
+    <div class="auth-register">
+      <strong>¿Primera vez por aquí?</strong>
+      <span>Crea tu cuenta y continúa con tu compra.</span>
+      <a class="btn btn-outline-primary mt-3" [routerLink]="['/register']"
+        [queryParams]="{ returnUrl: ReturnUrl }">Crear mi cuenta</a>
+    </div>
+  </div>
+
+  <aside class="auth-benefits">
+    <div class="benefit-brand"><i class="fa fa-leaf"></i> AceApp</div>
+    <h2>Compra cerca, recibe como prefieras.</h2>
+    <ul>
+      <li><i class="fa fa-check"></i> Stock de la tienda que atenderá tu pedido</li>
+      <li><i class="fa fa-check"></i> Delivery, recojo o entrega programada</li>
+      <li><i class="fa fa-check"></i> Tus pedidos y direcciones en un solo lugar</li>
+    </ul>
+  </aside>
+</div>

@@ -11,6 +11,7 @@ import com.ccadmin.app.sale.model.entity.SaleDetEntity;
 import com.ccadmin.app.sale.model.entity.SaleDetTaxEntity;
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
 import com.ccadmin.app.sale.model.entity.SalePaymentEntity;
+import com.ccadmin.app.system.model.entity.CurrencyEntity;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -19,6 +20,27 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class SaleModelFactoryTest {
+
+    @Test
+    void initializesUnpaidIndicatorWhenSavingAPresale() {
+        PresaleHeadEntity presale = new PresaleHeadEntity();
+        presale.CurrencyCod = "PEN";
+        PeriodEntity period = new PeriodEntity();
+        period.PeriodId = 202608;
+        CurrencyEntity currency = new CurrencyEntity();
+        currency.CurrencyCod = "PEN";
+
+        PresaleHeadEntity result = PresaleHeadEntityFactory.fromSaveRequest(
+                presale,
+                period,
+                currency,
+                currency,
+                "T001",
+                "P"
+        );
+
+        assertEquals("N", result.IsPaid);
+    }
 
     @Test
     void createsSaleHeadFromPresale() {

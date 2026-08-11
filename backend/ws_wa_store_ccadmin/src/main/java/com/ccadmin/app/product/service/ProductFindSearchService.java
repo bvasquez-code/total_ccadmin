@@ -84,4 +84,17 @@ public class ProductFindSearchService {
         }
         return text.matches("\\d+");
     }
+
+    public ProductSearchEntity findAvailability(String productCod, String storeCod) {
+        if (productCod == null || productCod.isBlank()) {
+            throw new IllegalArgumentException("El producto es obligatorio");
+        }
+        if (storeCod == null || storeCod.isBlank()) {
+            throw new IllegalArgumentException("La tienda es obligatoria");
+        }
+        return productSearchRepository.findAvailableProduct(productCod, storeCod)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "El producto no está disponible en la tienda seleccionada"
+                ));
+    }
 }

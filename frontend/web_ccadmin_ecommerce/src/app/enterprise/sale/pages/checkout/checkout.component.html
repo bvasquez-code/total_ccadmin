@@ -1,0 +1,174 @@
+<main class="container checkout-page">
+  <section class="payment-stage" *ngIf="OrderToken && SaleDetail">
+    <header class="checkout-heading">
+      <div>
+        <span>Pedido registrado</span>
+        <h1>{{ hasRegisteredPayment() ? 'Pago registrado' : 'Completa el pago de tu pedido' }}</h1>
+      </div>
+      <a routerLink="/catalog"><i class="fa fa-arrow-left mr-2"></i>Volver a la tienda</a>
+    </header>
+
+    <div class="order-state-banner">
+      <i class="fa fa-shopping-bag"></i>
+      <div>
+        <strong>Venta {{ SaleCod }}</strong>
+        <span>Preventa {{ PresaleCod }}</span>
+      </div>
+      <div class="state-badges">
+        <span>Preventa confirmada</span>
+        <span>Venta pendiente</span>
+      </div>
+    </div>
+
+    <div class="payment-layout">
+      <section class="checkout-card payment-form-card">
+        <div class="card-heading">
+          <span><i class="fa fa-credit-card"></i></span>
+          <div>
+            <h2>Pago del pedido</h2>
+            <p>Selecciona el medio con el que realizarás el pago.</p>
+          </div>
+        </div>
+
+        <div class="payment-complete" *ngIf="hasRegisteredPayment()">
+          <i class="fa fa-check-circle"></i>
+          <div>
+            <strong>El pago del pedido fue registrado</strong>
+            <p>La venta permanece pendiente para que la tienda realice su confirmación operativa final.</p>
+          </div>
+        </div>
+
+        <ng-container *ngIf="!hasRegisteredPayment()">
+          <div class="form-row">
+            <div class="form-group col-md-8">
+              <label for="payment-method">Medio de pago</label>
+              <select id="payment-method" class="form-control" name="PaymentMethodCod"
+                [(ngModel)]="SelectedPaymentMethodCod">
+                <option *ngFor="let paymentMethod of PaymentMethodList"
+                  [value]="paymentMethod.PaymentMethodCod">
+                  {{ paymentMethod.Description || paymentMethod.Name }}
+                </option>
+              </select>
+            </div>
+            <div class="form-group col-md-4">
+              <label>Total a pagar</label>
+              <div class="payment-fixed-amount">{{ paymentAmountLabel() }}</div>
+            </div>
+          </div>
+          <button type="button" class="btn btn-primary" [disabled]="IsSavingPayment"
+            (click)="addPayment()">
+            <i class="fa fa-lock mr-2"></i>{{ IsSavingPayment ? 'Procesando pago...' : 'Realizar pago' }}
+          </button>
+        </ng-container>
+
+        <div class="registered-payments" *ngIf="SaleDetail.DetailPayment.length > 0">
+          <h3>Pago registrado</h3>
+          <div class="payment-row" *ngFor="let payment of SaleDetail.DetailPayment">
+            <div>
+              <strong>{{ paymentMethodName(payment.TrxPayment.PaymentMethodCod) }}</strong>
+              <small *ngIf="payment.TrxPayment.TransactionId">Ref. {{ payment.TrxPayment.TransactionId }}</small>
+            </div>
+            <span>{{ payment.NumAmountPaid | currency:payment.CurrencyCod:'symbol-narrow':'1.2-2' }}</span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="checkout-summary payment-summary">
+        <span>Resumen del pedido</span>
+        <h2>{{ SaleCod }}</h2>
+        <div class="summary-line">
+          <span>Total</span>
+          <strong>{{ SaleDetail.Headboard.NumTotalPrice | currency:SaleDetail.Headboard.CurrencyCod:'symbol-narrow':'1.2-2' }}</strong>
+        </div>
+        <div class="summary-line">
+          <span>Pagado</span>
+          <strong class="paid-amount">{{ totalPaid() | currency:SaleDetail.Headboard.CurrencyCod:'symbol-narrow':'1.2-2' }}</strong>
+        </div>
+        <div class="summary-line total">
+          <span>Saldo pendiente</span>
+          <strong>{{ outstandingBalance() | currency:SaleDetail.Headboard.CurrencyCod:'symbol-narrow':'1.2-2' }}</strong>
+        </div>
+        <p class="secure-note">
+          <i class="fa fa-info-circle"></i>
+          Registrar el pago no confirma ni factura automáticamente la venta.
+        </p>
+      </aside>
+    </div>
+  </section>
+
+  <section class="order-loading" *ngIf="OrderToken && !SaleDetail && !OrderLoadError">
+    <i class="fa fa-spinner fa-spin"></i>
+    <p>Cargando el pedido...</p>
+  </section>
+
+  <section class="order-loading" *ngIf="OrderToken && OrderLoadError">
+    <i class="fa fa-exclamation-circle"></i>
+    <h2>No pudimos abrir este pedido</h2>
+    <p>El enlace no es válido, ya venció o no pertenece a tu cuenta.</p>
+    <a routerLink="/catalog" class="btn btn-primary">Volver a la tienda</a>
+  </section>
+
+  <ng-container *ngIf="!OrderToken">
+    <header class="checkout-heading">
+      <div><span>Último paso</span><h1>Confirma cómo recibirás tu pedido</h1></div>
+      <a routerLink="/cart"><i class="fa fa-arrow-left mr-2"></i>Volver al carrito</a>
+    </header>
+
+    <div class="checkout-layout">
+      <div class="checkout-forms">
+        <section class="checkout-card">
+          <div class="card-heading"><span>1</span><div><h2>Modalidad de entrega</h2><p>Opciones disponibles para tu ubicación.</p></div></div>
+          <div class="delivery-options">
+            <button type="button" *ngFor="let option of availableOptions()"
+              [class.selected]="Delivery.DeliveryTypeCod === option.Code" (click)="selectDelivery(option.Code)">
+              <i class="fa {{ option.Icon }}"></i><span><strong>{{ option.Name }}</strong><small>{{ option.Description }}</small></span>
+              <i class="fa fa-check-circle selection-check"></i>
+            </button>
+          </div>
+          <div class="delivery-warning" *ngIf="availableOptions().length === 0">
+            <i class="fa fa-exclamation-triangle"></i>No hay modalidades habilitadas para esta ubicación.
+          </div>
+        </section>
+
+        <section class="checkout-card">
+          <div class="card-heading"><span>2</span><div><h2>Persona que recibe o recoge</h2><p>Estos datos quedarán guardados como fotografía del pedido.</p></div></div>
+          <div class="form-row">
+            <div class="form-group col-md-7"><label for="recipient-name">Nombres completos</label><input id="recipient-name" class="form-control" name="Names" maxlength="256" [(ngModel)]="Delivery.Names"></div>
+            <div class="form-group col-md-5"><label for="recipient-phone">Teléfono</label><input id="recipient-phone" class="form-control" name="Phone" maxlength="20" [(ngModel)]="Delivery.Phone"></div>
+          </div>
+          <div class="custom-control custom-switch mb-3">
+            <input id="third-party" type="checkbox" class="custom-control-input" [checked]="Delivery.IsThirdParty === 'S'" (change)="Delivery.IsThirdParty = Delivery.IsThirdParty === 'S' ? 'N' : 'S'">
+            <label class="custom-control-label" for="third-party">Otra persona recibirá o recogerá mi pedido</label>
+          </div>
+          <div class="form-row" *ngIf="Delivery.IsThirdParty === 'S'">
+            <div class="form-group col-md-4"><label for="document-type">Tipo documento</label><select id="document-type" class="form-control" name="DocumentType" [(ngModel)]="Delivery.DocumentType"><option value="01">DNI</option><option value="04">Carné de extranjería</option><option value="07">Pasaporte</option></select></div>
+            <div class="form-group col-md-8"><label for="document-number">Número de documento</label><input id="document-number" class="form-control" name="DocumentNumber" maxlength="16" [(ngModel)]="Delivery.DocumentNumber"></div>
+          </div>
+        </section>
+
+        <section class="checkout-card" *ngIf="requiresAddress()">
+          <div class="card-heading"><span>3</span><div><h2>Dirección de entrega</h2><p>Antes de confirmar se validará contra la tienda seleccionada.</p></div></div>
+          <div class="map-placeholder"><i class="fa fa-map-marked-alt"></i><div><strong>Ubicación exacta del pedido</strong><small>El mapa interactivo se conectará al servicio de geolocalización.</small></div></div>
+          <div class="form-group"><label for="delivery-address-checkout">Dirección</label><input id="delivery-address-checkout" class="form-control" name="Address" maxlength="256" [(ngModel)]="Delivery.Address"></div>
+          <div class="form-group"><label for="delivery-reference">Referencia</label><input id="delivery-reference" class="form-control" name="Reference" maxlength="256" [(ngModel)]="Delivery.Reference" placeholder="Color de fachada, piso, punto cercano..."></div>
+          <div class="form-group"><label for="delivery-instructions">Indicaciones adicionales</label><textarea id="delivery-instructions" class="form-control" name="Instructions" rows="2" maxlength="256" [(ngModel)]="Delivery.Instructions"></textarea></div>
+          <div class="form-row" *ngIf="requiresSchedule()">
+            <div class="form-group col-md-6"><label for="scheduled-from">Desde</label><input id="scheduled-from" type="datetime-local" class="form-control" name="ScheduledFrom" [(ngModel)]="Delivery.ScheduledFrom"></div>
+            <div class="form-group col-md-6"><label for="scheduled-to">Hasta</label><input id="scheduled-to" type="datetime-local" class="form-control" name="ScheduledTo" [(ngModel)]="Delivery.ScheduledTo"></div>
+          </div>
+        </section>
+      </div>
+
+      <aside class="checkout-summary">
+        <span>Pedido atendido por</span><h2>{{ StoreContext?.Store?.Name }}</h2><p>{{ StoreContext?.Store?.Address }}</p>
+        <div class="summary-line"><span>Productos</span><strong>{{ cartService.getCurrent().Items.length }}</strong></div>
+        <div class="summary-line total"><span>Total productos</span><strong>{{ subtotal() | currency:currency():'symbol-narrow':'1.2-2' }}</strong></div>
+        <small>El costo de envío se calculará en backend con la ubicación confirmada.</small>
+        <button type="button" class="btn btn-primary btn-lg btn-block" [disabled]="IsSubmitting || availableOptions().length === 0" (click)="confirm()">
+          {{ IsSubmitting ? 'Registrando pedido...' : 'Confirmar pedido' }}
+        </button>
+        <p class="secure-note"><i class="fa fa-lock"></i>Precios, unidades y stock serán validados por el servidor.</p>
+      </aside>
+    </div>
+  </ng-container>
+</main>
