@@ -30,6 +30,9 @@ CREATE TABLE `payment_method` (
   `ModifyDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `Status` char(1) NOT NULL DEFAULT 'A',
   `PaymentMethodType` char(4) DEFAULT NULL COMMENT 'Tipo de medio de pago',
+  `IsInternalSaleEnabled` char(1) NOT NULL DEFAULT 'S' COMMENT 'Indica si el medio de pago se muestra en ventas internas (S:Si, N:No)',
+  `IsWebSaleEnabled` char(1) NOT NULL DEFAULT 'S' COMMENT 'Indica si el medio de pago se muestra en la tienda virtual (S:Si, N:No)',
+  `IsPaymentProofRequired` char(1) NOT NULL DEFAULT 'N' COMMENT 'Indica si la tienda virtual debe solicitar una imagen del comprobante de pago (S:Si, N:No)',
   PRIMARY KEY (`PaymentMethodCod`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -61,6 +64,39 @@ CREATE TABLE `payment_method` (
         ) THEN
             ALTER TABLE `payment_method` ADD COLUMN `Route` varchar(500) DEFAULT NULL COMMENT 'Ruta de archivo de imagen del medio de pago' AFTER `Description`;
             SELECT 'Columna Route agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'payment_method'
+            AND column_name = 'IsInternalSaleEnabled'
+        ) THEN
+            ALTER TABLE `payment_method`
+                ADD COLUMN `IsInternalSaleEnabled` char(1) NOT NULL DEFAULT 'S'
+                COMMENT 'Indica si el medio de pago se muestra en ventas internas (S:Si, N:No)'
+                AFTER `PaymentMethodType`;
+            SELECT 'Columna IsInternalSaleEnabled agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'payment_method'
+            AND column_name = 'IsWebSaleEnabled'
+        ) THEN
+            ALTER TABLE `payment_method`
+                ADD COLUMN `IsWebSaleEnabled` char(1) NOT NULL DEFAULT 'S'
+                COMMENT 'Indica si el medio de pago se muestra en la tienda virtual (S:Si, N:No)'
+                AFTER `IsInternalSaleEnabled`;
+            SELECT 'Columna IsWebSaleEnabled agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'payment_method'
+            AND column_name = 'IsPaymentProofRequired'
+        ) THEN
+            ALTER TABLE `payment_method`
+                ADD COLUMN `IsPaymentProofRequired` char(1) NOT NULL DEFAULT 'N'
+                COMMENT 'Indica si la tienda virtual debe solicitar una imagen del comprobante de pago (S:Si, N:No)'
+                AFTER `IsWebSaleEnabled`;
+            SELECT 'Columna IsPaymentProofRequired agregada exitosamente.' AS Mensaje;
         END IF;
 
         

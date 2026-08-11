@@ -22,4 +22,14 @@ public class PaymentMethodShared {
     {
         return this.paymentMethodService.findAllActive();
     }
+
+    public List<PaymentMethodEntity> findAllActiveInternalSale()
+    {
+        return this.paymentMethodService.findAllActiveInternalSale();
+    }
+
+    public List<PaymentMethodEntity> findAllActiveWebSale()
+    {
+        return this.paymentMethodService.findAllActiveWebSale();
+    }
 }

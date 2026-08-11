@@ -9,7 +9,7 @@ import com.ccadmin.app.shared.model.dto.ClientSessionDto;
 import com.ccadmin.app.shared.model.dto.ResponseAdditionalDto;
 import com.ccadmin.app.shared.model.dto.ResponsePageSearchT;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
-import com.ccadmin.app.system.model.entity.PaymentMethodEntity;
+import com.ccadmin.app.system.shared.PaymentMethodShared;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -23,17 +23,20 @@ public class SaleDeliverySearchService {
     private final SaleHeadRepository saleHeadRepository;
     private final SaleSearchService saleSearchService;
     private final SaleDeliveryAccessTokenService saleDeliveryAccessTokenService;
+    private final PaymentMethodShared paymentMethodShared;
 
     public SaleDeliverySearchService(
             ClientDeliveryContextService clientDeliveryContextService,
             SaleHeadRepository saleHeadRepository,
             SaleSearchService saleSearchService,
-            SaleDeliveryAccessTokenService saleDeliveryAccessTokenService
+            SaleDeliveryAccessTokenService saleDeliveryAccessTokenService,
+            PaymentMethodShared paymentMethodShared
     ) {
         this.clientDeliveryContextService = clientDeliveryContextService;
         this.saleHeadRepository = saleHeadRepository;
         this.saleSearchService = saleSearchService;
         this.saleDeliveryAccessTokenService = saleDeliveryAccessTokenService;
+        this.paymentMethodShared = paymentMethodShared;
     }
 
     public ResponseWsDto findDataForm(String orderToken) {
@@ -52,10 +55,8 @@ public class SaleDeliverySearchService {
                 .filter(item -> "PaymentMethodList".equals(item.Name))
                 .findFirst()
                 .orElse(null);
-        if (paymentMethods != null && paymentMethods.Data instanceof List<?> list) {
-            paymentMethods.Data = list.stream()
-                    .filter(PaymentMethodEntity.class::isInstance)
-                    .map(PaymentMethodEntity.class::cast)
+        if (paymentMethods != null) {
+            paymentMethods.Data = this.paymentMethodShared.findAllActiveWebSale().stream()
                     .filter(item -> !"NC001".equals(item.PaymentMethodCod))
                     .toList();
         }

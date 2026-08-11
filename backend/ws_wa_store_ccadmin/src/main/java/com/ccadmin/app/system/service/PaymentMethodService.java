@@ -23,8 +23,22 @@ public class PaymentMethodService {
     }
     public List<PaymentMethodEntity> findAllActive()
     {
-        List<PaymentMethodEntity> paymentMethodList = this.paymentMethodRepository.findAllActive();
-        paymentMethodList.forEach(appFilePublicUrlService::applyPublicRoute);
+        return this.applyPublicRoutes(this.paymentMethodRepository.findAllActive());
+    }
+
+    public List<PaymentMethodEntity> findAllActiveInternalSale()
+    {
+        return this.applyPublicRoutes(this.paymentMethodRepository.findAllActiveInternalSale());
+    }
+
+    public List<PaymentMethodEntity> findAllActiveWebSale()
+    {
+        return this.applyPublicRoutes(this.paymentMethodRepository.findAllActiveWebSale());
+    }
+
+    private List<PaymentMethodEntity> applyPublicRoutes(List<PaymentMethodEntity> paymentMethodList)
+    {
+        paymentMethodList.forEach(this.appFilePublicUrlService::applyPublicRoute);
         return paymentMethodList;
     }
 

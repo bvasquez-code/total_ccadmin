@@ -16,6 +16,22 @@ public interface PaymentMethodRepository extends JpaRepository<PaymentMethodEnti
             """, nativeQuery = true)
     public List<PaymentMethodEntity> findAllActive();
 
+    @Query( value = """
+            select pm.*
+            from payment_method pm
+            where pm.Status = 'A'
+              and pm.IsInternalSaleEnabled = 'S'
+            """, nativeQuery = true)
+    List<PaymentMethodEntity> findAllActiveInternalSale();
+
+    @Query( value = """
+            select pm.*
+            from payment_method pm
+            where pm.Status = 'A'
+              and pm.IsWebSaleEnabled = 'S'
+            """, nativeQuery = true)
+    List<PaymentMethodEntity> findAllActiveWebSale();
+
     @Override
     @Query(value = """
             select count(1)

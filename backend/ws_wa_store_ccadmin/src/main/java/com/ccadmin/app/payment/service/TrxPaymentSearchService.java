@@ -54,7 +54,7 @@ public class TrxPaymentSearchService extends SessionService {
     public ResponseWsDto findDataForm() {
         ResponseWsDto rpt = new ResponseWsDto();
 
-        List<PaymentMethodEntity> paymentMethodList = this.paymentMethodShared.findAllActive();
+        List<PaymentMethodEntity> paymentMethodList = this.paymentMethodShared.findAllActiveInternalSale();
         List<CurrencyEntity> currencyList = this.currencyShared.findAllActive();
 
         rpt.AddResponseAdditional("paymentMethodList", paymentMethodList);

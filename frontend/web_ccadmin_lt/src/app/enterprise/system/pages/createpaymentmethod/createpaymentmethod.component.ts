@@ -75,6 +75,12 @@ export class CreatepaymentmethodComponent implements OnInit {
       ValidationHelper.validateIsNotEmpty(paymentMethod.Description, "Debe ingresar una descripcion");
       ValidationHelper.validLengthString(paymentMethod.Description, 64, "La descripcion solo puede tener 64 caracteres");
       ValidationHelper.validateIsNotEmpty(paymentMethod.PaymentMethodType, "Debe seleccionar un tipo de metodo de pago");
+      if (paymentMethod.IsInternalSaleEnabled !== "S" && paymentMethod.IsWebSaleEnabled !== "S") {
+        throw new Error("El metodo de pago debe estar disponible en venta interna o tienda virtual");
+      }
+      if (paymentMethod.IsPaymentProofRequired === "S" && paymentMethod.IsWebSaleEnabled !== "S") {
+        throw new Error("El comprobante solo puede solicitarse para un medio habilitado en tienda virtual");
+      }
 
       return true;
     } catch (e: any) {
@@ -109,9 +115,19 @@ export class CreatepaymentmethodComponent implements OnInit {
     this.paymentMethod.Route = "";
   }
 
+  onWebSaleAvailabilityChange(): void {
+    this.ensureDefaults();
+    if (this.paymentMethod.IsWebSaleEnabled !== "S") {
+      this.paymentMethod.IsPaymentProofRequired = "N";
+    }
+  }
+
   private ensureDefaults(): void {
     if (!this.paymentMethod) this.paymentMethod = new PaymentMethodEntity();
     this.paymentMethod.PaymentMethodType = this.paymentMethod.PaymentMethodType || "";
+    this.paymentMethod.IsInternalSaleEnabled = this.paymentMethod.IsInternalSaleEnabled || "S";
+    this.paymentMethod.IsWebSaleEnabled = this.paymentMethod.IsWebSaleEnabled || "S";
+    this.paymentMethod.IsPaymentProofRequired = this.paymentMethod.IsPaymentProofRequired || "N";
     this.paymentMethod.FileCod = this.paymentMethod.FileCod || "";
     this.paymentMethod.Route = this.paymentMethod.Route || "";
   }
