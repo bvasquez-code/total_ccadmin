@@ -5,6 +5,7 @@ import { SaleDocumentEntity } from "../entity/SaleDocumentEntity";
 import { CreditNoteDetailDto } from "./CreditNoteDetailDto";
 import { SaleChannelEntity } from "../entity/SaleChannelEntity";
 import { SaleDeliveryEntity } from "../entity/SaleDeliveryEntity";
+import { SaleBillingEntity } from "../entity/SaleBillingEntity";
 
 export class SaleDetailDto
 {
@@ -16,6 +17,7 @@ export class SaleDetailDto
     public CreditNoteDetail : CreditNoteDetailDto;
     public SaleChannel: SaleChannelEntity;
     public SaleDelivery: SaleDeliveryEntity | null;
+    public SaleBilling: SaleBillingEntity | null;
 
     public constructor()
     {
@@ -27,5 +29,6 @@ export class SaleDetailDto
         this.CreditNoteDetail = new CreditNoteDetailDto();
         this.SaleChannel = new SaleChannelEntity();
         this.SaleDelivery = null;
+        this.SaleBilling = null;
     }
 }

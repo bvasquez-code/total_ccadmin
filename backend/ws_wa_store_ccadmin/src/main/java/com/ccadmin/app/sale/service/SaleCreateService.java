@@ -73,21 +73,40 @@ public class SaleCreateService extends SessionService {
     private SaleDeliveryRepository saleDeliveryRepository;
     @Autowired
     private SalesContextService salesContextService;
+    @Autowired
+    private SaleBillingCreateService saleBillingCreateService;
 
     @Transactional
     public SaleDetailDto save(PresaleDetailDto presaleDetail) throws SaleException, SaleBuildException {
+        return this.save(presaleDetail, null, salesContextService.getInternalContext());
+    }
 
-        return this.save(presaleDetail, salesContextService.getInternalContext());
+    @Transactional
+    public SaleDetailDto save(
+            PresaleDetailDto presaleDetail,
+            SaleBillingEntity saleBilling
+    ) throws SaleException, SaleBuildException {
+        return this.save(presaleDetail, saleBilling, salesContextService.getInternalContext());
     }
 
     @Transactional
     public SaleDetailDto saveWeb(PresaleDetailDto presaleDetail, String storeCod)
             throws SaleException, SaleBuildException {
-        return this.save(presaleDetail, salesContextService.getWebContext(storeCod));
+        return this.save(presaleDetail, null, salesContextService.getWebContext(storeCod));
+    }
+
+    @Transactional
+    public SaleDetailDto saveWeb(
+            PresaleDetailDto presaleDetail,
+            SaleBillingEntity saleBilling,
+            String storeCod
+    ) throws SaleException, SaleBuildException {
+        return this.save(presaleDetail, saleBilling, salesContextService.getWebContext(storeCod));
     }
 
     private SaleDetailDto save(
             PresaleDetailDto presaleDetail,
+            SaleBillingEntity requestedBilling,
             SalesContextDto salesContext
     ) throws SaleException, SaleBuildException {
 
@@ -128,6 +147,11 @@ public class SaleCreateService extends SessionService {
         );
 
         this.saleHeadRepository.save(saleHead);
+        this.saleBillingCreateService.createForSale(
+                saleHead,
+                requestedBilling,
+                salesContext.UserCod
+        );
         this.saleChannelRepository.save(saleChannel);
         this.saleDetRepository.saveAll(detailSale);
         this.saleDetWarehouseRepository.saveAll(detailSaleWarehouse);
@@ -358,13 +382,14 @@ public class SaleCreateService extends SessionService {
         this.genericQueuedService.addQueued(saleRankingService);
     }
 
+    @Transactional(rollbackOn = Exception.class)
     public SaleHeadEntity saveClientSale(String SaleCod, String ClientCod) throws SaleException {
-        SaleHeadEntity saleHead = this.saleHeadRepository.findById(SaleCod).get();
-        if(saleHead == null){
-            throw new SaleException("No existe la venta.");
-        }
+        SaleHeadEntity saleHead = this.saleHeadRepository.findById(SaleCod)
+                .orElseThrow(() -> new SaleException("No existe la venta."));
         saleHead.ClientCod = ClientCod;
         saleHead.addSession(getUserCod());
-        return this.saleHeadRepository.save(saleHead);
+        SaleHeadEntity savedSale = this.saleHeadRepository.save(saleHead);
+        this.saleBillingCreateService.synchronizeBuyer(savedSale.SaleCod);
+        return savedSale;
     }
 }

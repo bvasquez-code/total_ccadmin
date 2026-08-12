@@ -1,7 +1,5 @@
 package com.ccadmin.app.sale.service;
 
-import com.ccadmin.app.client.model.entity.ClientEntity;
-import com.ccadmin.app.client.shared.ClientShared;
 import com.ccadmin.app.sale.exception.SaleException;
 import com.ccadmin.app.sale.model.constants.SaleConstants;
 import com.ccadmin.app.sale.model.dto.SaleDetailDto;
@@ -36,15 +34,13 @@ public class SaleDocumentCreateService extends SessionService {
     @Autowired
     private CounterfoilShared counterfoilShared;
     @Autowired
-    private ClientShared clientShared;
-    @Autowired
     private GenericQueuedService genericQueuedService;
     @Autowired
     private SaleSunatEmissionService saleSunatEmissionService;
     @Autowired
-    private SaleSunatPayloadBuildService saleSunatPayloadBuildService;
-    @Autowired
     private CatalogSearchShared catalogSearchShared;
+    @Autowired
+    private SaleBillingCreateService saleBillingCreateService;
 
     /**
      * Nucleo unico para crear cualquier documento de venta. El llamador debe
@@ -74,9 +70,10 @@ public class SaleDocumentCreateService extends SessionService {
             throw new SaleException(existingDocumentMessage(documentRole));
         }
 
-        if (SaleConstants.DOCUMENT_ROLE_FISCAL.equals(documentRole)) {
-            this.validateFiscalClient(saleHead, documentType);
-        }
+        this.saleBillingCreateService.prepareForDocument(
+                saleHead,
+                documentType
+        );
 
         SaleDocumentEntity document;
         try {
@@ -90,7 +87,7 @@ public class SaleDocumentCreateService extends SessionService {
         }
         document.DocumentType = documentType;
         document.DocumentRole = documentRole;
-        document.ClientCod = normalizeOptionalCode(saleHead.ClientCod);
+        document.ClientCod = resolveLegacyDocumentClientCod(saleHead, documentType);
         document.IssueDate = new Date();
         document.addSession(getUserCod());
 
@@ -126,9 +123,10 @@ public class SaleDocumentCreateService extends SessionService {
             throw new SaleException("La venta no tiene una proforma activa para convertir");
         }
 
-        String requestedClientCod = normalizeOptionalCode(request.ClientCod);
-        if (requestedClientCod != null) {
-            saleHead.ClientCod = requestedClientCod;
+        if (request.SaleBilling != null) {
+            request.SaleBilling.SaleCod = saleHead.SaleCod;
+            request.SaleBilling.DocumentTypeRequest = request.DocumentType;
+            this.saleBillingCreateService.save(request.SaleBilling);
         }
 
         SaleDocumentEntity document = this.createDocument(saleHead, request.DocumentType);
@@ -182,35 +180,15 @@ public class SaleDocumentCreateService extends SessionService {
                 : "La venta ya tiene una proforma emitida";
     }
 
-    private void validateFiscalClient(SaleHeadEntity saleHead, String documentType) throws SaleException {
-        ClientEntity client = findClient(saleHead.ClientCod);
-        try {
-            this.saleSunatPayloadBuildService.validateCustomerForDocument(
-                    client,
-                    documentType,
-                    saleHead.NumTotalPrice
-            );
-        } catch (IllegalArgumentException ex) {
-            throw new SaleException(ex.getMessage(), ex);
-        }
-    }
-
-    private ClientEntity findClient(String clientCod) throws SaleException {
-        String normalizedClientCod = normalizeOptionalCode(clientCod);
-        if (normalizedClientCod == null) {
+    private String resolveLegacyDocumentClientCod(
+            SaleHeadEntity saleHead,
+            String documentType
+    ) {
+        if (SaleConstants.DOCUMENT_TYPE_INVOICE.equals(documentType)) {
             return null;
         }
-        try {
-            return this.clientShared.findById(normalizedClientCod);
-        } catch (RuntimeException ex) {
-            throw new SaleException("No existe el cliente " + normalizedClientCod, ex);
-        }
-    }
-
-    private String normalizeOptionalCode(String value) {
-        if (value == null || value.isBlank()) {
-            return null;
-        }
-        return value.trim();
+        return saleHead.ClientCod == null || saleHead.ClientCod.isBlank()
+                ? null
+                : saleHead.ClientCod.trim();
     }
 }

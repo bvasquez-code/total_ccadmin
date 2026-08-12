@@ -583,6 +583,10 @@ export class CreatecreditnoteComponent
   }
 
   getClient() {
+    const billing = this.SaleDetail.SaleBilling;
+    if (billing && (billing.DocumentNum || billing.LegalName)) {
+      return `${billing.DocumentNum || ''} - ${billing.LegalName || ''}`.trim();
+    }
     const Client = this.SaleDetail.Headboard.Client;
     if (Client && Client.Person && Client.Person.DocumentNum) {
       return Client.Person?.DocumentNum + ' - ' + Client.Person.Names + ' ' + Client.Person.LastNames;

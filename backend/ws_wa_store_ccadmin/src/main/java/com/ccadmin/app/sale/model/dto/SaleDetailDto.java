@@ -7,6 +7,7 @@ import java.util.List;
 public class SaleDetailDto {
 
     public SaleHeadEntity Headboard;
+    public SaleBillingEntity SaleBilling;
     public SaleDocumentEntity SaleDocument;
     public List<SaleDocumentEntity> SaleDocumentList;
     public SaleChannelEntity SaleChannel;

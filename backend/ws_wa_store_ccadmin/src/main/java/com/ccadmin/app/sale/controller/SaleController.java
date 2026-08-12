@@ -5,11 +5,13 @@ import com.ccadmin.app.sale.model.dto.SaleConfirmDto;
 import com.ccadmin.app.sale.model.dto.SalePaymentRegisterDto;
 import com.ccadmin.app.sale.model.dto.SalePickingConfirmDto;
 import com.ccadmin.app.sale.model.dto.SaleDocumentIssueDto;
+import com.ccadmin.app.sale.model.entity.SaleBillingEntity;
 import com.ccadmin.app.sale.service.SaleCreateService;
 import com.ccadmin.app.sale.service.SaleDocumentCreateService;
 import com.ccadmin.app.sale.service.SalePaymentCreateService;
 import com.ccadmin.app.sale.service.SaleSearchService;
 import com.ccadmin.app.sale.service.SalePickingCreateService;
+import com.ccadmin.app.sale.service.SaleBillingCreateService;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -33,6 +35,8 @@ public class SaleController {
     private SalePickingCreateService salePickingCreateService;
     @Autowired
     private SaleDocumentCreateService saleDocumentCreateService;
+    @Autowired
+    private SaleBillingCreateService saleBillingCreateService;
 
     @PostMapping("addPayment")
     public ResponseEntity<ResponseWsDto> addPayment(@RequestBody SalePaymentRegisterDto salePayment)
@@ -179,6 +183,22 @@ public class SaleController {
         {
             log.error("Error :{}",ex.getMessage(), ex);
             return new ResponseEntity<ResponseWsDto>(new ResponseWsDto(ex),HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("saveBilling")
+    public ResponseEntity<ResponseWsDto> saveBilling(@RequestBody SaleBillingEntity request)
+    {
+        try {
+            return new ResponseEntity<>(
+                    new ResponseWsDto(this.saleBillingCreateService.save(request)),
+                    HttpStatus.OK
+            );
+        }
+        catch (Exception ex)
+        {
+            log.error("Error :{}", ex.getMessage(), ex);
+            return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
         }
     }
 

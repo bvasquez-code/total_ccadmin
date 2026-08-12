@@ -1,6 +1,5 @@
 package com.ccadmin.app.sale.service;
 
-import com.ccadmin.app.client.shared.ClientShared;
 import com.ccadmin.app.sale.exception.SaleException;
 import com.ccadmin.app.sale.model.constants.SaleConstants;
 import com.ccadmin.app.sale.model.dto.SaleDetailDto;
@@ -42,15 +41,13 @@ class SaleDocumentCreateServiceTest {
     @Mock
     private CounterfoilShared counterfoilShared;
     @Mock
-    private ClientShared clientShared;
-    @Mock
     private GenericQueuedService genericQueuedService;
     @Mock
     private SaleSunatEmissionService saleSunatEmissionService;
     @Mock
-    private SaleSunatPayloadBuildService saleSunatPayloadBuildService;
-    @Mock
     private CatalogSearchShared catalogSearchShared;
+    @Mock
+    private SaleBillingCreateService saleBillingCreateService;
     @InjectMocks
     private SaleDocumentCreateService saleDocumentCreateService;
 
@@ -82,7 +79,10 @@ class SaleDocumentCreateServiceTest {
         assertEquals(SaleConstants.DOCUMENT_ROLE_INTERNAL, result.DocumentRole);
         assertEquals("N", saleHead.HasFiscalDocument);
         assertNotNull(result.IssueDate);
-        verify(clientShared, never()).findById(any());
+        verify(saleBillingCreateService).prepareForDocument(
+                saleHead,
+                SaleConstants.DOCUMENT_TYPE_PROFORMA
+        );
         verify(genericQueuedService, never()).addQueued(any());
     }
 
@@ -140,6 +140,10 @@ class SaleDocumentCreateServiceTest {
         assertEquals(SaleConstants.DOCUMENT_TYPE_RECEIPT, generatedReceipt.DocumentType);
         assertEquals(SaleConstants.DOCUMENT_ROLE_FISCAL, generatedReceipt.DocumentRole);
         verify(saleHeadRepository).save(saleHead);
+        verify(saleBillingCreateService).prepareForDocument(
+                saleHead,
+                SaleConstants.DOCUMENT_TYPE_RECEIPT
+        );
         verify(genericQueuedService).addQueued(any(SaleSunatEmissionTaskService.class));
     }
 

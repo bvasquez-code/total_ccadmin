@@ -118,6 +118,10 @@
           <span>Pagado</span>
           <strong class="paid-amount">{{ totalPaid() | currency:SaleDetail.Headboard.CurrencyCod:'symbol-narrow':'1.2-2' }}</strong>
         </div>
+        <div class="summary-line" *ngIf="SaleDetail.SaleBilling">
+          <span>Comprobante</span>
+          <strong>{{ SaleDetail.SaleBilling.DocumentTypeRequest === '01' ? 'Factura' : 'Boleta' }}</strong>
+        </div>
         <div class="summary-line total">
           <span>Saldo pendiente</span>
           <strong>{{ outstandingBalance() | currency:SaleDetail.Headboard.CurrencyCod:'symbol-narrow':'1.2-2' }}</strong>
@@ -151,7 +155,69 @@
     <div class="checkout-layout">
       <div class="checkout-forms">
         <section class="checkout-card">
-          <div class="card-heading"><span>1</span><div><h2>Modalidad de entrega</h2><p>Selecciona una modalidad; si requiere dirección validaremos su cobertura.</p></div></div>
+          <div class="card-heading">
+            <span>1</span>
+            <div>
+              <h2>Comprobante de pago</h2>
+              <p>Selecciona el documento que deseas recibir con tu compra.</p>
+            </div>
+          </div>
+
+          <div class="billing-options">
+            <button type="button"
+              [class.selected]="BillingDocumentType === '03'"
+              (click)="selectBillingDocument('03')">
+              <i class="fa fa-receipt"></i>
+              <span>
+                <strong>Boleta</strong>
+                <small>Se emitirá a nombre del titular de la cuenta.</small>
+              </span>
+              <i class="fa fa-check-circle selection-check"></i>
+            </button>
+            <button type="button"
+              [class.selected]="BillingDocumentType === '01'"
+              (click)="selectBillingDocument('01')">
+              <i class="fa fa-file-invoice"></i>
+              <span>
+                <strong>Factura</strong>
+                <small>Puede emitirse a un RUC diferente del comprador.</small>
+              </span>
+              <i class="fa fa-check-circle selection-check"></i>
+            </button>
+          </div>
+
+          <div class="billing-company mt-3" *ngIf="BillingDocumentType === '01'">
+            <div class="form-row align-items-end">
+              <div class="form-group col-md-8 mb-md-0">
+                <label for="billing-ruc">RUC para la factura</label>
+                <input id="billing-ruc" type="text" inputmode="numeric" class="form-control"
+                  name="BillingRuc" maxlength="11" [(ngModel)]="BillingRuc"
+                  (ngModelChange)="BillingPerson = null"
+                  placeholder="Ingresa los 11 dígitos del RUC">
+              </div>
+              <div class="form-group col-md-4 mb-0">
+                <button type="button" class="btn btn-outline-primary btn-block"
+                  [disabled]="IsSearchingBilling" (click)="findBillingCompany()">
+                  <i class="fa" [class.fa-search]="!IsSearchingBilling"
+                    [class.fa-spinner]="IsSearchingBilling" [class.fa-spin]="IsSearchingBilling"></i>
+                  {{ IsSearchingBilling ? 'Consultando...' : 'Buscar RUC' }}
+                </button>
+              </div>
+            </div>
+
+            <div class="billing-company-result" *ngIf="BillingPerson">
+              <i class="fa fa-check-circle"></i>
+              <div>
+                <strong>{{ BillingPerson.BusinessName }}</strong>
+                <span>RUC {{ BillingPerson.DocumentNum }}</span>
+                <small *ngIf="BillingPerson.Address">{{ BillingPerson.Address }}</small>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="checkout-card">
+          <div class="card-heading"><span>2</span><div><h2>Modalidad de entrega</h2><p>Selecciona una modalidad; si requiere dirección validaremos su cobertura.</p></div></div>
           <div class="delivery-options">
             <button type="button" *ngFor="let option of availableOptions()"
               [class.selected]="Delivery.DeliveryTypeCod === option.Code" (click)="selectDelivery(option.Code)">
@@ -165,7 +231,7 @@
         </section>
 
         <section class="checkout-card">
-          <div class="card-heading"><span>2</span><div><h2>Persona que recibe o recoge</h2><p>Estos datos quedarán guardados como fotografía del pedido.</p></div></div>
+          <div class="card-heading"><span>3</span><div><h2>Persona que recibe o recoge</h2><p>Estos datos quedarán guardados como fotografía del pedido.</p></div></div>
           <div class="form-row">
             <div class="form-group col-md-7"><label for="recipient-name">Nombres completos</label><input id="recipient-name" class="form-control" name="Names" maxlength="256" [(ngModel)]="Delivery.Names"></div>
             <div class="form-group col-md-5"><label for="recipient-phone">Teléfono</label><input id="recipient-phone" class="form-control" name="Phone" maxlength="20" [(ngModel)]="Delivery.Phone"></div>
@@ -182,7 +248,7 @@
 
         <section class="checkout-card" *ngIf="requiresAddress()">
           <div class="card-heading address-heading">
-            <span>3</span>
+            <span>4</span>
             <div><h2>Dirección de entrega</h2><p>Elige una dirección guardada; validaremos su cobertura contra esta tienda.</p></div>
             <button type="button" class="btn btn-outline-primary btn-sm" (click)="openAddressModal()">
               <i class="fa fa-plus mr-1"></i>Nueva dirección

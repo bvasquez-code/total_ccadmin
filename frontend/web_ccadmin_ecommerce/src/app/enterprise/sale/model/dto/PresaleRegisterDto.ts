@@ -1,11 +1,13 @@
 import { PresaleChannelEntity } from '../entity/PresaleChannelEntity';
 import { PresaleDetEntity } from '../entity/PresaleDetEntity';
 import { PresaleHeadEntity } from '../entity/PresaleHeadEntity';
+import { SaleBillingEntity } from '../entity/SaleBillingEntity';
 
 export class PresaleRegisterDto {
   public Headboard: PresaleHeadEntity = new PresaleHeadEntity();
   public DetailList: PresaleDetEntity[] = [];
   public PresaleChannel: PresaleChannelEntity = new PresaleChannelEntity();
+  public SaleBilling: SaleBillingEntity = new SaleBillingEntity();
   public CreditNoteCod: string = '';
 
   public rebuild(): void {

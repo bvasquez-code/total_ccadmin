@@ -18,10 +18,12 @@ public final class SaleDetailDtoFactory {
             List<SaleDocumentEntity> documents,
             CreditNoteDetailDto creditNoteDetail,
             SaleChannelEntity saleChannel,
-            SaleDeliveryEntity saleDelivery
+            SaleDeliveryEntity saleDelivery,
+            SaleBillingEntity saleBilling
     ) {
         SaleDetailDto result = new SaleDetailDto();
         result.Headboard = head;
+        result.SaleBilling = saleBilling;
         result.DetailList = details;
         result.DetailPayment = payments;
         result.SaleDocumentList = documents;

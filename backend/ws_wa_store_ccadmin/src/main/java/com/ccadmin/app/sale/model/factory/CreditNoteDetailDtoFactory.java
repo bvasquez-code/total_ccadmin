@@ -8,6 +8,7 @@ import com.ccadmin.app.sale.model.entity.CreditNoteDocumentEntity;
 import com.ccadmin.app.sale.model.entity.CreditNoteHeadEntity;
 import com.ccadmin.app.sale.model.entity.SaleDocumentEntity;
 import com.ccadmin.app.sale.model.entity.SalePaymentEntity;
+import com.ccadmin.app.sale.model.entity.SaleBillingEntity;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -25,11 +26,13 @@ public final class CreditNoteDetailDtoFactory {
             List<CreditNoteApplicationEntity> applications,
             BigDecimal availableBalance,
             CreditNoteDocumentEntity document,
-            SaleDocumentEntity documentReference
+            SaleDocumentEntity documentReference,
+            SaleBillingEntity saleBilling
     ) {
         CreditNoteDetailDto result = new CreditNoteDetailDto();
         result.Headboard = head;
         result.Client = client;
+        result.SaleBilling = saleBilling;
         result.DetailList = details;
         result.DetailPayment = payments;
         result.ApplicationList = applications;

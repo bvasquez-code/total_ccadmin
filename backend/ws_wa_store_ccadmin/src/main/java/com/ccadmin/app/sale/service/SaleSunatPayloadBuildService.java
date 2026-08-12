@@ -1,7 +1,5 @@
 package com.ccadmin.app.sale.service;
 
-import com.ccadmin.app.client.model.entity.ClientEntity;
-import com.ccadmin.app.person.model.entity.PersonEntity;
 import com.ccadmin.app.sale.model.dto.SaleDetailDto;
 import com.ccadmin.app.sunat.model.dto.sunat.SunatDocumentLineDto;
 import com.ccadmin.app.sunat.model.dto.sunat.SunatDocumentTotalsDto;
@@ -12,6 +10,7 @@ import com.ccadmin.app.sale.model.entity.SaleDetEntity;
 import com.ccadmin.app.sale.model.entity.SaleDetTaxEntity;
 import com.ccadmin.app.sale.model.entity.SaleDocumentEntity;
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
+import com.ccadmin.app.sale.model.entity.SaleBillingEntity;
 import com.ccadmin.app.sale.model.constants.SaleConstants;
 import com.ccadmin.app.store.model.dto.StoreInfoDto;
 import com.ccadmin.app.store.model.entity.CompanyEntity;
@@ -103,7 +102,7 @@ public class SaleSunatPayloadBuildService {
                 head.CurrencyCod,
                 "Contado",
                 buildSupplier(head.StoreCod),
-                buildCustomer(head.Client, sunatDocumentType, totals.PayableAmount),
+                buildCustomer(saleDetail.SaleBilling, sunatDocumentType, totals.PayableAmount),
                 totals,
                 lines
         );
@@ -148,41 +147,39 @@ public class SaleSunatPayloadBuildService {
         return supplier;
     }
 
-    private SunatPartyDto buildCustomer(ClientEntity client, String sunatDocumentType, BigDecimal payableAmount) {
-        this.validateCustomerForDocument(client, sunatDocumentType, payableAmount);
-        if (client == null || client.Person == null) {
-            return buildAnonymousCustomerOrThrow(sunatDocumentType, payableAmount);
-        }
-        PersonEntity person = client.Person;
-        if (!hasCustomerIdentity(person)) {
+    private SunatPartyDto buildCustomer(
+            SaleBillingEntity saleBilling,
+            String sunatDocumentType,
+            BigDecimal payableAmount
+    ) {
+        this.validateCustomerForDocument(saleBilling, sunatDocumentType, payableAmount);
+        if (!hasCustomerIdentity(saleBilling)) {
             return buildAnonymousCustomerOrThrow(sunatDocumentType, payableAmount);
         }
         SunatPartyDto customer = new SunatPartyDto();
-        customer.DocumentType = normalizeDocumentType(person.DocumentType);
-        customer.DocumentNumber = person.DocumentNum;
-        customer.LegalName = firstNotBlank(person.BusinessName, fullName(person), person.CommercialName);
-        customer.TradeName = person.CommercialName;
-        customer.Address = person.Address;
-        customer.UbigeoCod = person.UbigeoCod;
+        customer.DocumentType = normalizeDocumentType(saleBilling.DocumentType);
+        customer.DocumentNumber = saleBilling.DocumentNum;
+        customer.LegalName = saleBilling.LegalName;
+        customer.TradeName = saleBilling.CommercialName;
+        customer.Address = saleBilling.Address;
+        customer.UbigeoCod = saleBilling.UbigeoCod;
         customer.CountryCode = "PE";
         return customer;
     }
 
     public void validateCustomerForDocument(
-            ClientEntity client,
+            SaleBillingEntity saleBilling,
             String documentType,
             BigDecimal payableAmount
     ) {
-        PersonEntity person = client == null ? null : client.Person;
         if (SUNAT_FACTURA.equals(documentType)) {
-            if (person == null
-                    || !"04".equals(person.PersonType)
-                    || !"6".equals(normalizeDocumentType(person.DocumentType))
-                    || person.DocumentNum == null
-                    || !person.DocumentNum.trim().matches("\\d{11}")
-                    || !hasCustomerIdentity(person)) {
+            if (saleBilling == null
+                    || !"6".equals(normalizeDocumentType(saleBilling.DocumentType))
+                    || saleBilling.DocumentNum == null
+                    || !saleBilling.DocumentNum.trim().matches("\\d{11}")
+                    || !hasCustomerIdentity(saleBilling)) {
                 throw new IllegalArgumentException(
-                        "La factura requiere un cliente juridico con RUC valido"
+                        "La factura requiere una persona con RUC valido y razon social"
                 );
             }
             return;
@@ -191,10 +188,10 @@ public class SaleSunatPayloadBuildService {
         if (!SUNAT_BOLETA.equals(documentType)) {
             throw new IllegalArgumentException("Tipo de documento fiscal no permitido: " + documentType);
         }
-        if ((person == null || !hasCustomerIdentity(person))
+        if (!hasCustomerIdentity(saleBilling)
                 && amount(payableAmount).compareTo(ANONYMOUS_BOLETA_LIMIT) > 0) {
             throw new IllegalArgumentException(
-                    "La boleta mayor a S/ 700 requiere un cliente identificado"
+                    "La boleta mayor a S/ 700 requiere una persona identificada"
             );
         }
     }
@@ -218,10 +215,11 @@ public class SaleSunatPayloadBuildService {
         return customer;
     }
 
-    private boolean hasCustomerIdentity(PersonEntity person) {
-        return person.DocumentType != null && !person.DocumentType.isBlank()
-                && person.DocumentNum != null && !person.DocumentNum.isBlank()
-                && firstNotBlank(person.BusinessName, fullName(person), person.CommercialName) != null;
+    private boolean hasCustomerIdentity(SaleBillingEntity saleBilling) {
+        return saleBilling != null
+                && saleBilling.DocumentType != null && !saleBilling.DocumentType.isBlank()
+                && saleBilling.DocumentNum != null && !saleBilling.DocumentNum.isBlank()
+                && saleBilling.LegalName != null && !saleBilling.LegalName.isBlank();
     }
 
     private SunatDocumentTotalsDto buildTotals(SaleHeadEntity head) {
@@ -377,18 +375,6 @@ public class SaleSunatPayloadBuildService {
             throw new IllegalArgumentException("Codigo SUNAT de local anexo invalido: " + value);
         }
         return code;
-    }
-
-    private String fullName(PersonEntity person) {
-        String value = ((person.Names == null ? "" : person.Names) + " " + (person.LastNames == null ? "" : person.LastNames)).trim();
-        return value.isBlank() ? null : value;
-    }
-
-    private String firstNotBlank(String... values) {
-        for (String value : values) {
-            if (value != null && !value.isBlank()) return value;
-        }
-        return null;
     }
 
     private record DocumentNumber(String series, int correlative) {

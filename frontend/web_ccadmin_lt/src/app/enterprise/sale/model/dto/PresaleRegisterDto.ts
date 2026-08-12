@@ -1,12 +1,14 @@
 import { PresaleDetEntity } from "../entity/PresaleDetEntity";
 import { PresaleChannelEntity } from "../entity/PresaleChannelEntity";
 import { PresaleHeadEntity } from "../entity/PresaleHeadEntity";
+import { SaleBillingEntity } from "../entity/SaleBillingEntity";
 
 export class PresaleRegisterDto
 {
     public Headboard : PresaleHeadEntity = new PresaleHeadEntity();
     public DetailList : PresaleDetEntity[] = [];
     public PresaleChannel : PresaleChannelEntity = new PresaleChannelEntity();
+    public SaleBilling: SaleBillingEntity = new SaleBillingEntity();
     public CreditNoteCod: string = "";
 
     public constructor()
@@ -14,6 +16,7 @@ export class PresaleRegisterDto
         this.Headboard = new PresaleHeadEntity();
         this.DetailList = [];
         this.PresaleChannel = new PresaleChannelEntity();
+        this.SaleBilling = new SaleBillingEntity();
         this.CreditNoteCod = "";
     }
 
@@ -56,6 +59,10 @@ export class PresaleRegisterDto
         this.PresaleChannel = Object.assign(
             new PresaleChannelEntity(),
             DataSession.PresaleChannel ?? {}
+        );
+        this.SaleBilling = Object.assign(
+            new SaleBillingEntity(),
+            DataSession.SaleBilling ?? {}
         );
         this.CreditNoteCod = DataSession.CreditNoteCod ?? "";
 

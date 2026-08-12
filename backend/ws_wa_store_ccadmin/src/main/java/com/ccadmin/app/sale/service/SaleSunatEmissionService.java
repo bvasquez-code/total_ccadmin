@@ -50,7 +50,6 @@ public class SaleSunatEmissionService {
             );
         }
         saleDetail.SaleDocument = selectedDocument;
-        saleDetail.Headboard.Client = selectedDocument.Client;
         if (!this.saleSunatPayloadBuildService.isInvoiceOrReceipt(saleDetail)) {
             log.info("DOCUMENTO NO FISCAL OMITIDO PARA SUNAT : {} - {}", saleCod, documentCod);
             return;

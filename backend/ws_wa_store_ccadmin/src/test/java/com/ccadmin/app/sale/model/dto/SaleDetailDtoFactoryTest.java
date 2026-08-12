@@ -6,6 +6,7 @@ import com.ccadmin.app.sale.model.entity.SaleDetEntity;
 import com.ccadmin.app.sale.model.entity.SaleDocumentEntity;
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
 import com.ccadmin.app.sale.model.entity.SalePaymentEntity;
+import com.ccadmin.app.sale.model.entity.SaleBillingEntity;
 import com.ccadmin.app.sale.model.factory.SaleDetailDtoFactory;
 import org.junit.jupiter.api.Test;
 
@@ -20,6 +21,7 @@ class SaleDetailDtoFactoryTest {
         SaleHeadEntity head = new SaleHeadEntity();
         SaleChannelEntity channel = new SaleChannelEntity();
         SaleDeliveryEntity delivery = new SaleDeliveryEntity();
+        SaleBillingEntity billing = new SaleBillingEntity();
 
         SaleDetailDto result = SaleDetailDtoFactory.fromEntities(
                 head,
@@ -28,11 +30,13 @@ class SaleDetailDtoFactoryTest {
                 List.<SaleDocumentEntity>of(),
                 null,
                 channel,
-                delivery
+                delivery,
+                billing
         );
 
         assertSame(head, result.Headboard);
         assertSame(channel, result.SaleChannel);
         assertSame(delivery, result.SaleDelivery);
+        assertSame(billing, result.SaleBilling);
     }
 }

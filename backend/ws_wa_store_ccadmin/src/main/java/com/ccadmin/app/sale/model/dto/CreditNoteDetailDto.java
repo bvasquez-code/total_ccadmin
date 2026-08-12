@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 public class CreditNoteDetailDto {
 
     public ClientEntity Client;
+    public SaleBillingEntity SaleBilling;
 
     public CreditNoteHeadEntity Headboard;
     public CreditNoteDocumentEntity Document;

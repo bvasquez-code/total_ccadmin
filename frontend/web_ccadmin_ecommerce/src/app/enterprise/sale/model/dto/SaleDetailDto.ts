@@ -1,4 +1,5 @@
 import { TrxPaymentEntity } from '../entity/TrxPaymentEntity';
+import { SaleBillingEntity } from '../entity/SaleBillingEntity';
 
 export interface SalePaymentDto {
   PaymentNumber: number;
@@ -25,4 +26,5 @@ export interface SaleDetailDto {
   };
   DetailList: unknown[];
   DetailPayment: SalePaymentDto[];
+  SaleBilling: SaleBillingEntity | null;
 }

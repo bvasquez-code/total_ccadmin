@@ -19,6 +19,9 @@ import { PaymentMethodEntity } from 'src/app/enterprise/shared/model/entity/Paym
 import { SalePickingLineDto } from '../../model/dto/SalePickingLineDto';
 import { SalePickingConfirmDto } from '../../model/dto/SalePickingConfirmDto';
 import { IndicatorDto } from 'src/app/enterprise/shared/model/dto/IndicatorDto';
+import { SaleBillingEntity } from '../../model/entity/SaleBillingEntity';
+import { PersonEntity } from 'src/app/enterprise/person/model/entity/PersonEntity';
+import { PersonIdentityLookupService } from 'src/app/enterprise/person/service/person-identity-lookup.service';
 
 @Component({
   selector: 'app-createsale',
@@ -68,6 +71,7 @@ export class CreatesaleComponent implements OnInit {
     , private ticketSvc: TicketSunatService
     , private toastrService: ToastrService
     , private clientService: ClientService
+    , private personIdentityLookupService: PersonIdentityLookupService
   ) {
     let urlTree: any = this.router.parseUrl(this.router.url);
     this.SaleCod = urlTree.queryParams['SaleCod'];
@@ -91,6 +95,13 @@ export class CreatesaleComponent implements OnInit {
       this.IndProformaSales = rpt.DataAdditional.find(e => e.Name === "IndProformaSales")?.Data ?? new IndicatorDto();
       this.IndAdvancePayment = rpt.DataAdditional.find(e => e.Name === "IndAdvancePayment")?.Data ?? new IndicatorDto();
       this.IndMandatoryPicking = rpt.DataAdditional.find(e => e.Name === "IndMandatoryPicking")?.Data ?? new IndicatorDto();
+
+      const documentTypeRequest = this.SaleDetail.SaleBilling?.DocumentTypeRequest || "";
+      if ((documentTypeRequest === "01" || documentTypeRequest === "03")
+        && !this.SelectedPaymentOption) {
+        this.SelectedPaymentOption = documentTypeRequest;
+        this.DocumentType = documentTypeRequest;
+      }
 
       if (!this.isProformaSalesEnabled && this.SelectedPaymentOption === "99") {
         this.SelectedPaymentOption = "";
@@ -182,7 +193,7 @@ export class CreatesaleComponent implements OnInit {
 
   }
 
-  selectDocumentType(DocumentType: string) {
+  async selectDocumentType(DocumentType: string): Promise<void> {
     if (!this.ensurePickingAllowsOtherActions()) return;
     if (DocumentType === "99" && !this.isProformaSalesEnabled) {
       this.toastrService.warning("La emision de proformas no esta habilitada para esta empresa.");
@@ -191,14 +202,14 @@ export class CreatesaleComponent implements OnInit {
     this.ClientSearchMode = "sale";
     this.SelectedPaymentOption = DocumentType;
     this.DocumentType = DocumentType;
-    this.refreshPaymentAvailability();
-
-    if (this.requiresClientForSelectedDocument()) {
-      if (this.hasClient() && !this.isCurrentClientCompatible()) {
-        this.toastrService.error("El cliente seleccionado no corresponde al tipo de documento de venta.");
-      }
-      this.OpenClientModal();
+    if (DocumentType === "03") {
+      await this.saveBillingForBuyer("03");
+    } else if (DocumentType === "01" && !this.isCurrentBillingCompatible()) {
+      this.OpenClientModal("billing");
+    } else if (DocumentType === "99") {
+      await this.clearBillingRequest();
     }
+    this.refreshPaymentAvailability();
   }
 
   OpenAdvanceClientModal() {
@@ -233,7 +244,7 @@ export class CreatesaleComponent implements OnInit {
     }
 
     if (this.requiresClientForSelectedDocument()) {
-      this.OpenClientModal();
+      this.OpenClientModal(this.DocumentType === "01" ? "billing" : "sale");
       return;
     }
 
@@ -298,7 +309,7 @@ export class CreatesaleComponent implements OnInit {
       } else {
         this.toastrService.info("Debe seleccionar un cliente para continuar.", "Info");
       }
-      this.OpenClientModal();
+      this.OpenClientModal(this.DocumentType === "01" ? "billing" : "sale");
       return;
     }
 
@@ -348,14 +359,18 @@ export class CreatesaleComponent implements OnInit {
 
   requiresClientForSelectedDocument(): boolean {
     if (!this.hasSelectedPaymentOption()) return false;
-    if (this.hasClient() && !this.isCurrentClientCompatible()) return true;
     if (this.SelectedPaymentOption === "advance") return !this.hasClient();
-    if (this.DocumentType === "01") return !this.hasClient();
-    if (this.DocumentType === "03" && this.SaleDetail.Headboard.NumTotalPrice > 700) return !this.hasClient();
+    if (this.DocumentType === "01") return !this.isCurrentBillingCompatible();
+    if (this.DocumentType === "03" && this.SaleDetail.Headboard.NumTotalPrice > 700) {
+      return !this.isCurrentBillingCompatible();
+    }
     return false;
   }
 
   isCurrentClientCompatible(): boolean {
+    if (this.SelectedPaymentOption !== "advance") {
+      return this.isCurrentBillingCompatible();
+    }
     const person = this.SaleDetail.Headboard.Client?.Person;
 
     if (!person) return false;
@@ -364,15 +379,24 @@ export class CreatesaleComponent implements OnInit {
       return person.DocumentType === "01";
     }
 
-    if (this.DocumentType === "01") {
-      return person.PersonType === "04";
-    }
-
-    if (this.DocumentType === "03") {
-      return true;
-    }
-
     return true;
+  }
+
+  isCurrentBillingCompatible(): boolean {
+    const billing = this.SaleDetail.SaleBilling;
+    if (!billing || billing.DocumentTypeRequest !== this.DocumentType) return false;
+    if (this.DocumentType === "01") {
+      return (billing.DocumentType === "06" || billing.DocumentType === "6")
+        && /^\d{11}$/.test((billing.DocumentNum || "").trim())
+        && !!(billing.LegalName || "").trim();
+    }
+    if (this.DocumentType === "03") {
+      if (Number(this.SaleDetail.Headboard.NumTotalPrice || 0) <= 700) return true;
+      return !!(billing.DocumentType || "").trim()
+        && !!(billing.DocumentNum || "").trim()
+        && !!(billing.LegalName || "").trim();
+    }
+    return false;
   }
 
   refreshPaymentAvailability(): void {
@@ -506,7 +530,8 @@ export class CreatesaleComponent implements OnInit {
     this.ShowClientRegister = false;
     this.ShowClientSearch = true;
     this.ClientDocumentNum = "";
-    this.ClientDocumentType = this.ClientSearchMode === "advance" ? "01" : (this.DocumentType === "01" ? "06" : "01");
+    this.ClientDocumentType = this.ClientSearchMode === "advance" ? "01"
+      : (this.ClientSearchMode === "billing" || this.DocumentType === "01" ? "06" : "01");
     setTimeout(() => { this.btnOpenClientModal?.nativeElement.click(); }, 0);
   }
 
@@ -520,7 +545,20 @@ export class CreatesaleComponent implements OnInit {
     }
 
     if (this.ClientSearchMode !== "advance" && this.DocumentType === "01" && this.ClientDocumentType !== "06") {
-      this.toastrService.error("Para factura debe seleccionar un cliente con RUC.");
+      this.toastrService.error("Para factura debe seleccionar una persona con RUC.");
+      return;
+    }
+
+    if (this.ClientSearchMode === "billing") {
+      const identity = await this.personIdentityLookupService.findByDocument(
+        this.ClientDocumentType,
+        this.ClientDocumentNum
+      );
+      if (!identity.person) {
+        this.toastrService.error("No fue posible obtener los datos de la persona indicada.");
+        return;
+      }
+      await this.saveBillingPerson(identity.person, this.DocumentType);
       return;
     }
 
@@ -539,7 +577,12 @@ export class CreatesaleComponent implements OnInit {
   }
 
   async ResponseResultFormSaleClient(event: any) {
-    await this.SaveClientSale(event);
+    const client = event as ClientEntity;
+    if (this.ClientSearchMode === "billing") {
+      await this.saveBillingPerson(client.Person, this.DocumentType);
+      return;
+    }
+    await this.SaveClientSale(client);
   }
 
   async SaveClientSale(client: ClientEntity): Promise<void> {
@@ -549,6 +592,9 @@ export class CreatesaleComponent implements OnInit {
     if (!rpt.ErrorStatus) {
       this.SaleDetail.Headboard.ClientCod = client.ClientCod;
       this.SaleDetail.Headboard.Client = client;
+      if (this.ClientSearchMode === "sale" && this.SelectedPaymentOption === "03") {
+        await this.saveBillingForBuyer("03");
+      }
       this.ShowClientRegister = false;
       this.ShowClientSearch = false;
       this.ShowClient = true;
@@ -573,6 +619,52 @@ export class CreatesaleComponent implements OnInit {
     if (!person) return "";
     const name = person.BusinessName || person.CommercialName || `${person.Names} ${person.LastNames}`;
     return `${name}`;
+  }
+
+  getBillingName(): string {
+    return this.SaleDetail.SaleBilling?.LegalName || "";
+  }
+
+  private async saveBillingForBuyer(documentType: string): Promise<boolean> {
+    const request = new SaleBillingEntity();
+    request.SaleCod = this.SaleDetail.Headboard.SaleCod;
+    request.DocumentTypeRequest = documentType;
+    const response = await this.saleservice.saveBilling(request);
+    if (response.ErrorStatus) {
+      this.toastrService.error(response.Message || "No se pudieron guardar los datos de facturacion.");
+      return false;
+    }
+    this.SaleDetail.SaleBilling = response.Data;
+    return true;
+  }
+
+  private async saveBillingPerson(person: PersonEntity, documentType: string): Promise<boolean> {
+    const request = new SaleBillingEntity();
+    request.SaleCod = this.SaleDetail.Headboard.SaleCod;
+    request.DocumentTypeRequest = documentType;
+    request.PersonCod = person.PersonCod || "";
+    request.Person = person;
+    const response = await this.saleservice.saveBilling(request);
+    if (response.ErrorStatus) {
+      this.toastrService.error(response.Message || "No se pudieron guardar los datos de facturacion.");
+      return false;
+    }
+    this.SaleDetail.SaleBilling = response.Data;
+    this.ShowClientRegister = false;
+    this.ShowClientSearch = false;
+    this.ShowClient = true;
+    this.refreshPaymentAvailability();
+    this.toastrService.success("Datos de facturacion registrados.");
+    return true;
+  }
+
+  private async clearBillingRequest(): Promise<void> {
+    const request = new SaleBillingEntity();
+    request.SaleCod = this.SaleDetail.Headboard.SaleCod;
+    const response = await this.saleservice.saveBilling(request);
+    if (!response.ErrorStatus) {
+      this.SaleDetail.SaleBilling = response.Data;
+    }
   }
 
   openPickingModal(item: SaleDetEntity): void {

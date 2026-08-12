@@ -21,14 +21,17 @@
 
               <div class="row mt-4">
                 <div class="col-sm-6">
-                  <div class="text-100 text-grey-m1">Cliente del nuevo documento:</div>
+                  <div class="text-100 text-grey-m1">Datos de facturación del nuevo documento:</div>
                   <div class="text-600 text-110 text-primary mt-2">{{ getClientName() }}</div>
                   <div class="text-dark-l1" *ngIf="hasClient()">
-                    N° Documento: {{ SaleDetail.Headboard.Client.Person.DocumentNum }}
+                    N° Documento: {{ SaleDetail.SaleBilling?.DocumentNum }}
                   </div>
                   <button type="button" class="btn btn-sm btn-outline-primary mt-2"
-                    (click)="openClientModal()" [disabled]="loading || !DocumentType">
-                    {{ hasClient() ? 'Cambiar cliente' : 'Agregar cliente' }}
+                    *ngIf="DocumentType === '01' || DocumentType === '03'"
+                    (click)="openClientModal()" [disabled]="loading">
+                    {{ DocumentType === '01'
+                      ? (hasClient() ? 'Cambiar RUC' : 'Agregar RUC')
+                      : (hasBuyer() ? 'Cambiar cliente' : 'Agregar cliente') }}
                   </button>
                 </div>
 
@@ -177,7 +180,9 @@
   <div class="modal-dialog" role="document" *ngIf="ShowClientSearch">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title text-primary-d3" id="SaleDocumentClientModalLabel">Buscar cliente</h5>
+        <h5 class="modal-title text-primary-d3" id="SaleDocumentClientModalLabel">
+          {{ ClientSearchMode === 'billing' ? 'Buscar persona para facturación' : 'Buscar cliente para la boleta' }}
+        </h5>
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
           <span aria-hidden="true">&times;</span>
         </button>
@@ -186,11 +191,11 @@
         <div class="mb-3 row">
           <label class="col-sm-4 col-form-label">Tipo documento</label>
           <div class="col-sm-8">
-            <select class="form-control" #cboDocumentType [disabled]="DocumentType === '01'">
-              <option value="06" *ngIf="DocumentType === '01'">RUC</option>
-              <option value="01" *ngIf="DocumentType === '03'">DNI</option>
-              <option value="04" *ngIf="DocumentType === '03'">CARNET DE EXTRANJERIA</option>
-              <option value="06" *ngIf="DocumentType === '03'">RUC</option>
+            <select class="form-control" #cboDocumentType [disabled]="ClientSearchMode === 'billing'">
+              <option value="06" *ngIf="ClientSearchMode === 'billing'">RUC</option>
+              <option value="01" *ngIf="ClientSearchMode === 'buyer'">DNI</option>
+              <option value="04" *ngIf="ClientSearchMode === 'buyer'">CARNET DE EXTRANJERIA</option>
+              <option value="06" *ngIf="ClientSearchMode === 'buyer'">RUC</option>
             </select>
           </div>
         </div>

@@ -67,6 +67,8 @@ public class SaleSearchService extends SessionService {
     private CatalogSearchShared catalogSearchShared;
     @Autowired
     private CreditNoteSearchService creditNoteSearchService;
+    @Autowired
+    private SaleBillingSearchService saleBillingSearchService;
     public ResponseWsDto findDataForm(String SaleCod) {
         ResponseWsDto rpt = new ResponseWsDto();
 
@@ -109,6 +111,7 @@ public class SaleSearchService extends SessionService {
         CreditNoteDetailDto creditNoteDetail = this.creditNoteSearchService.findBySaleCod(SaleCod);
         SaleChannelEntity saleChannel = this.saleChannelRepository.findById(SaleCod).orElse(null);
         SaleDeliveryEntity saleDelivery = this.saleDeliveryRepository.findActiveBySaleCod(SaleCod).orElse(null);
+        SaleBillingEntity saleBilling = this.saleBillingSearchService.findBySaleCod(SaleCod);
 
         if (saleHead.existClient())
         {
@@ -134,7 +137,8 @@ public class SaleSearchService extends SessionService {
                 saleDocumentList,
                 creditNoteDetail,
                 saleChannel,
-                saleDelivery
+                saleDelivery,
+                saleBilling
         );
     }
 
@@ -185,8 +189,6 @@ public class SaleSearchService extends SessionService {
         SaleDetailDto saleDetail = this.findById(saleDocument.SaleCod);
         this.loadDocumentClients(List.of(saleDocument));
         saleDetail.SaleDocument = saleDocument;
-        saleDetail.Headboard.ClientCod = saleDocument.ClientCod;
-        saleDetail.Headboard.Client = saleDocument.Client;
         return saleDetail;
     }
 
@@ -211,10 +213,6 @@ public class SaleSearchService extends SessionService {
             this.loadDocumentClients(List.of(selectedDocument));
             saleDetail.SaleDocument = selectedDocument;
         }
-        if (saleDetail.SaleDocument != null) {
-            saleDetail.Headboard.Client = saleDetail.SaleDocument.Client;
-        }
-
         rpt.AddResponseAdditional("SaleDetail",saleDetail);
         rpt.AddResponseAdditional("PaymentMethodList",this.paymentMethodShared.findAllActive());
         rpt.AddResponseAdditional("CurrencyList",this.currencyShared.findAllActive());

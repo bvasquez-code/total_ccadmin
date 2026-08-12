@@ -8,6 +8,7 @@ import { SearchDto } from "../../shared/model/dto/SearchDto";
 import { SaleConfirmDto } from "../model/dto/SaleConfirmDto";
 import { SalePickingConfirmDto } from "../model/dto/SalePickingConfirmDto";
 import { SaleDocumentIssueDto } from "../model/dto/SaleDocumentIssueDto";
+import { SaleBillingEntity } from "../model/entity/SaleBillingEntity";
 
 @Injectable({
     providedIn: 'root'
@@ -103,6 +104,11 @@ export class SaleService
         RespuestaWS = await this.apiService.ExecutePostService(url,request);
 
         return RespuestaWS;
+    }
+
+    async saveBilling(request: SaleBillingEntity): Promise<ResponseWsDto> {
+        const url: string = `${AppSetting.API}/api/v1/sale/saveBilling`;
+        return await this.apiService.ExecutePostService(url, request);
     }
 
     async issueFiscalDocument(request: SaleDocumentIssueDto): Promise<ResponseWsDto> {

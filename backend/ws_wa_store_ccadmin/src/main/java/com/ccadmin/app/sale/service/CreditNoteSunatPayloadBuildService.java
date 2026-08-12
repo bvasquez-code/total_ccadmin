@@ -1,7 +1,5 @@
 package com.ccadmin.app.sale.service;
 
-import com.ccadmin.app.client.model.entity.ClientEntity;
-import com.ccadmin.app.person.model.entity.PersonEntity;
 import com.ccadmin.app.sale.model.dto.CreditNoteDetailDto;
 import com.ccadmin.app.sale.model.dto.CreditNoteDetDto;
 import com.ccadmin.app.sunat.model.dto.sunat.SunatCreditNoteProcessRequestDto;
@@ -15,6 +13,7 @@ import com.ccadmin.app.sale.model.entity.CreditNoteDetTaxEntity;
 import com.ccadmin.app.sale.model.entity.CreditNoteDocumentEntity;
 import com.ccadmin.app.sale.model.entity.CreditNoteHeadEntity;
 import com.ccadmin.app.sale.model.entity.SaleDocumentEntity;
+import com.ccadmin.app.sale.model.entity.SaleBillingEntity;
 import com.ccadmin.app.store.model.dto.StoreInfoDto;
 import com.ccadmin.app.store.model.entity.CompanyEntity;
 import com.ccadmin.app.store.shared.StoreShared;
@@ -61,7 +60,11 @@ public class CreditNoteSunatPayloadBuildService {
         dto.CurrencyCod = head.CurrencyCod;
         dto.Supplier = buildSupplier(head.StoreCod);
         dto.Totals = buildTotals(head);
-        dto.Customer = buildCustomer(creditNoteDetail.Client, relatedDocumentType, dto.Totals.PayableAmount);
+        dto.Customer = buildCustomer(
+                creditNoteDetail.SaleBilling,
+                relatedDocumentType,
+                dto.Totals.PayableAmount
+        );
         dto.DiscrepancyResponse = buildDiscrepancyResponse(head, referenceDocument.DocumentCod);
         dto.RelatedDocuments = buildRelatedDocuments(referenceDocument.DocumentCod, relatedDocumentType);
         dto.Lines = new ArrayList<>(creditNoteDetail.DetailList.stream()
@@ -89,21 +92,21 @@ public class CreditNoteSunatPayloadBuildService {
         return supplier;
     }
 
-    private SunatPartyDto buildCustomer(ClientEntity client, String relatedDocumentType, BigDecimal payableAmount) {
-        if (client == null || client.Person == null) {
-            return buildAnonymousCustomerOrThrow(relatedDocumentType, payableAmount);
-        }
-        PersonEntity person = client.Person;
-        if (!hasCustomerIdentity(person)) {
+    private SunatPartyDto buildCustomer(
+            SaleBillingEntity saleBilling,
+            String relatedDocumentType,
+            BigDecimal payableAmount
+    ) {
+        if (!hasCustomerIdentity(saleBilling)) {
             return buildAnonymousCustomerOrThrow(relatedDocumentType, payableAmount);
         }
         SunatPartyDto customer = new SunatPartyDto();
-        customer.DocumentType = normalizeDocumentType(person.DocumentType);
-        customer.DocumentNumber = person.DocumentNum;
-        customer.LegalName = firstNotBlank(person.BusinessName, fullName(person), person.CommercialName);
-        customer.TradeName = person.CommercialName;
-        customer.Address = person.Address;
-        customer.UbigeoCod = person.UbigeoCod;
+        customer.DocumentType = normalizeDocumentType(saleBilling.DocumentType);
+        customer.DocumentNumber = saleBilling.DocumentNum;
+        customer.LegalName = saleBilling.LegalName;
+        customer.TradeName = saleBilling.CommercialName;
+        customer.Address = saleBilling.Address;
+        customer.UbigeoCod = saleBilling.UbigeoCod;
         customer.CountryCode = "PE";
         return customer;
     }
@@ -272,10 +275,11 @@ public class CreditNoteSunatPayloadBuildService {
         return new DocumentNumber(parts[0], Integer.parseInt(parts[1]));
     }
 
-    private boolean hasCustomerIdentity(PersonEntity person) {
-        return person.DocumentType != null && !person.DocumentType.isBlank()
-                && person.DocumentNum != null && !person.DocumentNum.isBlank()
-                && firstNotBlank(person.BusinessName, fullName(person), person.CommercialName) != null;
+    private boolean hasCustomerIdentity(SaleBillingEntity saleBilling) {
+        return saleBilling != null
+                && saleBilling.DocumentType != null && !saleBilling.DocumentType.isBlank()
+                && saleBilling.DocumentNum != null && !saleBilling.DocumentNum.isBlank()
+                && saleBilling.LegalName != null && !saleBilling.LegalName.isBlank();
     }
 
     private String normalizeDocumentType(String documentType) {
@@ -309,11 +313,6 @@ public class CreditNoteSunatPayloadBuildService {
             throw new IllegalArgumentException("Codigo SUNAT de local anexo invalido: " + value);
         }
         return code;
-    }
-
-    private String fullName(PersonEntity person) {
-        String value = ((person.Names == null ? "" : person.Names) + " " + (person.LastNames == null ? "" : person.LastNames)).trim();
-        return value.isBlank() ? null : value;
     }
 
     private String firstNotBlank(String... values) {

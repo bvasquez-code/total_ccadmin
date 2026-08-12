@@ -58,9 +58,12 @@
                     </div>
                     <div *ngIf="(SaleDetail.Headboard.ClientCod === '' || SaleDetail.Headboard.ClientCod === null)">
                       <div class="alert bgc-warning-l4 brc-warning-m3 border-1 text-dark-m2" *ngIf="requiresClientForSelectedDocument()">
-                        Debe seleccionar un cliente para el documento de venta seleccionado.
-                        <button class="btn btn-sm btn-primary ml-2" type="button" (click)="OpenClientModal()">
-                          Buscar cliente
+                        {{ DocumentType === '01'
+                          ? 'Debe seleccionar la persona a la que se emitirá la factura.'
+                          : 'Debe seleccionar un cliente para la boleta.' }}
+                        <button class="btn btn-sm btn-primary ml-2" type="button"
+                          (click)="OpenClientModal(DocumentType === '01' ? 'billing' : 'sale')">
+                          {{ DocumentType === '01' ? 'Buscar RUC' : 'Buscar cliente' }}
                         </button>
                       </div>
                     </div>
@@ -69,6 +72,16 @@
                         [disabled]="isPickingDraftBlocked()">
                         {{ hasClient() ? 'Cambiar cliente' : 'Agregar cliente' }}
                       </button>
+                    </div>
+                    <div class="mt-3" *ngIf="SaleDetail.SaleBilling?.DocumentTypeRequest">
+                      <div class="text-100 text-grey-m1">Facturación:</div>
+                      <div class="text-600 text-primary mt-1">
+                        {{ SaleDetail.SaleBilling?.DocumentTypeRequest === '01' ? 'Factura' : 'Boleta' }}
+                        <span *ngIf="SaleDetail.SaleBilling?.LegalName"> - {{ SaleDetail.SaleBilling?.LegalName }}</span>
+                      </div>
+                      <div class="text-dark-l1" *ngIf="SaleDetail.SaleBilling?.DocumentNum">
+                        N° Documento: {{ SaleDetail.SaleBilling?.DocumentNum }}
+                      </div>
                     </div>
                   </div><!-- /.col -->
 
@@ -576,7 +589,7 @@
     <div class="modal-content" style="width: 100%;">
       <div class="modal-header">
         <h5 class="modal-title text-primary-d3" id="ClientModalLabel">
-          {{ ClientSearchMode === 'advance' ? 'Registrar anticipo' : 'Buscar cliente' }}
+          {{ ClientSearchMode === 'advance' ? 'Registrar anticipo' : (ClientSearchMode === 'billing' ? 'Buscar persona para facturación' : 'Buscar cliente') }}
         </h5>
 
         <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -593,7 +606,7 @@
         <div class="mb-3 row">
           <label class="col-sm-4 col-form-label">Tipo documento</label>
           <div class="col-sm-8">
-            <select class="form-control" #cboDocumentType [disabled]="DocumentType === '01' || ClientSearchMode === 'advance'">
+            <select class="form-control" #cboDocumentType [disabled]="DocumentType === '01' || ClientSearchMode === 'advance' || ClientSearchMode === 'billing'">
               <option value="06" *ngIf="DocumentType === '01' && ClientSearchMode !== 'advance'">RUC</option>
               <option value="01" *ngIf="!DocumentType || DocumentType === '03' || DocumentType === '99' || ClientSearchMode === 'advance'">DNI</option>
               <option value="04" *ngIf="(!DocumentType || DocumentType === '03' || DocumentType === '99') && ClientSearchMode !== 'advance'">CARNET DE EXTRANJERIA</option>
@@ -643,7 +656,7 @@
   <div class="modal-dialog" role="document" *ngIf="(ShowClient === true)">
     <div class="modal-content" style="width: 120%;">
 
-      <div class="modal-body" *ngIf="(SaleDetail.Headboard.Client!=null)">
+      <div class="modal-body" *ngIf="ClientSearchMode !== 'billing' && SaleDetail.Headboard.Client!=null">
         <div class="p-2 py-lg-3 d-flex pos-rel mx-1 justify-content-start justify-content-lg-center ccard">
           <div class="pl-1">
             <span class="d-inline-block bgc-purple-tp1 p-3 radius-round text-center border-2 brc-black-tp11">
@@ -657,6 +670,12 @@
               </span>
             </div>
           </div>
+        </div>
+      </div>
+      <div class="modal-body" *ngIf="ClientSearchMode === 'billing' && SaleDetail.SaleBilling">
+        <div class="alert alert-success mb-0">
+          <strong>{{ SaleDetail.SaleBilling.LegalName }}</strong><br>
+          {{ SaleDetail.SaleBilling.DocumentNum }}
         </div>
       </div>
 

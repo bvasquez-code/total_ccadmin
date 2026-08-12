@@ -74,7 +74,7 @@ class PresaleCreateServiceWebConfirmTest {
         when(presaleChannelRepository.findByPresaleCod("PT001"))
                 .thenReturn(Optional.of(channel));
         when(presaleSearchService.findById("PT001")).thenReturn(presaleDetail);
-        when(saleCreateService.saveWeb(presaleDetail, "T001")).thenReturn(expectedSale);
+        when(saleCreateService.saveWeb(presaleDetail, request.SaleBilling, "T001")).thenReturn(expectedSale);
         when(presaleDetWarehouseRepository.findActiveByPresaleCod("PT001"))
                 .thenReturn(List.of(new PresaleDetWarehouseEntity()));
         when(kardexShared.buildPresaleReservation(any(), any(), any()))
@@ -86,6 +86,6 @@ class PresaleCreateServiceWebConfirmTest {
         assertEquals(StatusConst.CONFIRMED, storedPresale.SaleStatus);
         assertEquals(StatusConst.PENDING, result.Headboard.SaleStatus);
         verify(presaleHeadRepository).save(storedPresale);
-        verify(saleCreateService).saveWeb(presaleDetail, "T001");
+        verify(saleCreateService).saveWeb(presaleDetail, request.SaleBilling, "T001");
     }
 }

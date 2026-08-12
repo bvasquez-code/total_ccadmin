@@ -1,8 +1,7 @@
 package com.ccadmin.app.sale.service;
 
-import com.ccadmin.app.client.model.entity.ClientEntity;
-import com.ccadmin.app.person.model.entity.PersonEntity;
 import com.ccadmin.app.sale.model.constants.SaleConstants;
+import com.ccadmin.app.sale.model.entity.SaleBillingEntity;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -35,7 +34,7 @@ class SaleSunatPayloadBuildServiceTest {
                 )
         );
 
-        assertEquals("La factura requiere un cliente juridico con RUC valido", exception.getMessage());
+        assertEquals("La factura requiere una persona con RUC valido y razon social", exception.getMessage());
     }
 
     @Test
@@ -54,18 +53,14 @@ class SaleSunatPayloadBuildServiceTest {
                         new BigDecimal("700.01")
                 )
         );
-        assertEquals("La boleta mayor a S/ 700 requiere un cliente identificado", exception.getMessage());
+        assertEquals("La boleta mayor a S/ 700 requiere una persona identificada", exception.getMessage());
     }
 
-    private ClientEntity rucClient() {
-        PersonEntity person = new PersonEntity();
-        person.PersonType = "04";
-        person.DocumentType = "06";
-        person.DocumentNum = "20123456789";
-        person.BusinessName = "CLIENTE EMPRESA SAC";
-        ClientEntity client = new ClientEntity();
-        client.ClientCod = "CL001";
-        client.Person = person;
-        return client;
+    private SaleBillingEntity rucClient() {
+        SaleBillingEntity billing = new SaleBillingEntity();
+        billing.DocumentType = "06";
+        billing.DocumentNum = "20123456789";
+        billing.LegalName = "CLIENTE EMPRESA SAC";
+        return billing;
     }
 }

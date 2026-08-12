@@ -97,8 +97,11 @@ export class ViewsaleComponent implements OnInit {
   }
 
   getDocumentClientName(document: SaleDocumentEntity): string {
+    if (document.DocumentRole === 'F' && this.SaleDetail?.SaleBilling?.LegalName) {
+      return this.SaleDetail.SaleBilling.LegalName;
+    }
     const person = document?.Client?.Person;
-    if (!person) return 'Cliente no identificado';
+    if (!person) return this.getClientName();
     const naturalName = `${person.Names || ''} ${person.LastNames || ''}`.trim();
     return person.BusinessName || person.CommercialName || naturalName || 'Cliente no identificado';
   }
@@ -141,6 +144,15 @@ export class ViewsaleComponent implements OnInit {
     if (status === 'P') return 'Pendiente';
     if (status === 'X') return 'Anulada';
     return status || '-';
+  }
+
+  hasBilling(): boolean {
+    const billing = this.SaleDetail?.SaleBilling;
+    return !!billing && !!(billing.DocumentTypeRequest || billing.DocumentNum || billing.LegalName);
+  }
+
+  getBillingDocumentName(): string {
+    return this.SaleDetail?.SaleBilling?.DocumentTypeRequest === '01' ? 'Factura' : 'Boleta';
   }
 
   getDelivery(): SaleDeliveryEntity | null {

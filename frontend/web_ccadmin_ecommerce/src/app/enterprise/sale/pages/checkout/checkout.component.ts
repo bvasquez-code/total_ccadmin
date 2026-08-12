@@ -20,7 +20,10 @@ import { PaymentMethodEntity } from '../../model/entity/PaymentMethodEntity';
 import { PresaleDetEntity } from '../../model/entity/PresaleDetEntity';
 import { TrxPaymentEntity } from '../../model/entity/TrxPaymentEntity';
 import { TrxPaymentDocumentEntity } from '../../model/entity/TrxPaymentDocumentEntity';
+import { SaleBillingEntity } from '../../model/entity/SaleBillingEntity';
 import { CheckoutService } from '../../service/checkout.service';
+import { BillingIdentityService } from '../../service/billing-identity.service';
+import { PersonEntity } from '../../../client/model/entity/ClientEntity';
 
 interface DeliveryOption {
   Code: string;
@@ -53,6 +56,10 @@ export class CheckoutComponent implements OnInit {
   public IsAddressModalVisible: boolean = false;
   public PaymentProofDocument: TrxPaymentDocumentEntity | null = null;
   public PaymentProofPreview: string = '';
+  public BillingDocumentType: string = '03';
+  public BillingRuc: string = '';
+  public BillingPerson: PersonEntity | null = null;
+  public IsSearchingBilling: boolean = false;
 
   private pendingConfirmationRequest: PresaleRegisterDto | null = null;
   private readonly MaxPaymentProofSizeBytes: number = 10 * 1024 * 1024;
@@ -69,6 +76,7 @@ export class CheckoutComponent implements OnInit {
     private clientSessionService: ClientSessionService,
     private clientAddressService: ClientAddressService,
     private checkoutService: CheckoutService,
+    private billingIdentityService: BillingIdentityService,
     private activatedRoute: ActivatedRoute,
     private router: Router,
     private toastrService: ToastrService
@@ -142,6 +150,7 @@ export class CheckoutComponent implements OnInit {
   }
 
   public canConfirmOrder(): boolean {
+    if (!this.isBillingValid()) return false;
     if (!this.Delivery.DeliveryTypeCod) return false;
     if (!this.requiresAddress()) return true;
     return !!this.Delivery.ClientAddressID
@@ -157,6 +166,44 @@ export class CheckoutComponent implements OnInit {
 
   public requiresSchedule(): boolean {
     return this.Delivery.DeliveryTypeCod === 'SCHEDULED_DELIVERY';
+  }
+
+  public selectBillingDocument(documentType: string): void {
+    this.BillingDocumentType = documentType;
+    if (documentType === '03') {
+      this.BillingRuc = '';
+      this.BillingPerson = null;
+    }
+  }
+
+  public async findBillingCompany(): Promise<void> {
+    const ruc = (this.BillingRuc || '').replace(/\D/g, '');
+    this.BillingRuc = ruc;
+    this.BillingPerson = null;
+    if (!/^\d{11}$/.test(ruc)) {
+      this.toastrService.warning('Ingresa un RUC valido de 11 digitos.');
+      return;
+    }
+
+    this.IsSearchingBilling = true;
+    try {
+      const person = await this.billingIdentityService.findCompanyByRuc(ruc);
+      if (!person) {
+        this.toastrService.warning('No fue posible obtener los datos del RUC indicado.');
+        return;
+      }
+      this.BillingPerson = person;
+    } finally {
+      this.IsSearchingBilling = false;
+    }
+  }
+
+  public isBillingValid(): boolean {
+    if (this.BillingDocumentType === '03') return true;
+    return this.BillingDocumentType === '01'
+      && !!this.BillingPerson
+      && /^\d{11}$/.test(this.BillingPerson.DocumentNum || '')
+      && !!(this.BillingPerson.BusinessName || '').trim();
   }
 
   public subtotal(): number {
@@ -485,6 +532,7 @@ export class CheckoutComponent implements OnInit {
 
     request.PresaleChannel.PresaleCod = request.Headboard.PresaleCod;
     request.PresaleChannel.ChannelCod = 'WEB';
+    request.SaleBilling = this.buildSaleBilling();
     request.Delivery = Object.assign(new CheckoutDeliveryDto(), this.Delivery);
     request.DetailList = this.cartService.getCurrent().Items.map((item, index) => {
       const detail = new PresaleDetEntity();
@@ -518,6 +566,7 @@ export class CheckoutComponent implements OnInit {
     confirmation.Headboard = response.Data?.Headboard || request.Headboard;
     confirmation.DetailList = response.Data?.DetailList || request.DetailList;
     confirmation.PresaleChannel = response.Data?.PresaleChannel || request.PresaleChannel;
+    confirmation.SaleBilling = request.SaleBilling;
     confirmation.CreditNoteCod = '';
     return confirmation;
   }
@@ -586,6 +635,14 @@ export class CheckoutComponent implements OnInit {
   }
 
   private validate(): boolean {
+    if (!this.isBillingValid()) {
+      this.toastrService.warning(
+        this.BillingDocumentType === '01'
+          ? 'Busca y confirma el RUC que se utilizara para la factura.'
+          : 'Selecciona el comprobante que deseas recibir.'
+      );
+      return false;
+    }
     if (!this.Delivery.DeliveryTypeCod) {
       this.toastrService.warning('No hay una modalidad de entrega disponible para esta ubicación.');
       return false;
@@ -622,6 +679,22 @@ export class CheckoutComponent implements OnInit {
       return false;
     }
     return true;
+  }
+
+  private buildSaleBilling(): SaleBillingEntity {
+    const saleBilling = new SaleBillingEntity();
+    saleBilling.DocumentTypeRequest = this.BillingDocumentType;
+    if (this.BillingDocumentType === '01' && this.BillingPerson) {
+      saleBilling.PersonCod = this.BillingPerson.PersonCod || '';
+      saleBilling.Person = Object.assign(new PersonEntity(), this.BillingPerson);
+      saleBilling.DocumentType = this.BillingPerson.DocumentType;
+      saleBilling.DocumentNum = this.BillingPerson.DocumentNum;
+      saleBilling.LegalName = this.BillingPerson.BusinessName;
+      saleBilling.CommercialName = this.BillingPerson.CommercialName;
+      saleBilling.Address = this.BillingPerson.Address;
+      saleBilling.UbigeoCod = this.BillingPerson.UbigeoCod;
+    }
+    return saleBilling;
   }
 
   private money(value: number): number {

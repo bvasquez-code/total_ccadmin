@@ -81,12 +81,25 @@ export class ViewcreditnoteComponent implements OnInit {
   }
 
   getClientName(): string {
+    if (this.Detail?.SaleBilling?.LegalName) {
+      return this.Detail.SaleBilling.LegalName;
+    }
     const person = this.Detail?.Client?.Person;
 
     if (!person) return '-';
 
     const naturalPersonName = `${person.Names || ''} ${person.LastNames || ''}`.trim();
     return (person.BusinessName || person.CommercialName || naturalPersonName || '-').trim();
+  }
+
+  getBillingDocumentNum(): string {
+    return this.Detail?.SaleBilling?.DocumentNum
+      || this.Detail?.Client?.Person?.DocumentNum
+      || '-';
+  }
+
+  getBillingAddress(): string {
+    return this.Detail?.SaleBilling?.Address || '';
   }
 
   getVisibleQuantity(internalQuantity: number, productUnitFactor: number): number {

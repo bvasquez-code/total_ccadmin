@@ -186,8 +186,12 @@ public class PresaleCreateService extends SessionService {
 
         PresaleDetailDto presaleDetail = this.presaleSearchService.findById(presale.PresaleCod);
         SaleDetailDto saleDetail = webSale
-                ? this.saleCreateService.saveWeb(presaleDetail, salesContext.StoreCod)
-                : this.saleCreateService.save(presaleDetail);
+                ? this.saleCreateService.saveWeb(
+                        presaleDetail,
+                        presaleRegister.SaleBilling,
+                        salesContext.StoreCod
+                )
+                : this.saleCreateService.save(presaleDetail, presaleRegister.SaleBilling);
         if (!StatusConst.PENDING.equals(saleDetail.Headboard.SaleStatus)
                 || !presale.PresaleCod.equals(saleDetail.Headboard.PresaleCod)) {
             throw new PresaleException("La venta pendiente no corresponde a la preventa confirmada");

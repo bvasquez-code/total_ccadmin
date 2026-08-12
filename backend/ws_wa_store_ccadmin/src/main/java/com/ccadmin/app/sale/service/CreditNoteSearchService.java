@@ -59,6 +59,8 @@ public class CreditNoteSearchService {
     private PaymentMethodShared paymentMethodShared;
     @Autowired
     private CreditNoteApplicationSearchService creditNoteApplicationSearchService;
+    @Autowired
+    private SaleBillingSearchService saleBillingSearchService;
 
     private SearchTService<CreditNoteHeadEntity> searchTService;
 
@@ -127,6 +129,7 @@ public class CreditNoteSearchService {
         SaleDocumentEntity documentReference = this.saleDocumentRepository.findFiscalBySaleCod(
                 creditNoteHead.SaleCod
         );
+        var saleBilling = this.saleBillingSearchService.findBySaleCod(creditNoteHead.SaleCod);
         return CreditNoteDetailDtoFactory.fromEntities(
                 creditNoteHead,
                 client,
@@ -135,7 +138,8 @@ public class CreditNoteSearchService {
                 applicationList,
                 availableBalance,
                 document,
-                documentReference
+                documentReference,
+                saleBilling
         );
     }
 

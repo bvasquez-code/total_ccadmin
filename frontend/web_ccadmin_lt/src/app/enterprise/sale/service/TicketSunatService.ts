@@ -19,6 +19,7 @@ import { TransferRequestDetailDto } from '../../transfer/model/dto/TransferReque
 import { TransferDocumentEntity } from '../../transfer/model/entity/TransferDocumentEntity';
 import { TransferDetEntity } from '../../transfer/model/entity/TransferDetEntity';
 import { ProductUnitHelper } from '../../shared/helper/ProductUnitHelper';
+import { SaleBillingEntity } from '../model/entity/SaleBillingEntity';
 
 @Injectable({ providedIn: 'root' })
 export class TicketSunatService {
@@ -51,7 +52,10 @@ export class TicketSunatService {
     const doc: SaleDocumentEntity = saleBlock?.SaleDocument || {};
     const items: SaleDetEntity[] = saleBlock?.DetailList || [];
     const payments: SalePaymentEntity[] = saleBlock?.DetailPayment || [];
-    const person: PersonEntity = saleBlock?.Headboard?.Client?.Person || {};
+    const person: PersonEntity = this.personFromBilling(
+      saleBlock?.SaleBilling,
+      saleBlock?.Headboard?.Client?.Person
+    );
 
     // === Moneda ===
     const currency = currencies.find((c: any) => c.CurrencyCod === cab?.CurrencyCod) || { CurrencySymbol: 'S/.' };
@@ -289,7 +293,10 @@ export class TicketSunatService {
     const head: CreditNoteHeadEntity = cnBlock?.Headboard || {};     // tiene: CreationDate, NumTotalPrice, TypeCreditNote, Commenter, SaleCod, CurrencyCod...
     const doc: CreditNoteDocumentEntity = cnBlock?.Document || {};     // tiene: DocumentCod, CounterfoilCod
     const rows: CreditNoteDetDto[] = cnBlock.DetailList || [];    // arreglo: [{ CreditNoteDet, Product }]
-    const person: PersonEntity = cnBlock?.Client?.Person || {};
+    const person: PersonEntity = this.personFromBilling(
+      cnBlock?.SaleBilling,
+      cnBlock?.Client?.Person
+    );
     const payments: SalePaymentEntity[] = cnBlock?.DetailPayment || [];
     const docRef: SaleDocumentEntity = cnBlock?.DocumentReference || {};
 
@@ -618,6 +625,32 @@ export class TicketSunatService {
     }else{
       return '';
     }
+  }
+
+  private personFromBilling(
+    billing: SaleBillingEntity | null | undefined,
+    fallback: PersonEntity | null | undefined
+  ): PersonEntity {
+    if (!billing || (!billing.LegalName && !billing.DocumentNum)) {
+      return fallback || new PersonEntity();
+    }
+
+    const person = new PersonEntity();
+    person.PersonCod = billing.PersonCod || '';
+    person.PersonType = billing.DocumentType === '06' || billing.DocumentType === '6'
+      ? '04'
+      : '01';
+    person.DocumentType = billing.DocumentType || '';
+    person.DocumentNum = billing.DocumentNum || '';
+    if (person.PersonType === '04') {
+      person.BusinessName = billing.LegalName || '';
+      person.CommercialName = billing.CommercialName || '';
+    } else {
+      person.Names = billing.LegalName || '';
+    }
+    person.Address = billing.Address || '';
+    person.UbigeoCod = billing.UbigeoCod || '';
+    return person;
   }
 
   private openAndPrint(html: string) {

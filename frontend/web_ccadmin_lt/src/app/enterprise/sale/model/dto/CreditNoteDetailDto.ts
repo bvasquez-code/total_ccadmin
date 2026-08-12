@@ -5,6 +5,7 @@ import { CreditNoteDocumentEntity } from "../entity/CreditNoteDocumentEntity";
 import { SalePaymentEntity } from "src/app/enterprise/trxpayment/model/entity/SalePaymentEntity";
 import { SaleDocumentEntity } from "../entity/SaleDocumentEntity";
 import { CreditNoteApplicationEntity } from "../entity/CreditNoteApplicationEntity";
+import { SaleBillingEntity } from "../entity/SaleBillingEntity";
 
 export class CreditNoteDetailDto {
 
@@ -16,6 +17,7 @@ export class CreditNoteDetailDto {
     public DetailPayment: SalePaymentEntity[];
     public ApplicationList: CreditNoteApplicationEntity[];
     public NumAvailableBalance: number;
+    public SaleBilling: SaleBillingEntity;
 
     constructor() {
         this.Client = new ClientEntity();
@@ -26,5 +28,6 @@ export class CreditNoteDetailDto {
         this.ApplicationList = [];
         this.NumAvailableBalance = 0;
         this.DocumentReference = new SaleDocumentEntity();
+        this.SaleBilling = new SaleBillingEntity();
     }
 }

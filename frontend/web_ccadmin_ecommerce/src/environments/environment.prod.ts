@@ -1,6 +1,7 @@
 export const environment = {
   production: true,
   settings: {
-    backend: ''
+    backend: '',
+    sunatIdentity: ''
   }
 };
