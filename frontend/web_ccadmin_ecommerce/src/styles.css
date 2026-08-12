@@ -1,6 +1,7 @@
 @import 'leaflet/dist/leaflet.css';
 
 :root {
+  --application-scale: 0.8;
   --store-primary: #2878bd;
   --store-primary-dark: #185681;
   --store-success: #2ca279;
@@ -31,6 +32,18 @@
 
 html {
   scroll-behavior: smooth;
+}
+
+@media screen and (min-width: 992px) {
+  html {
+    zoom: var(--application-scale);
+  }
+}
+
+@media print {
+  html {
+    zoom: 1;
+  }
 }
 
 body {
