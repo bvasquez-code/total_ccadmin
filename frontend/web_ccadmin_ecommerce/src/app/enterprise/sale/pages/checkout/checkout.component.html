@@ -43,7 +43,7 @@
             <div class="form-group col-md-8">
               <label for="payment-method">Medio de pago</label>
               <select id="payment-method" class="form-control" name="PaymentMethodCod"
-                [(ngModel)]="SelectedPaymentMethodCod">
+                [(ngModel)]="SelectedPaymentMethodCod" (change)="onPaymentMethodChange()">
                 <option *ngFor="let paymentMethod of PaymentMethodList"
                   [value]="paymentMethod.PaymentMethodCod">
                   {{ paymentMethod.Description || paymentMethod.Name }}
@@ -55,7 +55,41 @@
               <div class="payment-fixed-amount">{{ paymentAmountLabel() }}</div>
             </div>
           </div>
-          <button type="button" class="btn btn-primary" [disabled]="IsSavingPayment"
+
+          <div class="payment-proof" *ngIf="requiresPaymentProof()">
+            <div class="payment-proof-heading d-flex align-items-start justify-content-between">
+              <div class="d-flex flex-column">
+                <strong>Comprobante de pago</strong>
+                <span>Adjunta una captura o fotografía en formato JPG o PNG.</span>
+              </div>
+              <span class="badge badge-warning">Obligatorio</span>
+            </div>
+
+            <label class="payment-proof-picker d-flex align-items-center" *ngIf="!PaymentProofDocument">
+              <input type="file" accept="image/jpeg,image/png"
+                (change)="onPaymentProofSelected($event)">
+              <i class="fa fa-cloud-upload-alt"></i>
+              <span class="d-flex flex-column">
+                <strong>Seleccionar imagen</strong>
+                <small>Tamaño máximo: 10 MB</small>
+              </span>
+            </label>
+
+            <div class="payment-proof-preview d-flex align-items-center" *ngIf="PaymentProofDocument">
+              <img [src]="PaymentProofPreview" alt="Comprobante de pago seleccionado">
+              <div class="flex-grow-1 overflow-hidden">
+                <strong class="d-block text-truncate">{{ PaymentProofDocument.FileName }}</strong>
+                <small>Imagen lista para adjuntar al pago</small>
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-danger"
+                (click)="clearPaymentProof()" title="Quitar comprobante">
+                <i class="fa fa-trash"></i>
+              </button>
+            </div>
+          </div>
+
+          <button type="button" class="btn btn-primary"
+            [disabled]="IsSavingPayment || (requiresPaymentProof() && !PaymentProofDocument)"
             (click)="addPayment()">
             <i class="fa fa-lock mr-2"></i>{{ IsSavingPayment ? 'Procesando pago...' : 'Realizar pago' }}
           </button>

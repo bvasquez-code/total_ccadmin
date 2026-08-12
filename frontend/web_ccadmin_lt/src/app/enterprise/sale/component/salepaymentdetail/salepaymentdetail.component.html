@@ -23,6 +23,7 @@
             <th class="text-right">Monto</th>
             <th class="text-right">Vuelto</th>
             <th>Fecha</th>
+            <th class="text-center">Archivos</th>
           </tr>
         </thead>
         <tbody>
@@ -60,6 +61,12 @@
               {{ getPaymentCurrency(payment) }} {{ getReturnedAmount(payment) | FormatoMonedaPeruana:false }}
             </td>
             <td>{{ getPaymentDate(payment) | date:'dd/MM/yyyy HH:mm:ss' }}</td>
+            <td class="text-center">
+              <button type="button" class="btn btn-xs btn-outline-primary"
+                (click)="openDocumentGallery(payment)" title="Ver archivos del pago">
+                <i class="fa fa-images"></i>
+              </button>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -72,4 +79,71 @@
       Esta venta todavía no tiene pagos registrados.
     </div>
   </ng-template>
+</div>
+
+<div class="payment-document-backdrop" *ngIf="isDocumentGalleryVisible"
+  (click)="closeDocumentGallery()">
+  <section class="payment-document-modal" role="dialog" aria-modal="true"
+    aria-label="Archivos del pago" (click)="$event.stopPropagation()">
+    <header class="payment-document-header">
+      <div>
+        <h5 class="mb-1 text-primary-d2">
+          <i class="fa fa-images mr-2"></i>Archivos del pago
+        </h5>
+        <small class="text-grey-d1" *ngIf="selectedPayment">
+          Pago N° {{ selectedPayment.PaymentNumber }} ·
+          {{ getPaymentMethodName(selectedPayment.TrxPayment) }}
+        </small>
+      </div>
+      <button type="button" class="close" (click)="closeDocumentGallery()" aria-label="Cerrar">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </header>
+
+    <div class="payment-document-body">
+      <div class="text-center text-grey-d1 py-5" *ngIf="isLoadingDocuments">
+        <i class="fa fa-spinner fa-spin text-primary text-180 d-block mb-2"></i>
+        Consultando archivos del pago...
+      </div>
+
+      <div class="text-center text-grey-d1 py-5"
+        *ngIf="!isLoadingDocuments && documentList.length === 0">
+        <i class="fa fa-folder-open text-180 d-block mb-2"></i>
+        Este pago no tiene archivos ni información adjunta.
+      </div>
+
+      <div class="payment-document-gallery" *ngIf="!isLoadingDocuments && documentList.length > 0">
+        <article class="payment-document-card" *ngFor="let document of documentList">
+          <div class="payment-document-preview">
+            <img *ngIf="isImage(document) && document.PreviewUrl"
+              [src]="document.PreviewUrl" [alt]="document.FileName || getDocumentTypeName(document)">
+            <pre *ngIf="isText(document)">{{ document.Content }}</pre>
+            <i class="fa fa-file-alt" *ngIf="!isImage(document) && !isText(document)"></i>
+          </div>
+          <div class="payment-document-info">
+            <div class="d-flex align-items-start justify-content-between">
+              <div class="pr-2">
+                <b class="d-block text-dark-m2">{{ getDocumentTypeName(document) }}</b>
+                <small class="text-grey-d1">{{ document.FileName || document.ContentType || document.ContentEncoding }}</small>
+                <small class="text-grey-d1">
+                  {{ document.SizeBytes / 1024 | number:'1.0-1' }} KB ·
+                  {{ document.CreationDate | date:'dd/MM/yyyy HH:mm:ss' }}
+                </small>
+              </div>
+              <button type="button" class="btn btn-xs btn-outline-primary"
+                (click)="downloadDocument(document)" title="Descargar archivo">
+                <i class="fa fa-download"></i>
+              </button>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+
+    <footer class="payment-document-footer">
+      <button type="button" class="btn btn-secondary" (click)="closeDocumentGallery()">
+        Cerrar
+      </button>
+    </footer>
+  </section>
 </div>

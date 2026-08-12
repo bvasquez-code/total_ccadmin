@@ -36,6 +36,15 @@ public class PaymentMethodService {
         return this.applyPublicRoutes(this.paymentMethodRepository.findAllActiveWebSale());
     }
 
+    public PaymentMethodEntity findActiveWebSaleById(String paymentMethodCod)
+    {
+        PaymentMethodEntity paymentMethod = this.paymentMethodRepository.findActiveWebSaleById(paymentMethodCod)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "El medio de pago no esta habilitado para la tienda virtual"
+                ));
+        return this.appFilePublicUrlService.applyPublicRoute(paymentMethod);
+    }
+
     private List<PaymentMethodEntity> applyPublicRoutes(List<PaymentMethodEntity> paymentMethodList)
     {
         paymentMethodList.forEach(this.appFilePublicUrlService::applyPublicRoute);

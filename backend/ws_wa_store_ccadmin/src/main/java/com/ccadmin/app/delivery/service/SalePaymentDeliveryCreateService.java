@@ -4,6 +4,7 @@ import com.ccadmin.app.delivery.model.dto.SalePaymentDeliveryRegisterDto;
 import com.ccadmin.app.delivery.model.dto.SaleDeliveryAccessTokenPayloadDto;
 import com.ccadmin.app.payment.model.entity.TrxPaymentEntity;
 import com.ccadmin.app.payment.service.TrxPaymentCreateService;
+import com.ccadmin.app.payment.service.TrxPaymentDocumentCreateService;
 import com.ccadmin.app.sale.model.dto.SalePaymentRegisterDto;
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
 import com.ccadmin.app.sale.model.entity.SalePaymentEntity;
@@ -12,6 +13,8 @@ import com.ccadmin.app.sale.repository.SalePaymentRepository;
 import com.ccadmin.app.sale.service.SalePaymentCreateService;
 import com.ccadmin.app.shared.model.dto.ClientSessionDto;
 import com.ccadmin.app.shared.model.myconst.StatusConst;
+import com.ccadmin.app.system.model.entity.PaymentMethodEntity;
+import com.ccadmin.app.system.shared.PaymentMethodShared;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +29,8 @@ public class SalePaymentDeliveryCreateService {
     private final TrxPaymentCreateService trxPaymentCreateService;
     private final SalePaymentCreateService salePaymentCreateService;
     private final SaleDeliveryAccessTokenService saleDeliveryAccessTokenService;
+    private final TrxPaymentDocumentCreateService trxPaymentDocumentCreateService;
+    private final PaymentMethodShared paymentMethodShared;
 
     public SalePaymentDeliveryCreateService(
             ClientDeliveryContextService clientDeliveryContextService,
@@ -33,7 +38,9 @@ public class SalePaymentDeliveryCreateService {
             SalePaymentRepository salePaymentRepository,
             TrxPaymentCreateService trxPaymentCreateService,
             SalePaymentCreateService salePaymentCreateService,
-            SaleDeliveryAccessTokenService saleDeliveryAccessTokenService
+            SaleDeliveryAccessTokenService saleDeliveryAccessTokenService,
+            TrxPaymentDocumentCreateService trxPaymentDocumentCreateService,
+            PaymentMethodShared paymentMethodShared
     ) {
         this.clientDeliveryContextService = clientDeliveryContextService;
         this.saleHeadRepository = saleHeadRepository;
@@ -41,6 +48,8 @@ public class SalePaymentDeliveryCreateService {
         this.trxPaymentCreateService = trxPaymentCreateService;
         this.salePaymentCreateService = salePaymentCreateService;
         this.saleDeliveryAccessTokenService = saleDeliveryAccessTokenService;
+        this.trxPaymentDocumentCreateService = trxPaymentDocumentCreateService;
+        this.paymentMethodShared = paymentMethodShared;
     }
 
     @Transactional
@@ -65,9 +74,21 @@ public class SalePaymentDeliveryCreateService {
             throw new IllegalArgumentException("El pedido ya tiene un pago registrado");
         }
 
+        PaymentMethodEntity paymentMethod = this.paymentMethodShared.findActiveWebSaleById(
+                request.TrxPayment.PaymentMethodCod
+        );
+        this.trxPaymentDocumentCreateService.validateWebPaymentProofs(
+                request.DocumentList,
+                "S".equals(paymentMethod.IsPaymentProofRequired)
+        );
+
         prepareFullPayment(request.TrxPayment, saleHead);
         request.TrxPayment.TrxPaymentId = null;
         TrxPaymentEntity trxPayment = trxPaymentCreateService.saveWeb(request.TrxPayment);
+        this.trxPaymentDocumentCreateService.saveWeb(
+                trxPayment.TrxPaymentId,
+                request.DocumentList
+        );
 
         SalePaymentRegisterDto salePayment = new SalePaymentRegisterDto();
         salePayment.SaleCod = saleHead.SaleCod;
@@ -97,6 +118,10 @@ public class SalePaymentDeliveryCreateService {
         }
         if (request.TrxPayment == null) {
             throw new IllegalArgumentException("Los datos del pago son obligatorios");
+        }
+        if (request.TrxPayment.PaymentMethodCod == null
+                || request.TrxPayment.PaymentMethodCod.isBlank()) {
+            throw new IllegalArgumentException("El medio de pago es obligatorio");
         }
         if (!"I".equals(request.TrxPayment.TypeMovement)) {
             throw new IllegalArgumentException("La tienda virtual solo permite registrar ingresos");

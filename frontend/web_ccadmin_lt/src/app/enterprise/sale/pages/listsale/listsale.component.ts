@@ -8,10 +8,11 @@ import { SearchDto } from 'src/app/enterprise/shared/model/dto/SearchDto';
 import { DataSesionService } from 'src/app/enterprise/compartido/service/datasesion.service';
 import { ToastrService } from 'ngx-toastr';
 import { DataTablaGeneticDto } from 'src/app/enterprise/shared/model/dto/DataTablaGeneticDto';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ResponseWsDto } from 'src/app/enterprise/shared/model/dto/ResponseWsDto';
 import { PresaleCancellationDetailDto } from '../../model/dto/PresaleCancellationDetailDto';
 import { PresaleService } from '../../service/presale.service';
+import { SaleConstants } from '../../model/constants/SaleConstants';
 
 @Component({
   selector: 'app-listsale',
@@ -24,14 +25,25 @@ export class ListsaleComponent implements OnInit,ActionTableService<SaleHeadEnti
   responsePageSearch : ResponsePageSearch<SaleHeadEntity> = new ResponsePageSearch();
   dataTablaGenetic : DataTablaGeneticDto<SaleHeadEntity> = new DataTablaGeneticDto();
   SaleHeadSelect : SaleHeadEntity = new SaleHeadEntity();
+  ChannelCod: string = SaleConstants.COMMERCIAL_CHANNEL_IN_PERSON;
+  PageTitle: string = 'Facturación';
+  TableTitle: string = 'Lista de ventas presenciales';
+  ReturnUrl: string = '/enterprise/sale/pages/listsale';
 
   constructor(
     private saleService : SaleService,
     private dataSesionService : DataSesionService,
     private toastrService : ToastrService,
     private presaleService: PresaleService,
-    private router: Router
+    private router: Router,
+    private activatedRoute: ActivatedRoute
   ){
+    this.ChannelCod = this.activatedRoute.snapshot.data['ChannelCod']
+      || SaleConstants.COMMERCIAL_CHANNEL_IN_PERSON;
+    this.PageTitle = this.activatedRoute.snapshot.data['PageTitle'] || 'Facturación';
+    this.TableTitle = this.activatedRoute.snapshot.data['TableTitle'] || 'Lista de ventas presenciales';
+    this.ReturnUrl = this.activatedRoute.snapshot.data['ReturnUrl']
+      || '/enterprise/sale/pages/listsale';
   }
 
   ngOnInit(): void {
@@ -125,7 +137,7 @@ export class ListsaleComponent implements OnInit,ActionTableService<SaleHeadEnti
       {
         data : responsePageSearch
       },
-      "Lista de solicitudes de venta"
+      this.TableTitle
     );
 
     this.dataTablaGenetic = data;
@@ -138,7 +150,7 @@ export class ListsaleComponent implements OnInit,ActionTableService<SaleHeadEnti
     search.Page = Page;
     search.StoreCod = this.dataSesionService.getSessionStorageDto().StoreCod;
     search.Query = Query;
-    const rpt = await this.saleService.FindAll(search);
+    const rpt = await this.saleService.FindAll(search, this.ChannelCod);
 
     if( !rpt.ErrorStatus )
     {
@@ -176,7 +188,7 @@ export class ListsaleComponent implements OnInit,ActionTableService<SaleHeadEnti
           queryParams: {
             PresaleCod: this.SaleHeadSelect.PresaleCod,
             Mode: 'regular',
-            ReturnUrl: '/enterprise/sale/pages/listsale'
+            ReturnUrl: this.ReturnUrl
           }
         }
       );

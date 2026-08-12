@@ -82,11 +82,16 @@ public class SaleController {
     }
 
     @GetMapping("findAll")
-    public ResponseEntity<ResponseWsDto> findAll(@RequestParam String Query,int Page,String StoreCod)
+    public ResponseEntity<ResponseWsDto> findAll(
+            @RequestParam String Query,
+            @RequestParam int Page,
+            @RequestParam String StoreCod,
+            @RequestParam String ChannelCod
+    )
     {
         try{
             return new ResponseEntity<ResponseWsDto>(
-                    new ResponseWsDto(this.saleSearchService.findAll(Query,Page,StoreCod))
+                    new ResponseWsDto(this.saleSearchService.findAll(Query, Page, StoreCod, ChannelCod))
                     ,HttpStatus.OK
             );
         }

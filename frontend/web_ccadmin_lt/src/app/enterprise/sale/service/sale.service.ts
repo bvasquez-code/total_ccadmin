@@ -41,12 +41,17 @@ export class SaleService
         return await this.apiService.ExecutePostService(url, salePayment);
     }
 
-    async FindAll(search : SearchDto)
+    async FindAll(search : SearchDto, ChannelCod: string)
     {
         let url: string = `${AppSetting.API}/api/v1/sale/findAll`;
         let RespuestaWS : ResponseWsDto;
 
-        RespuestaWS = await this.apiService.ExecuteGetService(url,search);
+        RespuestaWS = await this.apiService.ExecuteGetService(url, {
+            Query: search.Query,
+            Page: search.Page,
+            StoreCod: search.StoreCod,
+            ChannelCod: ChannelCod
+        });
 
         return RespuestaWS;
     }

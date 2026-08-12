@@ -91,7 +91,7 @@ export class MenusidebarComponent implements OnInit {
     for (const menu of this.g_list_menu) {
       for (const submenu of menu.list_sub_menu) {
         const urlPosition = this.normalizeUrl(submenu.url_position);
-        if (submenu.url !== "" && submenu.url !== null && url.includes(urlPosition)) {
+        if (submenu.url !== "" && submenu.url !== null && url === urlPosition) {
           submenu.flg_menu_activo = true;
           menu.flg_menu_activo = true;
           this.isOpenMenu = true;

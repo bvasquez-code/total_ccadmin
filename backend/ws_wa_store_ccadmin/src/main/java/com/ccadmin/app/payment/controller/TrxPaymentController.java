@@ -2,6 +2,7 @@ package com.ccadmin.app.payment.controller;
 
 import com.ccadmin.app.payment.model.entity.TrxPaymentEntity;
 import com.ccadmin.app.payment.service.TrxPaymentCreateService;
+import com.ccadmin.app.payment.service.TrxPaymentDocumentSearchService;
 import com.ccadmin.app.payment.service.TrxPaymentSearchService;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +23,9 @@ public class TrxPaymentController {
 
     @Autowired
     private TrxPaymentSearchService trxPaymentSearchService;
+
+    @Autowired
+    private TrxPaymentDocumentSearchService trxPaymentDocumentSearchService;
 
     @PostMapping("save")
     public ResponseEntity<ResponseWsDto> save(@RequestBody TrxPaymentEntity trxPayment)
@@ -127,6 +131,23 @@ public class TrxPaymentController {
         {
             log.error("Error : {}",ex.getMessage(), ex);
             return new ResponseEntity<ResponseWsDto>(new ResponseWsDto(ex),HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @GetMapping("findDocumentsByTrxPaymentId")
+    public ResponseEntity<ResponseWsDto> findDocumentsByTrxPaymentId(
+            @RequestParam Long TrxPaymentId
+    ) {
+        try {
+            return new ResponseEntity<>(
+                    new ResponseWsDto(
+                            this.trxPaymentDocumentSearchService.findActiveByTrxPaymentId(TrxPaymentId)
+                    ),
+                    HttpStatus.OK
+            );
+        } catch (Exception ex) {
+            log.error("Error : {}", ex.getMessage(), ex);
+            return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
         }
     }
 }

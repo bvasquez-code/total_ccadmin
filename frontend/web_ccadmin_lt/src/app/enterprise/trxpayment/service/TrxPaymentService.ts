@@ -85,4 +85,9 @@ export class TrxPaymentService implements ICrudService<TrxPaymentEntity,number>{
 
         return RespuestaWS;
     }
+
+    async FindDocumentsByTrxPaymentId(TrxPaymentId: number): Promise<ResponseWsDto> {
+        const url: string = `${AppSetting.API}/api/v1/TrxPayment/findDocumentsByTrxPaymentId`;
+        return this.apiService.ExecuteGetService(url, { TrxPaymentId: TrxPaymentId });
+    }
 }

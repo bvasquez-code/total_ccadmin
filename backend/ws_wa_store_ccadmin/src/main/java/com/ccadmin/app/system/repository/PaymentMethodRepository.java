@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface PaymentMethodRepository extends JpaRepository<PaymentMethodEntity,String>,
         CcAdminRepository<PaymentMethodEntity, String> {
@@ -31,6 +32,17 @@ public interface PaymentMethodRepository extends JpaRepository<PaymentMethodEnti
               and pm.IsWebSaleEnabled = 'S'
             """, nativeQuery = true)
     List<PaymentMethodEntity> findAllActiveWebSale();
+
+    @Query( value = """
+            select pm.*
+            from payment_method pm
+            where pm.PaymentMethodCod = :paymentMethodCod
+              and pm.Status = 'A'
+              and pm.IsWebSaleEnabled = 'S'
+            """, nativeQuery = true)
+    Optional<PaymentMethodEntity> findActiveWebSaleById(
+            @Param("paymentMethodCod") String paymentMethodCod
+    );
 
     @Override
     @Query(value = """

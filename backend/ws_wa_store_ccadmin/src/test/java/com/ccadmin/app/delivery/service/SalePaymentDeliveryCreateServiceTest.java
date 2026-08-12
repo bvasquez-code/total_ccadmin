@@ -4,6 +4,7 @@ import com.ccadmin.app.delivery.model.dto.SalePaymentDeliveryRegisterDto;
 import com.ccadmin.app.delivery.model.dto.SaleDeliveryAccessTokenPayloadDto;
 import com.ccadmin.app.payment.model.entity.TrxPaymentEntity;
 import com.ccadmin.app.payment.service.TrxPaymentCreateService;
+import com.ccadmin.app.payment.service.TrxPaymentDocumentCreateService;
 import com.ccadmin.app.sale.model.dto.SalePaymentRegisterDto;
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
 import com.ccadmin.app.sale.model.entity.SalePaymentEntity;
@@ -12,6 +13,8 @@ import com.ccadmin.app.sale.repository.SalePaymentRepository;
 import com.ccadmin.app.sale.service.SalePaymentCreateService;
 import com.ccadmin.app.shared.model.dto.ClientSessionDto;
 import com.ccadmin.app.shared.model.myconst.StatusConst;
+import com.ccadmin.app.system.model.entity.PaymentMethodEntity;
+import com.ccadmin.app.system.shared.PaymentMethodShared;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -37,6 +40,8 @@ class SalePaymentDeliveryCreateServiceTest {
     @Mock private TrxPaymentCreateService trxPaymentCreateService;
     @Mock private SalePaymentCreateService salePaymentCreateService;
     @Mock private SaleDeliveryAccessTokenService saleDeliveryAccessTokenService;
+    @Mock private TrxPaymentDocumentCreateService trxPaymentDocumentCreateService;
+    @Mock private PaymentMethodShared paymentMethodShared;
     @InjectMocks private SalePaymentDeliveryCreateService service;
 
     @Test
@@ -75,6 +80,10 @@ class SalePaymentDeliveryCreateServiceTest {
         when(saleHeadRepository.findWebSaleForUpdate("ST001", "CL001"))
                 .thenReturn(Optional.of(sale));
         when(salePaymentRepository.countTotalPayment("ST001")).thenReturn(0);
+        PaymentMethodEntity paymentMethod = new PaymentMethodEntity();
+        paymentMethod.PaymentMethodCod = "EF001";
+        paymentMethod.IsPaymentProofRequired = "N";
+        when(paymentMethodShared.findActiveWebSaleById("EF001")).thenReturn(paymentMethod);
         when(trxPaymentCreateService.saveWeb(requestedTransaction)).thenReturn(savedTransaction);
         when(salePaymentCreateService.saveWeb(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq("T001")))
                 .thenReturn(expectedPayment);
@@ -88,6 +97,8 @@ class SalePaymentDeliveryCreateServiceTest {
         org.junit.jupiter.api.Assertions.assertEquals(new BigDecimal("25.00"), requestedTransaction.AmountPaid);
         org.junit.jupiter.api.Assertions.assertEquals(BigDecimal.ZERO, requestedTransaction.AmountReturned);
         verify(trxPaymentCreateService).saveWeb(requestedTransaction);
+        verify(trxPaymentDocumentCreateService).validateWebPaymentProofs(request.DocumentList, false);
+        verify(trxPaymentDocumentCreateService).saveWeb(15L, request.DocumentList);
         ArgumentCaptor<SalePaymentRegisterDto> paymentCaptor =
                 ArgumentCaptor.forClass(SalePaymentRegisterDto.class);
         verify(salePaymentCreateService).saveWeb(paymentCaptor.capture(), org.mockito.ArgumentMatchers.eq("T001"));
@@ -128,5 +139,51 @@ class SalePaymentDeliveryCreateServiceTest {
         assertThrows(IllegalArgumentException.class, () -> service.save(request));
 
         verify(trxPaymentCreateService, never()).saveWeb(requestedTransaction);
+    }
+
+    @Test
+    void rejectsPaymentWithoutProofWhenPaymentMethodRequiresIt() {
+        ClientSessionDto client = new ClientSessionDto(10L, "CL001", "client@example.com", "Cliente");
+        SaleHeadEntity sale = new SaleHeadEntity();
+        sale.SaleCod = "ST001";
+        sale.StoreCod = "T001";
+        sale.ClientCod = "CL001";
+        sale.SaleStatus = StatusConst.PENDING;
+        sale.CurrencyCod = "PEN";
+        sale.NumExchangevalue = BigDecimal.ONE;
+        sale.NumTotalPrice = new BigDecimal("25.00");
+
+        TrxPaymentEntity requestedTransaction = new TrxPaymentEntity();
+        requestedTransaction.TypeMovement = "I";
+        requestedTransaction.PaymentMethodCod = "YP001";
+
+        SalePaymentDeliveryRegisterDto request = new SalePaymentDeliveryRegisterDto();
+        request.OrderToken = "v1.order-token";
+        request.TrxPayment = requestedTransaction;
+
+        when(clientDeliveryContextService.getCurrentClient()).thenReturn(client);
+        SaleDeliveryAccessTokenPayloadDto tokenPayload = new SaleDeliveryAccessTokenPayloadDto();
+        tokenPayload.SaleCod = "ST001";
+        tokenPayload.ClientCod = "CL001";
+        when(saleDeliveryAccessTokenService.resolve("v1.order-token", "CL001"))
+                .thenReturn(tokenPayload);
+        when(saleHeadRepository.findWebSaleForUpdate("ST001", "CL001"))
+                .thenReturn(Optional.of(sale));
+        when(salePaymentRepository.countTotalPayment("ST001")).thenReturn(0);
+        PaymentMethodEntity paymentMethod = new PaymentMethodEntity();
+        paymentMethod.PaymentMethodCod = "YP001";
+        paymentMethod.IsPaymentProofRequired = "S";
+        when(paymentMethodShared.findActiveWebSaleById("YP001")).thenReturn(paymentMethod);
+        org.mockito.Mockito.doThrow(new IllegalArgumentException("Debe adjuntar la imagen"))
+                .when(trxPaymentDocumentCreateService)
+                .validateWebPaymentProofs(request.DocumentList, true);
+
+        assertThrows(IllegalArgumentException.class, () -> service.save(request));
+
+        verify(trxPaymentCreateService, never()).saveWeb(requestedTransaction);
+        verify(trxPaymentDocumentCreateService, never()).saveWeb(
+                org.mockito.ArgumentMatchers.anyLong(),
+                org.mockito.ArgumentMatchers.anyList()
+        );
     }
 }

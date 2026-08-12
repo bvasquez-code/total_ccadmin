@@ -194,6 +194,68 @@ public interface SaleHeadRepository extends JpaRepository<SaleHeadEntity,String>
             , @Param("limit") int limit
     );
 
+    @Query(value = """
+            select count(1)
+            from sale_head sh
+            inner join sale_channel sc
+                on sc.SaleCod = sh.SaleCod
+                and sc.Status = 'A'
+            left join client c on c.ClientCod = sh.ClientCod
+            left join person p on p.PersonCod = c.PersonCod
+            where sh.StoreCod = :storeCod
+              and sc.ChannelCod = :channelCod
+              and (
+                    coalesce(:query, '') = ''
+                    or sh.SaleCod = :query
+                    or concat_ws(' ',
+                        sh.SaleCod,
+                        p.DocumentNum,
+                        p.Names,
+                        p.LastNames,
+                        p.CommercialName,
+                        p.BusinessName
+                    ) like concat('%', :query, '%')
+              )
+            """, nativeQuery = true)
+    int countByStoreAndChannel(
+            @Param("query") String query,
+            @Param("storeCod") String storeCod,
+            @Param("channelCod") String channelCod
+    );
+
+    @Query(value = """
+            select sh.*
+            from sale_head sh
+            inner join sale_channel sc
+                on sc.SaleCod = sh.SaleCod
+                and sc.Status = 'A'
+            left join client c on c.ClientCod = sh.ClientCod
+            left join person p on p.PersonCod = c.PersonCod
+            where sh.StoreCod = :storeCod
+              and sc.ChannelCod = :channelCod
+              and (
+                    coalesce(:query, '') = ''
+                    or sh.SaleCod = :query
+                    or concat_ws(' ',
+                        sh.SaleCod,
+                        p.DocumentNum,
+                        p.Names,
+                        p.LastNames,
+                        p.CommercialName,
+                        p.BusinessName
+                    ) like concat('%', :query, '%')
+              )
+            order by sh.CreationDate desc, sh.SaleCod desc
+            limit :init, :limit
+            """, nativeQuery = true)
+    List<SaleHeadEntity> findByStoreAndChannel(
+            @Param("query") String query,
+            @Param("storeCod") String storeCod,
+            @Param("channelCod") String channelCod,
+            @Param("init") int init,
+            @Param("limit") int limit
+    );
+
     @Modifying
     @Query(value = """
             update sale_head set

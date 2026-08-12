@@ -19,6 +19,7 @@ import { SalePaymentDeliveryRegisterDto } from '../../model/dto/SalePaymentDeliv
 import { PaymentMethodEntity } from '../../model/entity/PaymentMethodEntity';
 import { PresaleDetEntity } from '../../model/entity/PresaleDetEntity';
 import { TrxPaymentEntity } from '../../model/entity/TrxPaymentEntity';
+import { TrxPaymentDocumentEntity } from '../../model/entity/TrxPaymentDocumentEntity';
 import { CheckoutService } from '../../service/checkout.service';
 
 interface DeliveryOption {
@@ -50,8 +51,11 @@ export class CheckoutComponent implements OnInit {
   public IsLoadingAddresses: boolean = false;
   public IsValidatingCoverage: boolean = false;
   public IsAddressModalVisible: boolean = false;
+  public PaymentProofDocument: TrxPaymentDocumentEntity | null = null;
+  public PaymentProofPreview: string = '';
 
   private pendingConfirmationRequest: PresaleRegisterDto | null = null;
+  private readonly MaxPaymentProofSizeBytes: number = 10 * 1024 * 1024;
 
   public readonly DeliveryOptions: DeliveryOption[] = [
     { Code: 'DELIVERY', Name: 'Delivery cercano', Description: 'Envío directo desde la tienda.', Icon: 'fa-motorcycle' },
@@ -214,6 +218,10 @@ export class CheckoutComponent implements OnInit {
       await this.loadSaleData();
       return;
     }
+    if (this.requiresPaymentProof() && !this.PaymentProofDocument) {
+      this.toastrService.warning('Adjunta la imagen del comprobante antes de realizar el pago.');
+      return;
+    }
 
     const confirmation = await Swal.fire({
       title: `Confirmar pago de ${this.paymentAmountLabel()}`,
@@ -238,6 +246,9 @@ export class CheckoutComponent implements OnInit {
     const request = new SalePaymentDeliveryRegisterDto();
     request.OrderToken = this.OrderToken;
     request.TrxPayment = this.buildPayment(paymentMethod, amount);
+    request.DocumentList = this.PaymentProofDocument
+      ? [this.PaymentProofDocument]
+      : [];
 
     this.IsSavingPayment = true;
     try {
@@ -248,6 +259,7 @@ export class CheckoutComponent implements OnInit {
       }
 
       await this.loadSaleData();
+      this.clearPaymentProof();
       this.toastrService.success('Pago completado. El pedido continúa pendiente de confirmación por la tienda.');
     } finally {
       this.IsSavingPayment = false;
@@ -281,6 +293,66 @@ export class CheckoutComponent implements OnInit {
 
   public selectedPaymentMethod(): PaymentMethodEntity | undefined {
     return this.PaymentMethodList.find(item => item.PaymentMethodCod === this.SelectedPaymentMethodCod);
+  }
+
+  public requiresPaymentProof(): boolean {
+    return this.selectedPaymentMethod()?.IsPaymentProofRequired === 'S';
+  }
+
+  public onPaymentMethodChange(): void {
+    if (!this.requiresPaymentProof()) {
+      this.clearPaymentProof();
+    }
+  }
+
+  public onPaymentProofSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'image/jpeg' && file.type !== 'image/png') {
+      this.toastrService.warning('El comprobante debe ser una imagen JPG o PNG.');
+      input.value = '';
+      return;
+    }
+    if (file.size <= 0 || file.size > this.MaxPaymentProofSizeBytes) {
+      this.toastrService.warning('La imagen del comprobante no puede superar los 10 MB.');
+      input.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = String(reader.result || '');
+      const separator = dataUrl.indexOf(',');
+      if (separator < 0) {
+        this.toastrService.error('No se pudo leer la imagen seleccionada.');
+        input.value = '';
+        return;
+      }
+
+      const document = new TrxPaymentDocumentEntity();
+      document.DocumentType = 'PAYMENT_PROOF';
+      document.ContentEncoding = 'BASE64';
+      document.Content = dataUrl.substring(separator + 1);
+      document.FileName = file.name;
+      document.ContentType = file.type;
+      document.SizeBytes = file.size;
+      document.SourceType = 'WEB';
+      this.PaymentProofDocument = document;
+      this.PaymentProofPreview = dataUrl;
+      input.value = '';
+    };
+    reader.onerror = () => {
+      this.toastrService.error('No se pudo leer la imagen seleccionada.');
+      input.value = '';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  public clearPaymentProof(): void {
+    this.PaymentProofDocument = null;
+    this.PaymentProofPreview = '';
   }
 
   public paymentMethodName(paymentMethodCod: string): string {

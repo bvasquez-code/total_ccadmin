@@ -34,6 +34,7 @@ import { CreatetrxpaymentComponent } from './enterprise/trxpayment/pages/createt
 import { ListtrxpaymentComponent } from './enterprise/trxpayment/pages/listtrxpayment/listtrxpayment.component';
 import { ViewtrxpaymentComponent } from './enterprise/trxpayment/pages/viewtrxpayment/viewtrxpayment.component';
 import { ListsaleComponent } from './enterprise/sale/pages/listsale/listsale.component';
+import { SaleConstants } from './enterprise/sale/model/constants/SaleConstants';
 import { ListkardexComponent } from './enterprise/product/pages/listkardex/listkardex.component';
 import { ListproductstockComponent } from './enterprise/product/pages/listproductstock/listproductstock.component';
 import { AppfileComponent } from './enterprise/system/pages/appfile/appfile.component';
@@ -133,7 +134,23 @@ const routes: Routes = [
       },
       {
         path: 'enterprise/sale/pages/listsale',
-        component: ListsaleComponent
+        component: ListsaleComponent,
+        data: {
+          ChannelCod: SaleConstants.COMMERCIAL_CHANNEL_IN_PERSON,
+          PageTitle: 'Facturación',
+          TableTitle: 'Lista de ventas presenciales',
+          ReturnUrl: '/enterprise/sale/pages/listsale'
+        }
+      },
+      {
+        path: 'enterprise/sale/pages/listsaleweb',
+        component: ListsaleComponent,
+        data: {
+          ChannelCod: SaleConstants.COMMERCIAL_CHANNEL_WEB,
+          PageTitle: 'Facturación Web',
+          TableTitle: 'Lista de pedidos web',
+          ReturnUrl: '/enterprise/sale/pages/listsaleweb'
+        }
       },
       {
         path: 'enterprise/sale/pages/createsale',

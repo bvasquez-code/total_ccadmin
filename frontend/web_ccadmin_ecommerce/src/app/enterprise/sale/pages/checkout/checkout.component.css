@@ -79,6 +79,13 @@
 .payment-row small { color: #80929e; }
 .payment-row > span { color: #2a9e77; font-weight: 700; }
 .payment-summary { position: sticky; top: 94px; }
+.payment-proof { margin: 0.25rem 0 1.25rem; padding: 1rem; background: #f7fafc; border: 1px solid #d7e3ea; border-radius: 0.6rem; }
+.payment-proof-heading { gap: 1rem; margin-bottom: 0.8rem; }
+.payment-proof-picker { gap: 0.85rem; margin: 0; padding: 1rem; cursor: pointer; background: #fff; border: 1px dashed #8eb9d3; border-radius: 0.55rem; }
+.payment-proof-picker input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.payment-proof-picker > i { color: #2878bd; font-size: 1.6rem; }
+.payment-proof-preview { gap: 0.85rem; padding: 0.7rem; background: #fff; border: 1px solid #c5dfef; border-radius: 0.55rem; }
+.payment-proof-preview img { width: 72px; height: 72px; object-fit: cover; background: #f2f5f7; border-radius: 0.4rem; }
 .paid-amount { color: #2ca279; }
 .order-loading { display: flex; align-items: center; flex-direction: column; justify-content: center; min-height: 450px; color: #718896; }
 .order-loading i { color: #2878bd; font-size: 2rem; }

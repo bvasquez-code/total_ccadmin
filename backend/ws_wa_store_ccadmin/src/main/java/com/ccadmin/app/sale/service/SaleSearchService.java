@@ -7,15 +7,12 @@ import com.ccadmin.app.product.shared.ProductShared;
 import com.ccadmin.app.sale.model.dto.CreditNoteDetailDto;
 import com.ccadmin.app.sale.model.dto.SaleDetailDto;
 import com.ccadmin.app.sale.model.entity.*;
+import com.ccadmin.app.sale.model.constants.SaleConstants;
 import com.ccadmin.app.sale.model.factory.SaleDetailDtoFactory;
 import com.ccadmin.app.sale.repository.*;
-import com.ccadmin.app.shared.model.dto.ResponsePageSearch;
 import com.ccadmin.app.shared.model.dto.ResponsePageSearchT;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
-import com.ccadmin.app.shared.model.dto.SearchDto;
 import com.ccadmin.app.shared.model.constants.BusinessConfigConstants;
-import com.ccadmin.app.shared.service.SearchService;
-import com.ccadmin.app.shared.service.SearchTService;
 import com.ccadmin.app.shared.service.SessionService;
 import com.ccadmin.app.shared.shared.CatalogSearchShared;
 import com.ccadmin.app.store.shared.CompanyShared;
@@ -45,6 +42,8 @@ public class SaleSearchService extends SessionService {
     @Autowired
     private SaleChannelRepository saleChannelRepository;
     @Autowired
+    private CommercialChannelRepository commercialChannelRepository;
+    @Autowired
     private SalePaymentRepository salePaymentRepository;
     @Autowired
     private SaleDocumentRepository saleDocumentRepository;
@@ -66,10 +65,6 @@ public class SaleSearchService extends SessionService {
     private CatalogSearchShared catalogSearchShared;
     @Autowired
     private CreditNoteSearchService creditNoteSearchService;
-    private SearchService searchService;
-
-    private SearchTService<SaleHeadEntity> searchTService;
-
     public ResponseWsDto findDataForm(String SaleCod) {
         ResponseWsDto rpt = new ResponseWsDto();
 
@@ -139,45 +134,42 @@ public class SaleSearchService extends SessionService {
         );
     }
 
-    public ResponsePageSearchT<SaleHeadEntity> findAll(String Query, int Page, String StoreCod,String a){
-        this.searchService = new SearchService(this.saleHeadRepository);
-        SearchDto search = new SearchDto(Query,Page,StoreCod);
-        ResponsePageSearchT<SaleHeadEntity> responsePage = this.searchTService.findAllStore(search,10);
-
-        if( responsePage.resultSearch != null )
-        {
-            List<ClientEntity> clientList = this.clientShared.findAllById(responsePage.resultSearch
-                    .stream()
-                    .filter(SaleHeadEntity::existClient)
-                    .map( e -> e.ClientCod)
-                    .toList()
-            );
-
-            responsePage.resultSearch.forEach( sale -> {
-                if(sale.existClient()){
-                    sale.Client = clientList.stream()
-                            .filter( client -> client.ClientCod.equals(sale.ClientCod))
-                            .findFirst()
-                            .orElse(null);
-                }
-            } );
+    public ResponsePageSearchT<SaleHeadEntity> findAll(
+            String query,
+            int page,
+            String storeCod,
+            String channelCod
+    ) {
+        if (page < 1) {
+            throw new IllegalArgumentException("La pagina debe ser mayor o igual a 1");
         }
-        return responsePage;
+        if (channelCod == null || channelCod.isBlank()
+                || this.commercialChannelRepository.findActiveByChannelCod(channelCod).isEmpty()) {
+            throw new IllegalArgumentException("No existe el canal de venta " + channelCod);
+        }
+
+        int limit = 10;
+        int init = (page - 1) * limit;
+        String normalizedQuery = query == null ? "" : query.trim();
+        List<SaleHeadEntity> saleList = this.saleHeadRepository.findByStoreAndChannel(
+                normalizedQuery,
+                storeCod,
+                channelCod,
+                init,
+                limit
+        );
+        int totalResult = this.saleHeadRepository.countByStoreAndChannel(
+                normalizedQuery,
+                storeCod,
+                channelCod
+        );
+
+        this.loadSaleClients(saleList);
+        return new ResponsePageSearchT<>(saleList, page, limit, totalResult);
     }
 
-    public ResponsePageSearch findAll(String Query, int Page, String StoreCod){
-        this.searchService = new SearchService(this.saleHeadRepository);
-        SearchDto search = new SearchDto(Query,Page,StoreCod);
-        ResponsePageSearch responsePage = this.searchService.findAllStore(search,10);
-
-        if( responsePage.resultSearch != null )
-        {
-            for (SaleHeadEntity Sale : (List<SaleHeadEntity>)responsePage.resultSearch)
-            {
-                if(Sale.ClientCod != null && !Sale.ClientCod.isEmpty()) Sale.Client = this.clientShared.findById(Sale.ClientCod);
-            }
-        }
-        return responsePage;
+    public ResponsePageSearchT<SaleHeadEntity> findAll(String query, int page, String storeCod) {
+        return this.findAll(query, page, storeCod, SaleConstants.COMMERCIAL_CHANNEL_IN_PERSON);
     }
 
     public SaleDetailDto findByDocumentCod(String DocumentCod) {
@@ -244,5 +236,23 @@ public class SaleSearchService extends SessionService {
                 .stream()
                 .collect(Collectors.toMap(client -> client.ClientCod, Function.identity()));
         documentList.forEach(document -> document.Client = clientsByCode.get(document.ClientCod));
+    }
+
+    private void loadSaleClients(List<SaleHeadEntity> saleList) {
+        if (saleList == null || saleList.isEmpty()) {
+            return;
+        }
+        List<String> clientCodes = saleList.stream()
+                .filter(SaleHeadEntity::existClient)
+                .map(sale -> sale.ClientCod)
+                .distinct()
+                .toList();
+        if (clientCodes.isEmpty()) {
+            return;
+        }
+        Map<String, ClientEntity> clientsByCode = this.clientShared.findAllById(clientCodes)
+                .stream()
+                .collect(Collectors.toMap(client -> client.ClientCod, Function.identity()));
+        saleList.forEach(sale -> sale.Client = clientsByCode.get(sale.ClientCod));
     }
 }

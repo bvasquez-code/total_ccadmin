@@ -32,4 +32,9 @@ public class PaymentMethodShared {
     {
         return this.paymentMethodService.findAllActiveWebSale();
     }
+
+    public PaymentMethodEntity findActiveWebSaleById(String paymentMethodCod)
+    {
+        return this.paymentMethodService.findActiveWebSaleById(paymentMethodCod);
+    }
 }
