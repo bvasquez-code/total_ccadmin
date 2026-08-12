@@ -1,7 +1,7 @@
 @import 'leaflet/dist/leaflet.css';
 
 :root {
-  --application-scale: 0.8;
+  --application-scale: 80%;
   --store-primary: #2878bd;
   --store-primary-dark: #185681;
   --store-success: #2ca279;
@@ -36,13 +36,7 @@ html {
 
 @media screen and (min-width: 992px) {
   html {
-    zoom: var(--application-scale);
-  }
-}
-
-@media print {
-  html {
-    zoom: 1;
+    font-size: var(--application-scale);
   }
 }
 
