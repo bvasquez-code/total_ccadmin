@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
+
 @RestController
 @RequestMapping("api/v1/delivery/clientAddress")
 public class ClientAddressDeliveryController {
@@ -41,7 +43,7 @@ public class ClientAddressDeliveryController {
     public ResponseEntity<ResponseWsDto> findAll() {
         try {
             return new ResponseEntity<>(
-                    new ResponseWsDto(clientAddressDeliverySearchService.findAll()),
+                    new ResponseWsDto(clientAddressDeliverySearchService.findAllForCurrentClient()),
                     HttpStatus.OK
             );
         } catch (Exception ex) {
@@ -69,6 +71,26 @@ public class ClientAddressDeliveryController {
         try {
             return new ResponseEntity<>(
                     new ResponseWsDto(addressGeocodingSearchService.search(Query, CountryCod)),
+                    HttpStatus.OK
+            );
+        } catch (Exception ex) {
+            return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @GetMapping("findAddressByCoordinates")
+    public ResponseEntity<ResponseWsDto> findAddressByCoordinates(
+            @RequestParam BigDecimal Latitude,
+            @RequestParam BigDecimal Longitude,
+            @RequestParam String CountryCod
+    ) {
+        try {
+            return new ResponseEntity<>(
+                    new ResponseWsDto(addressGeocodingSearchService.findByCoordinates(
+                            Latitude,
+                            Longitude,
+                            CountryCod
+                    )),
                     HttpStatus.OK
             );
         } catch (Exception ex) {

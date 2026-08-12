@@ -113,10 +113,21 @@
               [(ngModel)]="Address.Alias" placeholder="Casa, oficina...">
           </div>
           <div class="form-group col-md-8">
-            <label for="address-text">Dirección</label>
+            <label for="address-text">Dirección escrita por ti <span class="text-danger">*</span></label>
             <input id="address-text" class="form-control" name="Address" maxlength="256"
               [(ngModel)]="Address.Address" placeholder="Av., calle, número, urbanización y ciudad">
           </div>
+        </div>
+        <div class="form-group map-generated-address">
+          <label for="address-geocoded">Dirección aproximada del mapa</label>
+          <textarea id="address-geocoded" class="form-control" name="GeocodedAddress" rows="2"
+            maxlength="512" [ngModel]="Address.GeocodedAddress" readonly
+            [placeholder]="IsResolvingMapAddress ? 'Consultando el punto seleccionado...' : 'Selecciona un resultado o marca el punto exacto en el mapa'"></textarea>
+          <small class="form-text text-muted">
+            <i class="fa mr-1" [class.fa-spinner]="IsResolvingMapAddress"
+              [class.fa-spin]="IsResolvingMapAddress" [class.fa-info-circle]="!IsResolvingMapAddress"></i>
+            Es una referencia automática; no reemplaza la dirección que escribiste.
+          </small>
         </div>
         <div class="form-group">
           <label for="address-reference">Referencia</label>
@@ -193,7 +204,8 @@
 
     <footer class="address-footer">
       <button type="button" class="btn btn-light" [disabled]="IsSaving" (click)="close()">Cancelar</button>
-      <button type="button" class="btn btn-primary" [disabled]="IsSaving || IsLoadingUbigeo" (click)="save()">
+      <button type="button" class="btn btn-primary"
+        [disabled]="IsSaving || IsLoadingUbigeo || IsResolvingMapAddress" (click)="save()">
         <i class="fa fa-map-marker-alt mr-2"></i>
         {{ IsSaving ? 'Guardando...' : (Address.ClientAddressID ? 'Guardar cambios' : 'Guardar dirección') }}
       </button>

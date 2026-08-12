@@ -75,6 +75,7 @@ class ClientAddressDeliveryCreateServiceTest {
         assertEquals("Perú", result.CountryName);
         assertEquals("Lambayeque", result.StateName);
         assertEquals("Chiclayo", result.CityName);
+        assertEquals("Avenida Principal, Chiclayo, Perú", result.GeocodedAddress);
         assertEquals("S", result.IsDefault);
         assertEquals(AuditUserConstants.USER_WEB, result.CreationUser);
     }
@@ -180,6 +181,7 @@ class ClientAddressDeliveryCreateServiceTest {
         address.Names = "Cliente Web";
         address.Phone = "999999999";
         address.Address = "Av. Principal 123";
+        address.GeocodedAddress = "Avenida Principal, Chiclayo, Perú";
         address.CountryCod = "PER";
         address.UbigeoCod = "140101";
         address.Latitude = new BigDecimal("-6.7812");

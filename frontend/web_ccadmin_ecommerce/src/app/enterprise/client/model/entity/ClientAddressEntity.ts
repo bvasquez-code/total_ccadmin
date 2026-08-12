@@ -7,6 +7,7 @@ export class ClientAddressEntity extends AuditTableEntity {
   public Names: string = '';
   public Phone: string = '';
   public Address: string = '';
+  public GeocodedAddress: string = '';
   public Reference: string = '';
   public CountryCod: string = 'PER';
   public CountryName: string = '';

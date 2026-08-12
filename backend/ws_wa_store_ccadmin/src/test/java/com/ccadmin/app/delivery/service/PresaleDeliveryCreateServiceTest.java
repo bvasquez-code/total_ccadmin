@@ -90,6 +90,7 @@ class PresaleDeliveryCreateServiceTest {
         ClientAddressEntity address = new ClientAddressEntity();
         address.ClientAddressID = 20L;
         address.Address = "Av. Principal 123";
+        address.GeocodedAddress = "Avenida Principal, Chiclayo, Perú";
         address.Reference = "Frente al parque";
         address.CountryCod = "PER";
         address.CountryName = "Perú";
@@ -133,6 +134,7 @@ class PresaleDeliveryCreateServiceTest {
         assertEquals(6, delegated.DetailList.get(0).NumUnit);
         assertEquals(new BigDecimal("12.50"), delegated.DetailList.get(0).NumUnitPrice);
         assertEquals("Av. Principal 123", request.Delivery.Address);
+        assertEquals("Avenida Principal, Chiclayo, Perú", request.Delivery.GeocodedAddress);
         assertEquals("PER", request.Delivery.CountryCod);
         assertEquals("Perú", request.Delivery.CountryName);
         assertEquals("Lambayeque", request.Delivery.StateName);

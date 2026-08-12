@@ -26,7 +26,8 @@ BEGIN
           `DocumentNumber` varchar(16) DEFAULT NULL COMMENT 'Numero de documento de la persona que recibira o recogera el pedido',
           `Phone` varchar(20) NOT NULL COMMENT 'Telefono de contacto de la persona que recibira o recogera el pedido',
           `Email` varchar(128) DEFAULT NULL COMMENT 'Correo de contacto asociado a la entrega',
-          `Address` varchar(256) DEFAULT NULL COMMENT 'Fotografia de la direccion de destino utilizada por la venta',
+          `Address` varchar(256) DEFAULT NULL COMMENT 'Fotografia de la direccion escrita manualmente por el cliente',
+          `GeocodedAddress` varchar(512) DEFAULT NULL COMMENT 'Fotografia de la direccion aproximada generada por el mapa',
           `Reference` varchar(256) DEFAULT NULL COMMENT 'Referencia para ubicar el destino de la entrega',
           `CountryCod` varchar(3) DEFAULT NULL COMMENT 'Codigo ISO3 del pais seleccionado para la entrega',
           `CountryName` varchar(150) DEFAULT NULL COMMENT 'Fotografia del nombre del pais del destino',
@@ -74,6 +75,22 @@ BEGIN
 
         SELECT 'Tabla sale_delivery creada desde cero.' AS Mensaje;
     ELSE
+        SELECT COUNT(*) INTO v_column_exists
+        FROM information_schema.columns
+        WHERE table_schema = DATABASE()
+          AND table_name = 'sale_delivery'
+          AND column_name = 'GeocodedAddress';
+
+        IF v_column_exists = 0 THEN
+            ALTER TABLE `sale_delivery`
+                ADD COLUMN `GeocodedAddress` varchar(512) DEFAULT NULL
+                    COMMENT 'Fotografia de la direccion aproximada generada por el mapa' AFTER `Address`;
+        END IF;
+
+        ALTER TABLE `sale_delivery`
+            MODIFY COLUMN `Address` varchar(256) DEFAULT NULL
+                COMMENT 'Fotografia de la direccion escrita manualmente por el cliente';
+
         SELECT COUNT(*) INTO v_column_exists
         FROM information_schema.columns
         WHERE table_schema = DATABASE()

@@ -26,6 +26,7 @@ public class SaleDeliveryEntity extends AuditTableEntity implements Serializable
     public String Phone;
     public String Email;
     public String Address;
+    public String GeocodedAddress;
     public String Reference;
     public String CountryCod;
     public String CountryName;

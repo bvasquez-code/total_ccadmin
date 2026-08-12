@@ -258,9 +258,13 @@
 
                   <div class="border-t-1 brc-grey-l2 pt-3 mt-1" *ngIf="hasDeliveryLocation()">
                     <div class="row">
-                      <div class="col-md-6 mb-3" *ngIf="delivery.Address || delivery.Reference">
+                      <div class="col-md-6 mb-3"
+                        *ngIf="delivery.Address || delivery.GeocodedAddress || delivery.Reference">
                         <span class="text-grey-d1 d-block">Direcci&oacute;n de entrega</span>
                         <b *ngIf="delivery.Address">{{ delivery.Address }}</b>
+                        <div class="text-grey-d1" *ngIf="delivery.GeocodedAddress">
+                          Direcci&oacute;n aproximada del mapa: {{ delivery.GeocodedAddress }}
+                        </div>
                         <div class="text-grey-d1"
                           *ngIf="delivery.CityName || delivery.StateName || delivery.CountryName">
                           {{ delivery.CityName }}<span *ngIf="delivery.CityName && delivery.StateName">, </span>{{ delivery.StateName }}<span *ngIf="(delivery.CityName || delivery.StateName) && delivery.CountryName">, </span>{{ delivery.CountryName }}

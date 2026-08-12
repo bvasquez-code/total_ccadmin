@@ -200,6 +200,7 @@ export class ViewsaleComponent implements OnInit {
     const delivery = this.getDelivery();
     return !!delivery && !!(
       delivery.Address
+      || delivery.GeocodedAddress
       || delivery.Reference
       || delivery.CountryName
       || delivery.StateName

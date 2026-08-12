@@ -49,6 +49,19 @@ export class ClientAddressService {
     });
   }
 
+  public findAddressByCoordinates(
+    latitude: number,
+    longitude: number,
+    countryCod: string
+  ): Promise<ResponseWsDto> {
+    const url = `${AppSetting.API}/api/v1/delivery/clientAddress/findAddressByCoordinates`;
+    return this.apiService.ExecuteGetService(url, {
+      Latitude: latitude,
+      Longitude: longitude,
+      CountryCod: countryCod
+    });
+  }
+
   public findDepartments(): Promise<ResponseWsDto> {
     const url = `${AppSetting.API}/api/v1/delivery/clientAddress/findDepartments`;
     return this.apiService.ExecuteGetService(url, {});

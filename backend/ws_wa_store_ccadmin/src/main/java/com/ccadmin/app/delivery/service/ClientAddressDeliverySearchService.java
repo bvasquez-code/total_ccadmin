@@ -29,7 +29,7 @@ public class ClientAddressDeliverySearchService {
         this.locationRepository = locationRepository;
     }
 
-    public List<ClientAddressEntity> findAll() {
+    public List<ClientAddressEntity> findAllForCurrentClient() {
         String clientCod = clientDeliveryContextService.getCurrentClient().ClientCod;
         return clientAddressRepository.findActiveByClientCod(clientCod);
     }

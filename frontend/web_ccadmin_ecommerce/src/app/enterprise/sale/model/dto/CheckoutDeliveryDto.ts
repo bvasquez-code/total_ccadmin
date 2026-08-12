@@ -8,6 +8,7 @@ export class CheckoutDeliveryDto {
   public Phone: string = '';
   public Email: string = '';
   public Address: string = '';
+  public GeocodedAddress: string = '';
   public Reference: string = '';
   public CountryCod: string = '';
   public CountryName: string = '';

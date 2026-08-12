@@ -71,9 +71,22 @@ export class ProfileComponent implements OnInit {
     this.EditingAddress = null;
   }
 
-  public async addressSaved(): Promise<void> {
+  public addressSaved(savedAddress: ClientAddressEntity): void {
     this.closeAddressModal();
-    await this.loadAddresses();
+    const address = Object.assign(new ClientAddressEntity(), savedAddress);
+    const remainingAddresses = this.AddressList
+      .filter(item => item.ClientAddressID !== address.ClientAddressID)
+      .map(item => {
+        if (address.IsDefault === 'S') item.IsDefault = 'N';
+        return item;
+      });
+    this.AddressList = address.IsDefault === 'S'
+      ? [address, ...remainingAddresses]
+      : [
+          ...remainingAddresses.filter(item => item.IsDefault === 'S'),
+          address,
+          ...remainingAddresses.filter(item => item.IsDefault !== 'S')
+        ];
   }
 
   public documentTypeName(): string {

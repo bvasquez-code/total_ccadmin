@@ -29,6 +29,7 @@ export class AddressModalComponent implements OnChanges, OnDestroy {
   public IsLocating: boolean = false;
   public IsLoadingUbigeo: boolean = false;
   public IsSearchingAddress: boolean = false;
+  public IsResolvingMapAddress: boolean = false;
   public AddressSearchText: string = '';
   public AddressSearchResultList: AddressGeocodingResultDto[] = [];
   public DepartmentCod: string = '';
@@ -46,6 +47,7 @@ export class AddressModalComponent implements OnChanges, OnDestroy {
   private marker: L.Marker | null = null;
   private accuracyCircle: L.Circle | null = null;
   private resizeObserver: ResizeObserver | null = null;
+  private reverseGeocodingRequestNumber: number = 0;
 
   public constructor(
     private clientAddressService: ClientAddressService,
@@ -82,7 +84,11 @@ export class AddressModalComponent implements OnChanges, OnDestroy {
     navigator.geolocation.getCurrentPosition(
       position => {
         this.IsLocating = false;
-        this.setCoordinates(position.coords.latitude, position.coords.longitude, true);
+        void this.selectMapCoordinates(
+          position.coords.latitude,
+          position.coords.longitude,
+          true
+        );
         if (this.map) {
           if (this.accuracyCircle) this.map.removeLayer(this.accuracyCircle);
           this.accuracyCircle = L.circle(
@@ -134,6 +140,7 @@ export class AddressModalComponent implements OnChanges, OnDestroy {
     this.Address.StateName = '';
     this.Address.CityName = '';
     this.Address.UbigeoCod = '';
+    this.clearGeocodedAddress();
     this.AddressSearchResultList = [];
 
     if (this.isPeruCountry()) {
@@ -232,7 +239,9 @@ export class AddressModalComponent implements OnChanges, OnDestroy {
       this.toastrService.warning('La coincidencia seleccionada no tiene coordenadas válidas.');
       return;
     }
-    this.Address.Address = result.DisplayName.substring(0, 256);
+    this.reverseGeocodingRequestNumber++;
+    this.IsResolvingMapAddress = false;
+    this.Address.GeocodedAddress = result.DisplayName.substring(0, 512);
     if (!this.isPeruCountry() && result.PostalCode) {
       this.Address.UbigeoCod = result.PostalCode.substring(0, 12);
     }
@@ -441,6 +450,7 @@ export class AddressModalComponent implements OnChanges, OnDestroy {
   private centerMapAtLocation(location: LocationOptionDto): void {
     if (!this.validCoordinate(location.Latitude, -90, 90)
       || !this.validCoordinate(location.Longitude, -180, 180)) return;
+    this.clearGeocodedAddress();
     this.setCoordinates(Number(location.Latitude), Number(location.Longitude), true);
   }
 
@@ -490,10 +500,12 @@ export class AddressModalComponent implements OnChanges, OnDestroy {
       offset: [0, -30],
       className: 'address-map-label'
     });
-    this.map.on('click', event => this.setCoordinates(event.latlng.lat, event.latlng.lng));
+    this.map.on('click', event => {
+      void this.selectMapCoordinates(event.latlng.lat, event.latlng.lng);
+    });
     this.marker.on('dragend', () => {
       const position = this.marker?.getLatLng();
-      if (position) this.setCoordinates(position.lat, position.lng);
+      if (position) void this.selectMapCoordinates(position.lat, position.lng);
     });
 
     this.resizeObserver = new ResizeObserver(() => this.refreshMapSize());
@@ -534,6 +546,47 @@ export class AddressModalComponent implements OnChanges, OnDestroy {
       this.map.removeLayer(this.accuracyCircle);
       this.accuracyCircle = null;
     }
+  }
+
+  private async selectMapCoordinates(
+    latitude: number,
+    longitude: number,
+    centerMap: boolean = false
+  ): Promise<void> {
+    this.setCoordinates(latitude, longitude, centerMap);
+    this.clearGeocodedAddress();
+    if (!this.Address.CountryCod) return;
+
+    const requestNumber = this.reverseGeocodingRequestNumber;
+    this.IsResolvingMapAddress = true;
+    try {
+      const response = await this.clientAddressService.findAddressByCoordinates(
+        Number(this.Address.Latitude),
+        Number(this.Address.Longitude),
+        this.Address.CountryCod
+      );
+      if (requestNumber !== this.reverseGeocodingRequestNumber) return;
+      if (response.ErrorStatus || !response.Data?.DisplayName) {
+        this.toastrService.info(
+          response.Message || 'Marcamos el punto, pero no encontramos una dirección aproximada.'
+        );
+        return;
+      }
+      const result = Object.assign(new AddressGeocodingResultDto(), response.Data);
+      this.Address.GeocodedAddress = result.DisplayName.substring(0, 512);
+      if (!this.isPeruCountry() && result.PostalCode) {
+        this.Address.UbigeoCod = result.PostalCode.substring(0, 12);
+      }
+    } finally {
+      if (requestNumber === this.reverseGeocodingRequestNumber) {
+        this.IsResolvingMapAddress = false;
+      }
+    }
+  }
+
+  private clearGeocodedAddress(): void {
+    this.reverseGeocodingRequestNumber++;
+    this.Address.GeocodedAddress = '';
   }
 
   private validate(): boolean {
@@ -596,6 +649,8 @@ export class AddressModalComponent implements OnChanges, OnDestroy {
   }
 
   private destroyMap(): void {
+    this.reverseGeocodingRequestNumber++;
+    this.IsResolvingMapAddress = false;
     this.resizeObserver?.disconnect();
     this.resizeObserver = null;
     if (this.map) this.map.remove();

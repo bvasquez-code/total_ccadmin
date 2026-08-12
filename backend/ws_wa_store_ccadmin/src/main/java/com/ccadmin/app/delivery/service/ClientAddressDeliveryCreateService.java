@@ -69,6 +69,7 @@ public class ClientAddressDeliveryCreateService {
         address.Names = request.Names.trim();
         address.Phone = request.Phone.trim();
         address.Address = request.Address.trim();
+        address.GeocodedAddress = normalizeOptional(request.GeocodedAddress);
         address.Reference = normalizeOptional(request.Reference);
         address.CountryCod = location.getCountryCod();
         address.CountryName = location.getCountryName();
@@ -91,6 +92,7 @@ public class ClientAddressDeliveryCreateService {
         validateRequired(request.Names, 256, "El nombre de contacto");
         validateRequired(request.Phone, 20, "El teléfono");
         validateRequired(request.Address, 256, "La dirección");
+        validateOptional(request.GeocodedAddress, 512, "La dirección aproximada del mapa");
         validateRequired(request.CountryCod, 3, "El país");
         validateOptional(request.Alias, 64, "El alias");
         validateOptional(request.Reference, 256, "La referencia");

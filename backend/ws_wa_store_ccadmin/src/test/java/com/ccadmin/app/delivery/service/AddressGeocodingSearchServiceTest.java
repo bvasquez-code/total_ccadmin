@@ -41,6 +41,7 @@ class AddressGeocodingSearchServiceTest {
                 new ObjectMapper(),
                 locationRepository,
                 "https://nominatim.openstreetmap.org/search",
+                "https://nominatim.openstreetmap.org/reverse",
                 "CcAdmin-Test/1.0",
                 httpClient
         );
@@ -112,5 +113,48 @@ class AddressGeocodingSearchServiceTest {
                 any(HttpRequest.class),
                 org.mockito.ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()
         );
+    }
+
+    @Test
+    void findsTheApproximateAddressByCoordinatesAndCachesTheResult() throws Exception {
+        CountryEntity peru = new CountryEntity();
+        peru.CountryCod = "PER";
+        peru.CountryIso2 = "PE";
+        when(locationRepository.findActiveCountryByCode("PER")).thenReturn(Optional.of(peru));
+        when(httpResponse.statusCode()).thenReturn(200);
+        when(httpResponse.body()).thenReturn("""
+                {
+                  "display_name":"Avenida José Balta 895, Chiclayo, Perú",
+                  "lat":"-6.77140000",
+                  "lon":"-79.84090000",
+                  "address":{"postcode":"14001", "country_code":"pe"}
+                }
+                """);
+        when(httpClient.send(
+                any(HttpRequest.class),
+                org.mockito.ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()
+        )).thenReturn(httpResponse);
+
+        AddressGeocodingResultDto firstResult = addressGeocodingSearchService.findByCoordinates(
+                new BigDecimal("-6.77140001"),
+                new BigDecimal("-79.84090001"),
+                "PER"
+        );
+        AddressGeocodingResultDto cachedResult = addressGeocodingSearchService.findByCoordinates(
+                new BigDecimal("-6.77140002"),
+                new BigDecimal("-79.84090002"),
+                "per"
+        );
+
+        assertEquals("Avenida José Balta 895, Chiclayo, Perú", firstResult.DisplayName);
+        assertEquals("14001", firstResult.PostalCode);
+        assertEquals(firstResult, cachedResult);
+        ArgumentCaptor<HttpRequest> requestCaptor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(httpClient).send(
+                requestCaptor.capture(),
+                org.mockito.ArgumentMatchers.<HttpResponse.BodyHandler<String>>any()
+        );
+        assertEquals("/reverse", requestCaptor.getValue().uri().getPath());
+        assertTrue(requestCaptor.getValue().uri().getQuery().contains("lat=-6.77140001"));
     }
 }

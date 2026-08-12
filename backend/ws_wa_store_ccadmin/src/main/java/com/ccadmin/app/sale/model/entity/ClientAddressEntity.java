@@ -23,6 +23,7 @@ public class ClientAddressEntity extends AuditTableEntity implements Serializabl
     public String Names;
     public String Phone;
     public String Address;
+    public String GeocodedAddress;
     public String Reference;
     public String CountryCod;
     public String CountryName;

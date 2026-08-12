@@ -17,6 +17,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,7 +34,8 @@ public class AddressGeocodingSearchService {
     private final ObjectMapper objectMapper;
     private final LocationRepository locationRepository;
     private final HttpClient httpClient;
-    private final String providerUrl;
+    private final String providerSearchUrl;
+    private final String providerReverseUrl;
     private final String providerUserAgent;
     private final Object providerRateLock = new Object();
     private final Map<String, List<AddressGeocodingResultDto>> resultCache =
@@ -45,6 +47,15 @@ public class AddressGeocodingSearchService {
                     return size() > MAXIMUM_CACHE_ENTRIES;
                 }
             };
+    private final Map<String, AddressGeocodingResultDto> reverseResultCache =
+            new LinkedHashMap<>(MAXIMUM_CACHE_ENTRIES, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(
+                        Map.Entry<String, AddressGeocodingResultDto> eldest
+                ) {
+                    return size() > MAXIMUM_CACHE_ENTRIES;
+                }
+            };
     private long lastProviderRequestTimestamp;
 
     @Autowired
@@ -52,14 +63,17 @@ public class AddressGeocodingSearchService {
             ObjectMapper objectMapper,
             LocationRepository locationRepository,
             @Value("${delivery.geocoding.url:https://nominatim.openstreetmap.org/search}")
-            String providerUrl,
+            String providerSearchUrl,
+            @Value("${delivery.geocoding.reverse-url:https://nominatim.openstreetmap.org/reverse}")
+            String providerReverseUrl,
             @Value("${delivery.geocoding.user-agent:CcAdmin-Ecommerce/1.0}")
             String providerUserAgent
     ) {
         this(
                 objectMapper,
                 locationRepository,
-                providerUrl,
+                providerSearchUrl,
+                providerReverseUrl,
                 providerUserAgent,
                 HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(4)).build()
         );
@@ -68,13 +82,15 @@ public class AddressGeocodingSearchService {
     AddressGeocodingSearchService(
             ObjectMapper objectMapper,
             LocationRepository locationRepository,
-            String providerUrl,
+            String providerSearchUrl,
+            String providerReverseUrl,
             String providerUserAgent,
             HttpClient httpClient
     ) {
         this.objectMapper = objectMapper;
         this.locationRepository = locationRepository;
-        this.providerUrl = providerUrl;
+        this.providerSearchUrl = providerSearchUrl;
+        this.providerReverseUrl = providerReverseUrl;
         this.providerUserAgent = providerUserAgent;
         this.httpClient = httpClient;
     }
@@ -99,34 +115,46 @@ public class AddressGeocodingSearchService {
         return result;
     }
 
+    public AddressGeocodingResultDto findByCoordinates(
+            BigDecimal latitude,
+            BigDecimal longitude,
+            String countryCod
+    ) {
+        validateCoordinates(latitude, longitude);
+        CountryEntity country = findCountry(countryCod);
+        String countryIso2 = validateCountryIso2(country);
+        String cacheKey = countryIso2.toUpperCase(Locale.ROOT)
+                + '|' + coordinateCacheValue(latitude)
+                + '|' + coordinateCacheValue(longitude);
+
+        synchronized (reverseResultCache) {
+            AddressGeocodingResultDto cachedResult = reverseResultCache.get(cacheKey);
+            if (cachedResult != null) {
+                return cachedResult;
+            }
+        }
+
+        AddressGeocodingResultDto result = reverseProvider(
+                latitude,
+                longitude,
+                countryIso2
+        );
+        synchronized (reverseResultCache) {
+            reverseResultCache.put(cacheKey, result);
+        }
+        return result;
+    }
+
     private List<AddressGeocodingResultDto> searchProvider(
             String query,
             String countryIso2
     ) {
-        waitForProviderCapacity();
         try {
-            String requestUrl = providerUrl
+            String requestUrl = providerSearchUrl
                     + "?format=jsonv2&addressdetails=1&limit=" + MAXIMUM_RESULTS
                     + "&q=" + encode(query)
                     + "&countrycodes=" + encode(countryIso2.toLowerCase(Locale.ROOT));
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(requestUrl))
-                    .timeout(Duration.ofSeconds(8))
-                    .header("User-Agent", providerUserAgent)
-                    .header("Accept-Language", "es")
-                    .GET()
-                    .build();
-            HttpResponse<String> response = httpClient.send(
-                    request,
-                    HttpResponse.BodyHandlers.ofString()
-            );
-            if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                throw new IllegalStateException("El buscador de direcciones no respondió correctamente");
-            }
-            return parseResults(response.body());
-        } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt();
-            throw new IllegalStateException("La búsqueda de la dirección fue interrumpida", ex);
+            return parseResults(requestProvider(requestUrl));
         } catch (Exception ex) {
             if (ex instanceof IllegalStateException illegalStateException) {
                 throw illegalStateException;
@@ -136,6 +164,55 @@ public class AddressGeocodingSearchService {
                     ex
             );
         }
+    }
+
+    private AddressGeocodingResultDto reverseProvider(
+            BigDecimal latitude,
+            BigDecimal longitude,
+            String expectedCountryIso2
+    ) {
+        try {
+            String requestUrl = providerReverseUrl
+                    + "?format=jsonv2&addressdetails=1"
+                    + "&lat=" + encode(latitude.toPlainString())
+                    + "&lon=" + encode(longitude.toPlainString());
+            return parseReverseResult(requestProvider(requestUrl), expectedCountryIso2);
+        } catch (Exception ex) {
+            if (ex instanceof IllegalArgumentException illegalArgumentException) {
+                throw illegalArgumentException;
+            }
+            if (ex instanceof IllegalStateException illegalStateException) {
+                throw illegalStateException;
+            }
+            throw new IllegalStateException(
+                    "No se pudo obtener la dirección aproximada del mapa",
+                    ex
+            );
+        }
+    }
+
+    private AddressGeocodingResultDto parseReverseResult(
+            String responseBody,
+            String expectedCountryIso2
+    ) throws Exception {
+        JsonNode item = objectMapper.readTree(responseBody);
+        if (!item.isObject() || !item.hasNonNull("display_name")
+                || !item.hasNonNull("lat") || !item.hasNonNull("lon")) {
+            throw new IllegalStateException("No encontramos una dirección cercana al punto seleccionado");
+        }
+        String resultCountryIso2 = item.path("address").path("country_code").asText("");
+        if (!resultCountryIso2.isBlank()
+                && !expectedCountryIso2.equalsIgnoreCase(resultCountryIso2)) {
+            throw new IllegalArgumentException("El punto seleccionado no pertenece al país indicado");
+        }
+
+        AddressGeocodingResultDto result = new AddressGeocodingResultDto();
+        result.DisplayName = item.path("display_name").asText();
+        result.PostalCode = item.path("address").path("postcode").asText("");
+        result.Latitude = new BigDecimal(item.path("lat").asText());
+        result.Longitude = new BigDecimal(item.path("lon").asText());
+        validateCoordinates(result.Latitude, result.Longitude);
+        return result;
     }
 
     private List<AddressGeocodingResultDto> parseResults(String responseBody) throws Exception {
@@ -170,6 +247,35 @@ public class AddressGeocodingSearchService {
             }
         }
         return List.copyOf(resultList);
+    }
+
+    private String requestProvider(String requestUrl) {
+        waitForProviderCapacity();
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(requestUrl))
+                    .timeout(Duration.ofSeconds(8))
+                    .header("User-Agent", providerUserAgent)
+                    .header("Accept-Language", "es")
+                    .GET()
+                    .build();
+            HttpResponse<String> response = httpClient.send(
+                    request,
+                    HttpResponse.BodyHandlers.ofString()
+            );
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                throw new IllegalStateException("El servicio de direcciones no respondió correctamente");
+            }
+            return response.body();
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("La consulta de la dirección fue interrumpida", ex);
+        } catch (Exception ex) {
+            if (ex instanceof IllegalStateException illegalStateException) {
+                throw illegalStateException;
+            }
+            throw new IllegalStateException("No se pudo consultar el servicio de direcciones", ex);
+        }
     }
 
     private void waitForProviderCapacity() {
@@ -216,6 +322,20 @@ public class AddressGeocodingSearchService {
             throw new IllegalArgumentException("La búsqueda debe tener entre 3 y 512 caracteres");
         }
         return normalizedQuery;
+    }
+
+    private void validateCoordinates(BigDecimal latitude, BigDecimal longitude) {
+        if (latitude == null || longitude == null
+                || latitude.compareTo(BigDecimal.valueOf(-90)) < 0
+                || latitude.compareTo(BigDecimal.valueOf(90)) > 0
+                || longitude.compareTo(BigDecimal.valueOf(-180)) < 0
+                || longitude.compareTo(BigDecimal.valueOf(180)) > 0) {
+            throw new IllegalArgumentException("Selecciona coordenadas válidas en el mapa");
+        }
+    }
+
+    private String coordinateCacheValue(BigDecimal value) {
+        return value.setScale(6, RoundingMode.HALF_UP).toPlainString();
     }
 
     private String encode(String value) {

@@ -21,7 +21,8 @@ BEGIN
           `Alias` varchar(64) DEFAULT NULL COMMENT 'Nombre corto para identificar la direccion, por ejemplo Casa u Oficina',
           `Names` varchar(256) NOT NULL COMMENT 'Nombres de la persona que recibira pedidos en esta direccion',
           `Phone` varchar(20) NOT NULL COMMENT 'Telefono de contacto para la entrega',
-          `Address` varchar(256) NOT NULL COMMENT 'Direccion escrita de entrega',
+          `Address` varchar(256) NOT NULL COMMENT 'Direccion escrita manualmente por el cliente',
+          `GeocodedAddress` varchar(512) DEFAULT NULL COMMENT 'Direccion aproximada generada por geocodificacion del punto seleccionado en el mapa',
           `Reference` varchar(256) DEFAULT NULL COMMENT 'Referencia adicional para ubicar la direccion',
           `CountryCod` varchar(3) DEFAULT NULL COMMENT 'Codigo ISO3 del pais seleccionado',
           `CountryName` varchar(150) DEFAULT NULL COMMENT 'Nombre del pais fotografiado al registrar la direccion',
@@ -50,6 +51,22 @@ BEGIN
 
         SELECT 'Tabla client_address creada desde cero.' AS Mensaje;
     ELSE
+        SELECT COUNT(*) INTO v_column_exists
+        FROM information_schema.columns
+        WHERE table_schema = DATABASE()
+          AND table_name = 'client_address'
+          AND column_name = 'GeocodedAddress';
+
+        IF v_column_exists = 0 THEN
+            ALTER TABLE `client_address`
+                ADD COLUMN `GeocodedAddress` varchar(512) DEFAULT NULL
+                    COMMENT 'Direccion aproximada generada por geocodificacion del punto seleccionado en el mapa' AFTER `Address`;
+        END IF;
+
+        ALTER TABLE `client_address`
+            MODIFY COLUMN `Address` varchar(256) NOT NULL
+                COMMENT 'Direccion escrita manualmente por el cliente';
+
         SELECT COUNT(*) INTO v_column_exists
         FROM information_schema.columns
         WHERE table_schema = DATABASE()

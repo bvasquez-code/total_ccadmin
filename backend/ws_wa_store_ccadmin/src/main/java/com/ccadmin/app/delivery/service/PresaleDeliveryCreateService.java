@@ -291,6 +291,7 @@ public class PresaleDeliveryCreateService {
     ) {
         delivery.ClientAddressID = address.ClientAddressID;
         delivery.Address = address.Address;
+        delivery.GeocodedAddress = address.GeocodedAddress;
         delivery.Reference = address.Reference;
         delivery.CountryCod = address.CountryCod;
         delivery.CountryName = address.CountryName;
@@ -304,6 +305,7 @@ public class PresaleDeliveryCreateService {
     private void clearDeliveryAddress(CheckoutDeliveryDto delivery) {
         delivery.ClientAddressID = null;
         delivery.Address = null;
+        delivery.GeocodedAddress = null;
         delivery.Reference = null;
         delivery.CountryCod = null;
         delivery.CountryName = null;

@@ -112,13 +112,15 @@ export class CheckoutComponent implements OnInit {
 
   public async addressSaved(address: ClientAddressEntity): Promise<void> {
     this.IsAddressModalVisible = false;
-    await this.loadAddresses(address.ClientAddressID);
+    this.synchronizeSavedAddress(address);
+    await this.selectAddress(address);
   }
 
   public async selectAddress(address: ClientAddressEntity): Promise<void> {
     if (!address.ClientAddressID) return;
     this.Delivery.ClientAddressID = address.ClientAddressID;
     this.Delivery.Address = address.Address;
+    this.Delivery.GeocodedAddress = address.GeocodedAddress || '';
     this.Delivery.Reference = address.Reference || '';
     this.Delivery.CountryCod = address.CountryCod || '';
     this.Delivery.CountryName = address.CountryName || '';
@@ -415,6 +417,23 @@ export class CheckoutComponent implements OnInit {
     } finally {
       this.IsLoadingAddresses = false;
     }
+  }
+
+  private synchronizeSavedAddress(savedAddress: ClientAddressEntity): void {
+    const address = Object.assign(new ClientAddressEntity(), savedAddress);
+    const remainingAddresses = this.AddressList
+      .filter(item => item.ClientAddressID !== address.ClientAddressID)
+      .map(item => {
+        if (address.IsDefault === 'S') item.IsDefault = 'N';
+        return item;
+      });
+    this.AddressList = address.IsDefault === 'S'
+      ? [address, ...remainingAddresses]
+      : [
+          ...remainingAddresses.filter(item => item.IsDefault === 'S'),
+          address,
+          ...remainingAddresses.filter(item => item.IsDefault !== 'S')
+        ];
   }
 
   private async validateSelectedAddressCoverage(): Promise<void> {

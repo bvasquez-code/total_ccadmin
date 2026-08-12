@@ -105,6 +105,9 @@
             <span *ngIf="address.IsDefault === 'S'">Principal</span>
           </div>
           <p>{{ address.Address }}</p>
+          <small *ngIf="address.GeocodedAddress">
+            <strong>Referencia del mapa:</strong> {{ address.GeocodedAddress }}
+          </small>
           <small *ngIf="address.CityName || address.StateName || address.CountryName">
             <strong>Ubicación:</strong>
             {{ address.CityName }}<span *ngIf="address.CityName && address.StateName">, </span>{{ address.StateName }}<span *ngIf="(address.CityName || address.StateName) && address.CountryName">, </span>{{ address.CountryName }}
@@ -126,5 +129,5 @@
   [DefaultNames]="Profile.Names + ' ' + Profile.LastNames"
   [DefaultPhone]="Profile.Phone"
   (Closed)="closeAddressModal()"
-  (Saved)="addressSaved()">
+  (Saved)="addressSaved($event)">
 </app-address-modal>

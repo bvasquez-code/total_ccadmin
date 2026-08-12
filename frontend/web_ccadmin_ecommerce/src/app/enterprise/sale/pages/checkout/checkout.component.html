@@ -211,6 +211,7 @@
               <span>
                 <strong>{{ address.Alias || 'Dirección de entrega' }}</strong>
                 <small>{{ address.Address }}</small>
+                <small *ngIf="address.GeocodedAddress">Mapa: {{ address.GeocodedAddress }}</small>
                 <small *ngIf="address.CityName || address.StateName || address.CountryName">
                   {{ address.CityName }}<span *ngIf="address.CityName && address.StateName">, </span>{{ address.StateName }}<span *ngIf="(address.CityName || address.StateName) && address.CountryName">, </span>{{ address.CountryName }}
                 </small>
