@@ -70,6 +70,8 @@ public class SaleCreateService extends SessionService {
     @Autowired
     private SaleDeliveryCreateService saleDeliveryCreateService;
     @Autowired
+    private SaleDeliveryRepository saleDeliveryRepository;
+    @Autowired
     private SalesContextService salesContextService;
 
     @Transactional
@@ -288,6 +290,7 @@ public class SaleCreateService extends SessionService {
         if(!SaleConstants.PENDING.equals(saleHead.SaleStatus)){
             throw new SaleException("La venta ya no se encuentra pendiente");
         }
+        this.validateWebConfirmation(saleHead, DocumentType);
         if (this.catalogSearchShared.isIndicatorSystemEnabled(
                 BusinessConfigConstants.ConfigCod.IND_MANDATORY_PICKING
         ) && !"S".equals(saleHead.IsPickingConfirmed)) {
@@ -325,6 +328,27 @@ public class SaleCreateService extends SessionService {
         log.info("FIN - CONFIRMACION DE VENTA : {}",SaleCod);
 
         return saleDetail;
+    }
+
+    private void validateWebConfirmation(SaleHeadEntity saleHead, String documentType) throws SaleException {
+        SaleChannelEntity saleChannel = this.saleChannelRepository.findActiveBySaleCod(saleHead.SaleCod)
+                .orElse(null);
+        if (saleChannel == null
+                || !SaleConstants.COMMERCIAL_CHANNEL_WEB.equals(saleChannel.ChannelCod)) {
+            return;
+        }
+        if (!"S".equals(saleHead.IsPaid)) {
+            throw new SaleException("La venta web debe estar pagada antes de facturarla");
+        }
+        if (!SaleConstants.DOCUMENT_TYPE_INVOICE.equals(documentType)
+                && !SaleConstants.DOCUMENT_TYPE_RECEIPT.equals(documentType)) {
+            throw new SaleException("La venta web solo puede confirmarse con boleta o factura");
+        }
+        SaleDeliveryEntity saleDelivery = this.saleDeliveryRepository.findActiveBySaleCod(saleHead.SaleCod)
+                .orElseThrow(() -> new SaleException("La venta web no tiene datos de entrega"));
+        if (!SaleConstants.DELIVERY_STATUS_PREPARING.equals(saleDelivery.DeliveryStatus)) {
+            throw new SaleException("Debe iniciar la preparacion del pedido antes de facturarlo");
+        }
     }
 
     private void rankingProduct(SaleDetailDto saleDetail){

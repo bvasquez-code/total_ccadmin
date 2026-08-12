@@ -44,6 +44,15 @@ export class ClientSessionService {
     this.sessionSubject.next(null);
   }
 
+  public updateNames(names: string): void {
+    const current = this.sessionSubject.value;
+    if (!current) return;
+
+    const updated = Object.assign(new ClientSessionDto(), current, { Names: names });
+    localStorage.setItem(StorageConstants.CLIENT_SESSION, JSON.stringify(updated));
+    this.sessionSubject.next(updated);
+  }
+
   private readSession(): ClientSessionDto | null {
     const value = localStorage.getItem(StorageConstants.CLIENT_SESSION);
     if (!value) return null;

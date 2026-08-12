@@ -23,9 +23,33 @@
       <a routerLink="/login" class="account-action" *ngIf="!ClientSession">
         <i class="fa fa-user-circle"></i><span>Ingresar</span>
       </a>
-      <button type="button" class="account-action" *ngIf="ClientSession" (click)="logout()">
-        <i class="fa fa-user-circle"></i><span>{{ ClientSession.Names || ClientSession.Email }}</span>
-      </button>
+      <div class="account-menu-container" *ngIf="ClientSession" (click)="$event.stopPropagation()">
+        <button type="button" class="account-action" (click)="toggleAccountMenu($event)"
+          [attr.aria-expanded]="AccountMenuOpen" aria-haspopup="true">
+          <i class="fa fa-user-circle"></i>
+          <span>{{ ClientSession.Names || ClientSession.Email }}</span>
+          <i class="fa fa-chevron-down account-chevron" [class.open]="AccountMenuOpen"></i>
+        </button>
+        <div class="account-dropdown" *ngIf="AccountMenuOpen">
+          <div class="account-summary">
+            <strong>{{ ClientSession.Names || 'Mi cuenta' }}</strong>
+            <small>{{ ClientSession.Email }}</small>
+          </div>
+          <a routerLink="/profile" (click)="closeAccountMenu()">
+            <i class="fa fa-user-edit"></i><span>Mi perfil</span>
+          </a>
+          <a routerLink="/profile" fragment="addresses" (click)="closeAccountMenu()">
+            <i class="fa fa-map-marker-alt"></i><span>Mis direcciones</span>
+          </a>
+          <a routerLink="/orders" (click)="closeAccountMenu()">
+            <i class="fa fa-box"></i><span>Mis pedidos</span>
+          </a>
+          <div class="account-divider"></div>
+          <button type="button" class="logout-option" (click)="logout()">
+            <i class="fa fa-sign-out-alt"></i><span>Cerrar sesión</span>
+          </button>
+        </div>
+      </div>
       <a routerLink="/cart" class="cart-action" aria-label="Abrir carrito">
         <i class="fa fa-shopping-bag"></i><span *ngIf="CartCount > 0">{{ CartCount }}</span>
       </a>
@@ -39,7 +63,11 @@
     <a routerLink="/" (click)="MobileMenuOpen = false">Productos</a>
     <a routerLink="/cart" (click)="MobileMenuOpen = false">Mi carrito</a>
     <a routerLink="/orders" *ngIf="ClientSession" (click)="MobileMenuOpen = false">Mis pedidos</a>
+    <a routerLink="/profile" *ngIf="ClientSession" (click)="MobileMenuOpen = false">Mi perfil</a>
+    <a routerLink="/profile" fragment="addresses" *ngIf="ClientSession"
+      (click)="MobileMenuOpen = false">Mis direcciones</a>
     <button type="button" (click)="openLocation()">Cambiar ubicación</button>
+    <button type="button" *ngIf="ClientSession" (click)="logout()">Cerrar sesión</button>
   </nav>
 </header>
 

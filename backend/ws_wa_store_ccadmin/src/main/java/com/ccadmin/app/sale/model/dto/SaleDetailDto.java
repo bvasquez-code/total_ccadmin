@@ -10,6 +10,7 @@ public class SaleDetailDto {
     public SaleDocumentEntity SaleDocument;
     public List<SaleDocumentEntity> SaleDocumentList;
     public SaleChannelEntity SaleChannel;
+    public SaleDeliveryEntity SaleDelivery;
 
     public List<SaleDetEntity> DetailList;
     public List<SalePaymentEntity> DetailPayment;

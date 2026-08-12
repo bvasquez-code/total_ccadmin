@@ -44,6 +44,8 @@ export class CreatecreditnoteComponent
   isProductExchange = false;
   pendingConfirmCreditNoteHead: CreditNoteHeadEntity | null = null;
   isConfirmingAfterReturnPayments = false;
+  isFailedDeliveryMode = false;
+  forcedCommenter = '';
 
   constructor(
     private readonly saleService: SaleService,
@@ -62,7 +64,7 @@ export class CreatecreditnoteComponent
   }
 
   // -------------------- Lifecycle --------------------
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     // Usamos el método exigido por la interfaz
     this.GetParamUrl(this.router);
 
@@ -71,8 +73,39 @@ export class CreatecreditnoteComponent
       this.CreditNoteCod = this.route.snapshot.queryParamMap.get('CreditNoteCod') ?? '';
     }
 
+    const operationMode = this.route.snapshot.queryParamMap.get('Mode') ?? '';
+    const saleCod = this.route.snapshot.queryParamMap.get('SaleCod') ?? '';
+    this.isFailedDeliveryMode = operationMode === 'failed-delivery';
+
+    if (this.isFailedDeliveryMode) {
+      if (!saleCod) {
+        this.toastrService.error('Debe indicar la venta con entrega fallida.');
+        return;
+      }
+      this.txtDocumentCodReadOnly = true;
+      await this.FindBySaleCod(saleCod);
+      const creditStatus = this.SaleDetail.CreditNoteDetail?.Headboard?.CreditNoteStatus;
+      if (creditStatus === 'P' || creditStatus === 'C') {
+        this.toastrService.error('La venta ya tiene una nota de credito registrada.');
+        return;
+      }
+      this.isTotalMode = true;
+      this.isProductExchange = false;
+      this.forcedCommenter = `Entrega fallida del pedido web ${saleCod}`;
+      this.applyTotalQuantities();
+      setTimeout(() => {
+        if (this.txtDocumentCod?.nativeElement) {
+          this.txtDocumentCod.nativeElement.value = this.SaleDetail.SaleDocument?.DocumentCod ?? '';
+        }
+        if (this.txtCommenter?.nativeElement) {
+          this.txtCommenter.nativeElement.value = this.forcedCommenter;
+        }
+      });
+      return;
+    }
+
     if (this.CreditNoteCod) {
-      this.FindDataForm(this.CreditNoteCod);
+      await this.FindDataForm(this.CreditNoteCod);
     }
   }
 
@@ -195,6 +228,7 @@ export class CreatecreditnoteComponent
 
   // -------------------- Acciones UI --------------------
   async FindByDocumentCod(): Promise<void> {
+    if (this.isFailedDeliveryMode) return;
     this.SaleDetail = new SaleDetailDto();
     this.CreditNoteRegister = new CreditNoteRegisterDto();
 
@@ -558,6 +592,7 @@ export class CreatecreditnoteComponent
   }
 
   OnCreditNoteTypeChange(ev: Event): void {
+    if (this.isFailedDeliveryMode) return;
     this.isTotalMode = (ev.target as HTMLSelectElement).value === 'T';
 
     if (this.isTotalMode) {
@@ -568,6 +603,7 @@ export class CreatecreditnoteComponent
   }
 
   OnCreditNoteDestinationChange(ev: Event): void {
+    if (this.isFailedDeliveryMode) return;
     this.isProductExchange = (ev.target as HTMLSelectElement).value === 'S';
   }
 

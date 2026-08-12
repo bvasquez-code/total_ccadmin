@@ -21,6 +21,21 @@ export class ClientAddressService {
     return this.apiService.ExecutePostService(url, request);
   }
 
+  public findDepartments(): Promise<ResponseWsDto> {
+    const url = `${AppSetting.API}/api/v1/delivery/clientAddress/findDepartments`;
+    return this.apiService.ExecuteGetService(url, {});
+  }
+
+  public findProvinces(departmentCod: string): Promise<ResponseWsDto> {
+    const url = `${AppSetting.API}/api/v1/delivery/clientAddress/findProvinces`;
+    return this.apiService.ExecuteGetService(url, { DepartmentCod: departmentCod });
+  }
+
+  public findDistricts(provinceCod: string): Promise<ResponseWsDto> {
+    const url = `${AppSetting.API}/api/v1/delivery/clientAddress/findDistricts`;
+    return this.apiService.ExecuteGetService(url, { ProvinceCod: provinceCod });
+  }
+
   public validateCoverage(request: DeliveryCoverageRequestDto): Promise<ResponseWsDto> {
     const url = `${AppSetting.API}/api/v1/delivery/clientAddress/validateCoverage`;
     return this.apiService.ExecutePostService(url, request);

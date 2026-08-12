@@ -1,0 +1,126 @@
+<main class="container profile-page">
+  <header class="profile-heading">
+    <div>
+      <span>Tu cuenta</span>
+      <h1>Perfil y direcciones</h1>
+      <p>Administra tus datos de contacto y los lugares donde deseas recibir tus pedidos.</p>
+    </div>
+    <a routerLink="/orders" class="btn btn-outline-primary">
+      <i class="fa fa-box mr-2"></i>Ver mis pedidos
+    </a>
+  </header>
+
+  <section class="profile-card" aria-labelledby="personal-data-title">
+    <div class="section-heading">
+      <span><i class="fa fa-user"></i></span>
+      <div>
+        <h2 id="personal-data-title">Datos personales</h2>
+        <p>Puedes actualizar tus nombres y teléfono de contacto.</p>
+      </div>
+    </div>
+
+    <div class="profile-loading" *ngIf="IsLoadingProfile">
+      <i class="fa fa-spinner fa-spin"></i> Consultando tus datos...
+    </div>
+
+    <form *ngIf="!IsLoadingProfile" (ngSubmit)="saveProfile()" novalidate>
+      <div class="form-row">
+        <div class="form-group col-md-6">
+          <label for="profile-document">{{ documentTypeName() }}</label>
+          <div class="locked-field">
+            <input id="profile-document" class="form-control" [value]="Profile.DocumentNumber" readonly>
+            <i class="fa fa-lock" title="Este dato no puede modificarse"></i>
+          </div>
+          <small class="form-text text-muted">El número de documento no puede modificarse.</small>
+        </div>
+        <div class="form-group col-md-6">
+          <label for="profile-email">Correo electrónico</label>
+          <div class="locked-field">
+            <input id="profile-email" type="email" class="form-control" [value]="Profile.Email" readonly>
+            <i class="fa fa-lock" title="Este dato no puede modificarse"></i>
+          </div>
+          <small class="form-text text-muted">Es el correo utilizado para iniciar sesión.</small>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group col-md-5">
+          <label for="profile-names">Nombres</label>
+          <input id="profile-names" class="form-control" name="Names" maxlength="128"
+            [(ngModel)]="Profile.Names" autocomplete="given-name">
+        </div>
+        <div class="form-group col-md-5">
+          <label for="profile-last-names">Apellidos</label>
+          <input id="profile-last-names" class="form-control" name="LastNames" maxlength="128"
+            [(ngModel)]="Profile.LastNames" autocomplete="family-name">
+        </div>
+        <div class="form-group col-md-2">
+          <label for="profile-phone">Teléfono</label>
+          <input id="profile-phone" type="tel" class="form-control" name="Phone" maxlength="20"
+            [(ngModel)]="Profile.Phone" autocomplete="tel">
+        </div>
+      </div>
+
+      <div class="profile-actions">
+        <button type="submit" class="btn btn-primary" [disabled]="IsSavingProfile">
+          <i class="fa fa-save mr-2"></i>{{ IsSavingProfile ? 'Guardando...' : 'Guardar cambios' }}
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <section id="addresses" class="profile-card address-section" aria-labelledby="addresses-title">
+    <div class="section-heading address-heading">
+      <span><i class="fa fa-map-marker-alt"></i></span>
+      <div>
+        <h2 id="addresses-title">Mis direcciones</h2>
+        <p>Agrega o actualiza tus direcciones y su ubicación exacta en el mapa.</p>
+      </div>
+      <button type="button" class="btn btn-primary" (click)="openNewAddress()">
+        <i class="fa fa-plus mr-2"></i>Nueva dirección
+      </button>
+    </div>
+
+    <div class="profile-loading" *ngIf="IsLoadingAddresses">
+      <i class="fa fa-spinner fa-spin"></i> Consultando tus direcciones...
+    </div>
+
+    <div class="empty-addresses" *ngIf="!IsLoadingAddresses && AddressList.length === 0">
+      <i class="fa fa-map-marked-alt"></i>
+      <div>
+        <h3>Aún no tienes direcciones guardadas</h3>
+        <p>Registra tu primera dirección para agilizar tus próximos pedidos.</p>
+        <button type="button" class="btn btn-outline-primary" (click)="openNewAddress()">
+          Agregar dirección
+        </button>
+      </div>
+    </div>
+
+    <div class="address-grid" *ngIf="AddressList.length > 0">
+      <article class="address-card" *ngFor="let address of AddressList">
+        <div class="address-card-icon"><i class="fa fa-map-marker-alt"></i></div>
+        <div class="address-card-body">
+          <div class="address-title">
+            <h3>{{ address.Alias || 'Dirección de entrega' }}</h3>
+            <span *ngIf="address.IsDefault === 'S'">Principal</span>
+          </div>
+          <p>{{ address.Address }}</p>
+          <small *ngIf="address.Reference"><strong>Referencia:</strong> {{ address.Reference }}</small>
+          <small><strong>Contacto:</strong> {{ address.Names }} · {{ address.Phone }}</small>
+        </div>
+        <button type="button" class="edit-address" (click)="editAddress(address)" aria-label="Editar dirección">
+          <i class="fa fa-edit"></i>
+        </button>
+      </article>
+    </div>
+  </section>
+</main>
+
+<app-address-modal
+  [Visible]="IsAddressModalVisible"
+  [AddressToEdit]="EditingAddress"
+  [DefaultNames]="Profile.Names + ' ' + Profile.LastNames"
+  [DefaultPhone]="Profile.Phone"
+  (Closed)="closeAddressModal()"
+  (Saved)="addressSaved()">
+</app-address-modal>

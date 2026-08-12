@@ -60,6 +60,7 @@ export class CreatesaleComponent implements OnInit {
   IsPickingDraftStarted: boolean = false;
   IsConfirmingPicking: boolean = false;
   readonly MaxLotNumberLength: number = 32;
+  ReturnUrl: string = '/enterprise/sale/pages/listsale';
 
   constructor(
     private saleservice: SaleService
@@ -70,6 +71,10 @@ export class CreatesaleComponent implements OnInit {
   ) {
     let urlTree: any = this.router.parseUrl(this.router.url);
     this.SaleCod = urlTree.queryParams['SaleCod'];
+    const requestedReturnUrl = urlTree.queryParams['ReturnUrl'];
+    if (requestedReturnUrl === '/enterprise/sale/pages/listsaleweb') {
+      this.ReturnUrl = requestedReturnUrl;
+    }
 
   }
   ngOnInit(): void {
@@ -99,7 +104,12 @@ export class CreatesaleComponent implements OnInit {
       if (this.SaleDetail.Headboard.SaleStatus === "C") {
         await this.router.navigate(
           ['/enterprise/sale/pages/viewsale'],
-          { queryParams: { SaleCod: this.SaleDetail.Headboard.SaleCod } }
+          {
+            queryParams: {
+              SaleCod: this.SaleDetail.Headboard.SaleCod,
+              ReturnUrl: this.ReturnUrl
+            }
+          }
         );
         return;
       }
@@ -394,6 +404,10 @@ export class CreatesaleComponent implements OnInit {
       && (this.IndAdvancePayment?.Value || "N").trim().toUpperCase() === "S";
   }
 
+  get isWebSale(): boolean {
+    return this.SaleDetail?.SaleChannel?.ChannelCod === 'WEB';
+  }
+
   get isMandatoryPickingEnabled(): boolean {
     return this.IndMandatoryPicking?.Indicator === "IND_MANDATORY_PICKING"
       && (this.IndMandatoryPicking?.Value || "N").trim().toUpperCase() === "S";
@@ -452,7 +466,8 @@ export class CreatesaleComponent implements OnInit {
           {
             queryParams: {
               SaleCod: this.SaleDetail.Headboard.SaleCod,
-              AutoPrint: 'Y'
+              AutoPrint: 'Y',
+              ReturnUrl: this.ReturnUrl
             }
           }
         );
@@ -751,7 +766,7 @@ export class CreatesaleComponent implements OnInit {
   goBack(event: Event): void {
     event.preventDefault();
     if (!this.ensurePickingAllowsOtherActions()) return;
-    this.router.navigate(['/enterprise/sale/pages/listsale']);
+    this.router.navigate([this.ReturnUrl]);
   }
 
   getTodayDateInput(): string {

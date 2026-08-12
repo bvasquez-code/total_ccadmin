@@ -16,10 +16,25 @@
 .desktop-nav a { display: flex; align-items: center; padding: 0 0.9rem; color: #e4f1fa; font-size: 0.86rem; font-weight: 600; border-bottom: 3px solid transparent; }
 .desktop-nav a:hover, .desktop-nav a.active { color: #fff; text-decoration: none; border-bottom-color: #b9f1da; }
 .header-actions { display: flex; align-items: stretch; margin-left: auto; }
+.account-menu-container { position: relative; display: flex; align-items: stretch; }
 .account-action, .cart-action, .mobile-menu { display: flex; align-items: center; justify-content: center; gap: 0.5rem; padding: 0 0.9rem; color: #fff; background: transparent; border: 0; border-left: 1px solid rgba(255, 255, 255, 0.12); }
 .account-action:hover, .cart-action:hover { color: #fff; text-decoration: none; background: rgba(17, 77, 120, 0.25); }
 .account-action span { display: block; max-width: 125px; overflow: hidden; font-size: 0.78rem; text-overflow: ellipsis; white-space: nowrap; }
 .account-action i, .cart-action i { font-size: 1.2rem; }
+.account-action .account-chevron { margin-left: 0.2rem; font-size: 0.62rem; transition: transform 0.18s ease; }
+.account-action .account-chevron.open { transform: rotate(180deg); }
+.account-dropdown { position: absolute; top: calc(100% - 0.1rem); right: 0; z-index: 1060; width: 255px; padding: 0.55rem; color: var(--store-text); background: #fff; border: 1px solid #dbe5eb; border-radius: 0 0 0.7rem 0.7rem; box-shadow: 0 1rem 2.5rem rgba(17, 52, 77, 0.2); }
+.account-summary { display: flex; flex-direction: column; min-width: 0; padding: 0.7rem 0.75rem 0.85rem; border-bottom: 1px solid #e9eff3; }
+.account-summary strong, .account-summary small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-summary strong { color: #244b65; font-size: 0.84rem; }
+.account-summary small { margin-top: 0.15rem; color: #718694; font-size: 0.72rem; }
+.account-dropdown a, .account-dropdown button { display: flex; align-items: center; gap: 0.7rem; width: 100%; padding: 0.68rem 0.75rem; color: #42647b; text-align: left; background: transparent; border: 0; border-radius: 0.4rem; font-size: 0.82rem; font-weight: 600; }
+.account-dropdown a:hover, .account-dropdown button:hover { color: #1f6fa9; text-decoration: none; background: #edf6fb; }
+.account-dropdown i { width: 1.1rem; color: #2878bd; text-align: center; }
+.account-dropdown .logout-option { color: #b44747; }
+.account-dropdown .logout-option i { color: #cf4f4f; }
+.account-dropdown .logout-option:hover { color: #a63c3c; background: #fff1f1; }
+.account-divider { margin: 0.35rem 0; border-top: 1px solid #e9eff3; }
 .cart-action { position: relative; min-width: 56px; }
 .cart-action span { position: absolute; top: 12px; right: 8px; display: grid; place-items: center; min-width: 1.15rem; height: 1.15rem; padding: 0 0.2rem; color: #fff; background: #e45e49; border: 2px solid #2878bd; border-radius: 1rem; font-size: 0.6rem; font-weight: 700; }
 .mobile-menu { display: none; min-width: 52px; }
@@ -27,4 +42,4 @@
 .mobile-nav a, .mobile-nav button { display: block; width: 100%; padding: 0.7rem; color: #fff; text-align: left; background: transparent; border: 0; border-bottom: 1px solid rgba(255, 255, 255, 0.12); }
 
 @media (max-width: 950px) { .desktop-nav { display: none; } .mobile-menu { display: flex; } .mobile-nav { display: block; } }
-@media (max-width: 690px) { .header-row { min-height: 64px; } .brand { padding-right: 0.65rem; font-size: 1.2rem; } .brand small { display: none; } .location-button { min-width: 0; flex: 1; padding: 0 0.65rem; } .location-button span { max-width: 130px; } .account-action { display: none; } }
+@media (max-width: 690px) { .header-row { min-height: 64px; } .brand { padding-right: 0.65rem; font-size: 1.2rem; } .brand small { display: none; } .location-button { min-width: 0; flex: 1; padding: 0 0.65rem; } .location-button span { max-width: 130px; } .account-menu-container { display: none; } }

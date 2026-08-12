@@ -55,6 +55,18 @@ public interface SaleHeadRepository extends JpaRepository<SaleHeadEntity,String>
     );
 
     @Query(value = """
+            select sh.*
+            from sale_head sh
+            inner join sale_channel sc on sc.SaleCod = sh.SaleCod
+            where sh.SaleCod = :SaleCod
+              and sc.ChannelCod = 'WEB'
+              and sh.Status = 'A'
+              and sc.Status = 'A'
+            for update
+            """, nativeQuery = true)
+    Optional<SaleHeadEntity> findWebSaleBySaleCodForUpdate(@Param("SaleCod") String saleCod);
+
+    @Query(value = """
             select count(1)
             from sale_head sh
             inner join sale_channel sc on sc.SaleCod = sh.SaleCod

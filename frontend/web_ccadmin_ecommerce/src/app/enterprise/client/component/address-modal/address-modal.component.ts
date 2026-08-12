@@ -1,6 +1,7 @@
 import { Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges, ViewChild } from '@angular/core';
 import * as L from 'leaflet';
 import { ToastrService } from 'ngx-toastr';
+import { UbigeoOptionDto } from '../../model/dto/UbigeoOptionDto';
 import { ClientAddressEntity } from '../../model/entity/ClientAddressEntity';
 import { ClientAddressService } from '../../service/client-address.service';
 
@@ -16,12 +17,19 @@ export class AddressModalComponent implements OnChanges, OnDestroy {
   @Input() public InitialLongitude: number | null = null;
   @Input() public DefaultNames: string = '';
   @Input() public DefaultPhone: string = '';
+  @Input() public AddressToEdit: ClientAddressEntity | null = null;
   @Output() public Closed = new EventEmitter<void>();
   @Output() public Saved = new EventEmitter<ClientAddressEntity>();
 
   public Address = new ClientAddressEntity();
   public IsSaving: boolean = false;
   public IsLocating: boolean = false;
+  public IsLoadingUbigeo: boolean = false;
+  public DepartmentCod: string = '';
+  public ProvinceCod: string = '';
+  public DepartmentList: UbigeoOptionDto[] = [];
+  public ProvinceList: UbigeoOptionDto[] = [];
+  public DistrictList: UbigeoOptionDto[] = [];
 
   private map: L.Map | null = null;
   private marker: L.Marker | null = null;
@@ -37,6 +45,7 @@ export class AddressModalComponent implements OnChanges, OnDestroy {
   public ngOnChanges(changes: SimpleChanges): void {
     if (changes['Visible']?.currentValue === true) {
       this.resetAddress();
+      void this.initializeUbigeo();
       setTimeout(() => this.initializeMap());
     }
     if (changes['Visible']?.currentValue === false) {
@@ -104,16 +113,117 @@ export class AddressModalComponent implements OnChanges, OnDestroy {
     }
   }
 
+  public departmentChanged(): void {
+    this.ProvinceCod = '';
+    this.Address.UbigeoCod = '';
+    this.ProvinceList = [];
+    this.DistrictList = [];
+    if (this.DepartmentCod) void this.loadProvinces();
+  }
+
+  public provinceChanged(): void {
+    this.Address.UbigeoCod = '';
+    this.DistrictList = [];
+    if (this.ProvinceCod) void this.loadDistricts();
+  }
+
+  public districtChanged(): void {
+    const selectedDistrict = this.DistrictList.find(
+      district => district.Code === this.Address.UbigeoCod
+    );
+    if (!selectedDistrict) this.Address.UbigeoCod = '';
+  }
+
   private resetAddress(): void {
-    this.Address = new ClientAddressEntity();
-    this.Address.Names = this.DefaultNames || '';
-    this.Address.Phone = this.DefaultPhone || '';
-    this.Address.Latitude = this.validCoordinate(this.InitialLatitude, -90, 90)
-      ? this.InitialLatitude
-      : -6.7714;
-    this.Address.Longitude = this.validCoordinate(this.InitialLongitude, -180, 180)
-      ? this.InitialLongitude
-      : -79.8409;
+    this.Address = this.AddressToEdit
+      ? Object.assign(new ClientAddressEntity(), this.AddressToEdit)
+      : new ClientAddressEntity();
+    this.Address.Names = this.Address.Names || this.DefaultNames || '';
+    this.Address.Phone = this.Address.Phone || this.DefaultPhone || '';
+    if (!this.validCoordinate(this.Address.Latitude, -90, 90)) {
+      this.Address.Latitude = this.validCoordinate(this.InitialLatitude, -90, 90)
+        ? this.InitialLatitude
+        : -6.7714;
+    }
+    if (!this.validCoordinate(this.Address.Longitude, -180, 180)) {
+      this.Address.Longitude = this.validCoordinate(this.InitialLongitude, -180, 180)
+        ? this.InitialLongitude
+        : -79.8409;
+    }
+  }
+
+  private async initializeUbigeo(): Promise<void> {
+    this.DepartmentCod = '';
+    this.ProvinceCod = '';
+    this.DepartmentList = [];
+    this.ProvinceList = [];
+    this.DistrictList = [];
+    this.IsLoadingUbigeo = true;
+
+    try {
+      const response = await this.clientAddressService.findDepartments();
+      if (response.ErrorStatus) {
+        this.toastrService.error(response.Message || 'No se pudieron cargar los departamentos.');
+        return;
+      }
+      this.DepartmentList = this.mapUbigeoOptions(response.Data);
+
+      const currentUbigeoCod = (this.Address.UbigeoCod || '').trim();
+      if (!/^\d{6}$/.test(currentUbigeoCod)) {
+        this.Address.UbigeoCod = '';
+        return;
+      }
+
+      this.DepartmentCod = currentUbigeoCod.substring(0, 2);
+      this.ProvinceCod = currentUbigeoCod.substring(0, 4);
+      await this.loadProvinces(false);
+      await this.loadDistricts(false);
+
+      if (!this.DistrictList.some(district => district.Code === currentUbigeoCod)) {
+        this.DepartmentCod = '';
+        this.ProvinceCod = '';
+        this.Address.UbigeoCod = '';
+        this.ProvinceList = [];
+        this.DistrictList = [];
+      }
+    } finally {
+      this.IsLoadingUbigeo = false;
+    }
+  }
+
+  private async loadProvinces(updateLoading: boolean = true): Promise<void> {
+    if (!this.DepartmentCod) return;
+    if (updateLoading) this.IsLoadingUbigeo = true;
+    try {
+      const response = await this.clientAddressService.findProvinces(this.DepartmentCod);
+      if (response.ErrorStatus) {
+        this.toastrService.error(response.Message || 'No se pudieron cargar las provincias.');
+        return;
+      }
+      this.ProvinceList = this.mapUbigeoOptions(response.Data);
+    } finally {
+      if (updateLoading) this.IsLoadingUbigeo = false;
+    }
+  }
+
+  private async loadDistricts(updateLoading: boolean = true): Promise<void> {
+    if (!this.ProvinceCod) return;
+    if (updateLoading) this.IsLoadingUbigeo = true;
+    try {
+      const response = await this.clientAddressService.findDistricts(this.ProvinceCod);
+      if (response.ErrorStatus) {
+        this.toastrService.error(response.Message || 'No se pudieron cargar los distritos.');
+        return;
+      }
+      this.DistrictList = this.mapUbigeoOptions(response.Data);
+    } finally {
+      if (updateLoading) this.IsLoadingUbigeo = false;
+    }
+  }
+
+  private mapUbigeoOptions(data: unknown): UbigeoOptionDto[] {
+    if (!Array.isArray(data)) return [];
+    return data.map(item => Object.assign(new UbigeoOptionDto(), item));
   }
 
   private initializeMap(): void {
@@ -188,6 +298,11 @@ export class AddressModalComponent implements OnChanges, OnDestroy {
   }
 
   private validate(): boolean {
+    if (!/^\d{6}$/.test((this.Address.UbigeoCod || '').trim())
+      || !this.DistrictList.some(district => district.Code === this.Address.UbigeoCod)) {
+      this.toastrService.warning('Selecciona el departamento, provincia y distrito de la direcci\u00f3n.');
+      return false;
+    }
     if (!this.Address.Address.trim()) {
       this.toastrService.warning('Escribe la dirección que corresponde al punto marcado.');
       return false;

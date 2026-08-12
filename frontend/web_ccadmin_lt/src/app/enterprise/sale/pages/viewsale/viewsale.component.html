@@ -209,6 +209,142 @@
                 </app-salepaymentdetail>
               </div>
 
+              <div class="card border-1 brc-purple-l2 mt-4" *ngIf="getDelivery() as delivery">
+                <div class="card-header bgc-purple-l4 border-0 py-3">
+                  <h5 class="mb-0 text-purple-d3">
+                    <i class="fa fa-truck mr-2"></i>
+                    Datos de entrega
+                  </h5>
+                </div>
+                <div class="card-body">
+                  <div class="row">
+                    <div class="col-sm-6 col-lg-3 mb-3">
+                      <span class="text-grey-d1 d-block mb-1">Modalidad</span>
+                      <span class="badge badge-pill px-25" [ngClass]="getDeliveryTypeBadgeClass()">
+                        {{ getDeliveryTypeName() }}
+                      </span>
+                    </div>
+                    <div class="col-sm-6 col-lg-3 mb-3">
+                      <span class="text-grey-d1 d-block mb-1">Estado de entrega</span>
+                      <span class="badge badge-pill px-25" [ngClass]="getDeliveryStatusBadgeClass()">
+                        {{ getDeliveryStatusName() }}
+                      </span>
+                    </div>
+                    <div class="col-sm-6 col-lg-3 mb-3">
+                      <span class="text-grey-d1 d-block">Persona que recibe o recoge</span>
+                      <b>{{ delivery.Names || '-' }}</b>
+                      <div class="text-90 mt-1">
+                        <span class="badge badge-sm bgc-secondary-l3 text-dark-m2">
+                          {{ delivery.IsThirdParty === 'S' ? 'Tercero autorizado' : 'Titular del pedido' }}
+                        </span>
+                      </div>
+                      <div class="text-grey-d1 text-90 mt-1" *ngIf="delivery.DocumentNumber">
+                        {{ getDeliveryDocumentTypeName() }}: {{ delivery.DocumentNumber }}
+                      </div>
+                    </div>
+                    <div class="col-sm-6 col-lg-3 mb-3">
+                      <span class="text-grey-d1 d-block">Contacto</span>
+                      <div *ngIf="delivery.Phone">
+                        <i class="fa fa-phone fa-flip-horizontal text-purple mr-1"></i>
+                        {{ delivery.Phone }}
+                      </div>
+                      <div class="text-break" *ngIf="delivery.Email">
+                        <i class="fa fa-envelope text-purple mr-1"></i>
+                        {{ delivery.Email }}
+                      </div>
+                      <span *ngIf="!delivery.Phone && !delivery.Email">-</span>
+                    </div>
+                  </div>
+
+                  <div class="border-t-1 brc-grey-l2 pt-3 mt-1" *ngIf="hasDeliveryLocation()">
+                    <div class="row">
+                      <div class="col-md-6 mb-3" *ngIf="delivery.Address || delivery.Reference">
+                        <span class="text-grey-d1 d-block">Direcci&oacute;n de entrega</span>
+                        <b *ngIf="delivery.Address">{{ delivery.Address }}</b>
+                        <div class="text-grey-d1" *ngIf="delivery.Reference">
+                          Referencia: {{ delivery.Reference }}
+                        </div>
+                      </div>
+                      <div class="col-md-3 mb-3" *ngIf="delivery.UbigeoCod">
+                        <span class="text-grey-d1 d-block">Ubigeo</span>
+                        <b>{{ delivery.UbigeoCod }}</b>
+                      </div>
+                      <div class="col-md-3 mb-3"
+                        *ngIf="delivery.Latitude != null || delivery.Longitude != null">
+                        <span class="text-grey-d1 d-block">Coordenadas</span>
+                        <b>{{ delivery.Latitude }}, {{ delivery.Longitude }}</b>
+                        <div class="text-grey-d1 text-90" *ngIf="delivery.EstimatedDistanceKm != null">
+                          Distancia estimada: {{ delivery.EstimatedDistanceKm | number:'1.2-2' }} km
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="border-t-1 brc-grey-l2 pt-3" *ngIf="hasDeliverySchedule()">
+                    <div class="row">
+                      <div class="col-md-6 mb-3">
+                        <span class="text-grey-d1 d-block">Entrega programada desde</span>
+                        <b>{{ delivery.ScheduledFrom ? (delivery.ScheduledFrom | date:'dd/MM/yyyy HH:mm') : '-' }}</b>
+                      </div>
+                      <div class="col-md-6 mb-3">
+                        <span class="text-grey-d1 d-block">Entrega programada hasta</span>
+                        <b>{{ delivery.ScheduledTo ? (delivery.ScheduledTo | date:'dd/MM/yyyy HH:mm') : '-' }}</b>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="border-t-1 brc-grey-l2 pt-3" *ngIf="hasDeliveryLogistics()">
+                    <div class="row">
+                      <div class="col-md-3 mb-3" *ngIf="delivery.ShippingProviderCod">
+                        <span class="text-grey-d1 d-block">Proveedor de env&iacute;o</span>
+                        <b>{{ delivery.ShippingProviderCod }}</b>
+                      </div>
+                      <div class="col-md-3 mb-3" *ngIf="delivery.TrackingNumber">
+                        <span class="text-grey-d1 d-block">N.&deg; de seguimiento</span>
+                        <b>{{ delivery.TrackingNumber }}</b>
+                      </div>
+                      <div class="col-md-3 mb-3" *ngIf="delivery.AgencyName">
+                        <span class="text-grey-d1 d-block">Agencia</span>
+                        <b>{{ delivery.AgencyName }}</b>
+                      </div>
+                      <div class="col-md-3 mb-3" *ngIf="delivery.AgencyAddress">
+                        <span class="text-grey-d1 d-block">Direcci&oacute;n de agencia</span>
+                        <b>{{ delivery.AgencyAddress }}</b>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="border-t-1 brc-grey-l2 pt-3" *ngIf="hasDeliveryDates()">
+                    <div class="row">
+                      <div class="col-md-4 mb-3" *ngIf="delivery.ReadyDate">
+                        <span class="text-grey-d1 d-block">Lista para recojo</span>
+                        <b>{{ delivery.ReadyDate | date:'dd/MM/yyyy HH:mm:ss' }}</b>
+                      </div>
+                      <div class="col-md-4 mb-3" *ngIf="delivery.DispatchDate">
+                        <span class="text-grey-d1 d-block">Despachada</span>
+                        <b>{{ delivery.DispatchDate | date:'dd/MM/yyyy HH:mm:ss' }}</b>
+                      </div>
+                      <div class="col-md-4 mb-3" *ngIf="delivery.DeliveredDate">
+                        <span class="text-grey-d1 d-block">Entregada</span>
+                        <b>{{ delivery.DeliveredDate | date:'dd/MM/yyyy HH:mm:ss' }}</b>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="border-t-1 brc-grey-l2 pt-3"
+                    *ngIf="delivery.Instructions || delivery.Commenter">
+                    <div class="mb-2" *ngIf="delivery.Instructions">
+                      <span class="text-grey-d1">Indicaciones:</span>
+                      {{ delivery.Instructions }}
+                    </div>
+                    <div *ngIf="delivery.Commenter">
+                      <span class="text-grey-d1">Comentario:</span>
+                      {{ delivery.Commenter }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div class="card border-1 brc-orange-l2 mt-4" *ngIf="hasCreditNote()">
                 <div class="card-header bgc-orange-l4 border-0 py-3">
                   <h5 class="mb-0 text-orange-d3">
@@ -255,7 +391,7 @@
               <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
                 <div class="offset-md-5 col-md-7">
                   <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4"
-                    routerLink="/enterprise/sale/pages/listsale">
+                    [routerLink]="ReturnUrl">
                     <i class="fa fa-undo mr-1"></i>
                     Volver
                   </a>

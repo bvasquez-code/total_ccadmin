@@ -12,6 +12,8 @@ import com.ccadmin.app.sale.repository.SaleDetWarehouseRepository;
 import com.ccadmin.app.sale.repository.SaleDocumentRepository;
 import com.ccadmin.app.sale.repository.SaleHeadRepository;
 import com.ccadmin.app.sale.repository.SalePaymentRepository;
+import com.ccadmin.app.sale.repository.SaleDeliveryRepository;
+import com.ccadmin.app.sale.model.entity.SaleDeliveryEntity;
 import com.ccadmin.app.shared.model.myconst.StatusConst;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,6 +51,8 @@ class ExpiredSaleCancellationServiceTest {
     private SaleSearchService saleSearchService;
     @Mock
     private CreditNoteApplicationCreateService creditNoteApplicationCreateService;
+    @Mock
+    private SaleDeliveryRepository saleDeliveryRepository;
     @InjectMocks
     private ExpiredSaleCancellationService cancellationService;
 
@@ -119,11 +123,18 @@ class ExpiredSaleCancellationServiceTest {
         when(presaleHeadRepository.findById(presale.PresaleCod)).thenReturn(Optional.of(presale));
         when(saleHeadRepository.findByPresaleCod(presale.PresaleCod)).thenReturn(Optional.of(sale));
         when(saleSearchService.findById(sale.SaleCod)).thenReturn(new SaleDetailDto());
+        SaleDeliveryEntity delivery = new SaleDeliveryEntity();
+        delivery.SaleCod = sale.SaleCod;
+        delivery.DeliveryStatus = SaleConstants.DELIVERY_STATUS_PREPARING;
+        when(saleDeliveryRepository.findActiveBySaleCod(sale.SaleCod))
+                .thenReturn(Optional.of(delivery));
 
         cancellationService.cancelPresale(presale.PresaleCod, true);
 
         assertEquals(StatusConst.CANCELLED, presale.SaleStatus);
         assertEquals(SaleConstants.CANCELLED, sale.SaleStatus);
+        assertEquals(SaleConstants.DELIVERY_STATUS_CANCELLED, delivery.DeliveryStatus);
+        verify(saleDeliveryRepository).save(delivery);
         verify(kardexShared, never()).saveAll(org.mockito.ArgumentMatchers.anyList(), org.mockito.ArgumentMatchers.anyList());
     }
 

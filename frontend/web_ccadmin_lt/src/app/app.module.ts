@@ -58,6 +58,7 @@ import { CreatetrxpaymentComponent } from './enterprise/trxpayment/pages/createt
 import { ListtrxpaymentComponent } from './enterprise/trxpayment/pages/listtrxpayment/listtrxpayment.component';
 import { ViewtrxpaymentComponent } from './enterprise/trxpayment/pages/viewtrxpayment/viewtrxpayment.component';
 import { ListsaleComponent } from './enterprise/sale/pages/listsale/listsale.component';
+import { ListsalewebComponent } from './enterprise/sale/pages/listsaleweb/listsaleweb.component';
 import { ListkardexComponent } from './enterprise/product/pages/listkardex/listkardex.component';
 import { ListproductstockComponent } from './enterprise/product/pages/listproductstock/listproductstock.component';
 import { AppfileComponent } from './enterprise/system/pages/appfile/appfile.component';
@@ -173,6 +174,7 @@ import { ViewBulkLoadComponent } from './enterprise/bulkload/pages/viewbulkload/
     ListtrxpaymentComponent,
     ViewtrxpaymentComponent,
     ListsaleComponent,
+    ListsalewebComponent,
     ListkardexComponent,
     ListproductstockComponent,
     AppfileComponent,

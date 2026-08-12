@@ -13,6 +13,7 @@ import { CatalogComponent } from './enterprise/catalog/pages/catalog/catalog.com
 import { ProductDetailComponent } from './enterprise/catalog/pages/product-detail/product-detail.component';
 import { LoginComponent } from './enterprise/client/pages/login/login.component';
 import { RegisterComponent } from './enterprise/client/pages/register/register.component';
+import { ProfileComponent } from './enterprise/client/pages/profile/profile.component';
 import { AddressModalComponent } from './enterprise/client/component/address-modal/address-modal.component';
 import { StorefrontFooterComponent } from './enterprise/main/footer/storefront-footer.component';
 import { StorefrontHeaderComponent } from './enterprise/main/header/storefront-header.component';
@@ -35,6 +36,7 @@ import { LoadingInterceptor } from './interceptors/LoadingInterceptor';
     CartComponent,
     LoginComponent,
     RegisterComponent,
+    ProfileComponent,
     AddressModalComponent,
     CheckoutComponent,
     OrdersComponent

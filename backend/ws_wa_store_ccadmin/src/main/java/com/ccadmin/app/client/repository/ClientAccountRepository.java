@@ -1,6 +1,7 @@
 package com.ccadmin.app.client.repository;
 
 import com.ccadmin.app.client.model.entity.ClientAccountEntity;
+import com.ccadmin.app.delivery.model.idto.IClientProfileDto;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -36,6 +37,31 @@ public interface ClientAccountRepository extends JpaRepository<ClientAccountEnti
             limit 1
             """, nativeQuery = true)
     Optional<ClientAccountEntity> findActiveByClientAccountID(
+            @Param("clientAccountID") Long clientAccountID
+    );
+
+    @Query(value = """
+            select
+                ca.ClientAccountID as ClientAccountID,
+                ca.ClientCod as ClientCod,
+                ca.Email as Email,
+                p.DocumentType as DocumentType,
+                p.DocumentNum as DocumentNumber,
+                p.Names as Names,
+                p.LastNames as LastNames,
+                coalesce(nullif(p.CellPhone, ''), p.Phone, '') as Phone
+            from client_account ca
+            inner join client c
+                on c.ClientCod = ca.ClientCod
+                and c.Status = 'A'
+            inner join person p
+                on p.PersonCod = c.PersonCod
+                and p.Status = 'A'
+            where ca.ClientAccountID = :clientAccountID
+              and ca.Status = 'A'
+            limit 1
+            """, nativeQuery = true)
+    Optional<IClientProfileDto> findProfileByClientAccountID(
             @Param("clientAccountID") Long clientAccountID
     );
 

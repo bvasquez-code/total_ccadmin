@@ -3,8 +3,10 @@
     (click)="$event.stopPropagation()">
     <header class="address-header">
       <div>
-        <span>Nueva dirección</span>
-        <h2 id="address-modal-title">Ubica el punto exacto de entrega</h2>
+        <span>{{ Address.ClientAddressID ? 'Editar dirección' : 'Nueva dirección' }}</span>
+        <h2 id="address-modal-title">
+          {{ Address.ClientAddressID ? 'Actualiza tu dirección de entrega' : 'Ubica el punto exacto de entrega' }}
+        </h2>
         <p>Haz clic en el mapa, mueve el marcador o usa tu ubicación actual.</p>
       </div>
       <button type="button" class="close-button" aria-label="Cerrar" (click)="close()">
@@ -14,6 +16,43 @@
 
     <div class="address-body">
       <div class="address-fields">
+        <div class="form-group">
+          <label for="address-department">Departamento <span class="text-danger">*</span></label>
+          <select id="address-department" class="form-control" name="DepartmentCod"
+            [(ngModel)]="DepartmentCod" [disabled]="IsLoadingUbigeo || IsSaving"
+            (change)="departmentChanged()">
+            <option value="">Selecciona un departamento</option>
+            <option *ngFor="let department of DepartmentList" [value]="department.Code">
+              {{ department.Name }}
+            </option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group col-md-6">
+            <label for="address-province">Provincia <span class="text-danger">*</span></label>
+            <select id="address-province" class="form-control" name="ProvinceCod"
+              [(ngModel)]="ProvinceCod"
+              [disabled]="!DepartmentCod || IsLoadingUbigeo || IsSaving"
+              (change)="provinceChanged()">
+              <option value="">Selecciona una provincia</option>
+              <option *ngFor="let province of ProvinceList" [value]="province.Code">
+                {{ province.Name }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group col-md-6">
+            <label for="address-district">Distrito <span class="text-danger">*</span></label>
+            <select id="address-district" class="form-control" name="UbigeoCod"
+              [(ngModel)]="Address.UbigeoCod"
+              [disabled]="!ProvinceCod || IsLoadingUbigeo || IsSaving"
+              (change)="districtChanged()">
+              <option value="">Selecciona un distrito</option>
+              <option *ngFor="let district of DistrictList" [value]="district.Code">
+                {{ district.Name }}
+              </option>
+            </select>
+          </div>
+        </div>
         <div class="form-row">
           <div class="form-group col-md-4">
             <label for="address-alias">Alias</label>
@@ -72,8 +111,9 @@
 
     <footer class="address-footer">
       <button type="button" class="btn btn-light" [disabled]="IsSaving" (click)="close()">Cancelar</button>
-      <button type="button" class="btn btn-primary" [disabled]="IsSaving" (click)="save()">
-        <i class="fa fa-map-marker-alt mr-2"></i>{{ IsSaving ? 'Guardando...' : 'Guardar dirección' }}
+      <button type="button" class="btn btn-primary" [disabled]="IsSaving || IsLoadingUbigeo" (click)="save()">
+        <i class="fa fa-map-marker-alt mr-2"></i>
+        {{ IsSaving ? 'Guardando...' : (Address.ClientAddressID ? 'Guardar cambios' : 'Guardar dirección') }}
       </button>
     </footer>
   </section>

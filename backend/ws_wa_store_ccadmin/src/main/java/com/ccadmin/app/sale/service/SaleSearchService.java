@@ -42,6 +42,8 @@ public class SaleSearchService extends SessionService {
     @Autowired
     private SaleChannelRepository saleChannelRepository;
     @Autowired
+    private SaleDeliveryRepository saleDeliveryRepository;
+    @Autowired
     private CommercialChannelRepository commercialChannelRepository;
     @Autowired
     private SalePaymentRepository salePaymentRepository;
@@ -106,6 +108,7 @@ public class SaleSearchService extends SessionService {
         this.loadDocumentClients(saleDocumentList);
         CreditNoteDetailDto creditNoteDetail = this.creditNoteSearchService.findBySaleCod(SaleCod);
         SaleChannelEntity saleChannel = this.saleChannelRepository.findById(SaleCod).orElse(null);
+        SaleDeliveryEntity saleDelivery = this.saleDeliveryRepository.findActiveBySaleCod(SaleCod).orElse(null);
 
         if (saleHead.existClient())
         {
@@ -130,7 +133,8 @@ public class SaleSearchService extends SessionService {
                 salePaymentList,
                 saleDocumentList,
                 creditNoteDetail,
-                saleChannel
+                saleChannel,
+                saleDelivery
         );
     }
 

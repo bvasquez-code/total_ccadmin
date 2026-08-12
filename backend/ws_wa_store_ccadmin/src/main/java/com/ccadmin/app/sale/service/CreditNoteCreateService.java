@@ -80,6 +80,10 @@ public class CreditNoteCreateService extends SessionService {
     private CreditNoteSunatEmissionService creditNoteSunatEmissionService;
     @Autowired
     private SaleTaxCalculationService saleTaxCalculationService;
+    @Autowired
+    private SaleDeliveryRepository saleDeliveryRepository;
+    @Autowired
+    private SaleChannelRepository saleChannelRepository;
 
     public String createCode(){
         String PresaleCod = creditNoteHeadRepository.getCreditNoteCod(getStoreCod());
@@ -92,6 +96,7 @@ public class CreditNoteCreateService extends SessionService {
         log.info("INI_CREACION_NOTA_CREDITO -->> {}",creditNoteRegister.Headboard.CreditNoteCod);
 
         this.validateCreditNoteRegisterDto(creditNoteRegister);
+        this.validateFailedDeliveryCreditNote(creditNoteRegister);
 
         SaleHeadEntity saleHead = this.saleHeadRepository.findById(creditNoteRegister.Headboard.SaleCod).get();
         if (this.saleDocumentRepository.findFiscalBySaleCod(saleHead.SaleCod) == null) {
@@ -382,6 +387,55 @@ public class CreditNoteCreateService extends SessionService {
             CreditNoteHeadEntity creditNoteHead = this.creditNoteHeadRepository.findBySaleCod(creditNoteRegister.Headboard.SaleCod);
             if(creditNoteHead != null && !creditNoteHead.CreditNoteCod.equals(creditNoteRegister.Headboard.CreditNoteCod)){
                 throw new SaleException("Venta ya tiene asociada una nota de crédito");
+            }
+        }
+    }
+
+    private void validateFailedDeliveryCreditNote(
+            CreditNoteRegisterDto creditNoteRegister
+    ) throws SaleException {
+        String saleCod = creditNoteRegister.Headboard.SaleCod;
+        SaleChannelEntity saleChannel = this.saleChannelRepository.findActiveBySaleCod(saleCod)
+                .orElse(null);
+        if (saleChannel == null
+                || !SaleConstants.COMMERCIAL_CHANNEL_WEB.equals(saleChannel.ChannelCod)) {
+            return;
+        }
+        SaleDeliveryEntity saleDelivery = this.saleDeliveryRepository.findActiveBySaleCod(saleCod)
+                .orElse(null);
+        if (saleDelivery == null
+                || !SaleConstants.DELIVERY_STATUS_FAILED.equals(saleDelivery.DeliveryStatus)) {
+            return;
+        }
+        if (!"T".equals(creditNoteRegister.Headboard.TypeCreditNote)
+                || !"N".equals(creditNoteRegister.Headboard.IsProductExchange)) {
+            throw new SaleException("La entrega fallida requiere una nota de credito total con devolucion de pagos");
+        }
+
+        List<SaleDetEntity> saleDetailList = this.saleDetRepository.findBySaleCod(saleCod);
+        if (saleDetailList.size() != creditNoteRegister.DetailList.size()) {
+            throw new SaleException("La nota de credito debe incluir todo el detalle de la venta");
+        }
+        for (SaleDetEntity saleDetail : saleDetailList) {
+            CreditNoteDetEntity creditDetail = creditNoteRegister.DetailList.stream()
+                    .filter(item -> item.ItemNumber == saleDetail.ItemNumber)
+                    .findFirst()
+                    .orElseThrow(() -> new SaleException(
+                            "La nota de credito no incluye el item " + saleDetail.ItemNumber
+                    ));
+            if (creditDetail.NumUnit == null || creditDetail.NumUnit != saleDetail.NumUnit) {
+                throw new SaleException(
+                        "La nota de credito debe devolver toda la cantidad del item "
+                                + saleDetail.ItemNumber
+                );
+            }
+            if (creditDetail.NumUnitPriceSale == null
+                    || amount(creditDetail.NumUnitPriceSale)
+                    .compareTo(amount(saleDetail.NumUnitPriceSale)) != 0) {
+                throw new SaleException(
+                        "El precio del item " + saleDetail.ItemNumber
+                                + " no coincide con la venta original"
+                );
             }
         }
     }

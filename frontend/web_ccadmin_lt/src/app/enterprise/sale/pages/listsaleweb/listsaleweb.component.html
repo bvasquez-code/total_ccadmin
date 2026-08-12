@@ -1,0 +1,127 @@
+<div role="main" class="main-content">
+  <div class="page-content container container-plus">
+    <div class="card-header">
+      <h3 class="card-title text-125 text-primary-d2">
+        <i class="far fa-edit text-dark-l3 mr-1"></i>
+        Facturación Web
+      </h3>
+    </div>
+
+    <div class="row">
+      <div class="col-12">
+        <div class="card dcard">
+          <div class="card-body px-1 px-md-3">
+            <div autocomplete="off">
+              <div class="d-flex justify-content-between flex-column flex-md-row mb-3 px-2 px-sm-0">
+                <div class="pos-rel ml-md-auto mr-md-2 mb-2 mb-md-0">
+                  <i class="fa fa-filter position-lc ml-25 text-primary-m1"></i>
+                  <select class="form-control w-100 pl-45 radius-1 brc-primary-m4"
+                    [(ngModel)]="deliveryTypeCod">
+                    <option value="">Todos los pedidos web</option>
+                    <option value="DELIVERY">Delivery cercano</option>
+                    <option value="STORE_PICKUP">Recojo en tienda</option>
+                    <option value="SCHEDULED_DELIVERY">Entrega programada</option>
+                  </select>
+                </div>
+
+                <div class="pos-rel mr-md-2 mb-2 mb-md-0">
+                  <i class="fa fa-tasks position-lc ml-25 text-primary-m1"></i>
+                  <select class="form-control w-100 pl-45 radius-1 brc-primary-m4"
+                    [(ngModel)]="deliveryStatus">
+                    <option value="">Todos los estados de entrega</option>
+                    <option value="P">Pendiente</option>
+                    <option value="S">Programada</option>
+                    <option value="R">En preparación</option>
+                    <option value="L">Lista para recojo</option>
+                    <option value="D">Despachada</option>
+                    <option value="E">Entregada</option>
+                    <option value="F">Entrega fallida</option>
+                    <option value="X">Cancelada</option>
+                  </select>
+                </div>
+
+                <div class="pos-rel mr-md-2 mb-2 mb-md-0">
+                  <i class="fa fa-search position-lc ml-25 text-primary-m1"></i>
+                  <input type="text"
+                    class="form-control w-100 pl-45 radius-1 brc-primary-m4"
+                    placeholder="Buscar ..."
+                    (keyup.enter)="filter(1)"
+                    #txtSearch>
+                </div>
+
+                <div>
+                  <a class="btn px-4 btn-primary mb-1" (click)="filter(1)">
+                    Buscar
+                  </a>
+                </div>
+              </div>
+
+              <app-table [data]="dataTablaGenetic" [action]="this"></app-table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<app-modalconfirm
+  [id]="'modal_start_web_preparation'"
+  [title]="'Iniciar preparación'"
+  [message]="'El pedido quedará disponible para pickeo y facturación.'"
+  [action]="this">
+</app-modalconfirm>
+
+<app-modalconfirm
+  [id]="'modal_ready_web_order'"
+  [title]="'Pedido listo'"
+  [message]="'El pedido se marcará como listo para recojo o despacho.'"
+  [action]="this">
+</app-modalconfirm>
+
+<app-modalconfirm
+  [id]="'modal_dispatch_web_order'"
+  [title]="'Despachar pedido'"
+  [message]="'Confirme que el pedido fue entregado al repartidor.'"
+  [action]="this">
+</app-modalconfirm>
+
+<app-modalconfirm
+  [id]="'modal_deliver_web_order'"
+  [title]="'Confirmar entrega'"
+  [message]="'Confirme que el cliente recibió o recogió el pedido.'"
+  [action]="this">
+</app-modalconfirm>
+
+<app-modalconfirm
+  [id]="'modal_cancel_web_order'"
+  [title]="'Cancelar pedido web'"
+  [message]="'Se anularán la venta y su reserva de stock. La entrega quedará cancelada.'"
+  [action]="this">
+</app-modalconfirm>
+
+<div class="modal fade" id="modal_failed_web_order" tabindex="-1" role="dialog"
+  aria-labelledby="failedWebOrderTitle" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-primary-d3" id="failedWebOrderTitle">Registrar entrega fallida</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <label for="failureCommenter">Motivo de la entrega fallida</label>
+        <textarea id="failureCommenter" class="form-control" rows="3" maxlength="128"
+          [(ngModel)]="failureCommenter"
+          placeholder="Indique por qué no fue posible entregar el pedido"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary px-4" data-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger" (click)="confirmFailedDelivery()">
+          Confirmar falla
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

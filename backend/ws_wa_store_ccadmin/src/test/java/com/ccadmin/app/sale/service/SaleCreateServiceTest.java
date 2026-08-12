@@ -16,6 +16,8 @@ import com.ccadmin.app.sale.repository.PresaleChannelRepository;
 import com.ccadmin.app.sale.repository.SaleChannelRepository;
 import com.ccadmin.app.sale.repository.SaleDetWarehouseRepository;
 import com.ccadmin.app.sale.repository.SaleHeadRepository;
+import com.ccadmin.app.sale.repository.SaleDeliveryRepository;
+import com.ccadmin.app.sale.model.entity.SaleDeliveryEntity;
 import com.ccadmin.app.shared.model.constants.BusinessConfigConstants;
 import com.ccadmin.app.shared.service.GenericQueuedService;
 import com.ccadmin.app.shared.shared.CatalogSearchShared;
@@ -58,6 +60,8 @@ class SaleCreateServiceTest {
     private SaleDocumentCreateService saleDocumentCreateService;
     @Mock
     private CatalogSearchShared catalogSearchShared;
+    @Mock
+    private SaleDeliveryRepository saleDeliveryRepository;
     @InjectMocks
     private SaleCreateService saleCreateService;
 
@@ -140,6 +144,41 @@ class SaleCreateServiceTest {
         );
         verify(kardexShared, never()).buildSaleConfirmation(any(), any(), any());
         verify(saleDocumentCreateService, never()).createDocument(any(), any());
+    }
+
+    @Test
+    void rejectsWebConfirmationBeforeDeliveryPreparationStarts() {
+        SaleHeadEntity saleHead = pendingSale();
+        saleHead.IsPaid = "S";
+        SaleChannelEntity channel = new SaleChannelEntity();
+        channel.SaleCod = saleHead.SaleCod;
+        channel.ChannelCod = SaleConstants.COMMERCIAL_CHANNEL_WEB;
+        SaleDeliveryEntity delivery = new SaleDeliveryEntity();
+        delivery.SaleCod = saleHead.SaleCod;
+        delivery.DeliveryStatus = SaleConstants.DELIVERY_STATUS_PENDING;
+
+        when(saleHeadRepository.findByIdForUpdate(saleHead.SaleCod)).thenReturn(Optional.of(saleHead));
+        when(saleDetWarehouseRepository.findBySaleCod(saleHead.SaleCod))
+                .thenReturn(List.of(new SaleDetWarehouseEntity()));
+        when(saleChannelRepository.findActiveBySaleCod(saleHead.SaleCod))
+                .thenReturn(Optional.of(channel));
+        when(saleDeliveryRepository.findActiveBySaleCod(saleHead.SaleCod))
+                .thenReturn(Optional.of(delivery));
+
+        SaleException exception = assertThrows(
+                SaleException.class,
+                () -> saleCreateService.confirm(
+                        saleHead.SaleCod,
+                        SaleConstants.DOCUMENT_TYPE_RECEIPT,
+                        ""
+                )
+        );
+
+        assertEquals(
+                "Debe iniciar la preparacion del pedido antes de facturarlo",
+                exception.getMessage()
+        );
+        verify(kardexShared, never()).buildSaleConfirmation(any(), any(), any());
     }
 
     private SaleHeadEntity pendingSale() {

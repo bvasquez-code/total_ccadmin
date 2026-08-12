@@ -36,6 +36,7 @@ export class CancelpresalepaymentsComponent implements OnInit {
   ngOnInit(): void {
     const requestedReturnUrl: string = this.activatedRoute.snapshot.queryParamMap.get('ReturnUrl') || '';
     this.returnUrl = requestedReturnUrl === '/enterprise/sale/pages/listsale'
+      || requestedReturnUrl === '/enterprise/sale/pages/listsaleweb'
       ? requestedReturnUrl
       : '/enterprise/sale/pages/listpresale';
     this.presaleCod = this.activatedRoute.snapshot.queryParamMap.get('PresaleCod') || '';

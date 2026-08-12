@@ -17,7 +17,8 @@ public final class SaleDetailDtoFactory {
             List<SalePaymentEntity> payments,
             List<SaleDocumentEntity> documents,
             CreditNoteDetailDto creditNoteDetail,
-            SaleChannelEntity saleChannel
+            SaleChannelEntity saleChannel,
+            SaleDeliveryEntity saleDelivery
     ) {
         SaleDetailDto result = new SaleDetailDto();
         result.Headboard = head;
@@ -27,6 +28,7 @@ public final class SaleDetailDtoFactory {
         result.SaleDocument = documents.stream().findFirst().orElse(null);
         result.CreditNoteDetail = creditNoteDetail;
         result.SaleChannel = saleChannel;
+        result.SaleDelivery = saleDelivery;
         return result;
     }
 }

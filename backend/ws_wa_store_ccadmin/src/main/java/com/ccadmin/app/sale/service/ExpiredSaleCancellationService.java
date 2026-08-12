@@ -16,6 +16,7 @@ import com.ccadmin.app.sale.repository.SaleDetWarehouseRepository;
 import com.ccadmin.app.sale.repository.SaleDocumentRepository;
 import com.ccadmin.app.sale.repository.SaleHeadRepository;
 import com.ccadmin.app.sale.repository.SalePaymentRepository;
+import com.ccadmin.app.sale.repository.SaleDeliveryRepository;
 import com.ccadmin.app.shared.model.myconst.StatusConst;
 import com.ccadmin.app.shared.service.SessionService;
 import jakarta.transaction.Transactional;
@@ -47,6 +48,8 @@ public class ExpiredSaleCancellationService extends SessionService {
     private SaleSearchService saleSearchService;
     @Autowired
     private CreditNoteApplicationCreateService creditNoteApplicationCreateService;
+    @Autowired
+    private SaleDeliveryRepository saleDeliveryRepository;
 
     public PresaleCancellationDetailDto findCancellationDetail(String presaleCod) throws SaleException {
         PresaleHeadEntity presaleHead = this.presaleHeadRepository.findById(presaleCod)
@@ -204,6 +207,11 @@ public class ExpiredSaleCancellationService extends SessionService {
         presaleHead.addSessionModify(userCod);
         this.saleHeadRepository.save(saleHead);
         this.presaleHeadRepository.save(presaleHead);
+        this.saleDeliveryRepository.findActiveBySaleCod(saleHead.SaleCod).ifPresent(saleDelivery -> {
+            saleDelivery.DeliveryStatus = SaleConstants.DELIVERY_STATUS_CANCELLED;
+            saleDelivery.addSessionModify(userCod);
+            this.saleDeliveryRepository.save(saleDelivery);
+        });
         if (!kardexZoneList.isEmpty()) {
             this.kardexShared.saveAll(List.of(), kardexZoneList);
         }

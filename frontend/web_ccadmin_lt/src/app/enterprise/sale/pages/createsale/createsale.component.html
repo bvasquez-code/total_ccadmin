@@ -272,14 +272,14 @@
                               FACTURA
                             </div>
 
-                            <div *ngIf="isProformaSalesEnabled" role="button" (click)="selectDocumentType('99')"
+                            <div *ngIf="isProformaSalesEnabled && !isWebSale" role="button" (click)="selectDocumentType('99')"
                               class="mr-1 p-3 border-2 btn btn-brc-tp shadow-sm btn-text-green btn-light btn-h-lighter-green btn-a-light-green bgc-white"
                               [ngClass]="{'active': SelectedPaymentOption === '99'}">
                               <input type="radio" name="place" id="placeProforma" value="99">
                               PROFORMA
                             </div>
 
-                            <div *ngIf="isAdvancePaymentEnabled" role="button" (click)="OpenAdvanceClientModal()"
+                            <div *ngIf="isAdvancePaymentEnabled && !isWebSale" role="button" (click)="OpenAdvanceClientModal()"
                               class="mr-1 p-3 border-2 btn btn-brc-tp shadow-sm btn-text-orange btn-light btn-h-lighter-orange btn-a-light-orange bgc-white"
                               [ngClass]="{'active': SelectedPaymentOption === 'advance'}">
                               <input type="radio" name="place" id="place3" value="1">
@@ -287,7 +287,7 @@
                             </div>
                           </form>
                           <div class="alert bgc-info-l4 brc-info-m3 border-1 text-dark-m2 mt-2 mb-0 py-2"
-                            *ngIf="isProformaSalesEnabled && SelectedPaymentOption === '99'">
+                            *ngIf="isProformaSalesEnabled && !isWebSale && SelectedPaymentOption === '99'">
                             La proforma registra y cierra la venta sin enviarla a facturación electrónica.
                             Después podrá agregar una boleta o factura desde la lista de ventas.
                           </div>

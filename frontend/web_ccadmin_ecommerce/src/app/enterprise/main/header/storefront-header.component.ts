@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { Subscription } from 'rxjs';
@@ -20,6 +20,7 @@ export class StorefrontHeaderComponent implements OnInit, OnDestroy {
   public CartCount: number = 0;
   public ShowLocationModal: boolean = false;
   public MobileMenuOpen: boolean = false;
+  public AccountMenuOpen: boolean = false;
 
   private subscriptions = new Subscription();
 
@@ -51,6 +52,22 @@ export class StorefrontHeaderComponent implements OnInit, OnDestroy {
   public openLocation(): void {
     this.ShowLocationModal = true;
     this.MobileMenuOpen = false;
+    this.AccountMenuOpen = false;
+  }
+
+  public toggleAccountMenu(event: MouseEvent): void {
+    event.stopPropagation();
+    this.AccountMenuOpen = !this.AccountMenuOpen;
+    this.MobileMenuOpen = false;
+  }
+
+  public closeAccountMenu(): void {
+    this.AccountMenuOpen = false;
+  }
+
+  @HostListener('document:click')
+  public closeMenusFromOutside(): void {
+    this.AccountMenuOpen = false;
   }
 
   public applyStore(context: StoreContextDto): void {
@@ -71,6 +88,7 @@ export class StorefrontHeaderComponent implements OnInit, OnDestroy {
   public logout(): void {
     this.clientSessionService.logout();
     this.MobileMenuOpen = false;
+    this.AccountMenuOpen = false;
     void this.router.navigate(['/']);
     this.toastrService.info('Tu sesión se cerró correctamente.');
   }
