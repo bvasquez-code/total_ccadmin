@@ -1,1 +1,10 @@
-/* You can add global styles to this file, and also import other style files */
+/* Densidad visual de la aplicación en pantallas de escritorio. */
+:root {
+  --application-scale: 80%;
+}
+
+@media screen and (min-width: 992px) {
+  html {
+    font-size: var(--application-scale);
+  }
+}
