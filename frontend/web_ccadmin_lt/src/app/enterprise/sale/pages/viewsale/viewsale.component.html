@@ -261,12 +261,16 @@
                       <div class="col-md-6 mb-3" *ngIf="delivery.Address || delivery.Reference">
                         <span class="text-grey-d1 d-block">Direcci&oacute;n de entrega</span>
                         <b *ngIf="delivery.Address">{{ delivery.Address }}</b>
+                        <div class="text-grey-d1"
+                          *ngIf="delivery.CityName || delivery.StateName || delivery.CountryName">
+                          {{ delivery.CityName }}<span *ngIf="delivery.CityName && delivery.StateName">, </span>{{ delivery.StateName }}<span *ngIf="(delivery.CityName || delivery.StateName) && delivery.CountryName">, </span>{{ delivery.CountryName }}
+                        </div>
                         <div class="text-grey-d1" *ngIf="delivery.Reference">
                           Referencia: {{ delivery.Reference }}
                         </div>
                       </div>
                       <div class="col-md-3 mb-3" *ngIf="delivery.UbigeoCod">
-                        <span class="text-grey-d1 d-block">Ubigeo</span>
+                        <span class="text-grey-d1 d-block">Ubigeo / c&oacute;digo territorial</span>
                         <b>{{ delivery.UbigeoCod }}</b>
                       </div>
                       <div class="col-md-3 mb-3"

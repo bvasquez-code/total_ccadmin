@@ -91,6 +91,11 @@ class PresaleDeliveryCreateServiceTest {
         address.ClientAddressID = 20L;
         address.Address = "Av. Principal 123";
         address.Reference = "Frente al parque";
+        address.CountryCod = "PER";
+        address.CountryName = "Perú";
+        address.StateName = "Lambayeque";
+        address.CityName = "Chiclayo";
+        address.UbigeoCod = "140101";
         address.Latitude = new BigDecimal("-6.7812");
         address.Longitude = new BigDecimal("-79.8423");
         when(clientAddressDeliverySearchService.findActiveById("CL001", 20L))
@@ -128,6 +133,11 @@ class PresaleDeliveryCreateServiceTest {
         assertEquals(6, delegated.DetailList.get(0).NumUnit);
         assertEquals(new BigDecimal("12.50"), delegated.DetailList.get(0).NumUnitPrice);
         assertEquals("Av. Principal 123", request.Delivery.Address);
+        assertEquals("PER", request.Delivery.CountryCod);
+        assertEquals("Perú", request.Delivery.CountryName);
+        assertEquals("Lambayeque", request.Delivery.StateName);
+        assertEquals("Chiclayo", request.Delivery.CityName);
+        assertEquals("140101", request.Delivery.UbigeoCod);
         assertEquals(new BigDecimal("1.250"), request.Delivery.EstimatedDistanceKm);
         verify(virtualCartRepository).save(org.mockito.ArgumentMatchers.any());
     }

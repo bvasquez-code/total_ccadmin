@@ -17,42 +17,95 @@
     <div class="address-body">
       <div class="address-fields">
         <div class="form-group">
-          <label for="address-department">Departamento <span class="text-danger">*</span></label>
-          <select id="address-department" class="form-control" name="DepartmentCod"
-            [(ngModel)]="DepartmentCod" [disabled]="IsLoadingUbigeo || IsSaving"
-            (change)="departmentChanged()">
-            <option value="">Selecciona un departamento</option>
-            <option *ngFor="let department of DepartmentList" [value]="department.Code">
-              {{ department.Name }}
+          <label for="address-country">País <span class="text-danger">*</span></label>
+          <select id="address-country" class="form-control" name="CountryCod"
+            [(ngModel)]="Address.CountryCod" [disabled]="IsLoadingUbigeo || IsSaving"
+            (change)="countryChanged()">
+            <option value="">Selecciona un país</option>
+            <option *ngFor="let country of CountryList" [value]="country.Code">
+              {{ country.Name }}
             </option>
           </select>
         </div>
-        <div class="form-row">
-          <div class="form-group col-md-6">
-            <label for="address-province">Provincia <span class="text-danger">*</span></label>
-            <select id="address-province" class="form-control" name="ProvinceCod"
-              [(ngModel)]="ProvinceCod"
-              [disabled]="!DepartmentCod || IsLoadingUbigeo || IsSaving"
-              (change)="provinceChanged()">
-              <option value="">Selecciona una provincia</option>
-              <option *ngFor="let province of ProvinceList" [value]="province.Code">
-                {{ province.Name }}
+
+        <ng-container *ngIf="isPeruCountry(); else internationalLocation">
+          <div class="form-group">
+            <label for="address-department">Departamento <span class="text-danger">*</span></label>
+            <select id="address-department" class="form-control" name="DepartmentCod"
+              [(ngModel)]="DepartmentCod" [disabled]="IsLoadingUbigeo || IsSaving"
+              (change)="departmentChanged()">
+              <option value="">Selecciona un departamento</option>
+              <option *ngFor="let department of DepartmentList" [value]="department.Code">
+                {{ department.Name }}
               </option>
             </select>
           </div>
-          <div class="form-group col-md-6">
-            <label for="address-district">Distrito <span class="text-danger">*</span></label>
-            <select id="address-district" class="form-control" name="UbigeoCod"
-              [(ngModel)]="Address.UbigeoCod"
-              [disabled]="!ProvinceCod || IsLoadingUbigeo || IsSaving"
-              (change)="districtChanged()">
-              <option value="">Selecciona un distrito</option>
-              <option *ngFor="let district of DistrictList" [value]="district.Code">
-                {{ district.Name }}
-              </option>
-            </select>
+          <div class="form-row">
+            <div class="form-group col-md-6">
+              <label for="address-province">Provincia <span class="text-danger">*</span></label>
+              <select id="address-province" class="form-control" name="ProvinceCod"
+                [(ngModel)]="ProvinceCod"
+                [disabled]="!DepartmentCod || IsLoadingUbigeo || IsSaving"
+                (change)="provinceChanged()">
+                <option value="">Selecciona una provincia</option>
+                <option *ngFor="let province of ProvinceList" [value]="province.Code">
+                  {{ province.Name }}
+                </option>
+              </select>
+            </div>
+            <div class="form-group col-md-6">
+              <label for="address-district">Distrito <span class="text-danger">*</span></label>
+              <select id="address-district" class="form-control" name="UbigeoCod"
+                [(ngModel)]="Address.UbigeoCod"
+                [disabled]="!ProvinceCod || IsLoadingUbigeo || IsSaving"
+                (change)="districtChanged()">
+                <option value="">Selecciona un distrito</option>
+                <option *ngFor="let district of DistrictList" [value]="district.Code">
+                  {{ district.Name }}
+                </option>
+              </select>
+            </div>
           </div>
-        </div>
+        </ng-container>
+
+        <ng-template #internationalLocation>
+          <div class="form-row" *ngIf="Address.CountryCod">
+            <div class="form-group col-md-6">
+              <label for="address-state">Estado / región <span class="text-danger">*</span></label>
+              <select id="address-state" class="form-control" name="StateId"
+                [(ngModel)]="StateId" [disabled]="IsLoadingUbigeo || IsSaving"
+                (change)="stateChanged()">
+                <option [ngValue]="null">Selecciona un estado o región</option>
+                <option *ngFor="let state of StateList" [ngValue]="+state.Code">
+                  {{ state.Name }}
+                </option>
+              </select>
+            </div>
+            <div class="form-group col-md-6">
+              <label for="address-city">Ciudad <span class="text-danger">*</span></label>
+              <select id="address-city" class="form-control" name="CityId"
+                [(ngModel)]="CityId" [disabled]="!StateId || IsLoadingUbigeo || IsSaving"
+                (change)="cityChanged()">
+                <option [ngValue]="null">Selecciona una ciudad</option>
+                <option *ngFor="let city of CityList" [ngValue]="+city.Code">
+                  {{ city.Name }}
+                </option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group" *ngIf="Address.CountryCod">
+            <label for="address-territorial-code">
+              Código postal o territorial <span class="text-danger">*</span>
+            </label>
+            <input id="address-territorial-code" class="form-control" name="UbigeoCod"
+              maxlength="12" [(ngModel)]="Address.UbigeoCod"
+              [disabled]="!CityId || IsSaving" placeholder="Ingresa el código de la dirección">
+            <small class="form-text text-muted">
+              Para direcciones fuera de Perú este código se ingresa manualmente.
+            </small>
+          </div>
+        </ng-template>
+
         <div class="form-row">
           <div class="form-group col-md-4">
             <label for="address-alias">Alias</label>
@@ -100,6 +153,35 @@
             (click)="useCurrentLocation()">
             <i class="fa fa-crosshairs mr-1"></i>{{ IsLocating ? 'Ubicando...' : 'Mi ubicación' }}
           </button>
+        </div>
+        <div class="map-search">
+          <label for="address-map-search">Buscar una dirección en el mapa</label>
+          <div class="input-group">
+            <input id="address-map-search" class="form-control" name="AddressSearchText"
+              maxlength="256" [(ngModel)]="AddressSearchText"
+              [disabled]="!Address.CountryCod || IsSearchingAddress || IsSaving"
+              (keyup.enter)="searchAddress()"
+              placeholder="Ej. Av. José Balta 895, Chiclayo">
+            <div class="input-group-append">
+              <button type="button" class="btn btn-primary"
+                [disabled]="!Address.CountryCod || IsSearchingAddress || IsSaving"
+                (click)="searchAddress()">
+                <i class="fa" [class.fa-search]="!IsSearchingAddress"
+                  [class.fa-spinner]="IsSearchingAddress" [class.fa-spin]="IsSearchingAddress"></i>
+                {{ IsSearchingAddress ? 'Buscando...' : 'Buscar' }}
+              </button>
+            </div>
+          </div>
+          <div class="map-search-results" *ngIf="AddressSearchResultList.length > 0">
+            <button type="button" *ngFor="let result of AddressSearchResultList"
+              (click)="selectAddressSearchResult(result)">
+              <i class="fa fa-map-marker-alt"></i>
+              <span>
+                {{ result.DisplayName }}
+                <small *ngIf="result.PostalCode">Código postal: {{ result.PostalCode }}</small>
+              </span>
+            </button>
+          </div>
         </div>
         <div #mapContainer class="client-address-map" aria-label="Mapa para seleccionar la dirección"></div>
         <div class="coordinates">

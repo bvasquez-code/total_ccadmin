@@ -201,6 +201,9 @@ export class ViewsaleComponent implements OnInit {
     return !!delivery && !!(
       delivery.Address
       || delivery.Reference
+      || delivery.CountryName
+      || delivery.StateName
+      || delivery.CityName
       || delivery.UbigeoCod
       || typeof delivery.Latitude === 'number'
       || typeof delivery.Longitude === 'number'

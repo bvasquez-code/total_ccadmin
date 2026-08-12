@@ -9,6 +9,10 @@ export class CheckoutDeliveryDto {
   public Email: string = '';
   public Address: string = '';
   public Reference: string = '';
+  public CountryCod: string = '';
+  public CountryName: string = '';
+  public StateName: string = '';
+  public CityName: string = '';
   public UbigeoCod: string = '';
   public Latitude: number | null = null;
   public Longitude: number | null = null;

@@ -21,6 +21,34 @@ export class ClientAddressService {
     return this.apiService.ExecutePostService(url, request);
   }
 
+  public findCountries(): Promise<ResponseWsDto> {
+    const url = `${AppSetting.API}/api/v1/delivery/clientAddress/findCountries`;
+    return this.apiService.ExecuteGetService(url, {});
+  }
+
+  public findStates(countryCod: string): Promise<ResponseWsDto> {
+    const url = `${AppSetting.API}/api/v1/delivery/clientAddress/findStates`;
+    return this.apiService.ExecuteGetService(url, { CountryCod: countryCod });
+  }
+
+  public findCities(stateId: number): Promise<ResponseWsDto> {
+    const url = `${AppSetting.API}/api/v1/delivery/clientAddress/findCities`;
+    return this.apiService.ExecuteGetService(url, { StateId: stateId });
+  }
+
+  public findPeruProvinceLocation(provinceCod: string): Promise<ResponseWsDto> {
+    const url = `${AppSetting.API}/api/v1/delivery/clientAddress/findPeruProvinceLocation`;
+    return this.apiService.ExecuteGetService(url, { ProvinceCod: provinceCod });
+  }
+
+  public searchAddress(query: string, countryCod: string): Promise<ResponseWsDto> {
+    const url = `${AppSetting.API}/api/v1/delivery/clientAddress/searchAddress`;
+    return this.apiService.ExecuteGetService(url, {
+      Query: query,
+      CountryCod: countryCod
+    });
+  }
+
   public findDepartments(): Promise<ResponseWsDto> {
     const url = `${AppSetting.API}/api/v1/delivery/clientAddress/findDepartments`;
     return this.apiService.ExecuteGetService(url, {});

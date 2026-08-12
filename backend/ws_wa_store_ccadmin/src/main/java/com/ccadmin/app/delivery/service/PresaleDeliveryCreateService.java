@@ -292,6 +292,10 @@ public class PresaleDeliveryCreateService {
         delivery.ClientAddressID = address.ClientAddressID;
         delivery.Address = address.Address;
         delivery.Reference = address.Reference;
+        delivery.CountryCod = address.CountryCod;
+        delivery.CountryName = address.CountryName;
+        delivery.StateName = address.StateName;
+        delivery.CityName = address.CityName;
         delivery.UbigeoCod = address.UbigeoCod;
         delivery.Latitude = address.Latitude;
         delivery.Longitude = address.Longitude;
@@ -301,6 +305,10 @@ public class PresaleDeliveryCreateService {
         delivery.ClientAddressID = null;
         delivery.Address = null;
         delivery.Reference = null;
+        delivery.CountryCod = null;
+        delivery.CountryName = null;
+        delivery.StateName = null;
+        delivery.CityName = null;
         delivery.UbigeoCod = null;
         delivery.Latitude = null;
         delivery.Longitude = null;

@@ -1,7 +1,8 @@
 import { Component, ElementRef, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges, ViewChild } from '@angular/core';
 import * as L from 'leaflet';
 import { ToastrService } from 'ngx-toastr';
-import { UbigeoOptionDto } from '../../model/dto/UbigeoOptionDto';
+import { AddressGeocodingResultDto } from '../../model/dto/AddressGeocodingResultDto';
+import { LocationOptionDto } from '../../model/dto/LocationOptionDto';
 import { ClientAddressEntity } from '../../model/entity/ClientAddressEntity';
 import { ClientAddressService } from '../../service/client-address.service';
 
@@ -11,6 +12,8 @@ import { ClientAddressService } from '../../service/client-address.service';
   styleUrls: ['./address-modal.component.css']
 })
 export class AddressModalComponent implements OnChanges, OnDestroy {
+  private readonly PeruCountryCod: string = 'PER';
+
   @ViewChild('mapContainer') private mapContainer?: ElementRef<HTMLDivElement>;
   @Input() public Visible: boolean = false;
   @Input() public InitialLatitude: number | null = null;
@@ -25,11 +28,19 @@ export class AddressModalComponent implements OnChanges, OnDestroy {
   public IsSaving: boolean = false;
   public IsLocating: boolean = false;
   public IsLoadingUbigeo: boolean = false;
+  public IsSearchingAddress: boolean = false;
+  public AddressSearchText: string = '';
+  public AddressSearchResultList: AddressGeocodingResultDto[] = [];
   public DepartmentCod: string = '';
   public ProvinceCod: string = '';
-  public DepartmentList: UbigeoOptionDto[] = [];
-  public ProvinceList: UbigeoOptionDto[] = [];
-  public DistrictList: UbigeoOptionDto[] = [];
+  public StateId: number | null = null;
+  public CityId: number | null = null;
+  public CountryList: LocationOptionDto[] = [];
+  public DepartmentList: LocationOptionDto[] = [];
+  public ProvinceList: LocationOptionDto[] = [];
+  public DistrictList: LocationOptionDto[] = [];
+  public StateList: LocationOptionDto[] = [];
+  public CityList: LocationOptionDto[] = [];
 
   private map: L.Map | null = null;
   private marker: L.Marker | null = null;
@@ -45,7 +56,7 @@ export class AddressModalComponent implements OnChanges, OnDestroy {
   public ngOnChanges(changes: SimpleChanges): void {
     if (changes['Visible']?.currentValue === true) {
       this.resetAddress();
-      void this.initializeUbigeo();
+      void this.initializeLocation();
       setTimeout(() => this.initializeMap());
     }
     if (changes['Visible']?.currentValue === false) {
@@ -113,25 +124,120 @@ export class AddressModalComponent implements OnChanges, OnDestroy {
     }
   }
 
+  public isPeruCountry(): boolean {
+    return this.Address.CountryCod === this.PeruCountryCod;
+  }
+
+  public countryChanged(): void {
+    this.resetLocationSelections();
+    this.Address.CountryName = this.optionName(this.CountryList, this.Address.CountryCod);
+    this.Address.StateName = '';
+    this.Address.CityName = '';
+    this.Address.UbigeoCod = '';
+    this.AddressSearchResultList = [];
+
+    if (this.isPeruCountry()) {
+      void this.loadDepartments();
+    } else if (this.Address.CountryCod) {
+      void this.loadStates();
+    }
+  }
+
   public departmentChanged(): void {
     this.ProvinceCod = '';
     this.Address.UbigeoCod = '';
     this.ProvinceList = [];
     this.DistrictList = [];
+    this.Address.StateName = this.optionName(this.DepartmentList, this.DepartmentCod);
+    this.Address.CityName = '';
     if (this.DepartmentCod) void this.loadProvinces();
   }
 
-  public provinceChanged(): void {
+  public async provinceChanged(): Promise<void> {
     this.Address.UbigeoCod = '';
     this.DistrictList = [];
-    if (this.ProvinceCod) void this.loadDistricts();
+    this.Address.CityName = '';
+    if (this.ProvinceCod) {
+      await this.loadDistricts();
+      await this.centerPeruProvince();
+    }
   }
 
   public districtChanged(): void {
     const selectedDistrict = this.DistrictList.find(
       district => district.Code === this.Address.UbigeoCod
     );
-    if (!selectedDistrict) this.Address.UbigeoCod = '';
+    if (!selectedDistrict) {
+      this.Address.UbigeoCod = '';
+      this.Address.CityName = '';
+      return;
+    }
+    this.Address.CityName = selectedDistrict.Name;
+  }
+
+  public stateChanged(): void {
+    this.CityId = null;
+    this.Address.StateId = this.StateId;
+    this.Address.CityId = null;
+    this.Address.StateName = this.optionName(this.StateList, this.StateId);
+    this.Address.CityName = '';
+    this.Address.UbigeoCod = '';
+    this.CityList = [];
+    if (this.StateId) void this.loadCities();
+  }
+
+  public cityChanged(): void {
+    this.Address.CityId = this.CityId;
+    this.Address.CityName = this.optionName(this.CityList, this.CityId);
+    this.Address.UbigeoCod = '';
+    const selectedCity = this.CityList.find(city => city.Code === String(this.CityId));
+    if (selectedCity) this.centerMapAtLocation(selectedCity);
+  }
+
+  public async searchAddress(): Promise<void> {
+    if (!this.Address.CountryCod) {
+      this.toastrService.warning('Selecciona primero el país de la dirección.');
+      return;
+    }
+    if ((this.AddressSearchText || '').trim().length < 3) {
+      this.toastrService.warning('Escribe al menos 3 caracteres para buscar una dirección.');
+      return;
+    }
+
+    this.IsSearchingAddress = true;
+    this.AddressSearchResultList = [];
+    try {
+      const response = await this.clientAddressService.searchAddress(
+        this.buildAddressSearchQuery(),
+        this.Address.CountryCod
+      );
+      if (response.ErrorStatus) {
+        this.toastrService.error(response.Message || 'No se pudo buscar la dirección.');
+        return;
+      }
+      this.AddressSearchResultList = Array.isArray(response.Data)
+        ? response.Data.map((item: unknown) => Object.assign(new AddressGeocodingResultDto(), item))
+        : [];
+      if (this.AddressSearchResultList.length === 0) {
+        this.toastrService.info('No encontramos coincidencias. Prueba con otra descripción o marca el punto en el mapa.');
+      }
+    } finally {
+      this.IsSearchingAddress = false;
+    }
+  }
+
+  public selectAddressSearchResult(result: AddressGeocodingResultDto): void {
+    if (!this.validCoordinate(result.Latitude, -90, 90)
+      || !this.validCoordinate(result.Longitude, -180, 180)) {
+      this.toastrService.warning('La coincidencia seleccionada no tiene coordenadas válidas.');
+      return;
+    }
+    this.Address.Address = result.DisplayName.substring(0, 256);
+    if (!this.isPeruCountry() && result.PostalCode) {
+      this.Address.UbigeoCod = result.PostalCode.substring(0, 12);
+    }
+    this.setCoordinates(Number(result.Latitude), Number(result.Longitude), true);
+    this.AddressSearchResultList = [];
   }
 
   private resetAddress(): void {
@@ -140,6 +246,8 @@ export class AddressModalComponent implements OnChanges, OnDestroy {
       : new ClientAddressEntity();
     this.Address.Names = this.Address.Names || this.DefaultNames || '';
     this.Address.Phone = this.Address.Phone || this.DefaultPhone || '';
+    this.AddressSearchText = '';
+    this.AddressSearchResultList = [];
     if (!this.validCoordinate(this.Address.Latitude, -90, 90)) {
       this.Address.Latitude = this.validCoordinate(this.InitialLatitude, -90, 90)
         ? this.InitialLatitude
@@ -152,43 +260,142 @@ export class AddressModalComponent implements OnChanges, OnDestroy {
     }
   }
 
-  private async initializeUbigeo(): Promise<void> {
-    this.DepartmentCod = '';
-    this.ProvinceCod = '';
-    this.DepartmentList = [];
-    this.ProvinceList = [];
-    this.DistrictList = [];
+  private async initializeLocation(): Promise<void> {
+    this.CountryList = [];
+    this.resetLocationSelections();
     this.IsLoadingUbigeo = true;
 
+    try {
+      const response = await this.clientAddressService.findCountries();
+      if (response.ErrorStatus) {
+        this.toastrService.error(response.Message || 'No se pudieron cargar los países.');
+        return;
+      }
+      this.CountryList = this.mapLocationOptions(response.Data);
+      if (!this.Address.CountryCod && /^\d{6}$/.test((this.Address.UbigeoCod || '').trim())) {
+        this.Address.CountryCod = this.PeruCountryCod;
+      }
+      this.Address.CountryCod = this.Address.CountryCod || this.PeruCountryCod;
+      if (!this.CountryList.some(country => country.Code === this.Address.CountryCod)) {
+        this.Address.CountryCod = '';
+        this.Address.CountryName = '';
+        this.toastrService.warning('El país de la dirección ya no está disponible. Selecciona otro.');
+        return;
+      }
+      this.Address.CountryName = this.optionName(this.CountryList, this.Address.CountryCod);
+
+      if (this.isPeruCountry()) {
+        await this.initializePeruLocation();
+      } else {
+        await this.initializeForeignLocation();
+      }
+    } finally {
+      this.IsLoadingUbigeo = false;
+    }
+  }
+
+  private async initializePeruLocation(): Promise<void> {
+    await this.loadDepartments(false);
+    const currentUbigeoCod = (this.Address.UbigeoCod || '').trim();
+    if (!/^\d{6}$/.test(currentUbigeoCod)) {
+      this.Address.UbigeoCod = '';
+      return;
+    }
+
+    this.DepartmentCod = currentUbigeoCod.substring(0, 2);
+    this.ProvinceCod = currentUbigeoCod.substring(0, 4);
+    await this.loadProvinces(false);
+    await this.loadDistricts(false);
+
+    if (!this.DistrictList.some(district => district.Code === currentUbigeoCod)) {
+      this.DepartmentCod = '';
+      this.ProvinceCod = '';
+      this.Address.UbigeoCod = '';
+      this.ProvinceList = [];
+      this.DistrictList = [];
+      return;
+    }
+    this.Address.StateName = this.optionName(this.DepartmentList, this.DepartmentCod);
+    this.Address.CityName = this.optionName(this.DistrictList, currentUbigeoCod);
+  }
+
+  private async initializeForeignLocation(): Promise<void> {
+    await this.loadStates(false);
+    const state = this.StateList.find(option => option.Name === this.Address.StateName);
+    if (!state) return;
+
+    this.StateId = Number(state.Code);
+    this.Address.StateId = this.StateId;
+    await this.loadCities(false);
+    const city = this.CityList.find(option => option.Name === this.Address.CityName);
+    if (!city) return;
+
+    this.CityId = Number(city.Code);
+    this.Address.CityId = this.CityId;
+  }
+
+  private async loadDepartments(updateLoading: boolean = true): Promise<void> {
+    if (updateLoading) this.IsLoadingUbigeo = true;
     try {
       const response = await this.clientAddressService.findDepartments();
       if (response.ErrorStatus) {
         this.toastrService.error(response.Message || 'No se pudieron cargar los departamentos.');
         return;
       }
-      this.DepartmentList = this.mapUbigeoOptions(response.Data);
+      this.DepartmentList = this.mapLocationOptions(response.Data);
+    } finally {
+      if (updateLoading) this.IsLoadingUbigeo = false;
+    }
+  }
 
-      const currentUbigeoCod = (this.Address.UbigeoCod || '').trim();
-      if (!/^\d{6}$/.test(currentUbigeoCod)) {
-        this.Address.UbigeoCod = '';
+  private async loadStates(updateLoading: boolean = true): Promise<void> {
+    if (!this.Address.CountryCod) return;
+    if (updateLoading) this.IsLoadingUbigeo = true;
+    try {
+      const response = await this.clientAddressService.findStates(this.Address.CountryCod);
+      if (response.ErrorStatus) {
+        this.toastrService.error(response.Message || 'No se pudieron cargar los estados.');
         return;
       }
-
-      this.DepartmentCod = currentUbigeoCod.substring(0, 2);
-      this.ProvinceCod = currentUbigeoCod.substring(0, 4);
-      await this.loadProvinces(false);
-      await this.loadDistricts(false);
-
-      if (!this.DistrictList.some(district => district.Code === currentUbigeoCod)) {
-        this.DepartmentCod = '';
-        this.ProvinceCod = '';
-        this.Address.UbigeoCod = '';
-        this.ProvinceList = [];
-        this.DistrictList = [];
-      }
+      this.StateList = this.mapLocationOptions(response.Data);
     } finally {
-      this.IsLoadingUbigeo = false;
+      if (updateLoading) this.IsLoadingUbigeo = false;
     }
+  }
+
+  private async loadCities(updateLoading: boolean = true): Promise<void> {
+    if (!this.StateId) return;
+    if (updateLoading) this.IsLoadingUbigeo = true;
+    try {
+      const response = await this.clientAddressService.findCities(this.StateId);
+      if (response.ErrorStatus) {
+        this.toastrService.error(response.Message || 'No se pudieron cargar las ciudades.');
+        return;
+      }
+      this.CityList = this.mapLocationOptions(response.Data);
+    } finally {
+      if (updateLoading) this.IsLoadingUbigeo = false;
+    }
+  }
+
+  private async centerPeruProvince(): Promise<void> {
+    const response = await this.clientAddressService.findPeruProvinceLocation(this.ProvinceCod);
+    if (response.ErrorStatus || !response.Data) return;
+    this.centerMapAtLocation(Object.assign(new LocationOptionDto(), response.Data));
+  }
+
+  private resetLocationSelections(): void {
+    this.DepartmentCod = '';
+    this.ProvinceCod = '';
+    this.StateId = null;
+    this.CityId = null;
+    this.Address.StateId = null;
+    this.Address.CityId = null;
+    this.DepartmentList = [];
+    this.ProvinceList = [];
+    this.DistrictList = [];
+    this.StateList = [];
+    this.CityList = [];
   }
 
   private async loadProvinces(updateLoading: boolean = true): Promise<void> {
@@ -200,7 +407,7 @@ export class AddressModalComponent implements OnChanges, OnDestroy {
         this.toastrService.error(response.Message || 'No se pudieron cargar las provincias.');
         return;
       }
-      this.ProvinceList = this.mapUbigeoOptions(response.Data);
+      this.ProvinceList = this.mapLocationOptions(response.Data);
     } finally {
       if (updateLoading) this.IsLoadingUbigeo = false;
     }
@@ -215,15 +422,47 @@ export class AddressModalComponent implements OnChanges, OnDestroy {
         this.toastrService.error(response.Message || 'No se pudieron cargar los distritos.');
         return;
       }
-      this.DistrictList = this.mapUbigeoOptions(response.Data);
+      this.DistrictList = this.mapLocationOptions(response.Data);
     } finally {
       if (updateLoading) this.IsLoadingUbigeo = false;
     }
   }
 
-  private mapUbigeoOptions(data: unknown): UbigeoOptionDto[] {
+  private mapLocationOptions(data: unknown): LocationOptionDto[] {
     if (!Array.isArray(data)) return [];
-    return data.map(item => Object.assign(new UbigeoOptionDto(), item));
+    return data.map(item => Object.assign(new LocationOptionDto(), item));
+  }
+
+  private optionName(options: LocationOptionDto[], code: string | number | null): string {
+    if (code === null || code === '') return '';
+    return options.find(option => option.Code === String(code))?.Name || '';
+  }
+
+  private centerMapAtLocation(location: LocationOptionDto): void {
+    if (!this.validCoordinate(location.Latitude, -90, 90)
+      || !this.validCoordinate(location.Longitude, -180, 180)) return;
+    this.setCoordinates(Number(location.Latitude), Number(location.Longitude), true);
+  }
+
+  private buildAddressSearchQuery(): string {
+    const parts = [this.AddressSearchText.trim()];
+    if (this.isPeruCountry()) {
+      this.addUniqueSearchPart(parts, this.optionName(this.ProvinceList, this.ProvinceCod));
+      this.addUniqueSearchPart(parts, this.optionName(this.DepartmentList, this.DepartmentCod));
+    } else {
+      this.addUniqueSearchPart(parts, this.optionName(this.CityList, this.CityId));
+      this.addUniqueSearchPart(parts, this.optionName(this.StateList, this.StateId));
+    }
+    this.addUniqueSearchPart(parts, this.optionName(this.CountryList, this.Address.CountryCod));
+    return parts.join(', ');
+  }
+
+  private addUniqueSearchPart(parts: string[], value: string): void {
+    if (!value) return;
+    const normalizedValue = value.toLocaleUpperCase();
+    if (!parts.some(part => part.toLocaleUpperCase().includes(normalizedValue))) {
+      parts.push(value);
+    }
   }
 
   private initializeMap(): void {
@@ -298,10 +537,42 @@ export class AddressModalComponent implements OnChanges, OnDestroy {
   }
 
   private validate(): boolean {
-    if (!/^\d{6}$/.test((this.Address.UbigeoCod || '').trim())
-      || !this.DistrictList.some(district => district.Code === this.Address.UbigeoCod)) {
-      this.toastrService.warning('Selecciona el departamento, provincia y distrito de la direcci\u00f3n.');
+    if (!this.Address.CountryCod
+      || !this.CountryList.some(country => country.Code === this.Address.CountryCod)) {
+      this.toastrService.warning('Selecciona el país de la dirección.');
       return false;
+    }
+    this.Address.CountryName = this.optionName(this.CountryList, this.Address.CountryCod);
+
+    if (this.isPeruCountry()) {
+      if (!/^\d{6}$/.test((this.Address.UbigeoCod || '').trim())
+        || !this.DistrictList.some(district => district.Code === this.Address.UbigeoCod)) {
+        this.toastrService.warning('Selecciona el departamento, provincia y distrito de la dirección.');
+        return false;
+      }
+      this.Address.StateName = this.optionName(this.DepartmentList, this.DepartmentCod);
+      this.Address.CityName = this.optionName(this.DistrictList, this.Address.UbigeoCod);
+      this.Address.StateId = null;
+      this.Address.CityId = null;
+    } else {
+      const hasState = this.StateId !== null
+        && this.StateList.some(state => state.Code === String(this.StateId));
+      const hasCity = this.CityId !== null
+        && this.CityList.some(city => city.Code === String(this.CityId));
+      if (!hasState || !hasCity) {
+        this.toastrService.warning('Selecciona el estado y la ciudad de la dirección.');
+        return false;
+      }
+      const territorialCode = (this.Address.UbigeoCod || '').trim();
+      if (!territorialCode || territorialCode.length > 12) {
+        this.toastrService.warning('Ingresa un código postal o territorial de hasta 12 caracteres.');
+        return false;
+      }
+      this.Address.StateId = this.StateId;
+      this.Address.CityId = this.CityId;
+      this.Address.StateName = this.optionName(this.StateList, this.StateId);
+      this.Address.CityName = this.optionName(this.CityList, this.CityId);
+      this.Address.UbigeoCod = territorialCode;
     }
     if (!this.Address.Address.trim()) {
       this.toastrService.warning('Escribe la dirección que corresponde al punto marcado.');

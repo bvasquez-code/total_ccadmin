@@ -105,6 +105,10 @@
             <span *ngIf="address.IsDefault === 'S'">Principal</span>
           </div>
           <p>{{ address.Address }}</p>
+          <small *ngIf="address.CityName || address.StateName || address.CountryName">
+            <strong>Ubicación:</strong>
+            {{ address.CityName }}<span *ngIf="address.CityName && address.StateName">, </span>{{ address.StateName }}<span *ngIf="(address.CityName || address.StateName) && address.CountryName">, </span>{{ address.CountryName }}
+          </small>
           <small *ngIf="address.Reference"><strong>Referencia:</strong> {{ address.Reference }}</small>
           <small><strong>Contacto:</strong> {{ address.Names }} · {{ address.Phone }}</small>
         </div>

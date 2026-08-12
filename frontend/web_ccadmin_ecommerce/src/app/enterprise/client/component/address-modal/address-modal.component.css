@@ -37,6 +37,15 @@
 .map-toolbar > div { display: flex; flex-direction: column; }
 .map-toolbar strong { color: #294c64; font-size: 0.9rem; }
 .map-toolbar small { color: #78909f; font-size: 0.7rem; }
+.map-search { padding: 0.75rem; border-top: 1px solid #e2ebf0; background: #fff; }
+.map-search label { margin-bottom: 0.35rem; color: #294c64; font-size: 0.78rem; font-weight: 600; }
+.map-search-results { max-height: 155px; margin-top: 0.45rem; overflow-y: auto; border: 1px solid #d7e3ea; border-radius: 0.35rem; }
+.map-search-results button { display: flex; width: 100%; gap: 0.6rem; align-items: flex-start; padding: 0.55rem 0.65rem; color: #36576d; text-align: left; background: #fff; border: 0; border-bottom: 1px solid #e5edf2; }
+.map-search-results button:last-child { border-bottom: 0; }
+.map-search-results button:hover { background: #eef7fc; }
+.map-search-results i { margin-top: 0.2rem; color: #2878bd; }
+.map-search-results span { font-size: 0.76rem; line-height: 1.3; }
+.map-search-results small { display: block; margin-top: 0.18rem; color: #718896; }
 .client-address-map { position: relative; isolation: isolate; width: 100%; height: 350px; overflow: hidden; background: #e8eef2; }
 .coordinates { display: flex; justify-content: space-between; padding: 0.5rem 0.75rem; color: #60798a; background: #f8fafb; font-family: monospace; font-size: 0.75rem; }
 .address-footer { display: flex; justify-content: flex-end; gap: 0.65rem; padding: 0.9rem 1.4rem; background: #f5f8fa; border-top: 1px solid #dfe8ed; }

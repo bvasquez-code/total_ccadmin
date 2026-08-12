@@ -5,6 +5,8 @@ DELIMITER $$
 CREATE PROCEDURE `p_manage_sale_delivery`()
 BEGIN
     DECLARE v_table_exists INT DEFAULT 0;
+    DECLARE v_column_exists INT DEFAULT 0;
+    DECLARE v_index_exists INT DEFAULT 0;
     DECLARE v_constraint_exists INT DEFAULT 0;
 
     SELECT COUNT(*) INTO v_table_exists
@@ -26,7 +28,11 @@ BEGIN
           `Email` varchar(128) DEFAULT NULL COMMENT 'Correo de contacto asociado a la entrega',
           `Address` varchar(256) DEFAULT NULL COMMENT 'Fotografia de la direccion de destino utilizada por la venta',
           `Reference` varchar(256) DEFAULT NULL COMMENT 'Referencia para ubicar el destino de la entrega',
-          `UbigeoCod` varchar(12) DEFAULT NULL COMMENT 'Codigo de ubigeo del destino de la entrega',
+          `CountryCod` varchar(3) DEFAULT NULL COMMENT 'Codigo ISO3 del pais seleccionado para la entrega',
+          `CountryName` varchar(150) DEFAULT NULL COMMENT 'Fotografia del nombre del pais del destino',
+          `StateName` varchar(150) DEFAULT NULL COMMENT 'Fotografia del nombre del estado o departamento del destino',
+          `CityName` varchar(150) DEFAULT NULL COMMENT 'Fotografia del nombre de la ciudad o distrito del destino',
+          `UbigeoCod` varchar(12) DEFAULT NULL COMMENT 'Codigo de distrito para Peru o codigo territorial ingresado para otros paises',
           `Latitude` decimal(10,8) DEFAULT NULL COMMENT 'Latitud del destino utilizada al confirmar la venta',
           `Longitude` decimal(11,8) DEFAULT NULL COMMENT 'Longitud del destino utilizada al confirmar la venta',
           `Instructions` varchar(256) DEFAULT NULL COMMENT 'Indicaciones adicionales para entregar o recoger el pedido',
@@ -49,11 +55,13 @@ BEGIN
           PRIMARY KEY (`SaleCod`),
           KEY `idx_sale_delivery_type_status` (`DeliveryTypeCod`,`DeliveryStatus`,`Status`),
           KEY `idx_sale_delivery_client_address` (`ClientAddressID`),
+          KEY `idx_sale_delivery_country` (`CountryCod`),
           KEY `idx_sale_delivery_provider` (`ShippingProviderCod`),
           KEY `idx_sale_delivery_schedule` (`ScheduledFrom`,`ScheduledTo`),
           CONSTRAINT `fk_sale_delivery_sale` FOREIGN KEY (`SaleCod`) REFERENCES `sale_head` (`SaleCod`),
           CONSTRAINT `fk_sale_delivery_type` FOREIGN KEY (`DeliveryTypeCod`) REFERENCES `delivery_type` (`DeliveryTypeCod`),
           CONSTRAINT `fk_sale_delivery_client_address` FOREIGN KEY (`ClientAddressID`) REFERENCES `client_address` (`ClientAddressID`),
+          CONSTRAINT `fk_sale_delivery_country` FOREIGN KEY (`CountryCod`) REFERENCES `country` (`CountryCod`),
           CONSTRAINT `fk_sale_delivery_provider` FOREIGN KEY (`ShippingProviderCod`) REFERENCES `shipping_provider` (`ShippingProviderCod`),
           CONSTRAINT `chk_sale_delivery_third_party` CHECK (`IsThirdParty` IN ('S','N')),
           CONSTRAINT `chk_sale_delivery_latitude` CHECK (`Latitude` IS NULL OR (`Latitude` BETWEEN -90 AND 90)),
@@ -66,6 +74,97 @@ BEGIN
 
         SELECT 'Tabla sale_delivery creada desde cero.' AS Mensaje;
     ELSE
+        SELECT COUNT(*) INTO v_column_exists
+        FROM information_schema.columns
+        WHERE table_schema = DATABASE()
+          AND table_name = 'sale_delivery'
+          AND column_name = 'CountryCod';
+
+        IF v_column_exists = 0 THEN
+            ALTER TABLE `sale_delivery`
+                ADD COLUMN `CountryCod` varchar(3) DEFAULT NULL
+                    COMMENT 'Codigo ISO3 del pais seleccionado para la entrega' AFTER `Reference`;
+        END IF;
+
+        SELECT COUNT(*) INTO v_column_exists
+        FROM information_schema.columns
+        WHERE table_schema = DATABASE()
+          AND table_name = 'sale_delivery'
+          AND column_name = 'CountryName';
+
+        IF v_column_exists = 0 THEN
+            ALTER TABLE `sale_delivery`
+                ADD COLUMN `CountryName` varchar(150) DEFAULT NULL
+                    COMMENT 'Fotografia del nombre del pais del destino' AFTER `CountryCod`;
+        END IF;
+
+        SELECT COUNT(*) INTO v_column_exists
+        FROM information_schema.columns
+        WHERE table_schema = DATABASE()
+          AND table_name = 'sale_delivery'
+          AND column_name = 'StateName';
+
+        IF v_column_exists = 0 THEN
+            ALTER TABLE `sale_delivery`
+                ADD COLUMN `StateName` varchar(150) DEFAULT NULL
+                    COMMENT 'Fotografia del nombre del estado o departamento del destino' AFTER `CountryName`;
+        END IF;
+
+        SELECT COUNT(*) INTO v_column_exists
+        FROM information_schema.columns
+        WHERE table_schema = DATABASE()
+          AND table_name = 'sale_delivery'
+          AND column_name = 'CityName';
+
+        IF v_column_exists = 0 THEN
+            ALTER TABLE `sale_delivery`
+                ADD COLUMN `CityName` varchar(150) DEFAULT NULL
+                    COMMENT 'Fotografia del nombre de la ciudad o distrito del destino' AFTER `StateName`;
+        END IF;
+
+        ALTER TABLE `sale_delivery`
+            MODIFY COLUMN `UbigeoCod` varchar(12) DEFAULT NULL
+                COMMENT 'Codigo de distrito para Peru o codigo territorial ingresado para otros paises';
+
+        UPDATE `sale_delivery` sd
+        INNER JOIN `ubigeo_district` ud
+            ON ud.`DistrictCod` = sd.`UbigeoCod`
+        INNER JOIN `ubigeo_department` dp
+            ON dp.`DepartmentCod` = ud.`DepartmentCod`
+        INNER JOIN `country` c
+            ON c.`CountryCod` = 'PER'
+        SET sd.`CountryCod` = c.`CountryCod`,
+            sd.`CountryName` = c.`CountryName`,
+            sd.`StateName` = dp.`Name`,
+            sd.`CityName` = ud.`Name`
+        WHERE sd.`CountryCod` IS NULL
+           OR sd.`CountryName` IS NULL
+           OR sd.`StateName` IS NULL
+           OR sd.`CityName` IS NULL;
+
+        SELECT COUNT(*) INTO v_index_exists
+        FROM information_schema.statistics
+        WHERE table_schema = DATABASE()
+          AND table_name = 'sale_delivery'
+          AND index_name = 'idx_sale_delivery_country';
+
+        IF v_index_exists = 0 THEN
+            ALTER TABLE `sale_delivery`
+                ADD KEY `idx_sale_delivery_country` (`CountryCod`);
+        END IF;
+
+        SELECT COUNT(*) INTO v_constraint_exists
+        FROM information_schema.table_constraints
+        WHERE constraint_schema = DATABASE()
+          AND table_name = 'sale_delivery'
+          AND constraint_name = 'fk_sale_delivery_country';
+
+        IF v_constraint_exists = 0 THEN
+            ALTER TABLE `sale_delivery`
+                ADD CONSTRAINT `fk_sale_delivery_country`
+                    FOREIGN KEY (`CountryCod`) REFERENCES `country` (`CountryCod`);
+        END IF;
+
         SELECT COUNT(*) INTO v_constraint_exists
         FROM information_schema.table_constraints
         WHERE constraint_schema = DATABASE()

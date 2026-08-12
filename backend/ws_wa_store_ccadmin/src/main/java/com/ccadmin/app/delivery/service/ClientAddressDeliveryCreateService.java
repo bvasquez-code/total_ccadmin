@@ -3,6 +3,8 @@ package com.ccadmin.app.delivery.service;
 import com.ccadmin.app.sale.model.entity.ClientAddressEntity;
 import com.ccadmin.app.sale.repository.ClientAddressRepository;
 import com.ccadmin.app.shared.model.constants.AuditUserConstants;
+import com.ccadmin.app.shared.model.idto.IAddressLocationDto;
+import com.ccadmin.app.shared.repository.LocationRepository;
 import com.ccadmin.app.shared.repository.UbigeoRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -13,18 +15,23 @@ import java.util.List;
 @Service
 public class ClientAddressDeliveryCreateService {
 
+    private static final String PERU_COUNTRY_COD = "PER";
+
     private final ClientDeliveryContextService clientDeliveryContextService;
     private final ClientAddressRepository clientAddressRepository;
     private final UbigeoRepository ubigeoRepository;
+    private final LocationRepository locationRepository;
 
     public ClientAddressDeliveryCreateService(
             ClientDeliveryContextService clientDeliveryContextService,
             ClientAddressRepository clientAddressRepository,
-            UbigeoRepository ubigeoRepository
+            UbigeoRepository ubigeoRepository,
+            LocationRepository locationRepository
     ) {
         this.clientDeliveryContextService = clientDeliveryContextService;
         this.clientAddressRepository = clientAddressRepository;
         this.ubigeoRepository = ubigeoRepository;
+        this.locationRepository = locationRepository;
     }
 
     @Transactional
@@ -33,6 +40,7 @@ public class ClientAddressDeliveryCreateService {
             throw new IllegalArgumentException("Los datos de la dirección son obligatorios");
         }
         validate(request);
+        IAddressLocationDto location = resolveLocation(request);
 
         String clientCod = clientDeliveryContextService.getCurrentClient().ClientCod;
         List<ClientAddressEntity> activeAddressList = clientAddressRepository.findActiveByClientCod(clientCod);
@@ -62,6 +70,10 @@ public class ClientAddressDeliveryCreateService {
         address.Phone = request.Phone.trim();
         address.Address = request.Address.trim();
         address.Reference = normalizeOptional(request.Reference);
+        address.CountryCod = location.getCountryCod();
+        address.CountryName = location.getCountryName();
+        address.StateName = location.getStateName();
+        address.CityName = location.getCityName();
         address.UbigeoCod = request.UbigeoCod.trim();
         address.Latitude = request.Latitude;
         address.Longitude = request.Longitude;
@@ -79,15 +91,11 @@ public class ClientAddressDeliveryCreateService {
         validateRequired(request.Names, 256, "El nombre de contacto");
         validateRequired(request.Phone, 20, "El teléfono");
         validateRequired(request.Address, 256, "La dirección");
+        validateRequired(request.CountryCod, 3, "El país");
         validateOptional(request.Alias, 64, "El alias");
         validateOptional(request.Reference, 256, "La referencia");
-        validateRequired(request.UbigeoCod, 6, "El ubigeo");
+        validateRequired(request.UbigeoCod, 12, "El ubigeo");
         validateOptional(request.Instructions, 256, "Las indicaciones");
-
-        String ubigeoCod = request.UbigeoCod.trim();
-        if (!ubigeoCod.matches("^\\d{6}$") || ubigeoRepository.countDistrictByCode(ubigeoCod) != 1) {
-            throw new IllegalArgumentException("Selecciona un departamento, provincia y distrito validos");
-        }
 
         if (request.Latitude == null || request.Longitude == null
                 || request.Latitude.compareTo(BigDecimal.valueOf(-90)) < 0
@@ -100,6 +108,33 @@ public class ClientAddressDeliveryCreateService {
                 && !"N".equalsIgnoreCase(request.IsDefault)) {
             throw new IllegalArgumentException("El indicador de dirección predeterminada debe ser S o N");
         }
+    }
+
+    private IAddressLocationDto resolveLocation(ClientAddressEntity request) {
+        String countryCod = request.CountryCod.trim().toUpperCase();
+        String ubigeoCod = request.UbigeoCod.trim();
+
+        if (PERU_COUNTRY_COD.equals(countryCod)) {
+            if (!ubigeoCod.matches("^\\d{6}$")) {
+                throw new IllegalArgumentException("Selecciona un departamento, provincia y distrito válidos");
+            }
+            return ubigeoRepository.findPeruLocation(ubigeoCod)
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "Selecciona un departamento, provincia y distrito válidos"
+                    ));
+        }
+
+        if (request.StateId == null || request.StateId <= 0
+                || request.CityId == null || request.CityId <= 0) {
+            throw new IllegalArgumentException("Selecciona un estado y una ciudad válidos");
+        }
+        return locationRepository.findForeignLocation(
+                countryCod,
+                request.StateId,
+                request.CityId
+        ).orElseThrow(() -> new IllegalArgumentException(
+                "El país, estado y ciudad seleccionados no guardan relación"
+        ));
     }
 
     private void validateRequired(String value, int maximumLength, String fieldName) {

@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
@@ -23,11 +24,21 @@ public class ClientAddressEntity extends AuditTableEntity implements Serializabl
     public String Phone;
     public String Address;
     public String Reference;
+    public String CountryCod;
+    public String CountryName;
+    public String StateName;
+    public String CityName;
     public String UbigeoCod;
     public BigDecimal Latitude;
     public BigDecimal Longitude;
     public String Instructions;
     public String IsDefault = "N";
+
+    @Transient
+    public Long StateId;
+
+    @Transient
+    public Long CityId;
 
     public ClientAddressEntity() {
     }

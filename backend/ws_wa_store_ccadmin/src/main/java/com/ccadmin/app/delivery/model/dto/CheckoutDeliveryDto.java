@@ -14,6 +14,10 @@ public class CheckoutDeliveryDto {
     public String Email;
     public String Address;
     public String Reference;
+    public String CountryCod;
+    public String CountryName;
+    public String StateName;
+    public String CityName;
     public String UbigeoCod;
     public BigDecimal Latitude;
     public BigDecimal Longitude;

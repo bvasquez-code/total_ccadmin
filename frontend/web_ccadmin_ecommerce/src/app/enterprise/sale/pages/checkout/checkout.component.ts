@@ -120,6 +120,10 @@ export class CheckoutComponent implements OnInit {
     this.Delivery.ClientAddressID = address.ClientAddressID;
     this.Delivery.Address = address.Address;
     this.Delivery.Reference = address.Reference || '';
+    this.Delivery.CountryCod = address.CountryCod || '';
+    this.Delivery.CountryName = address.CountryName || '';
+    this.Delivery.StateName = address.StateName || '';
+    this.Delivery.CityName = address.CityName || '';
     this.Delivery.UbigeoCod = address.UbigeoCod || '';
     this.Delivery.Latitude = address.Latitude;
     this.Delivery.Longitude = address.Longitude;
