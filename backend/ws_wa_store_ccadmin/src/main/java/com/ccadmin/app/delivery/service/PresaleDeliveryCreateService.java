@@ -52,6 +52,7 @@ public class PresaleDeliveryCreateService {
     private final VirtualCartRepository virtualCartRepository;
     private final ObjectMapper objectMapper;
     private final SaleDeliveryAccessTokenService saleDeliveryAccessTokenService;
+    private final ShippingScheduleSearchService shippingScheduleSearchService;
 
     public PresaleDeliveryCreateService(
             ClientDeliveryContextService clientDeliveryContextService,
@@ -63,7 +64,8 @@ public class PresaleDeliveryCreateService {
             PresaleCreateService presaleCreateService,
             VirtualCartRepository virtualCartRepository,
             ObjectMapper objectMapper,
-            SaleDeliveryAccessTokenService saleDeliveryAccessTokenService
+            SaleDeliveryAccessTokenService saleDeliveryAccessTokenService,
+            ShippingScheduleSearchService shippingScheduleSearchService
     ) {
         this.clientDeliveryContextService = clientDeliveryContextService;
         this.clientAddressDeliverySearchService = clientAddressDeliverySearchService;
@@ -75,6 +77,7 @@ public class PresaleDeliveryCreateService {
         this.virtualCartRepository = virtualCartRepository;
         this.objectMapper = objectMapper;
         this.saleDeliveryAccessTokenService = saleDeliveryAccessTokenService;
+        this.shippingScheduleSearchService = shippingScheduleSearchService;
     }
 
     public String createCode(String storeCod) {
@@ -261,6 +264,7 @@ public class PresaleDeliveryCreateService {
         }
 
         if (SaleConstants.DELIVERY_TYPE_SCHEDULED.equals(delivery.DeliveryTypeCod)) {
+            shippingScheduleSearchService.validateSelection(storeCod, delivery);
             Date scheduledFrom = parseDate(delivery.ScheduledFrom, "inicio");
             Date scheduledTo = parseDate(delivery.ScheduledTo, "fin");
             if (scheduledTo.before(scheduledFrom)) {

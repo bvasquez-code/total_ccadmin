@@ -10,6 +10,7 @@ public final class BusinessConfigConstants {
         public static final String SYSTEM_FUNCTIONALITY_ACTIVATOR = "SystemFunctionalityActivator";
         public static final String SYSTEM_FUNCTIONALITY_CONFIG = "SystemFunctionalityConfig";
         public static final String CONFIG_AUTOMATIC_PROCESS_THREADS = "ConfigAutomaticProcessThreads";
+        public static final String SHIPPING_SCHEDULE_CONFIG = "ShippingScheduleConfig";
     }
 
     public static class ConfigCod {

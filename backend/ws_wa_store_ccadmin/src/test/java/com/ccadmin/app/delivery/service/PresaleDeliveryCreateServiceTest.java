@@ -51,6 +51,7 @@ class PresaleDeliveryCreateServiceTest {
     @Mock private PresaleCreateService presaleCreateService;
     @Mock private VirtualCartRepository virtualCartRepository;
     @Mock private SaleDeliveryAccessTokenService saleDeliveryAccessTokenService;
+    @Mock private ShippingScheduleSearchService shippingScheduleSearchService;
 
     private PresaleDeliveryCreateService service;
 
@@ -66,7 +67,8 @@ class PresaleDeliveryCreateServiceTest {
                 presaleCreateService,
                 virtualCartRepository,
                 new ObjectMapper(),
-                saleDeliveryAccessTokenService
+                saleDeliveryAccessTokenService,
+                shippingScheduleSearchService
         );
     }
 

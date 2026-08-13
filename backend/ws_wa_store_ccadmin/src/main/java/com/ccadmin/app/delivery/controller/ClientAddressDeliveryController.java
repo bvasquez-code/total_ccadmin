@@ -1,10 +1,12 @@
 package com.ccadmin.app.delivery.controller;
 
 import com.ccadmin.app.delivery.model.dto.DeliveryCoverageRequestDto;
+import com.ccadmin.app.delivery.model.dto.ShippingScheduleRequestDto;
 import com.ccadmin.app.delivery.service.AddressGeocodingSearchService;
 import com.ccadmin.app.delivery.service.ClientAddressDeliveryCreateService;
 import com.ccadmin.app.delivery.service.ClientAddressDeliverySearchService;
 import com.ccadmin.app.delivery.service.StoreDeliverySearchService;
+import com.ccadmin.app.delivery.service.ShippingScheduleSearchService;
 import com.ccadmin.app.sale.model.entity.ClientAddressEntity;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import org.springframework.http.HttpStatus;
@@ -26,17 +28,20 @@ public class ClientAddressDeliveryController {
     private final ClientAddressDeliverySearchService clientAddressDeliverySearchService;
     private final StoreDeliverySearchService storeDeliverySearchService;
     private final AddressGeocodingSearchService addressGeocodingSearchService;
+    private final ShippingScheduleSearchService shippingScheduleSearchService;
 
     public ClientAddressDeliveryController(
             ClientAddressDeliveryCreateService clientAddressDeliveryCreateService,
             ClientAddressDeliverySearchService clientAddressDeliverySearchService,
             StoreDeliverySearchService storeDeliverySearchService,
-            AddressGeocodingSearchService addressGeocodingSearchService
+            AddressGeocodingSearchService addressGeocodingSearchService,
+            ShippingScheduleSearchService shippingScheduleSearchService
     ) {
         this.clientAddressDeliveryCreateService = clientAddressDeliveryCreateService;
         this.clientAddressDeliverySearchService = clientAddressDeliverySearchService;
         this.storeDeliverySearchService = storeDeliverySearchService;
         this.addressGeocodingSearchService = addressGeocodingSearchService;
+        this.shippingScheduleSearchService = shippingScheduleSearchService;
     }
 
     @GetMapping("findAll")
@@ -193,6 +198,20 @@ public class ClientAddressDeliveryController {
         try {
             return new ResponseEntity<>(
                     new ResponseWsDto(storeDeliverySearchService.validateCoverage(request)),
+                    HttpStatus.OK
+            );
+        } catch (Exception ex) {
+            return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("findShippingSchedule")
+    public ResponseEntity<ResponseWsDto> findShippingSchedule(
+            @RequestBody ShippingScheduleRequestDto request
+    ) {
+        try {
+            return new ResponseEntity<>(
+                    new ResponseWsDto(shippingScheduleSearchService.findSchedule(request)),
                     HttpStatus.OK
             );
         } catch (Exception ex) {

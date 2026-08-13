@@ -63,4 +63,12 @@ public interface UbigeoRepository extends JpaRepository<UbigeoDepartmentEntity, 
             where ud.DistrictCod = :ubigeoCod
             """, nativeQuery = true)
     Optional<IAddressLocationDto> findPeruLocation(@Param("ubigeoCod") String ubigeoCod);
+
+    @Query(value = """
+            select ud.DepartmentCod
+            from ubigeo_district ud
+            where ud.DistrictCod = :ubigeoCod
+            limit 1
+            """, nativeQuery = true)
+    Optional<String> findDepartmentCodByUbigeoCod(@Param("ubigeoCod") String ubigeoCod);
 }

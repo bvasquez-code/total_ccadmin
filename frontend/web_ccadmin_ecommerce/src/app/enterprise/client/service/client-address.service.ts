@@ -3,6 +3,7 @@ import { AppSetting } from '../../../config/app.setting';
 import { ResponseWsDto } from '../../shared/model/dto/ResponseWsDto';
 import { ApiService } from '../../shared/service/api.service';
 import { DeliveryCoverageRequestDto } from '../model/dto/DeliveryCoverageRequestDto';
+import { ShippingScheduleRequestDto } from '../model/dto/ShippingScheduleRequestDto';
 import { ClientAddressEntity } from '../model/entity/ClientAddressEntity';
 
 @Injectable({ providedIn: 'root' })
@@ -79,6 +80,11 @@ export class ClientAddressService {
 
   public validateCoverage(request: DeliveryCoverageRequestDto): Promise<ResponseWsDto> {
     const url = `${AppSetting.API}/api/v1/delivery/clientAddress/validateCoverage`;
+    return this.apiService.ExecutePostService(url, request);
+  }
+
+  public findShippingSchedule(request: ShippingScheduleRequestDto): Promise<ResponseWsDto> {
+    const url = `${AppSetting.API}/api/v1/delivery/clientAddress/findShippingSchedule`;
     return this.apiService.ExecutePostService(url, request);
   }
 }
