@@ -13,6 +13,7 @@ public final class SaleConstants {
     public static final String DELIVERY_TYPE_AUTOMATIC = "DELIVERY";
     public static final String DELIVERY_TYPE_SCHEDULED = "SCHEDULED_DELIVERY";
     public static final String DELIVERY_TYPE_STORE_PICKUP = "STORE_PICKUP";
+    public static final String SHIPPING_PRODUCT_COD = "D0000001";
 
     public static final String KARDEX_ZONE_SOURCE_PRESALE = "presale_head";
     public static final String KARDEX_ZONE_EVENT_RESERVATION = "PRESALE_RESERVATION";

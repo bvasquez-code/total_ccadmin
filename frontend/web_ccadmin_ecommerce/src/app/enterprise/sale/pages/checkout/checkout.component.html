@@ -315,6 +315,17 @@
             </div>
           </div>
 
+          <div class="shipping-price-result" *ngIf="!IsValidatingCoverage && ShippingPrice">
+            <div>
+              <i class="fa fa-truck"></i>
+              <span>
+                <strong>{{ ShippingPrice.Description || 'Costo de envío' }}</strong>
+                <small>{{ ShippingPrice.DistanceKm | number:'1.0-3' }} km desde la tienda</small>
+              </span>
+            </div>
+            <strong>{{ ShippingPrice.Amount | currency:currency():'symbol-narrow':'1.0-0' }}</strong>
+          </div>
+
           <div class="shipping-schedule" *ngIf="requiresSchedule() && Coverage?.IsAvailable === 'S'">
             <div class="schedule-loading" *ngIf="IsLoadingShippingSchedule">
               <i class="fa fa-spinner fa-spin"></i>
@@ -371,8 +382,13 @@
       <aside class="checkout-summary">
         <span>Pedido atendido por</span><h2>{{ StoreContext?.Store?.Name }}</h2><p>{{ StoreContext?.Store?.Address }}</p>
         <div class="summary-line"><span>Productos</span><strong>{{ cartService.getCurrent().Items.length }}</strong></div>
-        <div class="summary-line total"><span>Total productos</span><strong>{{ subtotal() | currency:currency():'symbol-narrow':'1.2-2' }}</strong></div>
-        <small>El costo de envío se calculará en backend con la ubicación confirmada.</small>
+        <div class="summary-line"><span>Subtotal productos</span><strong>{{ subtotal() | currency:currency():'symbol-narrow':'1.2-2' }}</strong></div>
+        <div class="summary-line" *ngIf="requiresAddress()">
+          <span>Costo de envío</span>
+          <strong>{{ ShippingPrice ? (shippingAmount() | currency:currency():'symbol-narrow':'1.0-0') : 'Por calcular' }}</strong>
+        </div>
+        <div class="summary-line total"><span>Total del pedido</span><strong>{{ orderTotal() | currency:currency():'symbol-narrow':'1.2-2' }}</strong></div>
+        <small>El costo de envío se confirma nuevamente al registrar el pedido.</small>
         <button type="button" class="btn btn-primary btn-lg btn-block"
           [disabled]="IsSubmitting || availableOptions().length === 0 || !canConfirmOrder()" (click)="confirm()">
           {{ IsSubmitting ? 'Registrando pedido...' : 'Confirmar pedido' }}

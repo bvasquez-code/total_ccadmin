@@ -61,6 +61,12 @@
 .coverage-result.checking { color: #60798a; background: #f5f9fb; }
 .coverage-result.available { color: #267254; background: #edf8f3; border-color: #bce1d1; }
 .coverage-result.unavailable { color: #9d4c3f; background: #fff1ef; border-color: #efc7c0; }
+.shipping-price-result { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; padding: 0.85rem 1rem; color: #294c64; background: #eef6fb; border: 1px solid #c5dfef; border-radius: 0.55rem; }
+.shipping-price-result > div { display: flex; align-items: center; gap: 0.7rem; }
+.shipping-price-result > div > i { color: #2878bd; font-size: 1.2rem; }
+.shipping-price-result span { display: flex; flex-direction: column; }
+.shipping-price-result small { color: #718896; }
+.shipping-price-result > strong { color: #2878bd; font-size: 1.05rem; }
 .shipping-schedule { margin-bottom: 1rem; padding: 1rem; background: #f7fafc; border: 1px solid #d7e3ea; border-radius: 0.6rem; }
 .schedule-loading, .schedule-empty, .schedule-selected { display: flex; align-items: center; gap: 0.55rem; padding: 0.85rem; color: #60798a; background: #fff; border: 1px solid #d7e3ea; border-radius: 0.5rem; }
 .schedule-empty { color: #8b6825; background: #fff9ec; border-color: #efd69c; }

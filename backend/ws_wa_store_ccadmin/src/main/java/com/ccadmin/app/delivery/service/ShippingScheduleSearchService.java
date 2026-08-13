@@ -83,6 +83,13 @@ public class ShippingScheduleSearchService {
         DeliveryCoverageDto coverage = storeDeliverySearchService.validateCoverage(
                 buildCoverageRequest(request)
         );
+        return findSchedule(request, coverage);
+    }
+
+    ShippingScheduleDto findSchedule(
+            ShippingScheduleRequestDto request,
+            DeliveryCoverageDto coverage
+    ) {
         if (!"S".equals(coverage.IsAvailable)) {
             throw new IllegalArgumentException(coverage.Message);
         }
@@ -110,6 +117,13 @@ public class ShippingScheduleSearchService {
         request.CountryCod = delivery.CountryCod;
         request.UbigeoCod = delivery.UbigeoCod;
 
+        validateSelection(delivery, findSchedule(request));
+    }
+
+    public void validateSelection(
+            CheckoutDeliveryDto delivery,
+            ShippingScheduleDto schedule
+    ) {
         Instant scheduledFrom = parseInstant(delivery.ScheduledFrom, "inicio");
         Instant scheduledTo = parseInstant(delivery.ScheduledTo, "fin");
         if (scheduledTo.isBefore(scheduledFrom)) {
@@ -118,7 +132,6 @@ public class ShippingScheduleSearchService {
             );
         }
 
-        ShippingScheduleDto schedule = findSchedule(request);
         boolean validSelection = schedule.DateList.stream().anyMatch(date ->
                 matches(date.ScheduledFrom, date.ScheduledTo, scheduledFrom, scheduledTo)
                         || date.TimeSlotList.stream().anyMatch(slot ->
@@ -185,6 +198,7 @@ public class ShippingScheduleSearchService {
         ShippingScheduleDto result = new ShippingScheduleDto();
         result.ScheduleType = config.ConfigCod;
         result.ScheduleName = config.ConfigName;
+        result.ShippingConfigCod = config.ConfigDesc;
         result.UseTimeSlot = normalizeIndicator(config.Sta1Config);
 
         ZonedDateTime now = ZonedDateTime.now(clock);

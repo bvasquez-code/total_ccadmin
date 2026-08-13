@@ -4,6 +4,7 @@ import com.ccadmin.app.delivery.model.dto.CheckoutDeliveryDto;
 import com.ccadmin.app.delivery.model.dto.CheckoutRegisterDto;
 import com.ccadmin.app.delivery.model.dto.CheckoutConfirmationDto;
 import com.ccadmin.app.delivery.model.dto.DeliveryCoverageDto;
+import com.ccadmin.app.delivery.model.dto.ShippingPriceDto;
 import com.ccadmin.app.product.model.entity.ProductConfigEntity;
 import com.ccadmin.app.product.model.entity.ProductSearchEntity;
 import com.ccadmin.app.product.service.ProductFindSearchService;
@@ -52,6 +53,7 @@ class PresaleDeliveryCreateServiceTest {
     @Mock private VirtualCartRepository virtualCartRepository;
     @Mock private SaleDeliveryAccessTokenService saleDeliveryAccessTokenService;
     @Mock private ShippingScheduleSearchService shippingScheduleSearchService;
+    @Mock private ShippingPriceSearchService shippingPriceSearchService;
 
     private PresaleDeliveryCreateService service;
 
@@ -68,7 +70,8 @@ class PresaleDeliveryCreateServiceTest {
                 virtualCartRepository,
                 new ObjectMapper(),
                 saleDeliveryAccessTokenService,
-                shippingScheduleSearchService
+                shippingScheduleSearchService,
+                shippingPriceSearchService
         );
     }
 
@@ -83,8 +86,12 @@ class PresaleDeliveryCreateServiceTest {
         DeliveryCoverageDto coverage = new DeliveryCoverageDto();
         coverage.IsAvailable = "S";
         coverage.DistanceKm = new BigDecimal("1.250");
-        when(storeDeliverySearchService.validateCoverage(org.mockito.ArgumentMatchers.any()))
-                .thenReturn(coverage);
+        ShippingPriceDto shippingPrice = new ShippingPriceDto();
+        shippingPrice.ProductCod = SaleConstants.SHIPPING_PRODUCT_COD;
+        shippingPrice.Amount = new BigDecimal("6.25");
+        shippingPrice.Coverage = coverage;
+        when(shippingPriceSearchService.findPrice(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(shippingPrice);
         when(channelDeliveryTypeRepository.findActiveByChannelAndDeliveryType(
                 SaleConstants.COMMERCIAL_CHANNEL_WEB,
                 SaleConstants.DELIVERY_TYPE_AUTOMATIC
@@ -118,6 +125,24 @@ class PresaleDeliveryCreateServiceTest {
         config.IsDigital = "N";
         when(productOperationConfigShared.findByProduct("P001", "T001")).thenReturn(config);
 
+        ProductSearchEntity shippingProduct = new ProductSearchEntity();
+        shippingProduct.ProductCod = SaleConstants.SHIPPING_PRODUCT_COD;
+        shippingProduct.IsDigital = "S";
+        when(productFindSearchService.findAvailability(SaleConstants.SHIPPING_PRODUCT_COD, "T001"))
+                .thenReturn(shippingProduct);
+        ProductConfigEntity shippingConfig = new ProductConfigEntity();
+        shippingConfig.ProductCod = SaleConstants.SHIPPING_PRODUCT_COD;
+        shippingConfig.StoreCod = "T001";
+        shippingConfig.ProductUnitName = "NIU";
+        shippingConfig.ProductUnitFactor = 1;
+        shippingConfig.IsDigital = "S";
+        when(productOperationConfigShared.findByProduct(SaleConstants.SHIPPING_PRODUCT_COD, "T001"))
+                .thenReturn(shippingConfig);
+        when(productOperationConfigShared.isDigital(org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(invocation -> "S".equals(
+                        invocation.<ProductConfigEntity>getArgument(0).IsDigital
+                ));
+
         PresaleDetailDto saved = new PresaleDetailDto();
         saved.Headboard = new PresaleHeadEntity();
         saved.Headboard.PresaleCod = "PS001";
@@ -135,6 +160,9 @@ class PresaleDeliveryCreateServiceTest {
         assertEquals(SaleConstants.COMMERCIAL_CHANNEL_WEB, delegated.PresaleChannel.ChannelCod);
         assertEquals(6, delegated.DetailList.get(0).NumUnit);
         assertEquals(new BigDecimal("12.50"), delegated.DetailList.get(0).NumUnitPrice);
+        assertEquals(2, delegated.DetailList.size());
+        assertEquals(SaleConstants.SHIPPING_PRODUCT_COD, delegated.DetailList.get(1).ProductCod);
+        assertEquals(new BigDecimal("6.25"), delegated.DetailList.get(1).NumUnitPrice);
         assertEquals("Av. Principal 123", request.Delivery.Address);
         assertEquals("Avenida Principal, Chiclayo, Perú", request.Delivery.GeocodedAddress);
         assertEquals("PER", request.Delivery.CountryCod);

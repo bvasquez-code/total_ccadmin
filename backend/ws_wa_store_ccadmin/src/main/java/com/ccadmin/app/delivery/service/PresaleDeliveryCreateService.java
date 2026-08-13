@@ -5,6 +5,8 @@ import com.ccadmin.app.delivery.model.dto.CheckoutConfirmationDto;
 import com.ccadmin.app.delivery.model.dto.CheckoutRegisterDto;
 import com.ccadmin.app.delivery.model.dto.DeliveryCoverageDto;
 import com.ccadmin.app.delivery.model.dto.DeliveryCoverageRequestDto;
+import com.ccadmin.app.delivery.model.dto.ShippingPriceDto;
+import com.ccadmin.app.delivery.model.dto.ShippingPriceRequestDto;
 import com.ccadmin.app.product.model.entity.ProductConfigEntity;
 import com.ccadmin.app.product.model.entity.ProductSearchEntity;
 import com.ccadmin.app.product.service.ProductFindSearchService;
@@ -33,6 +35,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.Date;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -53,6 +56,7 @@ public class PresaleDeliveryCreateService {
     private final ObjectMapper objectMapper;
     private final SaleDeliveryAccessTokenService saleDeliveryAccessTokenService;
     private final ShippingScheduleSearchService shippingScheduleSearchService;
+    private final ShippingPriceSearchService shippingPriceSearchService;
 
     public PresaleDeliveryCreateService(
             ClientDeliveryContextService clientDeliveryContextService,
@@ -65,7 +69,8 @@ public class PresaleDeliveryCreateService {
             VirtualCartRepository virtualCartRepository,
             ObjectMapper objectMapper,
             SaleDeliveryAccessTokenService saleDeliveryAccessTokenService,
-            ShippingScheduleSearchService shippingScheduleSearchService
+            ShippingScheduleSearchService shippingScheduleSearchService,
+            ShippingPriceSearchService shippingPriceSearchService
     ) {
         this.clientDeliveryContextService = clientDeliveryContextService;
         this.clientAddressDeliverySearchService = clientAddressDeliverySearchService;
@@ -78,6 +83,7 @@ public class PresaleDeliveryCreateService {
         this.objectMapper = objectMapper;
         this.saleDeliveryAccessTokenService = saleDeliveryAccessTokenService;
         this.shippingScheduleSearchService = shippingScheduleSearchService;
+        this.shippingPriceSearchService = shippingPriceSearchService;
     }
 
     public String createCode(String storeCod) {
@@ -113,8 +119,18 @@ public class PresaleDeliveryCreateService {
         String storeCod = request.Headboard.StoreCod.trim();
 
         storeDeliverySearchService.findActiveVirtualStore(storeCod);
-        validateDelivery(request.Delivery, storeCod, clientSession.ClientCod);
+        ShippingPriceDto shippingPrice = validateDelivery(
+                request.Delivery,
+                storeCod,
+                clientSession.ClientCod
+        );
+        request.DetailList = new ArrayList<>(request.DetailList);
+        request.DetailList.removeIf(detail -> detail != null
+                && SaleConstants.SHIPPING_PRODUCT_COD.equals(detail.ProductCod));
         validateDetails(request, storeCod);
+        if (shippingPrice != null) {
+            request.DetailList.add(buildShippingDetail(request, shippingPrice, storeCod));
+        }
 
         request.Headboard.ClientCod = clientSession.ClientCod;
         PresaleDetailDto result = presaleCreateService.saveWeb(request, storeCod);
@@ -218,7 +234,7 @@ public class PresaleDeliveryCreateService {
         }
     }
 
-    private void validateDelivery(
+    private ShippingPriceDto validateDelivery(
             CheckoutDeliveryDto delivery,
             String storeCod,
             String clientCod
@@ -250,9 +266,18 @@ public class PresaleDeliveryCreateService {
             applyAddressSnapshot(delivery, address);
         }
 
-        DeliveryCoverageDto coverage = storeDeliverySearchService.validateCoverage(
-                buildCoverageRequest(storeCod, delivery)
-        );
+        ShippingPriceDto shippingPrice = null;
+        DeliveryCoverageDto coverage;
+        if (SaleConstants.DELIVERY_TYPE_STORE_PICKUP.equals(delivery.DeliveryTypeCod)) {
+            coverage = storeDeliverySearchService.validateCoverage(
+                    buildCoverageRequest(storeCod, delivery)
+            );
+        } else {
+            shippingPrice = shippingPriceSearchService.findPrice(
+                    buildShippingPriceRequest(storeCod, delivery)
+            );
+            coverage = shippingPrice.Coverage;
+        }
         if (!"S".equals(coverage.IsAvailable)) {
             throw new IllegalArgumentException(coverage.Message);
         }
@@ -264,7 +289,7 @@ public class PresaleDeliveryCreateService {
         }
 
         if (SaleConstants.DELIVERY_TYPE_SCHEDULED.equals(delivery.DeliveryTypeCod)) {
-            shippingScheduleSearchService.validateSelection(storeCod, delivery);
+            shippingScheduleSearchService.validateSelection(delivery, shippingPrice.Schedule);
             Date scheduledFrom = parseDate(delivery.ScheduledFrom, "inicio");
             Date scheduledTo = parseDate(delivery.ScheduledTo, "fin");
             if (scheduledTo.before(scheduledFrom)) {
@@ -275,6 +300,68 @@ public class PresaleDeliveryCreateService {
             delivery.ScheduledFrom = scheduledFrom.toInstant().toString();
             delivery.ScheduledTo = scheduledTo.toInstant().toString();
         }
+        return shippingPrice;
+    }
+
+    private ShippingPriceRequestDto buildShippingPriceRequest(
+            String storeCod,
+            CheckoutDeliveryDto delivery
+    ) {
+        ShippingPriceRequestDto request = new ShippingPriceRequestDto();
+        request.StoreCod = storeCod;
+        request.DeliveryTypeCod = delivery.DeliveryTypeCod;
+        request.Latitude = delivery.Latitude;
+        request.Longitude = delivery.Longitude;
+        request.CountryCod = delivery.CountryCod;
+        request.UbigeoCod = delivery.UbigeoCod;
+        return request;
+    }
+
+    private PresaleDetEntity buildShippingDetail(
+            CheckoutRegisterDto request,
+            ShippingPriceDto shippingPrice,
+            String storeCod
+    ) {
+        if (!SaleConstants.SHIPPING_PRODUCT_COD.equals(shippingPrice.ProductCod)) {
+            throw new IllegalArgumentException(
+                    "La tarifa de envío debe utilizar el producto " + SaleConstants.SHIPPING_PRODUCT_COD
+            );
+        }
+        ProductConfigEntity config = productOperationConfigShared.findByProduct(
+                shippingPrice.ProductCod,
+                storeCod
+        );
+        ProductSearchEntity product = productFindSearchService.findAvailability(
+                shippingPrice.ProductCod,
+                storeCod
+        );
+        if (!productOperationConfigShared.isDigital(config)
+                || !"S".equalsIgnoreCase(product.IsDigital)) {
+            throw new IllegalArgumentException("El producto de delivery debe estar configurado como digital");
+        }
+        productOperationConfigShared.validateInternalQuantity(
+                shippingPrice.ProductCod,
+                1,
+                config.ProductUnitFactor
+        );
+
+        PresaleDetEntity detail = new PresaleDetEntity();
+        detail.PresaleCod = request.Headboard.PresaleCod;
+        detail.ItemNumber = request.DetailList.stream()
+                .mapToInt(item -> item.ItemNumber)
+                .max()
+                .orElse(0) + 1;
+        detail.ProductCod = shippingPrice.ProductCod;
+        detail.Variant = "0000";
+        detail.NumUnit = 1;
+        detail.NumUnitPrice = shippingPrice.Amount;
+        detail.NumDiscount = BigDecimal.ZERO;
+        detail.NumUnitPriceSale = shippingPrice.Amount;
+        detail.NumTotalPrice = shippingPrice.Amount;
+        detail.ProductUnitName = config.ProductUnitName;
+        detail.ProductUnitFactor = config.ProductUnitFactor;
+        detail.IsDigital = "S";
+        return detail;
     }
 
     private DeliveryCoverageRequestDto buildCoverageRequest(

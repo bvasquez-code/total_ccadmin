@@ -7,6 +7,7 @@ public class ShippingScheduleDto {
 
     public String ScheduleType;
     public String ScheduleName;
+    public String ShippingConfigCod;
     public String UseTimeSlot;
     public List<ShippingScheduleDateDto> DateList = new ArrayList<>();
 }

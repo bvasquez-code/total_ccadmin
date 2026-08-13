@@ -6,13 +6,12 @@ import { CartService } from '../../../cart/service/cart.service';
 import { ClientSessionService } from '../../../client/service/client-session.service';
 import { ClientAddressService } from '../../../client/service/client-address.service';
 import { DeliveryCoverageDto } from '../../../client/model/dto/DeliveryCoverageDto';
-import { DeliveryCoverageRequestDto } from '../../../client/model/dto/DeliveryCoverageRequestDto';
 import {
   ShippingScheduleDateDto,
   ShippingScheduleDto,
   ShippingScheduleTimeSlotDto
 } from '../../../client/model/dto/ShippingScheduleDto';
-import { ShippingScheduleRequestDto } from '../../../client/model/dto/ShippingScheduleRequestDto';
+import { ShippingPriceDto, ShippingPriceRequestDto } from '../../../client/model/dto/ShippingPriceDto';
 import { ClientAddressEntity } from '../../../client/model/entity/ClientAddressEntity';
 import { StoreContextDto } from '../../../store/model/dto/StoreContextDto';
 import { StoreContextService } from '../../../store/service/store-context.service';
@@ -60,6 +59,7 @@ export class CheckoutComponent implements OnInit {
   public IsLoadingAddresses: boolean = false;
   public IsValidatingCoverage: boolean = false;
   public ShippingSchedule: ShippingScheduleDto | null = null;
+  public ShippingPrice: ShippingPriceDto | null = null;
   public IsLoadingShippingSchedule: boolean = false;
   public SelectedScheduleDate: string = '';
   public SelectedScheduleTimeSlot: string = '';
@@ -76,7 +76,6 @@ export class CheckoutComponent implements OnInit {
   private pendingConfirmationRequest: PresaleRegisterDto | null = null;
   private readonly MaxPaymentProofSizeBytes: number = 10 * 1024 * 1024;
   private coverageValidationSequence: number = 0;
-  private shippingScheduleLoadSequence: number = 0;
 
   public readonly DeliveryOptions: DeliveryOption[] = [
     { Code: 'DELIVERY', Name: 'Delivery cercano', Description: 'Envío directo desde la tienda.', Icon: 'fa-motorcycle' },
@@ -173,7 +172,7 @@ export class CheckoutComponent implements OnInit {
       && this.Coverage?.DeliveryTypeCod === this.Delivery.DeliveryTypeCod
       && this.Coverage?.IsAvailable === 'S'
       && !this.IsValidatingCoverage;
-    if (!validAddress) return false;
+    if (!validAddress || !this.ShippingPrice) return false;
     return !this.requiresSchedule()
       || (!!this.Delivery.ScheduledFrom
         && !!this.Delivery.ScheduledTo
@@ -270,6 +269,14 @@ export class CheckoutComponent implements OnInit {
 
   public subtotal(): number {
     return this.cartService.subtotal();
+  }
+
+  public shippingAmount(): number {
+    return this.money(Number(this.ShippingPrice?.Amount || 0));
+  }
+
+  public orderTotal(): number {
+    return this.money(this.subtotal() + this.shippingAmount());
   }
 
   public currency(): string {
@@ -556,80 +563,58 @@ export class CheckoutComponent implements OnInit {
     const selectedAddressId = this.Delivery.ClientAddressID;
     const selectedDeliveryType = this.Delivery.DeliveryTypeCod;
 
-    const request = new DeliveryCoverageRequestDto();
+    const request = new ShippingPriceRequestDto();
     request.StoreCod = this.StoreContext?.Store.StoreCod || '';
     request.DeliveryTypeCod = this.Delivery.DeliveryTypeCod;
-    request.Latitude = this.Delivery.Latitude;
-    request.Longitude = this.Delivery.Longitude;
-
-    this.IsValidatingCoverage = true;
-    try {
-      const response = await this.clientAddressService.validateCoverage(request);
-      if (validationSequence !== this.coverageValidationSequence
-        || selectedAddressId !== this.Delivery.ClientAddressID
-        || selectedDeliveryType !== this.Delivery.DeliveryTypeCod) return;
-      if (response.ErrorStatus || !response.Data) {
-        this.Coverage = null;
-        this.toastrService.error(response.Message || 'No se pudo validar la cobertura de esta dirección.');
-        return;
-      }
-      const coverage = Object.assign(new DeliveryCoverageDto(), response.Data);
-      this.Coverage = coverage;
-      if (this.requiresSchedule() && coverage.IsAvailable === 'S') {
-        await this.loadShippingSchedule(selectedAddressId, validationSequence);
-      }
-    } finally {
-      if (validationSequence === this.coverageValidationSequence) {
-        this.IsValidatingCoverage = false;
-      }
-    }
-  }
-
-  private async loadShippingSchedule(
-    selectedAddressId: number,
-    coverageValidationSequence: number
-  ): Promise<void> {
-    const loadSequence = ++this.shippingScheduleLoadSequence;
-    const request = new ShippingScheduleRequestDto();
-    request.StoreCod = this.StoreContext?.Store.StoreCod || '';
     request.Latitude = this.Delivery.Latitude;
     request.Longitude = this.Delivery.Longitude;
     request.CountryCod = this.Delivery.CountryCod;
     request.UbigeoCod = this.Delivery.UbigeoCod;
 
-    this.IsLoadingShippingSchedule = true;
+    this.IsValidatingCoverage = true;
+    this.IsLoadingShippingSchedule = this.requiresSchedule();
     try {
-      const response = await this.clientAddressService.findShippingSchedule(request);
-      if (loadSequence !== this.shippingScheduleLoadSequence
-        || coverageValidationSequence !== this.coverageValidationSequence
+      const response = await this.clientAddressService.findShippingPrice(request);
+      if (validationSequence !== this.coverageValidationSequence
         || selectedAddressId !== this.Delivery.ClientAddressID
-        || !this.requiresSchedule()) return;
+        || selectedDeliveryType !== this.Delivery.DeliveryTypeCod) return;
       if (response.ErrorStatus || !response.Data) {
-        this.ShippingSchedule = null;
-        this.toastrService.error(
-          response.Message || 'No se pudieron consultar las fechas de entrega disponibles.'
-        );
+        this.Coverage = null;
+        this.ShippingPrice = null;
+        this.toastrService.error(response.Message || 'No se pudo calcular el costo de envío.');
         return;
       }
-      const schedule = Object.assign(new ShippingScheduleDto(), response.Data);
-      schedule.DateList = (response.Data.DateList || []).map((dateItem: ShippingScheduleDateDto) => {
+      const shippingPrice = Object.assign(new ShippingPriceDto(), response.Data);
+      const coverage = Object.assign(new DeliveryCoverageDto(), response.Data.Coverage);
+      shippingPrice.Coverage = coverage;
+      this.Coverage = coverage;
+      this.ShippingPrice = shippingPrice;
+      if (this.requiresSchedule() && response.Data.Schedule) {
+        this.ShippingSchedule = this.mapShippingSchedule(response.Data.Schedule);
+      }
+    } finally {
+      if (validationSequence === this.coverageValidationSequence) {
+        this.IsValidatingCoverage = false;
+        this.IsLoadingShippingSchedule = false;
+      }
+    }
+  }
+
+  private mapShippingSchedule(data: any): ShippingScheduleDto {
+      const schedule = Object.assign(new ShippingScheduleDto(), data);
+      schedule.DateList = (data.DateList || []).map((dateItem: ShippingScheduleDateDto) => {
         const dateOption = Object.assign(new ShippingScheduleDateDto(), dateItem);
         dateOption.TimeSlotList = (dateItem.TimeSlotList || []).map(
           timeSlot => Object.assign(new ShippingScheduleTimeSlotDto(), timeSlot)
         );
         return dateOption;
       });
-      this.ShippingSchedule = schedule;
-    } finally {
-      if (loadSequence === this.shippingScheduleLoadSequence) {
-        this.IsLoadingShippingSchedule = false;
-      }
-    }
+      return schedule;
   }
 
   private clearShippingSchedule(): void {
-    this.shippingScheduleLoadSequence++;
     this.ShippingSchedule = null;
+    this.ShippingPrice = null;
     this.IsLoadingShippingSchedule = false;
     this.SelectedScheduleDate = '';
     this.SelectedScheduleTimeSlot = '';

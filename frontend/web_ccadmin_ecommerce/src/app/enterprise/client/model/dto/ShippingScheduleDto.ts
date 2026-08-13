@@ -17,6 +17,7 @@ export class ShippingScheduleDateDto {
 export class ShippingScheduleDto {
   public ScheduleType: string = '';
   public ScheduleName: string = '';
+  public ShippingConfigCod: string = '';
   public UseTimeSlot: string = 'N';
   public DateList: ShippingScheduleDateDto[] = [];
 }

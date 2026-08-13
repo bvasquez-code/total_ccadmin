@@ -4,6 +4,7 @@ import { ResponseWsDto } from '../../shared/model/dto/ResponseWsDto';
 import { ApiService } from '../../shared/service/api.service';
 import { DeliveryCoverageRequestDto } from '../model/dto/DeliveryCoverageRequestDto';
 import { ShippingScheduleRequestDto } from '../model/dto/ShippingScheduleRequestDto';
+import { ShippingPriceRequestDto } from '../model/dto/ShippingPriceDto';
 import { ClientAddressEntity } from '../model/entity/ClientAddressEntity';
 
 @Injectable({ providedIn: 'root' })
@@ -85,6 +86,11 @@ export class ClientAddressService {
 
   public findShippingSchedule(request: ShippingScheduleRequestDto): Promise<ResponseWsDto> {
     const url = `${AppSetting.API}/api/v1/delivery/clientAddress/findShippingSchedule`;
+    return this.apiService.ExecutePostService(url, request);
+  }
+
+  public findShippingPrice(request: ShippingPriceRequestDto): Promise<ResponseWsDto> {
+    const url = `${AppSetting.API}/api/v1/delivery/clientAddress/findShippingPrice`;
     return this.apiService.ExecutePostService(url, request);
   }
 }
