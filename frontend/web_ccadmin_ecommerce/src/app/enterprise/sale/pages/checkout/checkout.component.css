@@ -29,6 +29,9 @@
 .billing-company-result > i { margin-top: 0.12rem; font-size: 1.2rem; }
 .billing-company-result > div { display: flex; flex-direction: column; }
 .billing-company-result span, .billing-company-result small { margin-top: 0.12rem; color: #5d7b70; }
+.billing-company-manual { margin-top: 1rem; padding: 0.9rem; background: #fff9ec; border: 1px solid #efd69c; border-radius: 0.55rem; }
+.billing-manual-message { display: flex; align-items: flex-start; gap: 0.55rem; color: #80621f; font-size: 0.8rem; }
+.billing-manual-message i { margin-top: 0.12rem; color: #d49a1f; }
 .selection-check { position: absolute; top: 0.65rem; right: 0.65rem; display: none; color: #2aa176; }
 .selected .selection-check { display: block; }
 .delivery-warning { padding: 1rem; color: #9d4c3f; background: #fff1ef; border-radius: 0.5rem; }

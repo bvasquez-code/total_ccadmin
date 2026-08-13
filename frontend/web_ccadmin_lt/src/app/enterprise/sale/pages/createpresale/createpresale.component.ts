@@ -29,7 +29,8 @@ import { IndicatorDto } from 'src/app/enterprise/shared/model/dto/IndicatorDto';
 
 @Component({
   selector: 'app-createpresale',
-  templateUrl: './createpresale.component.html'
+  templateUrl: './createpresale.component.html',
+  styleUrls: ['./createpresale.component.css']
 })
 export class CreatepresaleComponent implements OnInit {
 

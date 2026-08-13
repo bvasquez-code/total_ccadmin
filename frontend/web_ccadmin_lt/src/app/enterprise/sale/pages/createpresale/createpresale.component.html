@@ -435,13 +435,17 @@
       <div class="bgc-secondary-l4 brc-dark-l3 border-1 px-35 pb-3 pt-25 radius-1"
         *ngFor="let SubListaProducto of productListHtml">
         <div class="row">
-          <div class="col-12 col-lg-3 pr-2 mb-3 mb-lg-0" *ngFor="let product of SubListaProducto">
-            <div class="dcard brc-transparent p-3 brc-h-warning-m3">
+          <div class="col-12 col-lg-3 pr-2 mb-3 product-card-column" *ngFor="let product of SubListaProducto">
+            <div class="dcard brc-transparent p-3 brc-h-warning-m3 product-card">
 
-              <img *ngIf="(product.FileRoute === null)" src="http://localhost:4200/assets/image/avatar/NO_IMAGEN.png"
-                class="radius-1 w-100" alt="Product Image" />
-              <img *ngIf="(product.FileRoute !== null)" src="{{product.FileRoute}}" class="radius-1 w-100"
-                alt="Product Image" />
+              <a class="product-card-image-link radius-1"
+                [routerLink]="['/enterprise/product/pages/viewproduct']"
+                [queryParams]="{ ProductCod: product.ProductCod }"
+                target="_blank" rel="noopener noreferrer"
+                title="Ver detalle del producto en una pestaña nueva">
+                <img [src]="product.FileRoute || '/assets/image/avatar/NO_IMAGEN.png'"
+                  class="product-card-image" [alt]="product.ProductName" />
+              </a>
 
               <div class="my-3 text-90 text-warning-m2">
                 <span class="text-grey-m1 ml-1">
@@ -470,10 +474,10 @@
               <h4 class="text-danger text-100" *ngIf="!isDigitalSearchProduct(product)">
                 STOCK : {{ getVisibleStock(product.NumDigitalStock, product.ProductUnitFactor) }} {{ product.ProductUnitName }}
               </h4>
-              <div>
+              <div class="product-card-name" [title]="product.ProductName">
                 {{product.ProductName}}
               </div>
-              <div>
+              <div class="product-card-actions">
                 <a href="#" class="btn btn-white btn-h-info btn-a-info btn-sm px-3" data-toggle="modal"
                   data-target="#ProductModal" (click)="findDetailById(product.ProductCod)">
                   <i class="fa fa-shopping-cart d-sm-none mr-2"></i>

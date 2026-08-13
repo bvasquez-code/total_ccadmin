@@ -192,7 +192,7 @@
                 <label for="billing-ruc">RUC para la factura</label>
                 <input id="billing-ruc" type="text" inputmode="numeric" class="form-control"
                   name="BillingRuc" maxlength="11" [(ngModel)]="BillingRuc"
-                  (ngModelChange)="BillingPerson = null"
+                  (ngModelChange)="billingRucChanged()"
                   placeholder="Ingresa los 11 dígitos del RUC">
               </div>
               <div class="form-group col-md-4 mb-0">
@@ -211,6 +211,19 @@
                 <strong>{{ BillingPerson.BusinessName }}</strong>
                 <span>RUC {{ BillingPerson.DocumentNum }}</span>
                 <small *ngIf="BillingPerson.Address">{{ BillingPerson.Address }}</small>
+              </div>
+            </div>
+
+            <div class="billing-company-manual" *ngIf="IsManualBilling">
+              <div class="billing-manual-message">
+                <i class="fa fa-info-circle"></i>
+                <span>El RUC no fue encontrado. Puedes registrar la razón social manualmente.</span>
+              </div>
+              <div class="form-group mb-0 mt-3">
+                <label for="billing-company-name">Nombre o razón social</label>
+                <input id="billing-company-name" type="text" class="form-control"
+                  name="BillingCompanyName" maxlength="256" [(ngModel)]="BillingCompanyName"
+                  placeholder="Ingresa el nombre de la empresa">
               </div>
             </div>
           </div>

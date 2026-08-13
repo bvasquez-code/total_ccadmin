@@ -60,6 +60,8 @@ export class CheckoutComponent implements OnInit {
   public BillingRuc: string = '';
   public BillingPerson: PersonEntity | null = null;
   public IsSearchingBilling: boolean = false;
+  public IsManualBilling: boolean = false;
+  public BillingCompanyName: string = '';
 
   private pendingConfirmationRequest: PresaleRegisterDto | null = null;
   private readonly MaxPaymentProofSizeBytes: number = 10 * 1024 * 1024;
@@ -173,13 +175,24 @@ export class CheckoutComponent implements OnInit {
     if (documentType === '03') {
       this.BillingRuc = '';
       this.BillingPerson = null;
+      this.IsManualBilling = false;
+      this.BillingCompanyName = '';
     }
+  }
+
+  public billingRucChanged(): void {
+    this.BillingRuc = (this.BillingRuc || '').replace(/\D/g, '');
+    this.BillingPerson = null;
+    this.IsManualBilling = false;
+    this.BillingCompanyName = '';
   }
 
   public async findBillingCompany(): Promise<void> {
     const ruc = (this.BillingRuc || '').replace(/\D/g, '');
     this.BillingRuc = ruc;
     this.BillingPerson = null;
+    this.IsManualBilling = false;
+    this.BillingCompanyName = '';
     if (!/^\d{11}$/.test(ruc)) {
       this.toastrService.warning('Ingresa un RUC valido de 11 digitos.');
       return;
@@ -187,12 +200,17 @@ export class CheckoutComponent implements OnInit {
 
     this.IsSearchingBilling = true;
     try {
-      const person = await this.billingIdentityService.findCompanyByRuc(ruc);
+      let person = await this.billingIdentityService.findCompanyByRuc(ruc);
       if (!person) {
-        this.toastrService.warning('No fue posible obtener los datos del RUC indicado.');
+        person = await this.billingIdentityService.findInternalCompanyByRuc(ruc);
+      }
+      if (person) {
+        this.BillingPerson = person;
+        this.BillingCompanyName = person.BusinessName || '';
         return;
       }
-      this.BillingPerson = person;
+      this.IsManualBilling = true;
+      this.toastrService.info('No encontramos el RUC. Ingresa manualmente el nombre de la empresa.');
     } finally {
       this.IsSearchingBilling = false;
     }
@@ -201,9 +219,11 @@ export class CheckoutComponent implements OnInit {
   public isBillingValid(): boolean {
     if (this.BillingDocumentType === '03') return true;
     return this.BillingDocumentType === '01'
-      && !!this.BillingPerson
-      && /^\d{11}$/.test(this.BillingPerson.DocumentNum || '')
-      && !!(this.BillingPerson.BusinessName || '').trim();
+      && /^\d{11}$/.test(this.BillingRuc || '')
+      && (
+        (!!this.BillingPerson && !!(this.BillingPerson.BusinessName || '').trim())
+        || (this.IsManualBilling && !!(this.BillingCompanyName || '').trim())
+      );
   }
 
   public subtotal(): number {
@@ -684,17 +704,32 @@ export class CheckoutComponent implements OnInit {
   private buildSaleBilling(): SaleBillingEntity {
     const saleBilling = new SaleBillingEntity();
     saleBilling.DocumentTypeRequest = this.BillingDocumentType;
-    if (this.BillingDocumentType === '01' && this.BillingPerson) {
-      saleBilling.PersonCod = this.BillingPerson.PersonCod || '';
-      saleBilling.Person = Object.assign(new PersonEntity(), this.BillingPerson);
-      saleBilling.DocumentType = this.BillingPerson.DocumentType;
-      saleBilling.DocumentNum = this.BillingPerson.DocumentNum;
-      saleBilling.LegalName = this.BillingPerson.BusinessName;
-      saleBilling.CommercialName = this.BillingPerson.CommercialName;
-      saleBilling.Address = this.BillingPerson.Address;
-      saleBilling.UbigeoCod = this.BillingPerson.UbigeoCod;
+    if (this.BillingDocumentType === '01') {
+      const person = this.BillingPerson
+        ? Object.assign(new PersonEntity(), this.BillingPerson)
+        : this.buildManualBillingPerson();
+      saleBilling.PersonCod = this.BillingPerson ? (person.PersonCod || '') : '';
+      saleBilling.Person = person;
+      saleBilling.DocumentType = person.DocumentType;
+      saleBilling.DocumentNum = person.DocumentNum;
+      saleBilling.LegalName = person.BusinessName;
+      saleBilling.CommercialName = person.CommercialName;
+      saleBilling.Address = person.Address;
+      saleBilling.UbigeoCod = person.UbigeoCod;
     }
     return saleBilling;
+  }
+
+  private buildManualBillingPerson(): PersonEntity {
+    const person = new PersonEntity();
+    person.PersonCod = this.BillingRuc;
+    person.PersonType = '04';
+    person.DocumentType = '06';
+    person.DocumentNum = this.BillingRuc;
+    person.Names = '-';
+    person.LastNames = '-';
+    person.BusinessName = (this.BillingCompanyName || '').trim();
+    return person;
   }
 
   private money(value: number): number {

@@ -89,6 +89,7 @@ import { ListBulkLoadComponent } from './enterprise/bulkload/pages/listbulkload/
 import { CreateBulkLoadComponent } from './enterprise/bulkload/pages/createbulkload/createbulkload.component';
 import { ViewBulkLoadComponent } from './enterprise/bulkload/pages/viewbulkload/viewbulkload.component';
 import { SessionAccessGuard } from './enterprise/login/service/session-access.guard';
+import { ViewproductComponent } from './enterprise/product/pages/viewproduct/viewproduct.component';
 
 const routes: Routes = [
   {
@@ -290,6 +291,10 @@ const routes: Routes = [
       {
         path: 'enterprise/product/pages/createproductconfig',
         component: CreateproductconfigComponent
+      },
+      {
+        path: 'enterprise/product/pages/viewproduct',
+        component: ViewproductComponent
       },
       {
         path: 'enterprise/product/pages/listBrand',

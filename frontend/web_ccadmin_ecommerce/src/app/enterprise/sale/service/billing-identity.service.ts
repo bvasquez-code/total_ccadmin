@@ -26,6 +26,22 @@ export class BillingIdentityService {
     return this.mapCompany(data.company, ruc);
   }
 
+  public async findInternalCompanyByRuc(ruc: string): Promise<PersonEntity | null> {
+    const response: ResponseWsDto = await this.apiService.ExecuteGetService(
+      `${AppSetting.API}/api/v1/delivery/billingIdentity/findCompanyByRuc`,
+      { Ruc: ruc }
+    );
+    if (response.ErrorStatus || !response.Data) {
+      return null;
+    }
+    const person = Object.assign(new PersonEntity(), response.Data);
+    if (!person.BusinessName?.trim()) {
+      person.BusinessName = person.CommercialName?.trim()
+        || `${person.Names || ''} ${person.LastNames || ''}`.trim();
+    }
+    return person.BusinessName?.trim() ? person : null;
+  }
+
   private mapCompany(company: SunatCompanyIdentityDto, ruc: string): PersonEntity {
     const person = new PersonEntity();
     person.PersonType = '04';

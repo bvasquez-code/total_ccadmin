@@ -264,25 +264,31 @@
                       <div class="d-inline-block text-center" *ngIf="(SaleDetail.Headboard.SaleStatus !== 'C')">
                         <p class="text-95 text-dark-m2">
                           <i class="fa fa-exclamation-triangle text-danger-m2 mr-1"></i>
-                          Seleccione el tipo de
+                          {{ isWebSale ? 'Comprobante solicitado' : 'Seleccione el tipo de' }}
                           <br>
-                           documento de venta
+                          {{ isWebSale ? 'en la tienda virtual' : 'documento de venta' }}
                         </p>
 
                         <div>
                           <form autocomplete="off" class="p-2 p-sm-3 bgc-secondary-l4 radius-1 btn-group btn-group-toggle mx-n3 mx-sm-0" data-toggle="buttons">
-                            <div role="button" (click)="selectDocumentType('03')" 
+                            <div [attr.role]="isWebSale ? null : 'button'" (click)="selectDocumentType('03')"
+                              [attr.aria-disabled]="isWebDocumentLocked('03')"
                               class="mr-1 p-3 border-2 btn btn-brc-tp shadow-sm btn-light btn-text-blue btn-h-lighter-blue btn-a-light-blue bgc-white"
-                              [ngClass]="{'active': SelectedPaymentOption === '03'}">
-                              <input type="radio" name="place" id="place1" value="1">
+                              [ngClass]="{'active': SelectedPaymentOption === '03', 'disabled': isWebDocumentLocked('03')}">
+                              <input type="radio" name="place" id="place1" value="03"
+                                [checked]="SelectedPaymentOption === '03'" [disabled]="isWebSale">
                               BOLETA
+                              <i class="fa fa-lock ml-2" *ngIf="isWebSale && SelectedPaymentOption === '03'"></i>
                             </div>
 
-                            <div role="button" (click)="selectDocumentType('01')" 
+                            <div [attr.role]="isWebSale ? null : 'button'" (click)="selectDocumentType('01')"
+                              [attr.aria-disabled]="isWebDocumentLocked('01')"
                               class="mr-1 p-3 border-2 btn btn-brc-tp shadow-sm btn-text-purple btn-light btn-h-lighter-purple btn-a-light-purple bgc-white"
-                              [ngClass]="{'active': SelectedPaymentOption === '01'}">
-                              <input type="radio" name="place" id="place2" value="1">
+                              [ngClass]="{'active': SelectedPaymentOption === '01', 'disabled': isWebDocumentLocked('01')}">
+                              <input type="radio" name="place" id="place2" value="01"
+                                [checked]="SelectedPaymentOption === '01'" [disabled]="isWebSale">
                               FACTURA
+                              <i class="fa fa-lock ml-2" *ngIf="isWebSale && SelectedPaymentOption === '01'"></i>
                             </div>
 
                             <div *ngIf="isProformaSalesEnabled && !isWebSale" role="button" (click)="selectDocumentType('99')"
@@ -299,6 +305,18 @@
                               ANTICIPO
                             </div>
                           </form>
+                          <div class="alert bgc-blue-l4 brc-blue-m3 border-1 text-dark-m2 mt-2 mb-0 py-2"
+                            *ngIf="isWebSale && (SelectedPaymentOption === '01' || SelectedPaymentOption === '03')">
+                            <i class="fa fa-lock text-blue mr-2"></i>
+                            El cliente solicitó
+                            <b>{{ SelectedPaymentOption === '01' ? 'FACTURA' : 'BOLETA' }}</b>.
+                            Este comprobante no puede cambiarse desde la facturación interna.
+                          </div>
+                          <div class="alert alert-danger mt-2 mb-0 py-2"
+                            *ngIf="isWebSale && SelectedPaymentOption !== '01' && SelectedPaymentOption !== '03'">
+                            <i class="fa fa-exclamation-circle mr-2"></i>
+                            La venta web no tiene un comprobante solicitado válido.
+                          </div>
                           <div class="alert bgc-info-l4 brc-info-m3 border-1 text-dark-m2 mt-2 mb-0 py-2"
                             *ngIf="isProformaSalesEnabled && !isWebSale && SelectedPaymentOption === '99'">
                             La proforma registra y cierra la venta sin enviarla a facturación electrónica.
@@ -333,7 +351,19 @@
                             {{  SaleDetail.Headboard.CurrencyCod }} {{ SaleDetail.Headboard.NumTotalTax | FormatoMonedaPeruana : false }}
                               </span>
                         </div>
-                      </div>                      
+                      </div>
+
+                      <div class="row my-2 pt-2 border-t-1 brc-secondary-l3 align-items-center">
+                        <div class="col-7 text-right text-110">
+                          <b>Monto total</b>
+                        </div>
+
+                        <div class="col-5">
+                          <strong class="text-140 text-dark-d2">
+                            {{ SaleDetail.Headboard.CurrencyCod }} {{ SaleDetail.Headboard.NumTotalPrice | FormatoMonedaPeruana : false }}
+                          </strong>
+                        </div>
+                      </div>
 
                       <a *ngIf="(SaleDetail.Headboard.SaleStatus !== 'C' && enableButtonPay)"
                         class="row my-3 align-items-center bgc-green-d3 p-2 radius-1" 
@@ -342,14 +372,15 @@
                         [attr.data-target]="shouldOpenPaymentModal() ? '#TrxPaymentModal' : null"
                         (click)="OpenTrxPaymentModal()"
                       >
-                        <div class="col-7 text-right text-white text-110">
-                          Monto Total
+                        <div class="text-white text-110"
+                          [ngClass]="hasOutstandingBalance() ? 'col-7 text-right' : 'col-12 text-center'">
+                          <b>{{ getPaymentActionLabel() }}</b>
                         </div>
 
-                        <div class="col-5">
-                          <span class="text-150 text-white">
-                            {{  SaleDetail.Headboard.CurrencyCod }} {{ SaleDetail.Headboard.NumTotalPrice | FormatoMonedaPeruana : false  }}
-                              </span>
+                        <div class="col-5" *ngIf="hasOutstandingBalance()">
+                          <strong class="text-150 text-white">
+                            {{ SaleDetail.Headboard.CurrencyCod }} {{ getOutstandingbalance() | FormatoMonedaPeruana : false }}
+                          </strong>
                         </div>
                       </a>
 
@@ -358,13 +389,14 @@
                         style="cursor: pointer;"
                         (click)="viewAlertSelectDocumentType()"
                       >
-                        <div class="col-7 text-right text-white text-110">
-                          Monto Total
+                        <div class="text-white text-110"
+                          [ngClass]="hasOutstandingBalance() ? 'col-7 text-right' : 'col-12 text-center'">
+                          <b>{{ getPaymentActionLabel() }}</b>
                         </div>
-                        <div class="col-5">
-                          <span class="text-150 text-white">
-                            {{  SaleDetail.Headboard.CurrencyCod }} {{ SaleDetail.Headboard.NumTotalPrice | FormatoMonedaPeruana : false  }}
-                              </span>
+                        <div class="col-5" *ngIf="hasOutstandingBalance()">
+                          <strong class="text-150 text-white">
+                            {{ SaleDetail.Headboard.CurrencyCod }} {{ getOutstandingbalance() | FormatoMonedaPeruana : false }}
+                          </strong>
                         </div>
                       </a>
                       
@@ -653,35 +685,54 @@
     </div>
   </div>
 
-  <div class="modal-dialog" role="document" *ngIf="(ShowClient === true)">
-    <div class="modal-content" style="width: 120%;">
+  <div class="modal-dialog" style="max-width: 680px;" role="document" *ngIf="(ShowClient === true)">
+    <div class="modal-content">
 
-      <div class="modal-body" *ngIf="ClientSearchMode !== 'billing' && SaleDetail.Headboard.Client!=null">
-        <div class="p-2 py-lg-3 d-flex pos-rel mx-1 justify-content-start justify-content-lg-center ccard">
-          <div class="pl-1">
-            <span class="d-inline-block bgc-purple-tp1 p-3 radius-round text-center border-2 brc-black-tp11">
-              <i class="far fa-user text-white text-170 w-3 mx-3px"></i>
-            </span>
-          </div>
-          <div class="pl-25">
-            <div class="d-flex align-items-center justify-content-between justify-content-md-start">
-              <span class="text-grey-d3 text-160 mr-4">
-                {{ getInfoClient() }}
-              </span>
-            </div>
-          </div>
+      <div class="modal-header border-0 pb-0">
+        <div>
+          <h5 class="modal-title text-primary-d3">Resultado de la búsqueda</h5>
+          <div class="text-grey-m1 text-90">Verifica los datos seleccionados antes de continuar.</div>
         </div>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+          <span aria-hidden="true">&times;</span>
+        </button>
       </div>
-      <div class="modal-body" *ngIf="ClientSearchMode === 'billing' && SaleDetail.SaleBilling">
-        <div class="alert alert-success mb-0">
-          <strong>{{ SaleDetail.SaleBilling.LegalName }}</strong><br>
-          {{ SaleDetail.SaleBilling.DocumentNum }}
+
+      <div class="modal-body">
+        <div class="p-3 p-lg-4 bgc-white border-1 brc-secondary-l2 shadow-sm radius-2">
+          <div class="d-flex align-items-center">
+            <div class="d-flex align-items-center justify-content-center flex-shrink-0 bgc-primary-l3 radius-round mr-3 mr-lg-4"
+              style="width: 4.5rem; height: 4.5rem;">
+              <i class="fa text-primary text-180"
+                [ngClass]="isSearchResultCompany() ? 'fa-building' : 'fa-user'"></i>
+            </div>
+
+            <div class="flex-grow-1 overflow-hidden">
+              <span class="badge badge-primary mb-2">{{ getSearchResultContextLabel() }}</span>
+              <h4 class="text-dark-d2 text-130 font-bolder mb-2 text-break">
+                {{ getSearchResultName() }}
+              </h4>
+              <div class="d-flex align-items-center flex-wrap text-grey-d1">
+                <span class="badge badge-light border-1 brc-secondary-l2 mr-2">
+                  {{ getSearchResultDocumentLabel() }}
+                </span>
+                <b>{{ getSearchResultDocumentNum() }}</b>
+              </div>
+              <div class="text-grey-m1 text-90 mt-2 text-break" *ngIf="getSearchResultAddress()">
+                <i class="fa fa-map-marker-alt text-primary-m1 mr-1"></i>
+                {{ getSearchResultAddress() }}
+              </div>
+            </div>
+
+            <i class="fa fa-check-circle text-success text-180 ml-3 d-none d-sm-inline-block"></i>
+          </div>
         </div>
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn btn-primary" data-dismiss="modal">
-          Ok
+        <button type="button" class="btn btn-primary px-4" data-dismiss="modal">
+          <i class="fa fa-check mr-1"></i>
+          Continuar
         </button>
       </div>
     </div>

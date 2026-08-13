@@ -121,6 +121,7 @@ import { StockMovementViewComponent } from './enterprise/inventory/components/st
 import { ListBulkLoadComponent } from './enterprise/bulkload/pages/listbulkload/listbulkload.component';
 import { CreateBulkLoadComponent } from './enterprise/bulkload/pages/createbulkload/createbulkload.component';
 import { ViewBulkLoadComponent } from './enterprise/bulkload/pages/viewbulkload/viewbulkload.component';
+import { ViewproductComponent } from './enterprise/product/pages/viewproduct/viewproduct.component';
 
 @NgModule({
   declarations: [
@@ -235,6 +236,7 @@ import { ViewBulkLoadComponent } from './enterprise/bulkload/pages/viewbulkload/
     ListBulkLoadComponent,
     CreateBulkLoadComponent,
     ViewBulkLoadComponent,
+    ViewproductComponent,
   ],
   imports: [
     BrowserModule,

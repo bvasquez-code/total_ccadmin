@@ -1,0 +1,79 @@
+<div class="page-content container container-plus">
+  <div class="page-header border-0 pb-3">
+    <div class="d-flex align-items-center justify-content-between flex-wrap">
+      <div>
+        <h1 class="page-title text-primary-d2 mb-1">
+          <i class="fa fa-box-open mr-2"></i>Detalle del producto
+        </h1>
+        <div class="text-grey-m1">Vista informativa. Esta pantalla no modifica la preventa.</div>
+      </div>
+      <button type="button" class="btn btn-outline-secondary btn-sm mt-2 mt-sm-0" (click)="closeWindow()">
+        <i class="fa fa-times mr-1"></i>Cerrar pestaña
+      </button>
+    </div>
+  </div>
+
+  <div class="d-flex align-items-center justify-content-center text-grey-m1 text-110 py-5" *ngIf="IsLoading">
+    <i class="fa fa-spinner fa-spin"></i>
+    <span class="ml-2">Cargando producto...</span>
+  </div>
+
+  <div class="alert alert-danger" *ngIf="!IsLoading && HasLoadError">
+    <i class="fa fa-exclamation-triangle mr-2"></i>
+    No fue posible cargar el producto solicitado.
+  </div>
+
+  <ng-container *ngIf="!IsLoading && !HasLoadError">
+    <div class="product-detail-card">
+      <section class="product-gallery" aria-label="Galería de imágenes del producto">
+        <div class="product-thumbnails" *ngIf="ImageRoutes.length > 1">
+          <button type="button" *ngFor="let route of ImageRoutes"
+            [class.active]="route === SelectedImageRoute"
+            (click)="selectImage(route)"
+            [attr.aria-label]="'Ver imagen de ' + ProductInfo.Product.ProductName">
+            <img [src]="route" [alt]="ProductInfo.Product.ProductName">
+          </button>
+        </div>
+        <div class="product-main-image">
+          <img [src]="SelectedImageRoute" [alt]="ProductInfo.Product.ProductName">
+        </div>
+      </section>
+
+      <section class="product-information">
+        <div class="product-badges">
+          <span class="badge badge-primary">{{ getCategoryName() }}</span>
+          <span class="badge bgc-purple-d1 text-white" *ngIf="isDigital()"><i class="fa fa-infinity mr-1"></i>Digital</span>
+          <span class="badge bgc-green-d1 text-white"><i class="fa fa-eye mr-1"></i>Solo consulta</span>
+        </div>
+
+        <div class="text-grey-m1">Código: {{ ProductInfo.Product.ProductCod }}</div>
+        <h2>{{ ProductInfo.Product.ProductName }}</h2>
+        <div class="text-grey-d1">Marca: <b>{{ getBrandName() }}</b></div>
+        <p class="product-description">
+          {{ ProductInfo.Product.ProductDesc || 'Este producto no tiene una descripción registrada.' }}
+        </p>
+
+        <div class="product-summary">
+          <div>
+            <small>Precio por {{ getUnitName() }}</small>
+            <strong>{{ ProductInfo.Config.StoreCod ? (getVisiblePrice() | currency:'PEN':'code':'1.2-2') : 'Sin configurar' }}</strong>
+          </div>
+          <div>
+            <small>Disponibilidad en la tienda actual</small>
+            <strong *ngIf="isDigital()"><i class="fa fa-infinity mr-1"></i>Ilimitada</strong>
+            <strong *ngIf="!isDigital()">{{ getVisibleStock() }} {{ getUnitName() }}</strong>
+          </div>
+        </div>
+
+        <div class="variant-section" *ngIf="ProductInfo.VariantList.length > 0">
+          <h3 class="text-dark-m2 text-100">Variantes registradas</h3>
+          <div class="variant-list">
+            <span class="badge badge-light border-1 brc-secondary-l2 p-2" *ngFor="let variant of ProductInfo.VariantList">
+              <b>{{ variant.Variant }}</b> · {{ variant.VariantDesc || 'Sin descripción' }}
+            </span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </ng-container>
+</div>

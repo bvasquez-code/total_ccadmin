@@ -64,35 +64,6 @@
                 </div>
               </div>
 
-              <div class="card border-1 brc-blue-l2 mt-4" *ngIf="hasBilling()">
-                <div class="card-header bgc-blue-l4 border-0 py-3">
-                  <h5 class="mb-0 text-blue-d3">
-                    <i class="fa fa-address-card mr-2"></i>
-                    Datos de facturación
-                  </h5>
-                </div>
-                <div class="card-body py-3">
-                  <div class="row">
-                    <div class="col-sm-3 mb-2">
-                      <span class="text-grey-d1 d-block">Comprobante solicitado</span>
-                      <b>{{ getBillingDocumentName() }}</b>
-                    </div>
-                    <div class="col-sm-4 mb-2">
-                      <span class="text-grey-d1 d-block">Nombre o razón social</span>
-                      <b>{{ SaleDetail.SaleBilling?.LegalName || '-' }}</b>
-                    </div>
-                    <div class="col-sm-2 mb-2">
-                      <span class="text-grey-d1 d-block">Documento</span>
-                      <b>{{ SaleDetail.SaleBilling?.DocumentNum || '-' }}</b>
-                    </div>
-                    <div class="col-sm-3 mb-2">
-                      <span class="text-grey-d1 d-block">Dirección fiscal</span>
-                      <b>{{ SaleDetail.SaleBilling?.Address || '-' }}</b>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
               <div class="card border-1 brc-primary-l2 mt-4" *ngIf="getDocumentList().length > 0">
                 <div class="card-header bgc-primary-l4 border-0 py-3 d-flex align-items-center justify-content-between">
                   <h5 class="mb-0 text-primary-d3">
@@ -236,6 +207,35 @@
                   [paymentMethodList]="PaymentMethodList"
                   [currencyCod]="SaleDetail.Headboard.CurrencyCod">
                 </app-salepaymentdetail>
+              </div>
+
+              <div class="card border-1 brc-blue-l2 mt-4" *ngIf="hasBilling()">
+                <div class="card-header bgc-blue-l4 border-0 py-3">
+                  <h5 class="mb-0 text-blue-d3">
+                    <i class="fa fa-address-card mr-2"></i>
+                    Datos de facturación
+                  </h5>
+                </div>
+                <div class="card-body py-3">
+                  <div class="row">
+                    <div class="col-sm-3 mb-2">
+                      <span class="text-grey-d1 d-block">Comprobante solicitado</span>
+                      <b>{{ getBillingDocumentName() }}</b>
+                    </div>
+                    <div class="col-sm-4 mb-2">
+                      <span class="text-grey-d1 d-block">Nombre o razón social</span>
+                      <b>{{ SaleDetail.SaleBilling?.LegalName || '-' }}</b>
+                    </div>
+                    <div class="col-sm-2 mb-2">
+                      <span class="text-grey-d1 d-block">Documento</span>
+                      <b>{{ SaleDetail.SaleBilling?.DocumentNum || '-' }}</b>
+                    </div>
+                    <div class="col-sm-3 mb-2">
+                      <span class="text-grey-d1 d-block">Dirección fiscal</span>
+                      <b>{{ SaleDetail.SaleBilling?.Address || '-' }}</b>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div class="card border-1 brc-purple-l2 mt-4" *ngIf="getDelivery() as delivery">

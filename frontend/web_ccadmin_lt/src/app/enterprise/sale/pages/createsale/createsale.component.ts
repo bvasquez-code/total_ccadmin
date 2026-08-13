@@ -97,7 +97,13 @@ export class CreatesaleComponent implements OnInit {
       this.IndMandatoryPicking = rpt.DataAdditional.find(e => e.Name === "IndMandatoryPicking")?.Data ?? new IndicatorDto();
 
       const documentTypeRequest = this.SaleDetail.SaleBilling?.DocumentTypeRequest || "";
-      if ((documentTypeRequest === "01" || documentTypeRequest === "03")
+      if (this.isWebSale && (documentTypeRequest === "01" || documentTypeRequest === "03")) {
+        // En una venta web la solicitud del cliente es la fuente autoritativa.
+        // Se restablece siempre para evitar que un estado previo del componente
+        // deje otro botón seleccionado después de refrescar la venta.
+        this.SelectedPaymentOption = documentTypeRequest;
+        this.DocumentType = documentTypeRequest;
+      } else if ((documentTypeRequest === "01" || documentTypeRequest === "03")
         && !this.SelectedPaymentOption) {
         this.SelectedPaymentOption = documentTypeRequest;
         this.DocumentType = documentTypeRequest;
@@ -195,6 +201,20 @@ export class CreatesaleComponent implements OnInit {
 
   async selectDocumentType(DocumentType: string): Promise<void> {
     if (!this.ensurePickingAllowsOtherActions()) return;
+    if (this.isWebSale) {
+      const requestedDocumentType = this.SaleDetail.SaleBilling?.DocumentTypeRequest || "";
+      if (requestedDocumentType !== "01" && requestedDocumentType !== "03") {
+        this.toastrService.error("La venta web no tiene un comprobante solicitado válido.");
+        return;
+      }
+      this.SelectedPaymentOption = requestedDocumentType;
+      this.DocumentType = requestedDocumentType;
+      this.refreshPaymentAvailability();
+      if (DocumentType !== requestedDocumentType) {
+        this.toastrService.info("El comprobante solicitado por el cliente no puede modificarse.");
+      }
+      return;
+    }
     if (DocumentType === "99" && !this.isProformaSalesEnabled) {
       this.toastrService.warning("La emision de proformas no esta habilitada para esta empresa.");
       return;
@@ -258,10 +278,15 @@ export class CreatesaleComponent implements OnInit {
 
   getOutstandingbalance(): number {
     const totalPrice: number = Number(this.SaleDetail.Headboard.NumTotalPrice || 0);
-    const totalPaid: number = this.SaleDetail.DetailPayment
-      .reduce((sum, e) => sum + Number(e.NumAmountPaid || 0), 0);
+    return Math.max(0, this.toMoney(totalPrice - this.getTotalPaid()));
+  }
 
-    return this.toMoney(totalPrice - totalPaid);
+  hasOutstandingBalance(): boolean {
+    return this.getOutstandingbalance() > 0;
+  }
+
+  getPaymentActionLabel(): string {
+    return this.hasOutstandingBalance() ? "Monto por pagar" : "Facturar";
   }
 
   getTrxPaymentList(): TrxPaymentEntity[] {
@@ -430,6 +455,11 @@ export class CreatesaleComponent implements OnInit {
 
   get isWebSale(): boolean {
     return this.SaleDetail?.SaleChannel?.ChannelCod === 'WEB';
+  }
+
+  isWebDocumentLocked(documentType: string): boolean {
+    return this.isWebSale
+      && this.SaleDetail?.SaleBilling?.DocumentTypeRequest !== documentType;
   }
 
   get isMandatoryPickingEnabled(): boolean {
@@ -623,6 +653,48 @@ export class CreatesaleComponent implements OnInit {
 
   getBillingName(): string {
     return this.SaleDetail.SaleBilling?.LegalName || "";
+  }
+
+  getSearchResultName(): string {
+    return this.ClientSearchMode === "billing"
+      ? (this.SaleDetail.SaleBilling?.LegalName || "")
+      : this.getNameClient();
+  }
+
+  getSearchResultDocumentNum(): string {
+    return this.ClientSearchMode === "billing"
+      ? (this.SaleDetail.SaleBilling?.DocumentNum || "")
+      : (this.SaleDetail.Headboard.Client?.Person?.DocumentNum || "");
+  }
+
+  getSearchResultDocumentType(): string {
+    return this.ClientSearchMode === "billing"
+      ? (this.SaleDetail.SaleBilling?.DocumentType || "")
+      : (this.SaleDetail.Headboard.Client?.Person?.DocumentType || "");
+  }
+
+  getSearchResultDocumentLabel(): string {
+    const documentType = this.getSearchResultDocumentType().replace(/^0+/, "");
+    if (documentType === "6") return "RUC";
+    if (documentType === "1") return "DNI";
+    if (documentType === "4") return "Carnet de extranjería";
+    return "Documento";
+  }
+
+  getSearchResultContextLabel(): string {
+    if (this.ClientSearchMode === "billing") return "Datos de facturación";
+    if (this.ClientSearchMode === "advance") return "Persona del anticipo";
+    return "Cliente de la venta";
+  }
+
+  getSearchResultAddress(): string {
+    return this.ClientSearchMode === "billing"
+      ? (this.SaleDetail.SaleBilling?.Address || "")
+      : (this.SaleDetail.Headboard.Client?.Person?.Address || "");
+  }
+
+  isSearchResultCompany(): boolean {
+    return this.getSearchResultDocumentType().replace(/^0+/, "") === "6";
   }
 
   private async saveBillingForBuyer(documentType: string): Promise<boolean> {
