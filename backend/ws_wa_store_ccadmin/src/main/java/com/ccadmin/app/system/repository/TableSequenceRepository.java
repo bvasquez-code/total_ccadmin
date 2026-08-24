@@ -11,7 +11,7 @@ import java.util.List;
 public interface TableSequenceRepository extends JpaRepository<TableSequenceEntity, String>,
         CcAdminRepository<TableSequenceEntity, String> {
 
-    @Query(value = "call db_store_01.get_cod_seq(:type)", nativeQuery = true)
+    @Query(value = "call get_cod_seq(:type)", nativeQuery = true)
     String getNextCode(@Param("type") String sequenceTableType);
 
     @Query(value = """

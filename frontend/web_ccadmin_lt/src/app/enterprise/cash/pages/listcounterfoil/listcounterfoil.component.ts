@@ -12,6 +12,7 @@ import { CounterfoilEntity } from '../../model/entity/CounterfoilEntity';
 import { ResponseWsDto } from 'src/app/enterprise/shared/model/dto/ResponseWsDto';
 import { CounterfoilService } from '../../service/CounterfoilService';
 import { DataSesionService } from 'src/app/enterprise/compartido/service/datasesion.service';
+import { DocumentTypeDto } from '../../model/dto/DocumentTypeDto';
 
 @Component({
   selector: 'app-listcounterfoil',
@@ -22,6 +23,7 @@ export class ListcounterfoilComponent implements OnInit, ActionTableService<Coun
   @ViewChild('txtSearch') txtSearch!: ElementRef<HTMLInputElement>;
 
   table: TableDto<CounterfoilEntity> = new TableDto();
+  DocumentTypeList: DocumentTypeDto[] = [];
 
   constructor(
     private counterfoilService: CounterfoilService,
@@ -30,7 +32,22 @@ export class ListcounterfoilComponent implements OnInit, ActionTableService<Coun
   ) { }
 
   ngOnInit(): void {
-    this.findAll(1, "");
+    this.initializeList();
+  }
+
+  private async initializeList(): Promise<void> {
+    await this.loadDocumentTypes();
+    await this.findAll(1, "");
+  }
+
+  private async loadDocumentTypes(): Promise<void> {
+    const rpt: ResponseWsDto = await this.counterfoilService.formData("");
+
+    if (!rpt.ErrorStatus) {
+      this.DocumentTypeList = rpt.DataAdditional
+        ?.find((item: any) => item.Name === "documentType")
+        ?.Data ?? [];
+    }
   }
 
   filter(Page: number): void {
@@ -42,7 +59,7 @@ export class ListcounterfoilComponent implements OnInit, ActionTableService<Coun
     const data: DataTablaGeneticDto<CounterfoilEntity> = new DataTablaGeneticDto();
 
     const viewCod = (e: CounterfoilEntity) => e.CounterfoilCod;
-    const viewDoc = (e: CounterfoilEntity) => e.DocumentType;
+    const viewDoc = (e: CounterfoilEntity) => this.getDocumentTypeDescription(e.DocumentType);
     const viewSeries = (e: CounterfoilEntity) => e.Series;
     const viewCorr = (e: CounterfoilEntity) => e.Correlative;
     const viewAuto = (e: CounterfoilEntity) => e.IsAutomatic;
@@ -103,6 +120,10 @@ export class ListcounterfoilComponent implements OnInit, ActionTableService<Coun
     );
 
     this.table.dataTablaGenetic = data;
+  }
+
+  private getDocumentTypeDescription(documentType: string): string {
+    return this.DocumentTypeList.find(item => item.Code === documentType)?.Description ?? documentType;
   }
 
   async findAll(Page: number, Query: string): Promise<void> {

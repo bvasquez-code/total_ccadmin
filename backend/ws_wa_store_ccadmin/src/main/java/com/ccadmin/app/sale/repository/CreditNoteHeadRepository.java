@@ -26,7 +26,7 @@ public interface CreditNoteHeadRepository extends JpaRepository<CreditNoteHeadEn
     public CreditNoteHeadEntity findBySaleCod(@Param("SaleCod") String SaleCod);*/
 
     @Query(value = """
-            CALL db_store_01.get_cod_trx(:storeCod, 'credit_note_head')
+            CALL get_cod_trx(:storeCod, 'credit_note_head')
             """,nativeQuery = true)
     public String getCreditNoteCod(@Param("storeCod") String storeCod);
 

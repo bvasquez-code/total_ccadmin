@@ -19,7 +19,7 @@ public interface PresaleHeadRepository extends JpaRepository<PresaleHeadEntity,S
     Optional<PresaleHeadEntity> findByIdForUpdate(@Param("PresaleCod") String presaleCod);
 
     @Query(value = """
-            CALL db_store_01.get_cod_trx(:storeCod, 'presale_head')
+            CALL get_cod_trx(:storeCod, 'presale_head')
             """,nativeQuery = true)
     public String getPresaleCod(@Param("storeCod") String storeCod);
 

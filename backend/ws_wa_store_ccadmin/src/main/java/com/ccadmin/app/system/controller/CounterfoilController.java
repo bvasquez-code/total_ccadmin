@@ -32,6 +32,21 @@ public class CounterfoilController {
         catch (Exception ex) { return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST); }
     }
 
+    @GetMapping("existsByDocumentTypeAndSeries")
+    public ResponseEntity<ResponseWsDto> existsByDocumentTypeAndSeries(
+            @RequestParam String DocumentType,
+            @RequestParam String Series
+    ) {
+        try {
+            return new ResponseEntity<>(
+                    new ResponseWsDto(counterfoilSearchService.existsByDocumentTypeAndSeries(DocumentType, Series)),
+                    HttpStatus.OK
+            );
+        } catch (Exception ex) {
+            return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+
     @GetMapping("findAll")
     public ResponseEntity<ResponseWsDto> findAll(@RequestParam String Query, @RequestParam int Page, @RequestParam String StoreCod) {
         try { return new ResponseEntity<>(new ResponseWsDto(counterfoilSearchService.findAll(Query, Page,StoreCod)), HttpStatus.OK); }

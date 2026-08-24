@@ -65,7 +65,7 @@ public interface StoreRepository extends JpaRepository<StoreEntity,String>, CcAd
 
     @Modifying
     @Query(value = """
-            CALL db_store_01.sp_initalize_store_automation(:StoreCod, :Name, :Description)
+            CALL sp_initalize_store_automation(:StoreCod, :Name, :Description)
             """, nativeQuery = true)
     public void initializeStoreAutomation(
             @Param("StoreCod") String StoreCod,

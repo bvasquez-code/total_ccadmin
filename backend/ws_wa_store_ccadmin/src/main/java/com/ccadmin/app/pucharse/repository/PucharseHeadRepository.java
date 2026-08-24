@@ -19,7 +19,7 @@ public interface PucharseHeadRepository extends JpaRepository<PucharseHeadEntity
     Optional<PucharseHeadEntity> findByIdForUpdate(@Param("PucharseCod") String pucharseCod);
 
     @Query(value = """
-            CALL db_store_01.get_cod_trx(:storeCod, 'pucharse_head')
+            CALL get_cod_trx(:storeCod, 'pucharse_head')
             """,nativeQuery = true)
     public String getPucharseCod(@Param("storeCod") String storeCod);
 

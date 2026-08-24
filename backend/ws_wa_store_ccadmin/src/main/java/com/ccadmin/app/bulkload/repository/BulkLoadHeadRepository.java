@@ -8,7 +8,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface BulkLoadHeadRepository extends JpaRepository<BulkLoadHeadEntity, String> {
-    @Query(value = "CALL db_store_01.get_cod_seq('bulk_load_head')", nativeQuery = true)
+    @Query(value = "CALL get_cod_seq('bulk_load_head')", nativeQuery = true)
     String createCode();
 
     @Query(value = "select * from bulk_load_head where BulkLoadCod=:code for update", nativeQuery = true)

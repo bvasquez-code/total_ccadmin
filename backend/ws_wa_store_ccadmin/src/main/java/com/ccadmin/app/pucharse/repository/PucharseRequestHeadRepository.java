@@ -13,7 +13,7 @@ public interface PucharseRequestHeadRepository extends JpaRepository<PucharseReq
 
 
     @Query(value = """
-            CALL db_store_01.get_cod_trx(:StoreCod, 'pucharse_request_head')
+            CALL get_cod_trx(:StoreCod, 'pucharse_request_head')
             """, nativeQuery = true)
     public String getPucharseReqCod(
             @Param("StoreCod") String StoreCod

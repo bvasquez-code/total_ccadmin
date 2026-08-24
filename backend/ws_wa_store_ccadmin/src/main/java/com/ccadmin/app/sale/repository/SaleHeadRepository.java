@@ -168,7 +168,7 @@ public interface SaleHeadRepository extends JpaRepository<SaleHeadEntity,String>
     );
 
     @Query(value = """
-            CALL db_store_01.get_cod_trx(:storeCod, 'sale_head')
+            CALL get_cod_trx(:storeCod, 'sale_head')
             """,nativeQuery = true)
     public String getSaleCod(@Param("storeCod") String storeCod);
 

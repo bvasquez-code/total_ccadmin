@@ -111,4 +111,16 @@ export class CounterfoilService {
 
         return RespuestaWS;
     }
+
+    async existsByDocumentTypeAndSeries(DocumentType: string, Series: string): Promise<ResponseWsDto> {
+        let url: string = `${AppSetting.API}/api/v1/counterfoil/existsByDocumentTypeAndSeries`;
+        let RespuestaWS: ResponseWsDto;
+
+        RespuestaWS = await this.apiService.ExecuteGetService(url, {
+            DocumentType: DocumentType,
+            Series: Series
+        });
+
+        return RespuestaWS;
+    }
 }

@@ -89,11 +89,19 @@ public class CounterfoilCreateService extends SessionService {
         request.counterfoil.validate().session(this.getUserCod());
         request.counterfoilStore.validate().session(this.getUserCod());
 
-        boolean repeatedSeries = this.counterfoilRepository.existBySeries(request.counterfoil.Series)>0;
-        boolean existeCounterfoil = this.counterfoilRepository.existsById(request.counterfoil.CounterfoilCod);
+        boolean repeatedDocumentTypeAndSeries = this.counterfoilRepository.findByDocTypeSeries(
+                request.counterfoil.DocumentType,
+                request.counterfoil.Series
+        ).isPresent();
+        boolean existsCounterfoil = this.counterfoilRepository.existsById(request.counterfoil.CounterfoilCod);
 
-        if(!existeCounterfoil && repeatedSeries){
-            throw new RuntimeException("Serie ya existe : "+request.counterfoil.Series);
+        if (!existsCounterfoil && repeatedDocumentTypeAndSeries) {
+            throw new RuntimeException(
+                    "Ya existe un talonario para el tipo de documento "
+                            + request.counterfoil.DocumentType
+                            + " y la serie "
+                            + request.counterfoil.Series
+            );
         }
 
         return new CounterfoilRegisterDto(

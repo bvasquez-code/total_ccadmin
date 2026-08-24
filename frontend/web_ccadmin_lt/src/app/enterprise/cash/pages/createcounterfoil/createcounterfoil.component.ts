@@ -87,10 +87,16 @@ export class CreatecounterfoilComponent implements OnInit {
     if (doc.length === 2 && serie.length === 4) {
       const CounterfoilCod = `${doc}${serie}`;
 
-      const result = await this.validateExistenceCounterfoil(serie);
+      if (this.CounterfoilCod === CounterfoilCod) {
+        this.register.counterfoil.CounterfoilCod = CounterfoilCod;
+        return;
+      }
+
+      const result = await this.validateCounterfoilAvailability(doc, serie);
       if (result) {
         this.register.counterfoil.CounterfoilCod = CounterfoilCod;
       } else {
+        this.register.counterfoil.CounterfoilCod = '';
         this.register.counterfoil.Series = '';
       }
     } else {
@@ -98,12 +104,12 @@ export class CreatecounterfoilComponent implements OnInit {
     }
   }
 
-  async validateExistenceCounterfoil(Series: string): Promise<boolean> {
-    const rpt: ResponseWsDto = await this.counterfoilService.existsSeries(Series);
+  async validateCounterfoilAvailability(DocumentType: string, Series: string): Promise<boolean> {
+    const rpt: ResponseWsDto = await this.counterfoilService.existsByDocumentTypeAndSeries(DocumentType, Series);
     if (!rpt.ErrorStatus && rpt.Data) {
       const result: boolean = rpt.Data;
       if (result) {
-        this.toastrService.error("El talonario ya existe");
+        this.toastrService.error("Ya existe un talonario para el tipo de documento y la serie ingresados");
         return false;
       }
     }
@@ -112,7 +118,7 @@ export class CreatecounterfoilComponent implements OnInit {
 
   async save() {
 
-    this.buildCounterfoilCod();
+    await this.buildCounterfoilCod();
 
     // relación 1 a 1
     this.register.counterfoilStore.CounterfoilCod = this.register.counterfoil.CounterfoilCod;

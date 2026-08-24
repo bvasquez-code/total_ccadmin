@@ -50,6 +50,10 @@ public class CounterfoilSearchService extends SessionService {
         return counterfoilRepository.existBySeries(Series) > 0;
     }
 
+    public Boolean existsByDocumentTypeAndSeries(String documentType, String series) {
+        return counterfoilRepository.findByDocTypeSeries(documentType, series).isPresent();
+    }
+
     public List<CounterfoilEntity> findActives() {
         return counterfoilRepository.findActives();
     }

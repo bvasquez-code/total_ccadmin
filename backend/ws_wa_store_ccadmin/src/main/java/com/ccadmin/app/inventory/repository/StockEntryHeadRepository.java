@@ -8,7 +8,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 
 public interface StockEntryHeadRepository extends JpaRepository<StockEntryHeadEntity, String> {
-    @Query(value = "CALL db_store_01.get_cod_trx(:storeCod, 'stock_entry_head')", nativeQuery = true)
+    @Query(value = "CALL get_cod_trx(:storeCod, 'stock_entry_head')", nativeQuery = true)
     String createCode(@Param("storeCod") String storeCod);
 
     @Query(value = "select * from stock_entry_head where StockEntryCod=:code for update", nativeQuery = true)

@@ -11,7 +11,7 @@ import java.util.List;
 public interface TransferHeadRepository extends JpaRepository<TransferHeadEntity, String>, CcAdminRepository<TransferHeadEntity, String> {
 
     @Query(value = """
-            CALL db_store_01.get_cod_trx(:storeCod, 'transfer_head')
+            CALL get_cod_trx(:storeCod, 'transfer_head')
             """, nativeQuery = true)
     String getTransferCod(@Param("storeCod") String storeCod);
 
