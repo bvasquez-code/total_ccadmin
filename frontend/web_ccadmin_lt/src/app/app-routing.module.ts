@@ -91,6 +91,8 @@ import { CreateBulkLoadProductsComponent } from './enterprise/bulkload/pages/cre
 import { ViewBulkLoadComponent } from './enterprise/bulkload/pages/viewbulkload/viewbulkload.component';
 import { SessionAccessGuard } from './enterprise/login/service/session-access.guard';
 import { ViewproductComponent } from './enterprise/product/pages/viewproduct/viewproduct.component';
+import { CreateProductQuickComponent } from './enterprise/product/pages/createproductquick/createproductquick.component';
+import { CreateQuickStockEntryComponent } from './enterprise/inventory/pages/createquickstockentry/createquickstockentry.component';
 
 const routes: Routes = [
   {
@@ -178,6 +180,7 @@ const routes: Routes = [
     children: [
       { path: 'enterprise/inventory/pages/liststockentry', component: ListStockEntryComponent },
       { path: 'enterprise/inventory/pages/createstockentry', component: CreateStockEntryComponent },
+      { path: 'enterprise/inventory/pages/createquickstockentry', component: CreateQuickStockEntryComponent },
       { path: 'enterprise/inventory/pages/viewstockentry', component: ViewStockEntryComponent },
       { path: 'enterprise/inventory/pages/resolvestockentry', component: ResolveStockEntryComponent },
       { path: 'enterprise/inventory/pages/liststockexit', component: ListStockExitComponent },
@@ -289,6 +292,10 @@ const routes: Routes = [
       {
         path: 'enterprise/product/pages/createProduct',
         component: CreateproductComponent
+      },
+      {
+        path: 'enterprise/product/pages/createproductquick',
+        component: CreateProductQuickComponent
       },
       {
         path: 'enterprise/product/pages/createproductconfig',

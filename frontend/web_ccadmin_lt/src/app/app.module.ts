@@ -123,6 +123,8 @@ import { CreateBulkLoadComponent } from './enterprise/bulkload/pages/createbulkl
 import { CreateBulkLoadProductsComponent } from './enterprise/bulkload/pages/createbulkloadproducts/createbulkloadproducts.component';
 import { ViewBulkLoadComponent } from './enterprise/bulkload/pages/viewbulkload/viewbulkload.component';
 import { ViewproductComponent } from './enterprise/product/pages/viewproduct/viewproduct.component';
+import { CreateProductQuickComponent } from './enterprise/product/pages/createproductquick/createproductquick.component';
+import { CreateQuickStockEntryComponent } from './enterprise/inventory/pages/createquickstockentry/createquickstockentry.component';
 
 @NgModule({
   declarations: [
@@ -239,6 +241,8 @@ import { ViewproductComponent } from './enterprise/product/pages/viewproduct/vie
     CreateBulkLoadProductsComponent,
     ViewBulkLoadComponent,
     ViewproductComponent,
+    CreateProductQuickComponent,
+    CreateQuickStockEntryComponent,
   ],
   imports: [
     BrowserModule,
@@ -247,7 +251,7 @@ import { ViewproductComponent } from './enterprise/product/pages/viewproduct/vie
     CommonModule,
     BrowserAnimationsModule,
     ToastrModule.forRoot(),
-    FormsModule
+    FormsModule,
   ],
   providers: [
     {

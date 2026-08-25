@@ -7,12 +7,15 @@ import com.ccadmin.app.product.model.entity.ProductPictureEntity;
 import com.ccadmin.app.product.service.ProductCreateService;
 import com.ccadmin.app.product.service.ProductConfigCreateService;
 import com.ccadmin.app.product.service.ProductConfigSearchService;
+import com.ccadmin.app.product.service.ProductImageAnalysisService;
 import com.ccadmin.app.product.service.ProductSearchService;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("api/v1/product")
@@ -26,6 +29,8 @@ public class ProductController {
     private ProductConfigSearchService productConfigSearchService;
     @Autowired
     private ProductSearchService productSearchService;
+    @Autowired
+    private ProductImageAnalysisService productImageAnalysisService;
 
     @GetMapping("findById")
     public ResponseEntity<ResponseWsDto> findById(@RequestParam String ProductCod) {
@@ -84,6 +89,49 @@ public class ProductController {
                     new ResponseWsDto(this.productSearchService.findByBarCode(BarCode)), HttpStatus.OK);
         } catch (Exception ex) {
             return new ResponseEntity<ResponseWsDto>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @GetMapping("findRegisteredByBarCode")
+    public ResponseEntity<ResponseWsDto> findRegisteredByBarCode(
+            @RequestParam String BarCode
+    ) {
+        try {
+            return new ResponseEntity<>(
+                    new ResponseWsDto(
+                            this.productSearchService.findRegisteredByBarCode(BarCode)
+                    ),
+                    HttpStatus.OK
+            );
+        } catch (Exception ex) {
+            return new ResponseEntity<>(
+                    new ResponseWsDto(ex), HttpStatus.BAD_REQUEST
+            );
+        }
+    }
+
+    @PostMapping(
+            value = "analyzeQuickCreateImage",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<ResponseWsDto> analyzeQuickCreateImage(
+            @RequestPart("frontImage") MultipartFile frontImage,
+            @RequestPart("sideImage") MultipartFile sideImage,
+            @RequestPart("barcodeImage") MultipartFile barcodeImage
+    ) {
+        try {
+            return new ResponseEntity<>(
+                    new ResponseWsDto(
+                            this.productImageAnalysisService.analyze(
+                                    frontImage, sideImage, barcodeImage
+                            )
+                    ),
+                    HttpStatus.OK
+            );
+        } catch (Exception ex) {
+            return new ResponseEntity<>(
+                    new ResponseWsDto(ex), HttpStatus.BAD_REQUEST
+            );
         }
     }
 

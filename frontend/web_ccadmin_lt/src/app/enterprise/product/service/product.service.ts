@@ -73,6 +73,11 @@ export class ProductService {
         return RespuestaWS;
     }
 
+    async FindRegisteredByBarCode(BarCode: string) {
+        const url: string = `${AppSetting.API}/api/v1/product/findRegisteredByBarCode`;
+        return this.apiService.ExecuteGetService(url, { BarCode });
+    }
+
     async GenerateProductCode() {
         let url: string = `${AppSetting.API}/api/v1/product/generateProductCode`;
         let RespuestaWS: ResponseWsDto;

@@ -1,0 +1,60 @@
+<div role="main" class="main-content">
+  <div class="page-content container container-plus quick-stock-page">
+    <div class="card-header">
+      <h3 class="card-title text-125 text-primary-d2">
+        <i class="fa fa-cubes text-dark-l3 mr-1"></i>
+        Carga rápida de stock
+      </h3>
+    </div>
+
+    <div class="card dcard">
+      <div class="card-body">
+        <div class="form-group">
+          <label for="quickStockProductCod">Código de producto</label>
+          <input id="quickStockProductCod" class="form-control product-code"
+                 type="text" [value]="productCod" readonly>
+        </div>
+
+        <div class="form-group mb-2">
+          <label for="quickStockQuantity">Stock a ingresar</label>
+          <div class="quantity-control">
+            <button class="btn btn-light-secondary" type="button"
+                    [disabled]="saving" (click)="decrease()"
+                    aria-label="Restar una unidad">
+              <i class="fa fa-minus"></i>
+            </button>
+            <input #quantityInput id="quickStockQuantity"
+                   class="form-control quantity-input" type="text"
+                   inputmode="numeric" autocomplete="off"
+                   [disabled]="saving" [(ngModel)]="quantityText"
+                   (focus)="quantityInput.select()"
+                   (keydown)="onQuantityKeyDown($event)">
+            <button class="btn btn-light-primary" type="button"
+                    [disabled]="saving" (click)="increase()"
+                    aria-label="Sumar una unidad">
+              <i class="fa fa-plus"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="alert alert-info scanner-help">
+          <i class="fa fa-barcode mr-1"></i>
+          Para contar con la pistola, mantenga seleccionado el campo de stock y escanee el producto. Cada lectura correcta suma <strong>1 unidad</strong>.
+        </div>
+
+        <div class="action-row">
+          <a class="btn btn-light-secondary"
+             routerLink="/enterprise/product/pages/listProduct">
+            Cancelar
+          </a>
+          <button class="btn btn-success" type="button"
+                  [disabled]="saving" (click)="save()">
+            <i class="fa mr-1"
+               [ngClass]="saving ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+            {{saving ? 'Registrando stock...' : 'Registrar stock'}}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -52,6 +52,13 @@ public class StockEntryController {
         return execute(() -> stockEntryCreateService.confirm(action.Code));
     }
 
+    @PostMapping("quickCreateAndConfirm")
+    public ResponseEntity<ResponseWsDto> quickCreateAndConfirm(
+            @RequestBody StockEntryQuickCreateDto request
+    ) {
+        return execute(() -> stockEntryCreateService.createAndConfirmQuick(request));
+    }
+
     @PostMapping("resolve")
     public ResponseEntity<ResponseWsDto> resolve(@RequestBody StockResolutionRequestDto request) {
         return execute(() -> stockEntryCreateService.resolve(request));

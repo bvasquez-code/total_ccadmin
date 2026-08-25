@@ -4,6 +4,7 @@ import com.ccadmin.app.inventory.model.constants.StockMovementConstants;
 import com.ccadmin.app.inventory.model.dto.StockEntryBulkCreateDto;
 import com.ccadmin.app.inventory.model.dto.StockEntryBulkLineDto;
 import com.ccadmin.app.inventory.model.dto.StockEntryBulkResultDto;
+import com.ccadmin.app.inventory.model.dto.StockEntryQuickCreateDto;
 import com.ccadmin.app.inventory.model.dto.StockEntryRegisterDto;
 import com.ccadmin.app.inventory.model.entity.StockEntryDetEntity;
 import com.ccadmin.app.inventory.model.entity.StockEntryHeadEntity;
@@ -14,10 +15,15 @@ import com.ccadmin.app.product.repository.ProductInfoRepository;
 import com.ccadmin.app.product.repository.ProductInfoWarehouseRepository;
 import com.ccadmin.app.product.repository.ProductRepository;
 import com.ccadmin.app.product.repository.ProductVariantRepository;
+import com.ccadmin.app.product.model.entity.ProductConfigEntity;
+import com.ccadmin.app.product.model.entity.ProductEntity;
+import com.ccadmin.app.product.model.entity.ProductVariantEntity;
+import com.ccadmin.app.product.model.entity.id.ProductConfigID;
 import com.ccadmin.app.product.service.KardexCreateService;
 import com.ccadmin.app.shared.model.myconst.StatusConst;
 import com.ccadmin.app.shared.repository.BusinessConfigRepository;
 import com.ccadmin.app.store.repository.StoreRepository;
+import com.ccadmin.app.store.model.entity.WarehouseEntity;
 import com.ccadmin.app.store.shared.WarehouseShared;
 import com.ccadmin.app.user.shared.UserStoreShared;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,6 +35,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -148,6 +155,67 @@ class StockEntryCreateServiceTest {
         assertEquals("SISTEMA", stockEntryHead.ConfirmUser);
         assertEquals(7, stockEntryDetail.NumUnitResolvedIn);
         verify(stockEntryDetRepository).saveAll(List.of(stockEntryDetail));
+        verify(kardexCreateService).saveAll(anyList(), anyList());
+    }
+
+    @Test
+    void quickCreationBuildsAndConfirmsADirectInitialStoreEntry() {
+        StockEntryQuickCreateDto request = new StockEntryQuickCreateDto();
+        request.ProductCod = "00000035";
+        request.Quantity = 7;
+
+        ProductEntity product = new ProductEntity();
+        product.ProductCod = request.ProductCod;
+        product.ProductName = "Producto rapido";
+        ProductConfigEntity productConfig = new ProductConfigEntity();
+        productConfig.ProductCod = request.ProductCod;
+        productConfig.StoreCod = "T001";
+        productConfig.ProductUnitName = "NIU";
+        productConfig.ProductUnitFactor = 1;
+        ProductVariantEntity productVariant = new ProductVariantEntity(
+                request.ProductCod
+        );
+        WarehouseEntity warehouse = new WarehouseEntity();
+        warehouse.WarehouseCod = "T0010001";
+        StockEntryRegisterDto expected = new StockEntryRegisterDto();
+
+        when(userStoreShared.getMainStore("SISTEMA")).thenReturn("T001");
+        when(stockMovementValidationService.positive(7, "La cantidad"))
+                .thenReturn(7);
+        when(productRepository.findById(request.ProductCod))
+                .thenReturn(Optional.of(product));
+        when(productConfigRepository.findById(
+                org.mockito.ArgumentMatchers.any(ProductConfigID.class)
+        )).thenReturn(Optional.of(productConfig));
+        when(productVariantRepository.findAllVariantProduct(request.ProductCod))
+                .thenReturn(List.of(productVariant));
+        when(warehouseShared.findMainWarehouseByStore("T001"))
+                .thenReturn(warehouse);
+        when(stockEntryHeadRepository.createCode("T001"))
+                .thenReturn("IET0010001000003");
+        when(stockEntrySearchService.findById("IET0010001000003"))
+                .thenReturn(expected);
+
+        StockEntryRegisterDto result =
+                stockEntryCreateService.createAndConfirmQuick(request);
+
+        assertEquals(expected, result);
+        verify(stockEntryHeadRepository, times(2)).save(
+                org.mockito.ArgumentMatchers.argThat(head ->
+                        StockMovementConstants.MODE_DIRECT.equals(head.MovementMode)
+                                && StockMovementConstants.INITIAL_STORE_LOAD_REASON
+                                .equals(head.ReasonCode)
+                                && StatusConst.CONFIRMED.equals(head.ProcessStatus)
+                )
+        );
+        verify(stockEntryDetRepository, times(2)).saveAll(
+                org.mockito.ArgumentMatchers.argThat(details -> {
+                    StockEntryDetEntity detail = details.iterator().next();
+                    return request.ProductCod.equals(detail.ProductCod)
+                            && warehouse.WarehouseCod.equals(detail.WarehouseCod)
+                            && detail.NumUnit == 7;
+                })
+        );
         verify(kardexCreateService).saveAll(anyList(), anyList());
     }
 }

@@ -14,6 +14,7 @@ export class CreatecategoryComponent implements OnInit, AfterViewInit, IRegister
 
   @Input() isModal: boolean = false;
   @Input() productSelectionMode: boolean = false;
+  @Input() initialName: string = '';
   @Output() CategoryCreated = new EventEmitter<CategoryEntity>();
   @Output() CancelModal = new EventEmitter<void>();
 
@@ -136,6 +137,9 @@ export class CreatecategoryComponent implements OnInit, AfterViewInit, IRegister
     if (!this.IsEditMode && this.productSelectionMode) {
       this.cboIsCategoryDad.nativeElement.value = 'N';
       this.IsCategoryDad();
+    }
+    if (!this.IsEditMode && this.initialName) {
+      this.txtCategoryName.nativeElement.value = this.initialName;
     }
   }
 

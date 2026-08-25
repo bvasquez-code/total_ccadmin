@@ -1,0 +1,430 @@
+<div role="main" class="main-content">
+  <div class="page-content container container-plus quick-product-page">
+    <div class="card-header">
+      <h3 class="card-title text-125 text-primary-d2">
+        <i class="fa fa-camera text-dark-l3 mr-1"></i>
+        Creación rápida de productos
+      </h3>
+    </div>
+
+    <div class="card dcard">
+      <div class="card-body px-2 px-md-4">
+        <div class="mb-3">
+          <a class="btn btn-light-secondary px-4"
+             routerLink="/enterprise/product/pages/listProduct">
+            <i class="fa fa-arrow-left mr-1"></i>Volver
+          </a>
+        </div>
+
+        <section class="quick-step">
+          <div class="quick-step-title">
+            <span class="step-number">1</span>
+            <div>
+              <h5 class="mb-0">Tomar tres fotografías del producto</h5>
+              <small class="text-muted">
+                Necesitamos una foto frontal, una lateral y otra enfocada en el código de barras.
+              </small>
+            </div>
+          </div>
+
+          <div class="alert alert-info photo-hint">
+            <i class="fa fa-info-circle mr-1"></i>
+            Para leer mejor el código, tome la última foto de frente, con buena luz y lo más cerca posible sin perder el enfoque.
+          </div>
+
+          <div class="photo-grid">
+            <article class="photo-card" [class.photo-ready]="photos.front.previewUrl">
+              <input #frontPhotoInput hidden type="file" accept="image/*"
+                     capture="environment"
+                     (change)="onPhotoSelected($event, 'front')">
+              <div class="photo-card-heading">
+                <span class="photo-sequence">1</span>
+                <div>
+                  <strong>Foto frontal</strong>
+                  <small>Frente del empaque o producto</small>
+                </div>
+              </div>
+              <button class="photo-capture" type="button"
+                      *ngIf="!photos.front.previewUrl"
+                      (click)="frontPhotoInput.click()">
+                <i class="fa fa-camera fa-2x"></i>
+                <span>Tomar foto frontal</span>
+              </button>
+              <div class="photo-preview-box" *ngIf="photos.front.previewUrl">
+                <img [src]="photos.front.previewUrl" alt="Fotografía frontal del producto">
+                <button class="btn btn-sm btn-light-primary" type="button"
+                        [disabled]="analyzing" (click)="retakePhoto('front')">
+                  <i class="fa fa-redo mr-1"></i>Reemplazar
+                </button>
+              </div>
+            </article>
+
+            <article class="photo-card" [class.photo-ready]="photos.side.previewUrl">
+              <input #sidePhotoInput hidden type="file" accept="image/*"
+                     capture="environment"
+                     (change)="onPhotoSelected($event, 'side')">
+              <div class="photo-card-heading">
+                <span class="photo-sequence">2</span>
+                <div>
+                  <strong>Foto lateral</strong>
+                  <small>Detalles y especificaciones</small>
+                </div>
+              </div>
+              <button class="photo-capture" type="button"
+                      *ngIf="!photos.side.previewUrl"
+                      (click)="sidePhotoInput.click()">
+                <i class="fa fa-camera fa-2x"></i>
+                <span>Tomar foto lateral</span>
+              </button>
+              <div class="photo-preview-box" *ngIf="photos.side.previewUrl">
+                <img [src]="photos.side.previewUrl" alt="Fotografía lateral del producto">
+                <button class="btn btn-sm btn-light-primary" type="button"
+                        [disabled]="analyzing" (click)="retakePhoto('side')">
+                  <i class="fa fa-redo mr-1"></i>Reemplazar
+                </button>
+              </div>
+            </article>
+
+            <article class="photo-card" [class.photo-ready]="photos.barcode.previewUrl">
+              <input #barcodePhotoInput hidden type="file" accept="image/*"
+                     capture="environment"
+                     (change)="onPhotoSelected($event, 'barcode')">
+              <div class="photo-card-heading">
+                <span class="photo-sequence">3</span>
+                <div>
+                  <strong>Código de barras</strong>
+                  <small>Etiqueta completa y enfocada</small>
+                </div>
+              </div>
+              <button class="photo-capture" type="button"
+                      *ngIf="!photos.barcode.previewUrl"
+                      (click)="barcodePhotoInput.click()">
+                <i class="fa fa-barcode fa-2x"></i>
+                <span>Tomar foto del código</span>
+              </button>
+              <div class="photo-preview-box" *ngIf="photos.barcode.previewUrl">
+                <img [src]="photos.barcode.previewUrl" alt="Fotografía del código de barras">
+                <button class="btn btn-sm btn-light-primary" type="button"
+                        [disabled]="analyzing" (click)="retakePhoto('barcode')">
+                  <i class="fa fa-redo mr-1"></i>Reemplazar
+                </button>
+              </div>
+            </article>
+          </div>
+
+          <div class="photo-analysis-actions">
+            <button class="btn btn-info" type="button"
+                    [disabled]="!hasAllPhotos || analyzing"
+                    (click)="analyzePhotos()">
+              <i class="fa mr-1"
+                 [ngClass]="analyzing ? 'fa-spinner fa-spin' : 'fa-magic'"></i>
+              {{analyzing ? 'Analizando las tres fotos...' : 'Identificar producto con IA'}}
+            </button>
+            <button class="btn btn-light-secondary" type="button"
+                    [disabled]="!hasAllPhotos || analyzing"
+                    (click)="continueWithoutAi()">
+              Continuar con ingreso manual
+            </button>
+          </div>
+        </section>
+
+        <section class="quick-step" *ngIf="formVisible">
+          <div class="quick-step-title">
+            <span class="step-number">2</span>
+            <div>
+              <h5 class="mb-0">Revisar la información del producto</h5>
+              <small class="text-muted">Todas las sugerencias de la IA pueden editarse.</small>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-lg-8">
+              <div class="form-group">
+                <label for="quickProductCod">
+                  Código interno <small class="text-muted">(opcional)</small>
+                </label>
+                <input id="quickProductCod" class="form-control"
+                       type="text" maxlength="20" [(ngModel)]="productCod"
+                       placeholder="Se generará automáticamente">
+              </div>
+
+              <div class="form-group">
+                <label for="quickProductName">Nombre</label>
+                <textarea id="quickProductName" class="form-control"
+                          rows="2" maxlength="128"
+                          [(ngModel)]="productName"></textarea>
+                <div class="mt-2" *ngIf="productNameSuggestions.length > 0">
+                  <small class="text-muted d-block mb-1">Nombres sugeridos:</small>
+                  <button *ngFor="let name of productNameSuggestions"
+                          class="btn btn-xs btn-light-primary mr-1 mb-1"
+                          type="button" (click)="selectSuggestedName(name)">
+                    {{name}}
+                  </button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="quickProductDescription">Descripción</label>
+                <textarea id="quickProductDescription" class="form-control"
+                          rows="4" maxlength="256"
+                          [(ngModel)]="productDescription"></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="quickProductPrice">Precio</label>
+                <input id="quickProductPrice" class="form-control"
+                       type="number" min="0" step="0.01"
+                       [(ngModel)]="numPrice" placeholder="0.00">
+                <small class="form-text text-muted">
+                  Confirme el precio incluso si fue leído de una etiqueta.
+                </small>
+              </div>
+            </div>
+
+            <div class="col-lg-4">
+              <label class="d-block">Fotografías registradas</label>
+              <div class="photo-summary">
+                <figure>
+                  <img [src]="photos.front.previewUrl" alt="Foto frontal">
+                  <figcaption>Frontal</figcaption>
+                </figure>
+                <figure>
+                  <img [src]="photos.side.previewUrl" alt="Foto lateral">
+                  <figcaption>Lateral</figcaption>
+                </figure>
+                <figure>
+                  <img [src]="photos.barcode.previewUrl" alt="Foto del código">
+                  <figcaption>Código</figcaption>
+                </figure>
+              </div>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-lg-6 mb-3">
+              <div class="master-validation-card">
+                <label for="quickBrandSuggestion">Marca sugerida por IA</label>
+                <input #brandSuggestionInput id="quickBrandSuggestion"
+                       class="form-control" type="text" maxlength="128"
+                       [(ngModel)]="brandSuggested"
+                       (ngModelChange)="resetBrandValidation()"
+                       placeholder="Ingrese o edite la marca sugerida">
+                <span class="badge mt-2" [ngClass]="statusClass(brandStatus)">
+                  {{brandStatusLabel()}}
+                </span>
+                <div class="validated-master mt-2" *ngIf="selectedBrandCod">
+                  <i class="fa fa-check-circle text-success mr-1"></i>
+                  {{selectedBrandName()}} ({{selectedBrandCod}})
+                </div>
+
+                <div class="mt-3">
+                  <button class="btn btn-sm btn-primary mr-1 mb-1"
+                          type="button" [disabled]="loadingLookups"
+                          (click)="validateBrand()">Validar</button>
+                  <button class="btn btn-sm btn-light-secondary mr-1 mb-1"
+                          type="button" (click)="modifyBrandSuggestion()">Modificar</button>
+                  <button *ngIf="(brandStatus === 'missing' || brandStatus === 'similar') && canCreateBrand"
+                          class="btn btn-sm btn-success mb-1" type="button"
+                          data-toggle="modal" data-target="#quickBrandModal"
+                          (click)="openCreateBrandModal()">Registrar nueva</button>
+                </div>
+
+                <div class="mt-3" *ngIf="similarBrands.length > 0">
+                  <small class="text-muted d-block mb-1">Posibles coincidencias:</small>
+                  <button *ngFor="let brand of similarBrands"
+                          class="btn btn-sm btn-light-primary mr-1 mb-1"
+                          type="button" (click)="selectBrand(brand)">
+                    {{brand.BrandName}}
+                  </button>
+                </div>
+
+                <div class="form-group mt-3 mb-0">
+                  <label>Seleccionar una marca existente</label>
+                  <select class="form-control" [ngModel]="selectedBrandCod"
+                          (ngModelChange)="selectBrandByCode($event)">
+                    <option value="">-- Seleccionar --</option>
+                    <option *ngFor="let brand of brandList" [value]="brand.BrandCod">
+                      {{brand.BrandName}} ({{brand.BrandCod}})
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-lg-6 mb-3">
+              <div class="master-validation-card">
+                <label for="quickCategorySuggestion">Categoría sugerida por IA</label>
+                <input #categorySuggestionInput id="quickCategorySuggestion"
+                       class="form-control" type="text" maxlength="128"
+                       [(ngModel)]="categorySuggested"
+                       (ngModelChange)="resetCategoryValidation()"
+                       placeholder="Ingrese o edite la categoría sugerida">
+                <span class="badge mt-2" [ngClass]="statusClass(categoryStatus)">
+                  {{categoryStatusLabel()}}
+                </span>
+                <div class="validated-master mt-2" *ngIf="selectedCategoryCod">
+                  <i class="fa fa-check-circle text-success mr-1"></i>
+                  {{selectedCategoryName()}} ({{selectedCategoryCod}})
+                </div>
+
+                <div class="mt-3">
+                  <button class="btn btn-sm btn-primary mr-1 mb-1"
+                          type="button" [disabled]="loadingLookups"
+                          (click)="validateCategory()">Validar</button>
+                  <button class="btn btn-sm btn-light-secondary mr-1 mb-1"
+                          type="button" (click)="modifyCategorySuggestion()">Modificar</button>
+                  <button *ngIf="(categoryStatus === 'missing' || categoryStatus === 'similar') && canCreateCategory"
+                          class="btn btn-sm btn-success mb-1" type="button"
+                          data-toggle="modal" data-target="#quickCategoryModal"
+                          (click)="openCreateCategoryModal()">Registrar nueva</button>
+                </div>
+
+                <div class="mt-3" *ngIf="similarCategories.length > 0">
+                  <small class="text-muted d-block mb-1">Posibles coincidencias:</small>
+                  <button *ngFor="let category of similarCategories"
+                          class="btn btn-sm btn-light-primary mr-1 mb-1"
+                          type="button" (click)="selectCategory(category)">
+                    {{category.CategoryName}}
+                  </button>
+                </div>
+
+                <div class="form-group mt-3 mb-0">
+                  <label>Seleccionar una categoría existente</label>
+                  <select class="form-control" [ngModel]="selectedCategoryCod"
+                          (ngModelChange)="selectCategoryByCode($event)">
+                    <option value="">-- Seleccionar --</option>
+                    <option *ngFor="let category of categoryList" [value]="category.CategoryCod">
+                      {{category.CategoryName}} ({{category.CategoryCod}})
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="quick-step barcode-final-step" *ngIf="formVisible">
+          <div class="quick-step-title">
+            <span class="step-number">3</span>
+            <div>
+              <h5 class="mb-0">Último paso: revisar el código de barras</h5>
+              <small class="text-muted">La IA puede equivocarse al leer los dígitos.</small>
+            </div>
+          </div>
+
+          <div class="alert alert-warning">
+            <i class="fa fa-exclamation-triangle mr-1"></i>
+            Revise que el código sea correcto. Puede reemplazarlo escribiéndolo manualmente o escanearlo con la pistola láser; luego presione <strong>Validar código</strong>.
+          </div>
+
+          <div class="row align-items-end">
+            <div class="col-md-8 mb-2">
+              <label for="quickProductBarcode">Código de barras</label>
+              <input id="quickProductBarcode" class="form-control barcode-input"
+                     type="text" maxlength="20" inputmode="numeric"
+                     autocomplete="off" [disabled]="processingBarcode"
+                     [(ngModel)]="barcode"
+                     (ngModelChange)="onBarcodeChanged()"
+                     (keyup.enter)="verifyBarcode()"
+                     placeholder="Ingrese los dígitos o use la pistola láser">
+            </div>
+            <div class="col-md-4 mb-2">
+              <button class="btn btn-primary btn-block" type="button"
+                      [disabled]="processingBarcode" (click)="verifyBarcode()">
+                <i class="fa mr-1"
+                   [ngClass]="processingBarcode ? 'fa-spinner fa-spin' : 'fa-check-circle'"></i>
+                {{processingBarcode ? 'Validando...' : 'Validar código'}}
+              </button>
+            </div>
+          </div>
+
+          <div class="alert alert-danger mt-3" *ngIf="existingProduct">
+            <h6 class="mb-1">
+              <i class="fa fa-exclamation-circle mr-1"></i>
+              Este código de barras ya está registrado.
+            </h6>
+            <div><strong>{{existingProduct.ProductCod}}</strong> — {{existingProduct.ProductName}}</div>
+            <a class="btn btn-sm btn-light-danger mt-2"
+               routerLink="/enterprise/product/pages/createProduct"
+               [queryParams]="{ ProductCod: existingProduct.ProductCod }">
+              Ver producto existente
+            </a>
+          </div>
+
+          <div class="alert alert-success mt-3" *ngIf="barcodeVerified">
+            <i class="fa fa-check-circle mr-1"></i>
+            Código <strong>{{verifiedBarcode}}</strong> validado y disponible.
+          </div>
+
+          <div class="text-right border-top pt-3 mt-3">
+            <small class="text-muted d-block mb-2" *ngIf="!barcodeVerified">
+              Valide el código de barras para habilitar la creación.
+            </small>
+            <button class="btn btn-success btn-lg" type="button"
+                    [disabled]="saving || !barcodeVerified || existingProduct"
+                    (click)="save()">
+              <i class="fa mr-1"
+                 [ngClass]="saving ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+              {{saving ? 'Creando producto...' : 'Confirmar y crear producto'}}
+            </button>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="quickBrandModal" tabindex="-1" role="dialog"
+     aria-labelledby="quickBrandModalTitle" aria-hidden="true"
+     *ngIf="canCreateBrand">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-primary-d3" id="quickBrandModalTitle">
+          Registrar marca sugerida
+        </h5>
+        <button #closeBrandModal type="button" class="close"
+                data-dismiss="modal" aria-label="Cerrar"
+                (click)="showCreateBrand = false">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <app-createbrand *ngIf="showCreateBrand"
+          [isModal]="true"
+          [initialName]="brandSuggested"
+          (BrandCreated)="handleBrandCreated($event)"
+          (CancelModal)="cancelBrandModal()">
+        </app-createbrand>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="quickCategoryModal" tabindex="-1" role="dialog"
+     aria-labelledby="quickCategoryModalTitle" aria-hidden="true"
+     *ngIf="canCreateCategory">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title text-primary-d3" id="quickCategoryModalTitle">
+          Registrar categoría sugerida
+        </h5>
+        <button #closeCategoryModal type="button" class="close"
+                data-dismiss="modal" aria-label="Cerrar"
+                (click)="showCreateCategory = false">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <app-createcategory *ngIf="showCreateCategory"
+          [isModal]="true"
+          [productSelectionMode]="true"
+          [initialName]="categorySuggested"
+          (CategoryCreated)="handleCategoryCreated($event)"
+          (CancelModal)="cancelCategoryModal()">
+        </app-createcategory>
+      </div>
+    </div>
+  </div>
+</div>

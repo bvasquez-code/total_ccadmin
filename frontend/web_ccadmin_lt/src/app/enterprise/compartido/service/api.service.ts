@@ -110,6 +110,16 @@ export class ApiService {
         });
     }
 
+    public InvokePostFormDataService(URL: string, Request: FormData): Observable<any> {
+        const token = this.dataSesionService.GetToken();
+        if (!token) {
+            this.router.navigate(['/login']);
+        }
+        return this.http.post<any>(URL, Request, {
+            headers: new HttpHeaders({ 'Authorization': token })
+        });
+    }
+
     public InvokeGetService(URL: string,Request : any): Observable<any> {
 
         let URLparam : string = new URLSearchParams(Request).toString();
@@ -136,6 +146,23 @@ export class ApiService {
             RespuestaWS = data;
         }).catch( function(e){
             RespuestaWS = e.error;
+            console.log({ ERROR : e });
+        });
+        return RespuestaWS;
+    }
+
+    async ExecutePostFormDataService(URL: string, Request: FormData)
+    {
+        let RespuestaWS : ResponseWsDto = new ResponseWsDto();
+
+        await this.InvokePostFormDataService(URL, Request)
+        .toPromise()
+        .then(data => {
+            RespuestaWS = data;
+        }).catch(function(e){
+            RespuestaWS = e.error || new ResponseWsDto();
+            RespuestaWS.ErrorStatus = true;
+            RespuestaWS.Message = RespuestaWS.Message || 'No fue posible enviar el archivo';
             console.log({ ERROR : e });
         });
         return RespuestaWS;

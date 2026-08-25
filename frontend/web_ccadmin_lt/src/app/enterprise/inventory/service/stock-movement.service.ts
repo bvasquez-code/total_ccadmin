@@ -28,6 +28,16 @@ export class StockMovementService {
     return this.action(kind, 'confirm', code);
   }
 
+  quickCreateAndConfirm(
+    ProductCod: string,
+    Quantity: number
+  ): Promise<ResponseWsDto> {
+    return this.apiService.ExecutePostService(
+      `${this.url('entry')}/quickCreateAndConfirm`,
+      { ProductCod, Quantity }
+    );
+  }
+
   resolve(kind: StockMovementKind, request: any): Promise<ResponseWsDto> {
     return this.apiService.ExecutePostService(`${this.url(kind)}/resolve`, request);
   }

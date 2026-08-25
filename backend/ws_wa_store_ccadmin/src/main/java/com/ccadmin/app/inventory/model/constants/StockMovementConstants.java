@@ -12,6 +12,7 @@ public final class StockMovementConstants {
     public static final String SOURCE_EXIT = "stock_exit_head";
     public static final String EVENT_CONFIRMATION = "CONFIRMATION";
     public static final String EVENT_RESOLUTION_PREFIX = "RESOLUTION_";
+    public static final String INITIAL_STORE_LOAD_REASON = "CARGA_INICIAL_TIENDA";
 
     private StockMovementConstants() {
     }

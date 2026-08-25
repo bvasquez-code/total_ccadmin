@@ -86,6 +86,8 @@ export class SidebarMenuConfigService {
                 { permission: "PR000002", label: "Bandeja de Marcas", url: "enterprise/product/pages/listBrand" },
                 { permission: "PR000003", label: "Bandeja de Categorias", url: "enterprise/product/pages/listCategory" },
                 { permission: "PR000005", label: "Creacion de Productos", url: "enterprise/product/pages/createProduct", urlShade: "enterprise/product/pages/listProduct", isVisible: false },
+                { permission: "PR000005", label: "Creacion rapida de Productos", url: "enterprise/product/pages/createproductquick", urlShade: "enterprise/product/pages/listProduct", isVisible: false },
+                { permission: "PR000005", label: "Carga rapida de stock inicial", url: "enterprise/inventory/pages/createquickstockentry", urlShade: "enterprise/product/pages/listProduct", isVisible: false },
                 { permission: "PR000005", label: "Configuracion de producto por tienda", url: "enterprise/product/pages/createproductconfig", urlShade: "enterprise/product/pages/listProduct", isVisible: false },
                 { permission: "PR000006", label: "Creacion de Marcas", url: "enterprise/product/pages/createBrand", urlShade: "enterprise/product/pages/listBrand", isVisible: false },
                 { permission: "PR000007", label: "Creacion de categorias", url: "enterprise/product/pages/createCategory", urlShade: "enterprise/product/pages/listCategory", isVisible: false },

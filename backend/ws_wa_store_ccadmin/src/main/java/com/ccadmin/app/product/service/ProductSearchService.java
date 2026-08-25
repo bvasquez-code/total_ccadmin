@@ -128,6 +128,15 @@ public class ProductSearchService extends SessionService {
         return findById(ProductCod);
     }
 
+    public ProductEntity findRegisteredByBarCode(String barCode) {
+        if (barCode == null || barCode.trim().isEmpty()) return null;
+        return this.productBarcodeRepository.findById(barCode.trim())
+                .flatMap(productBarcode -> this.productRepository.findById(
+                        productBarcode.ProductCod
+                ))
+                .orElse(null);
+    }
+
     public List<ProductEntity> findAll(){
         return this.productRepository.findAll();
     }

@@ -1,4 +1,4 @@
-import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
 import { BrandService } from '../../service/brand.service';
 import { IRegisterForm } from 'src/app/enterprise/shared/interface/IRegisterForm';
 import { BrandEntity } from '../../model/entity/BrandEntity';
@@ -10,9 +10,10 @@ import { ValidationHelper } from 'src/app/enterprise/shared/helper/ValidationHel
   selector: 'app-createbrand',
   templateUrl: './createbrand.component.html'
 })
-export class CreatebrandComponent implements OnInit, IRegisterForm<BrandEntity, string> {
+export class CreatebrandComponent implements OnInit, AfterViewInit, IRegisterForm<BrandEntity, string> {
 
   @Input() isModal: boolean = false;
+  @Input() initialName: string = '';
   @Output() BrandCreated = new EventEmitter<BrandEntity>();
   @Output() CancelModal = new EventEmitter<void>();
 
@@ -152,6 +153,12 @@ export class CreatebrandComponent implements OnInit, IRegisterForm<BrandEntity, 
 
   ngOnInit(): void {
 
+  }
+
+  ngAfterViewInit(): void {
+    if (!this.IsEditMode && this.initialName) {
+      this.txtBrandName.nativeElement.value = this.initialName;
+    }
   }
 
 }

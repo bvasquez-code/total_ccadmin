@@ -141,6 +141,87 @@ public class StockEntryCreateService extends SessionService {
         return stockEntrySearchService.findById(code);
     }
 
+    /**
+     * Transforma una carga inicial simple en una entrada excepcional directa y
+     * delega su persistencia y confirmacion al mismo nucleo de inventario.
+     */
+    @Transactional(rollbackOn = Exception.class)
+    public StockEntryRegisterDto createAndConfirmQuick(
+            StockEntryQuickCreateDto request
+    ) {
+        if (request == null || clean(request.ProductCod).isEmpty()) {
+            throw new IllegalArgumentException(
+                    "El codigo de producto es obligatorio"
+            );
+        }
+
+        String productCod = clean(request.ProductCod);
+        int visibleQuantity = stockMovementValidationService.positive(
+                request.Quantity, "La cantidad"
+        );
+        String storeCod = getStoreCod();
+        String userCod = getUserCod();
+
+        ProductEntity product = productRepository.findById(productCod)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No existe el producto " + productCod
+                ));
+        ProductConfigEntity productConfig = productConfigRepository.findById(
+                new ProductConfigID(productCod, storeCod)
+        ).orElseThrow(() -> new IllegalArgumentException(
+                "El producto no esta configurado para la tienda actual"
+        ));
+        ProductVariantEntity productVariant = productVariantRepository
+                .findAllVariantProduct(productCod)
+                .stream()
+                .filter(variant -> "0000".equals(variant.Variant))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "El producto no tiene una variante predeterminada"
+                ));
+        WarehouseEntity warehouse = warehouseShared
+                .findMainWarehouseByStore(storeCod);
+
+        int productUnitFactor = Math.max(1, productConfig.ProductUnitFactor);
+        int internalQuantity;
+        try {
+            internalQuantity = Math.multiplyExact(
+                    visibleQuantity, productUnitFactor
+            );
+        } catch (ArithmeticException exception) {
+            throw new IllegalArgumentException("La cantidad ingresada es demasiado grande");
+        }
+
+        StockEntryHeadEntity stockEntryHead = new StockEntryHeadEntity();
+        stockEntryHead.StockEntryCod = createCode(storeCod);
+        stockEntryHead.StoreCod = storeCod;
+        stockEntryHead.ProcessType = StockMovementConstants.PROCESS_ORIGINAL;
+        stockEntryHead.MovementMode = StockMovementConstants.MODE_DIRECT;
+        stockEntryHead.ReasonCode =
+                StockMovementConstants.INITIAL_STORE_LOAD_REASON;
+        stockEntryHead.ProcessStatus = StatusConst.PENDING;
+        stockEntryHead.Observation =
+                "Carga inicial de tienda para " + productCod;
+
+        StockEntryDetEntity stockEntryDetail = new StockEntryDetEntity();
+        stockEntryDetail.ProductCod = product.ProductCod;
+        stockEntryDetail.ProductName = product.ProductName;
+        stockEntryDetail.Variant = productVariant.Variant;
+        stockEntryDetail.WarehouseCod = warehouse.WarehouseCod;
+        stockEntryDetail.ProductUnitName = clean(productConfig.ProductUnitName)
+                .isEmpty() ? "NIU" : productConfig.ProductUnitName;
+        stockEntryDetail.ProductUnitFactor = productUnitFactor;
+        stockEntryDetail.NumUnit = internalQuantity;
+        stockEntryDetail.Observation = "Carga inicial desde creacion rapida";
+
+        List<StockEntryDetEntity> stockEntryDetails =
+                new ArrayList<>(List.of(stockEntryDetail));
+        normalizeAndValidate(stockEntryHead, stockEntryDetails);
+        persistEntry(stockEntryHead, stockEntryDetails, userCod);
+        confirmEntry(stockEntryHead, stockEntryDetails, userCod);
+        return stockEntrySearchService.findById(stockEntryHead.StockEntryCod);
+    }
+
     public String createCode(String storeCod) {
         String code = stockEntryHeadRepository.createCode(storeCod);
         if (code == null || code.isBlank()) {
