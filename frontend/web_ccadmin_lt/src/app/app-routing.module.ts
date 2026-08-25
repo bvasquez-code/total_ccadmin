@@ -87,6 +87,7 @@ import { ViewStockExitComponent } from './enterprise/inventory/pages/viewstockex
 import { ResolveStockExitComponent } from './enterprise/inventory/pages/resolvestockexit/resolvestockexit.component';
 import { ListBulkLoadComponent } from './enterprise/bulkload/pages/listbulkload/listbulkload.component';
 import { CreateBulkLoadComponent } from './enterprise/bulkload/pages/createbulkload/createbulkload.component';
+import { CreateBulkLoadProductsComponent } from './enterprise/bulkload/pages/createbulkloadproducts/createbulkloadproducts.component';
 import { ViewBulkLoadComponent } from './enterprise/bulkload/pages/viewbulkload/viewbulkload.component';
 import { SessionAccessGuard } from './enterprise/login/service/session-access.guard';
 import { ViewproductComponent } from './enterprise/product/pages/viewproduct/viewproduct.component';
@@ -185,6 +186,7 @@ const routes: Routes = [
       { path: 'enterprise/inventory/pages/resolvestockexit', component: ResolveStockExitComponent },
       { path: 'enterprise/bulkload/pages/listbulkload', component: ListBulkLoadComponent },
       { path: 'enterprise/bulkload/pages/createbulkload', component: CreateBulkLoadComponent },
+      { path: 'enterprise/bulkload/pages/createbulkloadproducts', component: CreateBulkLoadProductsComponent },
       { path: 'enterprise/bulkload/pages/viewbulkload', component: ViewBulkLoadComponent }
     ]
   },

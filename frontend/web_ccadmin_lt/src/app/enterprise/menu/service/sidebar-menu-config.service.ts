@@ -47,7 +47,8 @@ export class SidebarMenuConfigService {
                 { permission: "AT000012", label: "Resolver retiro de stock", url: "enterprise/inventory/pages/resolvestockexit", urlShade: "enterprise/inventory/pages/liststockexit", isVisible: false },
                 { permission: "AT000013", label: "Cargas masivas", url: "enterprise/bulkload/pages/listbulkload" },
                 { permission: "AT000013", label: "Ver carga masiva", url: "enterprise/bulkload/pages/viewbulkload", urlShade: "enterprise/bulkload/pages/listbulkload", isVisible: false },
-                { permission: "AT000014", label: "Nueva carga masiva", url: "enterprise/bulkload/pages/createbulkload", urlShade: "enterprise/bulkload/pages/listbulkload", isVisible: false }
+                { permission: "AT000014", label: "Nueva carga masiva", url: "enterprise/bulkload/pages/createbulkload", urlShade: "enterprise/bulkload/pages/listbulkload", isVisible: false },
+                { permission: "AT000014", label: "Ingreso manual de productos", url: "enterprise/bulkload/pages/createbulkloadproducts", urlShade: "enterprise/bulkload/pages/listbulkload", isVisible: false }
             ]
         }),
         new SidebarMenuConfigDto({
@@ -89,6 +90,7 @@ export class SidebarMenuConfigService {
                 { permission: "PR000006", label: "Creacion de Marcas", url: "enterprise/product/pages/createBrand", urlShade: "enterprise/product/pages/listBrand", isVisible: false },
                 { permission: "PR000007", label: "Creacion de categorias", url: "enterprise/product/pages/createCategory", urlShade: "enterprise/product/pages/listCategory", isVisible: false },
                 { permission: "PR000009", label: "Creacion masiva de Productos", url: "enterprise/product/pages/createproductmassive", urlShade: "enterprise/product/pages/listProduct", isVisible: false },
+                { permission: "PR000009", label: "Ingreso manual masivo de Productos", url: "enterprise/bulkload/pages/createbulkloadproducts", urlShade: "enterprise/product/pages/listProduct", isVisible: false },
                 { permission: "PR000010", label: "Creacion masiva de Marcas", url: "enterprise/product/pages/createbrandmassive", urlShade: "enterprise/product/pages/listBrand", isVisible: false },
                 { permission: "PR000011", label: "Creacion masiva de categorias", url: "enterprise/product/pages/createcategorymassive", urlShade: "enterprise/product/pages/listCategory", isVisible: false }
             ]

@@ -120,6 +120,7 @@ import { StockResolutionEditorComponent } from './enterprise/inventory/component
 import { StockMovementViewComponent } from './enterprise/inventory/components/stock-movement-view/stock-movement-view.component';
 import { ListBulkLoadComponent } from './enterprise/bulkload/pages/listbulkload/listbulkload.component';
 import { CreateBulkLoadComponent } from './enterprise/bulkload/pages/createbulkload/createbulkload.component';
+import { CreateBulkLoadProductsComponent } from './enterprise/bulkload/pages/createbulkloadproducts/createbulkloadproducts.component';
 import { ViewBulkLoadComponent } from './enterprise/bulkload/pages/viewbulkload/viewbulkload.component';
 import { ViewproductComponent } from './enterprise/product/pages/viewproduct/viewproduct.component';
 
@@ -235,6 +236,7 @@ import { ViewproductComponent } from './enterprise/product/pages/viewproduct/vie
     StockMovementViewComponent,
     ListBulkLoadComponent,
     CreateBulkLoadComponent,
+    CreateBulkLoadProductsComponent,
     ViewBulkLoadComponent,
     ViewproductComponent,
   ],

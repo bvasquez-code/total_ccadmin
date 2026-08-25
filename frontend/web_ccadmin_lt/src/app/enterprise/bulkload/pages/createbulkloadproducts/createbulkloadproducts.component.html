@@ -1,0 +1,138 @@
+<div role="main" class="main-content">
+  <div class="page-content container container-plus">
+    <div class="card-header">
+      <h3 class="card-title text-125 text-primary-d2">
+        <i class="fa fa-table text-dark-l3 mr-1"></i>
+        Ingreso manual de productos
+      </h3>
+    </div>
+
+    <div class="card dcard">
+      <div class="card-body px-2 px-md-3">
+        <div class="d-flex flex-wrap justify-content-between mb-3">
+          <button class="btn px-4 btn-light-secondary mb-2"
+                  type="button" [disabled]="saving" (click)="cancel()">
+            <i class="fa fa-arrow-left mr-1"></i>Volver
+          </button>
+          <button class="btn px-4 btn-success mb-2"
+                  type="button"
+                  [disabled]="saving || loadingLookups"
+                  (click)="submit()">
+            <i class="fa mr-1"
+               [ngClass]="saving ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+            {{saving ? 'Validando...' : 'Generar y validar carga'}}
+          </button>
+        </div>
+
+        <div class="alert alert-info">
+          Ingrese únicamente los productos que desea crear. Las filas vacías se
+          ignorarán. Si deja el código vacío, se generará automáticamente.
+          El stock máximo y mínimo se registrarán con los valores predeterminados
+          <strong>100</strong> y <strong>50</strong>.
+        </div>
+
+        <div *ngIf="loadingLookups" class="text-center py-4">
+          <i class="fa fa-spinner fa-spin fa-2x text-primary"></i>
+          <div class="mt-2">Cargando marcas y categorías...</div>
+        </div>
+
+        <div class="alert alert-danger" *ngIf="errors.length > 0">
+          La carga tiene errores. Corrija los campos señalados y vuelva a validar.
+        </div>
+
+        <div class="table-responsive manual-product-table-wrapper"
+             *ngIf="!loadingLookups">
+          <table class="table table-bordered manual-product-table mb-0">
+            <thead>
+              <tr>
+                <th class="barcode-column">Código de barras</th>
+                <th class="code-column">Código</th>
+                <th class="name-column">Nombre</th>
+                <th class="description-column">Descripción</th>
+                <th class="lookup-column">Marca</th>
+                <th class="lookup-column">Categoría</th>
+                <th class="price-column">Precio</th>
+                <th class="error-column">Validación</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let row of rows; let rowIndex = index;
+                          trackBy: trackByIndex"
+                  [class.table-danger]="rowErrors(rowIndex + 4).length > 0">
+                <td>
+                  <input class="form-control form-control-sm"
+                         type="text" maxlength="20"
+                         [attr.autofocus]="rowIndex === 0 ? true : null"
+                         placeholder="Escanee o ingrese"
+                         [(ngModel)]="row.BarCode">
+                </td>
+                <td>
+                  <input class="form-control form-control-sm"
+                         type="text" maxlength="20"
+                         placeholder="Opcional"
+                         [(ngModel)]="row.ProductCod">
+                </td>
+                <td>
+                  <textarea class="form-control form-control-sm product-textarea"
+                            rows="2" maxlength="128"
+                            placeholder="Nombre"
+                            [(ngModel)]="row.ProductName"></textarea>
+                </td>
+                <td>
+                  <textarea class="form-control form-control-sm product-textarea"
+                            rows="2" maxlength="256"
+                            placeholder="Descripción"
+                            [(ngModel)]="row.ProductDesc"></textarea>
+                </td>
+                <td>
+                  <input class="form-control form-control-sm"
+                         type="text" list="manual-product-brands"
+                         autocomplete="off" placeholder="Buscar"
+                         [(ngModel)]="row.BrandSearch"
+                         (ngModelChange)="onBrandInput(row)">
+                </td>
+                <td>
+                  <input class="form-control form-control-sm"
+                         type="text" list="manual-product-categories"
+                         autocomplete="off" placeholder="Buscar"
+                         [(ngModel)]="row.CategorySearch"
+                         (ngModelChange)="onCategoryInput(row)">
+                </td>
+                <td>
+                  <input class="form-control form-control-sm text-right"
+                         type="text" inputmode="decimal"
+                         placeholder="0.00"
+                         [(ngModel)]="row.NumPrice">
+                </td>
+                <td class="validation-cell">
+                  <span *ngIf="rowErrors(rowIndex + 4).length === 0"
+                        class="text-muted">—</span>
+                  <small *ngFor="let message of rowErrors(rowIndex + 4)"
+                         class="d-block text-danger">
+                    {{message}}
+                  </small>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <datalist id="manual-product-brands">
+          <option *ngFor="let brand of brandList"
+                  [value]="brandOptionValue(brand)"></option>
+        </datalist>
+        <datalist id="manual-product-categories">
+          <option *ngFor="let category of categoryList"
+                  [value]="categoryOptionValue(category)"></option>
+        </datalist>
+
+        <div class="text-right mt-2" *ngIf="!loadingLookups">
+          <button class="btn btn-primary"
+                  type="button" [disabled]="saving" (click)="addRow()">
+            <i class="fa fa-plus mr-1"></i>Agregar más
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

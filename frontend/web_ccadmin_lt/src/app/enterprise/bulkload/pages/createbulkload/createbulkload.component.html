@@ -47,6 +47,12 @@
             </select>
           </div>
           <div class="col-md-8 mb-3">
+            <button *ngIf="type === constants.TYPE_PRODUCT_CREATE"
+                    class="btn btn-light-success mr-2 mb-1"
+                    type="button" [disabled]="loading"
+                    (click)="openManualProductCreation()">
+              <i class="fa fa-table mr-1"></i>Ingresar productos manualmente
+            </button>
             <button class="btn btn-light-primary mr-2 mb-1"
                     type="button" [disabled]="loading"
                     (click)="downloadTemplate()">

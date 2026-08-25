@@ -237,6 +237,15 @@ export class CreateBulkLoadComponent implements OnInit {
     void this.loadDetails(1);
   }
 
+  async openManualProductCreation(): Promise<void> {
+    const routePath = this.route.snapshot.routeConfig?.path
+      ?? 'enterprise/bulkload/pages/createbulkload';
+    await this.router.navigate(
+      ['/enterprise/bulkload/pages/createbulkloadproducts'],
+      { queryParams: { returnTo: `/${routePath}` } }
+    );
+  }
+
   async confirm(): Promise<void> {
     if (!this.current || !this.canConfirm) return;
     const confirmation = await this.alertService.waring(

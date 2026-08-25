@@ -1,0 +1,73 @@
+.manual-product-table-wrapper {
+  border: 1px solid #d7dce5;
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  width: 100%;
+}
+
+.manual-product-table {
+  min-width: 1120px;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.manual-product-table thead th {
+  background-color: #b4c7e7;
+  color: #172b4d;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.5rem 0.35rem;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+.manual-product-table td {
+  padding: 0.3rem;
+  vertical-align: top;
+}
+
+.manual-product-table .form-control {
+  font-size: 0.82rem;
+  min-height: 31px;
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
+}
+
+.product-textarea {
+  line-height: 1.25;
+  min-height: 52px;
+  resize: vertical;
+}
+
+.barcode-column {
+  width: 145px;
+}
+
+.code-column {
+  width: 125px;
+}
+
+.name-column {
+  width: 145px;
+}
+
+.description-column {
+  width: 165px;
+}
+
+.lookup-column {
+  width: 145px;
+}
+
+.price-column {
+  width: 85px;
+}
+
+.error-column {
+  width: 170px;
+}
+
+.validation-cell {
+  line-height: 1.25;
+}
