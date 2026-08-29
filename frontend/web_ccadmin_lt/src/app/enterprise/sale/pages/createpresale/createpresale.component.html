@@ -98,8 +98,8 @@
         <div class="card-body px-1 px-md-3">
 
           <form autocomplete="off">
-            <div class="row">
-              <div class="col-8">
+            <div class="row presale-summary-row">
+              <div class="col-12 col-lg-8">
                 <div class="d-flex justify-content-between flex-column flex-sm-row mb-3 px-2 px-sm-0">
                   <h3 class="text-125 pl-1 mb-3 mb-sm-0 text-secondary-d4">
                     Detalle preventa
@@ -115,9 +115,9 @@
                   </div>
                 </div>
               </div>
-              <div class="col-4" *ngIf="ShoppingCart.DetailList.length > 0">
-                <div class="col-12 col-sm-12 offset-sm-12 col-lg-12 offset-lg-12">
-                  <div class="bgc-default-l4 p-3 radius-1 border-1 brc-default-l2">
+              <div class="col-12 col-lg-4" *ngIf="ShoppingCart.DetailList.length > 0">
+                <div class="col-12">
+                  <div class="presale-totals bgc-default-l4 p-3 radius-1 border-1 brc-default-l2">
                     <div class="d-flex align-items-center mb-2">
                       <span class="text-secondary-d2 text-95 flex-grow-1">Sub Total</span>
                       <span class="text-secondary-d3 text-100 text-600">
@@ -162,8 +162,9 @@
             </div>
             <br>
 
+            <div class="presale-detail-table-wrapper">
             <table id="simple-table"
-              class="mb-0 table table-borderless table-bordered-x brc-secondary-l3 text-dark-m2 radius-1 overflow-hidden">
+              class="presale-detail-table mb-0 table table-borderless table-bordered-x brc-secondary-l3 text-dark-m2 radius-1 overflow-hidden">
               <thead class="text-dark-tp3 bgc-grey-l4 text-90 border-b-1 brc-transparent">
                 <tr>
                   <th>
@@ -192,16 +193,16 @@
 
               <tbody class="mt-1">
                 <tr class="bgc-h-yellow-l4 d-style" *ngFor="let Product of ShoppingCart.DetailList">
-                  <td>
+                  <td data-label="Producto">
                     <a href="#" class="text-blue-d1 text-600 text-95">{{ Product.getNameSummary() }}</a>
                   </td>
 
-                  <td class="text-600 text-orange-d2">
+                  <td data-label="Precio" class="text-600 text-orange-d2">
                     {{ CurrencySystem.CurrencyCod }}
                     {{ getVisibleUnitPrice(Product.NumUnitPrice, Product.ProductUnitFactor) | number:'1.2-2' }}
                   </td>
 
-                  <td class="d-none d-sm-table-cell text-grey-d1">
+                  <td data-label="Cantidad" class="d-none d-sm-table-cell text-grey-d1">
                     <div class="btn-group" role="group" aria-label="Basic mixed styles example">
                       <button type="button" class="btn btn-danger"
                         (click)="subtractUnitDirect(Product.ProductCod)">-</button>
@@ -212,19 +213,19 @@
                     </div>
                   </td>
 
-                  <td class="text-600 text-orange-d2">
+                  <td data-label="Sub total" class="d-none d-sm-table-cell text-600 text-orange-d2">
                     {{ CurrencySystem.CurrencyCod }}
                     {{ Product.NumUnitPrice * Product.NumUnit | number:'1.2-2' }}
                   </td>
-                  <td class="text-600 text-orange-d2">
+                  <td data-label="Descuento" class="text-600 text-orange-d2">
                     {{ CurrencySystem.CurrencyCod }}
                     {{ Product.NumDiscount * Product.NumUnit | number:'1.2-2' }}
                   </td>
-                  <td class="text-600 text-orange-d2">
+                  <td data-label="Total" class="d-none d-sm-table-cell text-600 text-orange-d2">
                     {{ CurrencySystem.CurrencyCod }}
                     {{ Product.NumTotalPrice | number:'1.2-2' }}
                   </td>
-                  <td>
+                  <td data-label="Acciones" class="presale-detail-actions">
                     <!-- action buttons -->
                     <div class="d-none d-lg-flex">
                       <a href="#"
@@ -255,20 +256,17 @@
                         <div class="dropdown-inner">
                           <div
                             class="dropdown-header text-100 text-secondary-d1 border-b-1 brc-secondary-l2 text-600 mb-2">
-                            ace.com
+                            Acciones
                           </div>
-                          <a href="#" class="dropdown-item">
+                          <button type="button" class="dropdown-item" data-toggle="modal" data-target="#ProductModal"
+                            (click)="findDetailById(Product.ProductCod)">
                             <i class="fa fa-pencil-alt text-blue mr-1 p-2 w-4"></i>
-                            Edit
-                          </a>
-                          <a href="#" class="dropdown-item">
+                            Editar
+                          </button>
+                          <button type="button" class="dropdown-item" (click)="DeleteProduct(Product.ProductCod)">
                             <i class="fa fa-trash-alt text-danger-m1 mr-1 p-2 w-4"></i>
-                            Delete
-                          </a>
-                          <a href="#" class="dropdown-item">
-                            <i class="far fa-flag text-orange-d1 mr-1 p-2 w-4"></i>
-                            Flag
-                          </a>
+                            Eliminar
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -296,12 +294,13 @@
 
               </tbody>
             </table>
+            </div>
           </form>
 
         </div>
         <div class="card-body px-1 px-md-3">
           <div class="row">
-            <div class="col-sm-2">
+            <div class="col-12 col-lg-2 mb-2 mb-lg-0">
               <button type="button" class="btn btn-primary btn-bold px-4" type="button" data-toggle="modal"
                 data-target="#CommentSaleModal" (click)="InitSale()" style="width: 100%;"
                 [disabled]="!isProductExchangeTotalValid()">
@@ -309,7 +308,7 @@
               </button>
             </div>
 
-            <div class="col-sm-3">
+            <div class="col-12 col-lg-3">
               <button type="button" class="btn btn-lighter-default btn-h-outline-red btn-a-red px-45 btn-bold mb-1"
                 type="button" data-toggle="modal" data-target="#ClientModal" (click)="OpenClientModal()"
                 style="width: 100%;"
@@ -537,8 +536,8 @@
 
 <div class="modal fade" id="ProductModal" tabindex="-1" role="dialog" aria-labelledby="ProductModalLabel"
   aria-hidden="true">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content" style="width: 150%;">
+  <div class="modal-dialog presale-product-modal-dialog" role="document">
+    <div class="modal-content presale-product-modal-content">
       <div class="modal-header">
         <h5 class="modal-title text-primary-d3" id="ProductModalLabel">
           Producto : {{ productInfoDtoSelect.Product.ProductCod }}
@@ -676,11 +675,11 @@
           <div class="card-body p-0 ccard overflow-hidden">
             <div class="list-group">
               <div class="list-group-item" *ngFor="let VariaProduct of productInfoDtoSelect.VariantList">
-                <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center">
                   <div class="text-dark-tp3 text-95 text-600">
                     {{ VariaProduct.VariantDesc }}
                   </div>
-                  <div class="btn-group" role="group" aria-label="Basic mixed styles example">
+                  <div class="btn-group mt-2 mt-sm-0" role="group" aria-label="Basic mixed styles example">
                     <button type="button" class="btn btn-danger"
                       (click)="subtractUnit(productInfoDtoSelect,VariaProduct)">-</button>
 
@@ -746,7 +745,7 @@
 
 <div class="modal fade" id="CommentSaleModal" data-backdrop-bg="bgc-grey-tp4" data-blur="true" tabindex="-1"
   role="dialog" aria-labelledby="exampleModal2Label" aria-hidden="true">
-  <div class="modal-dialog" role="document">
+  <div class="modal-dialog presale-confirm-modal-dialog" role="document">
     <div class="modal-content border-0 shadow radius-1" *ngIf="(ShoppingCartResult.Headboard.PresaleCod ==='')">
       <div class="modal-header">
         <h5 class="modal-title text-primary-d2" id="CommentSaleModal">
@@ -798,8 +797,8 @@
 
 <div class="modal fade" id="ClientModal" tabindex="-1" role="dialog" aria-labelledby="ClientModalLabel"
   aria-hidden="true">
-  <div class="modal-dialog" role="document" *ngIf="(ShowClientSearch === true)">
-    <div class="modal-content" style="width: 100%;">
+  <div class="modal-dialog presale-client-modal-dialog" role="document" *ngIf="(ShowClientSearch === true)">
+    <div class="modal-content presale-client-search-content">
       <div class="modal-header">
         <h5 class="modal-title text-primary-d3" id="ClientModalLabel">
           Buscar cliente
@@ -840,8 +839,8 @@
     </div>
   </div>
 
-  <div class="modal-dialog" role="document" *ngIf="(ShowClientRegister === true)">
-    <div class="modal-content" style="width: 180%;">
+  <div class="modal-dialog presale-client-modal-dialog" role="document" *ngIf="(ShowClientRegister === true)">
+    <div class="modal-content presale-client-register-content">
 
       <div class="modal-body">
         <app-createclient (ResultForm)="ResponseResultFormClient($event)" [InputDocumentNum]="DocumentNum"
@@ -857,19 +856,19 @@
     </div>
   </div>
 
-  <div class="modal-dialog" role="document" *ngIf="(ShowClient === true)">
-    <div class="modal-content" style="width: 120%;">
+  <div class="modal-dialog presale-client-modal-dialog" role="document" *ngIf="(ShowClient === true)">
+    <div class="modal-content presale-client-result-content">
 
       <div class="modal-body" *ngIf="(ShoppingCart.Headboard.Client!=null)">
-        <div class="p-2 py-lg-3 d-flex pos-rel mx-1 justify-content-start justify-content-lg-center ccard">
-          <div class="pl-1">
+        <div class="client-result-card p-2 py-lg-3 d-flex flex-column flex-sm-row pos-rel mx-1 align-items-center align-items-sm-stretch justify-content-start justify-content-lg-center ccard">
+          <div class="pl-sm-1">
             <span class="d-inline-block bgc-purple-tp1 p-3 radius-round text-center border-2 brc-black-tp11">
               <i class="far fa-user text-white text-170 w-3 mx-3px"></i>
             </span>
           </div>
-          <div class="pl-25">
-            <div class="d-flex align-items-center justify-content-between justify-content-md-start">
-              <span class="text-grey-d3 text-160 mr-4">
+          <div class="client-result-data pl-sm-25 mt-2 mt-sm-0">
+            <div class="d-flex align-items-center justify-content-center justify-content-sm-between justify-content-md-start">
+              <span class="client-result-name text-grey-d3 text-160 mr-sm-4 text-break">
                 {{ ShoppingCart.Headboard.Client.Person.Names }} {{ ShoppingCart.Headboard.Client.Person.LastNames }}
               </span>
               <!-- <div class="text-danger opacity-2 pr-1 font-bolder">
@@ -877,7 +876,7 @@
                 <i class="fas fa-long-arrow-alt-down text-120"></i>
               </div> -->
             </div>
-            <div class="text-nowrap">
+            <div class="client-result-document text-break">
               N° Documento : {{ ShoppingCart.Headboard.Client.Person.DocumentNum }}
             </div>
           </div>

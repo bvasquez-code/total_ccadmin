@@ -39,7 +39,6 @@ BEGIN
           KEY `idx_stock_entry_head_origin` (`OriginStockEntryCod`),
           KEY `idx_stock_entry_head_reason` (`ReasonCode`),
           CONSTRAINT `fk_stock_entry_head_store` FOREIGN KEY (`StoreCod`) REFERENCES `store` (`StoreCod`),
-          CONSTRAINT `fk_stock_entry_head_reason` FOREIGN KEY (`ReasonCode`) REFERENCES `business_config` (`ConfigCod`),
           CONSTRAINT `fk_stock_entry_head_origin` FOREIGN KEY (`OriginStockEntryCod`) REFERENCES `stock_entry_head` (`StockEntryCod`),
           CONSTRAINT `chk_stock_entry_head_process_type` CHECK (`ProcessType` in (_utf8mb4'O',_utf8mb4'R')),
           CONSTRAINT `chk_stock_entry_head_movement_mode` CHECK (
@@ -59,7 +58,17 @@ BEGIN
         -- =============================================
         -- CASO: LA TABLA YA EXISTE -> APLICAR ALTERS
         -- =============================================
-        SELECT 'Tabla stock_entry_head ya existe. No se realizaron cambios estructurales.' AS Mensaje;
+        IF EXISTS (
+            SELECT * FROM information_schema.table_constraints
+            WHERE table_schema = DATABASE() AND table_name = 'stock_entry_head'
+              AND constraint_name = 'fk_stock_entry_head_reason'
+              AND constraint_type = 'FOREIGN KEY'
+        ) THEN
+            ALTER TABLE `stock_entry_head`
+                DROP FOREIGN KEY `fk_stock_entry_head_reason`;
+        END IF;
+
+        SELECT 'Tabla stock_entry_head verificada y actualizada.' AS Mensaje;
     END IF;
 END $$
 

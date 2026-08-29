@@ -25,7 +25,8 @@ import { PersonIdentityLookupService } from 'src/app/enterprise/person/service/p
 
 @Component({
   selector: 'app-createsale',
-  templateUrl: './createsale.component.html'
+  templateUrl: './createsale.component.html',
+  styleUrls: ['./createsale.component.css']
 })
 export class CreatesaleComponent implements OnInit {
 

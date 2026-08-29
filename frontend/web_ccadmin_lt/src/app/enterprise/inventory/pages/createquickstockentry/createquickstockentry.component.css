@@ -2,10 +2,18 @@
   max-width: 620px;
 }
 
-.product-code {
+.product-code,
+.product-name {
   background: #f5f7fa;
-  font-size: 1.15rem;
   font-weight: 600;
+}
+
+.product-code {
+  font-size: 1.15rem;
+}
+
+.product-name {
+  resize: none;
 }
 
 .quantity-control {

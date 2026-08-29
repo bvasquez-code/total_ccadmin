@@ -1,5 +1,4 @@
 import {
-  AfterViewInit,
   Component,
   ElementRef,
   OnInit,
@@ -16,10 +15,11 @@ import { StockMovementService } from '../../service/stock-movement.service';
   templateUrl: './createquickstockentry.component.html',
   styleUrls: ['./createquickstockentry.component.css']
 })
-export class CreateQuickStockEntryComponent implements OnInit, AfterViewInit {
+export class CreateQuickStockEntryComponent implements OnInit {
   @ViewChild('quantityInput') quantityInput?: ElementRef<HTMLInputElement>;
 
   productCod = '';
+  productName = '';
   quantity = 0;
   quantityText = '0';
   saving = false;
@@ -48,11 +48,7 @@ export class CreateQuickStockEntryComponent implements OnInit, AfterViewInit {
       void this.router.navigate(['/enterprise/product/pages/listProduct']);
       return;
     }
-    void this.loadProductBarcode();
-  }
-
-  ngAfterViewInit(): void {
-    this.focusQuantity();
+    void this.loadProductData();
   }
 
   onQuantityKeyDown(event: KeyboardEvent): void {
@@ -83,11 +79,13 @@ export class CreateQuickStockEntryComponent implements OnInit, AfterViewInit {
   }
 
   decrease(): void {
+    this.blurQuantity();
     this.quantity = Math.max(0, this.manualQuantity() - 1);
     this.syncQuantityText();
   }
 
   increase(): void {
+    this.blurQuantity();
     this.quantity = this.manualQuantity() + 1;
     this.syncQuantityText();
   }
@@ -103,10 +101,7 @@ export class CreateQuickStockEntryComponent implements OnInit, AfterViewInit {
       `Se agregarán ${this.quantity} unidad(es) al stock del producto ${this.productCod}.`,
       'Confirmar carga inicial de stock'
     );
-    if (!confirmation.isConfirmed) {
-      this.focusQuantity();
-      return;
-    }
+    if (!confirmation.isConfirmed) return;
 
     this.saving = true;
     try {
@@ -126,14 +121,16 @@ export class CreateQuickStockEntryComponent implements OnInit, AfterViewInit {
     }
   }
 
-  private async loadProductBarcode(): Promise<void> {
+  private async loadProductData(): Promise<void> {
     try {
       const response = await this.productService.FindDataForm(this.productCod);
       if (response.ErrorStatus) return;
       const productRegister = response.DataAdditional
         ?.find(item => item.Name === 'product')?.Data;
+      this.productName = this.clean(productRegister?.product?.ProductName);
       this.barcode = this.clean(productRegister?.productBarcode?.BarCode);
     } catch (error) {
+      this.productName = '';
       this.barcode = '';
     }
   }
@@ -147,6 +144,7 @@ export class CreateQuickStockEntryComponent implements OnInit, AfterViewInit {
       if (this.matchesProduct(scannedValue)) {
         this.quantity = this.quantityBeforeSequence + 1;
         this.syncQuantityText();
+        this.selectQuantityIfFocused();
         return true;
       }
       this.quantity = this.quantityBeforeSequence;
@@ -182,7 +180,6 @@ export class CreateQuickStockEntryComponent implements OnInit, AfterViewInit {
   private syncQuantityText(): void {
     this.quantityText = String(this.quantity);
     this.resetInputSequence();
-    this.focusQuantity();
   }
 
   private resetInputSequence(): void {
@@ -191,11 +188,16 @@ export class CreateQuickStockEntryComponent implements OnInit, AfterViewInit {
     this.scannerSequence = true;
   }
 
-  private focusQuantity(): void {
+  private selectQuantityIfFocused(): void {
+    const input = this.quantityInput?.nativeElement;
+    if (!input || document.activeElement !== input) return;
     setTimeout(() => {
-      this.quantityInput?.nativeElement.focus();
-      this.quantityInput?.nativeElement.select();
+      input.select();
     }, 0);
+  }
+
+  private blurQuantity(): void {
+    this.quantityInput?.nativeElement.blur();
   }
 
   private clean(value: unknown): string {

@@ -15,7 +15,8 @@ import { AlertService } from 'src/app/enterprise/shared/service/AlertService';
 
 @Component({
   selector: 'app-createtrxpayment',
-  templateUrl: './createtrxpayment.component.html'
+  templateUrl: './createtrxpayment.component.html',
+  styleUrls: ['./createtrxpayment.component.css']
 })
 export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymentEntity,number>{
 

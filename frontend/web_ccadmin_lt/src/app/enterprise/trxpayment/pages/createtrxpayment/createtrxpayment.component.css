@@ -1,0 +1,146 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.payment-history-table-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+@media (max-width: 991.98px) {
+  .payment-method-selector,
+  .payment-method-selector .btn,
+  .payment-method-selector .btn > span {
+    min-width: 0;
+  }
+
+  .payment-method-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .payment-form-content,
+  .payment-form-content .page-content,
+  .payment-form-content .container-plus {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .payment-form-content .page-content {
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .payment-history-table {
+    min-width: 720px;
+  }
+
+  .payment-actions {
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+    padding-right: 1rem;
+    padding-left: 1rem;
+  }
+
+  .payment-actions > div {
+    flex: 0 0 100%;
+    max-width: 100%;
+    margin-left: 0;
+    padding: 0;
+  }
+
+  .payment-actions .btn {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .payment-history-card {
+    border: 0;
+    box-shadow: none;
+  }
+
+  .payment-history-card > .card-body {
+    padding-right: 0 !important;
+    padding-left: 0 !important;
+  }
+
+  .payment-history-table-wrapper {
+    overflow: visible;
+  }
+
+  .payment-history-table {
+    min-width: 0;
+  }
+
+  .payment-history-table thead {
+    display: none;
+  }
+
+  .payment-history-table,
+  .payment-history-table tbody,
+  .payment-history-table tr,
+  .payment-history-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .payment-history-table tbody tr {
+    margin-bottom: 0.85rem;
+    overflow: hidden;
+    border: 1px solid #d7dce3;
+    border-radius: 0.35rem;
+    background: #fff;
+  }
+
+  .payment-history-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-width: 0;
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid #edf0f4;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+
+  .payment-history-table td::before {
+    content: attr(data-label);
+    flex: 0 0 6rem;
+    color: #697689;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  .payment-history-table td:last-child {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .payment-form-content .card-header,
+  .payment-form-content .card-body {
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
+  }
+
+  .payment-form-content .col-form-label {
+    padding-right: 15px !important;
+  }
+
+  .payment-method-name {
+    white-space: normal;
+  }
+
+  .payment-actions {
+    margin-top: 1.5rem !important;
+  }
+}

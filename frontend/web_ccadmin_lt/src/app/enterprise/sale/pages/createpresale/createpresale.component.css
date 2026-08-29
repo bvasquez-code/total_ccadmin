@@ -51,6 +51,27 @@
   margin-top: auto;
 }
 
+.presale-detail-table-wrapper {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.presale-product-modal-content {
+  width: 150%;
+}
+
+.presale-client-register-content {
+  width: 180%;
+}
+
+.presale-client-result-content {
+  width: 120%;
+}
+
+.client-result-data {
+  min-width: 0;
+}
+
 @media (max-width: 991.98px) {
   .product-card {
     height: auto;
@@ -60,5 +81,189 @@
   .product-card-image-link {
     flex-basis: 18rem;
     max-height: 18rem;
+  }
+
+  .presale-summary-row > [class*="col-"] + [class*="col-"] {
+    margin-top: 1rem;
+  }
+
+  .presale-detail-table {
+    min-width: 760px;
+  }
+
+  #ProductModal .presale-product-modal-dialog,
+  #CommentSaleModal .presale-confirm-modal-dialog,
+  #ClientModal .presale-client-modal-dialog {
+    width: calc(100% - 1.5rem);
+    max-width: none;
+    margin: 0.75rem auto;
+  }
+
+  #ProductModal .presale-product-modal-content,
+  #ClientModal .presale-client-search-content,
+  #ClientModal .presale-client-register-content,
+  #ClientModal .presale-client-result-content {
+    width: 100%;
+  }
+
+  #ProductModal .modal-content,
+  #CommentSaleModal .modal-content,
+  #ClientModal .modal-content {
+    max-height: calc(100vh - 1.5rem);
+    overflow: hidden;
+  }
+
+  #ProductModal .modal-body,
+  #CommentSaleModal .modal-body,
+  #ClientModal .modal-body {
+    min-width: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+  }
+
+  #ClientModal app-createclient {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 767.98px) {
+  .presale-detail-table-wrapper {
+    overflow: visible;
+  }
+
+  .presale-detail-table {
+    min-width: 0;
+  }
+
+  .presale-detail-table thead {
+    display: none;
+  }
+
+  .presale-detail-table,
+  .presale-detail-table tbody,
+  .presale-detail-table tr,
+  .presale-detail-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .presale-detail-table tbody tr:not(.detail-row) {
+    margin-bottom: 1rem;
+    overflow: hidden;
+    border: 1px solid #d7dce3;
+    border-radius: 0.35rem;
+    background: #fff;
+  }
+
+  .presale-detail-table td,
+  .presale-detail-table td.d-none.d-sm-table-cell {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-width: 0;
+    padding: 0.7rem 0.85rem;
+    border-bottom: 1px solid #edf0f4;
+    text-align: right;
+  }
+
+  .presale-detail-table td::before {
+    content: attr(data-label);
+    flex: 0 0 6.5rem;
+    color: #697689;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: left;
+    text-transform: uppercase;
+  }
+
+  .presale-detail-table td:first-child {
+    display: block !important;
+    padding-top: 0.9rem;
+    text-align: left;
+  }
+
+  .presale-detail-table td:first-child::before {
+    display: block;
+    margin-bottom: 0.35rem;
+  }
+
+  .presale-detail-table td:last-child {
+    border-bottom: 0;
+  }
+
+  .presale-detail-table .detail-row {
+    display: none;
+  }
+
+  .presale-detail-actions .dropdown-menu {
+    max-width: calc(100vw - 3rem);
+  }
+
+  .presale-totals .d-flex {
+    gap: 1rem;
+  }
+
+  #ProductModal .modal-header,
+  #CommentSaleModal .modal-header,
+  #ClientModal .modal-header {
+    padding: 0.85rem 1rem;
+  }
+
+  #ProductModal .modal-body,
+  #CommentSaleModal .modal-body,
+  #ClientModal .modal-body {
+    padding: 0.85rem;
+  }
+
+  #ProductModal .modal-footer,
+  #CommentSaleModal .modal-footer,
+  #ClientModal .modal-footer {
+    flex-wrap: wrap;
+    padding: 0.75rem;
+  }
+
+  #CommentSaleModal .modal-footer .btn,
+  #ClientModal .modal-footer .btn {
+    flex: 1 1 auto;
+    margin: 0.25rem;
+  }
+
+  .client-result-card,
+  .client-result-data {
+    width: 100%;
+    text-align: center;
+  }
+
+  .client-result-name {
+    margin-right: 0;
+    font-size: 1.25rem;
+    line-height: 1.35;
+  }
+
+  .client-result-document {
+    margin-top: 0.25rem;
+  }
+}
+
+@media (max-width: 575.98px) {
+  #ProductModal .presale-product-modal-dialog,
+  #CommentSaleModal .presale-confirm-modal-dialog,
+  #ClientModal .presale-client-modal-dialog {
+    width: calc(100% - 1rem);
+    margin: 0.5rem auto;
+  }
+
+  #ProductModal .modal-content,
+  #CommentSaleModal .modal-content,
+  #ClientModal .modal-content {
+    max-height: calc(100vh - 1rem);
+  }
+
+  .presale-detail-table td::before {
+    flex-basis: 5.75rem;
   }
 }

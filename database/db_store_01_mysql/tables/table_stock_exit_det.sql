@@ -57,10 +57,6 @@ BEGIN
           CONSTRAINT `fk_stock_exit_det_head` FOREIGN KEY (`StockExitCod`) REFERENCES `stock_exit_head` (`StockExitCod`),
           CONSTRAINT `fk_stock_exit_det_variant` FOREIGN KEY (`ProductCod`,`Variant`) REFERENCES `product_variant` (`ProductCod`,`Variant`),
           CONSTRAINT `fk_stock_exit_det_warehouse` FOREIGN KEY (`WarehouseCod`) REFERENCES `warehouse` (`WarehouseCod`),
-          CONSTRAINT `fk_stock_exit_det_unavailable_reason` FOREIGN KEY (`UnavailableReasonCode`) REFERENCES `business_config` (`ConfigCod`),
-          CONSTRAINT `fk_stock_exit_det_resolved_in_reason` FOREIGN KEY (`ResolvedInReasonCode`) REFERENCES `business_config` (`ConfigCod`),
-          CONSTRAINT `fk_stock_exit_det_resolved_out_reason` FOREIGN KEY (`ResolvedOutReasonCode`) REFERENCES `business_config` (`ConfigCod`),
-          CONSTRAINT `fk_stock_exit_det_resolution_reason` FOREIGN KEY (`ResolutionReasonCode`) REFERENCES `business_config` (`ConfigCod`),
           CONSTRAINT `fk_stock_exit_det_origin` FOREIGN KEY (`OriginStockExitCod`,`OriginItemNumber`)
               REFERENCES `stock_exit_det` (`StockExitCod`,`ItemNumber`),
           CONSTRAINT `chk_stock_exit_det_quantity` CHECK (
@@ -101,9 +97,7 @@ BEGIN
                 COMMENT 'Ultimo ConfigCod usado para regresar cantidad a disponible. business_config GroupId=11'
                 AFTER `UnavailableReasonCode`;
             ALTER TABLE `stock_exit_det`
-                ADD KEY `idx_stock_exit_det_resolved_in_reason` (`ResolvedInReasonCode`),
-                ADD CONSTRAINT `fk_stock_exit_det_resolved_in_reason`
-                    FOREIGN KEY (`ResolvedInReasonCode`) REFERENCES `business_config` (`ConfigCod`);
+                ADD KEY `idx_stock_exit_det_resolved_in_reason` (`ResolvedInReasonCode`);
         END IF;
 
         IF NOT EXISTS (
@@ -116,9 +110,7 @@ BEGIN
                 COMMENT 'Ultimo ConfigCod usado para retirar cantidad definitivamente. business_config GroupId=12'
                 AFTER `ResolvedInReasonCode`;
             ALTER TABLE `stock_exit_det`
-                ADD KEY `idx_stock_exit_det_resolved_out_reason` (`ResolvedOutReasonCode`),
-                ADD CONSTRAINT `fk_stock_exit_det_resolved_out_reason`
-                    FOREIGN KEY (`ResolvedOutReasonCode`) REFERENCES `business_config` (`ConfigCod`);
+                ADD KEY `idx_stock_exit_det_resolved_out_reason` (`ResolvedOutReasonCode`);
         END IF;
 
         IF NOT EXISTS (
@@ -161,6 +153,46 @@ BEGIN
             ALTER TABLE `stock_exit_det`
                 ADD CONSTRAINT `chk_stock_exit_det_resolution_version`
                 CHECK (`ResolutionVersion` >= 0);
+        END IF;
+
+        IF EXISTS (
+            SELECT * FROM information_schema.table_constraints
+            WHERE table_schema = DATABASE() AND table_name = 'stock_exit_det'
+              AND constraint_name = 'fk_stock_exit_det_unavailable_reason'
+              AND constraint_type = 'FOREIGN KEY'
+        ) THEN
+            ALTER TABLE `stock_exit_det`
+                DROP FOREIGN KEY `fk_stock_exit_det_unavailable_reason`;
+        END IF;
+
+        IF EXISTS (
+            SELECT * FROM information_schema.table_constraints
+            WHERE table_schema = DATABASE() AND table_name = 'stock_exit_det'
+              AND constraint_name = 'fk_stock_exit_det_resolved_in_reason'
+              AND constraint_type = 'FOREIGN KEY'
+        ) THEN
+            ALTER TABLE `stock_exit_det`
+                DROP FOREIGN KEY `fk_stock_exit_det_resolved_in_reason`;
+        END IF;
+
+        IF EXISTS (
+            SELECT * FROM information_schema.table_constraints
+            WHERE table_schema = DATABASE() AND table_name = 'stock_exit_det'
+              AND constraint_name = 'fk_stock_exit_det_resolved_out_reason'
+              AND constraint_type = 'FOREIGN KEY'
+        ) THEN
+            ALTER TABLE `stock_exit_det`
+                DROP FOREIGN KEY `fk_stock_exit_det_resolved_out_reason`;
+        END IF;
+
+        IF EXISTS (
+            SELECT * FROM information_schema.table_constraints
+            WHERE table_schema = DATABASE() AND table_name = 'stock_exit_det'
+              AND constraint_name = 'fk_stock_exit_det_resolution_reason'
+              AND constraint_type = 'FOREIGN KEY'
+        ) THEN
+            ALTER TABLE `stock_exit_det`
+                DROP FOREIGN KEY `fk_stock_exit_det_resolution_reason`;
         END IF;
 
         SELECT 'Tabla stock_exit_det verificada y actualizada.' AS Mensaje;

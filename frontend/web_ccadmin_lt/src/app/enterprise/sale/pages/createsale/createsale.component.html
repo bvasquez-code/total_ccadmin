@@ -15,7 +15,7 @@
                 </small>
               </h1>
               <div class="page-tools">
-                <div class="action-buttons">
+                <div class="action-buttons sale-page-actions">
                   <a class="btn bg-white btn-light mx-1px text-95 shadow-sm" 
                       href="#" 
                       data-title="Print"
@@ -61,14 +61,14 @@
                         {{ DocumentType === '01'
                           ? 'Debe seleccionar la persona a la que se emitirá la factura.'
                           : 'Debe seleccionar un cliente para la boleta.' }}
-                        <button class="btn btn-sm btn-primary ml-2" type="button"
+                        <button class="btn btn-sm btn-primary ml-2 sale-client-required-button" type="button"
                           (click)="OpenClientModal(DocumentType === '01' ? 'billing' : 'sale')">
                           {{ DocumentType === '01' ? 'Buscar RUC' : 'Buscar cliente' }}
                         </button>
                       </div>
                     </div>
                     <div class="mt-2" *ngIf="(SaleDetail.Headboard.SaleStatus !== 'C')">
-                      <button class="btn btn-sm btn-outline-primary" type="button" (click)="OpenClientModal()"
+                      <button class="btn btn-sm btn-outline-primary sale-client-button" type="button" (click)="OpenClientModal()"
                         [disabled]="isPickingDraftBlocked()">
                         {{ hasClient() ? 'Cambiar cliente' : 'Agregar cliente' }}
                       </button>
@@ -243,7 +243,7 @@
                           El pickeo está en edición. Confirme los productos pickeados antes de cambiar cliente, documento o pagos.
                         </ng-template>
                       </div>
-                      <button type="button" class="btn btn-success btn-bold my-1"
+                      <button type="button" class="btn btn-success btn-bold my-1 sale-picking-confirm-button"
                         [disabled]="!canConfirmPickingDraft() || IsConfirmingPicking"
                         (click)="confirmAllPicking()">
                         <i class="fa fa-check mr-1"></i>
@@ -261,7 +261,7 @@
                   <div class="row mt-4">
                     <div class="col-12 col-sm-7 mt-2 mt-lg-0">
                       
-                      <div class="d-inline-block text-center" *ngIf="(SaleDetail.Headboard.SaleStatus !== 'C')">
+                      <div class="sale-document-selector d-inline-block text-center" *ngIf="(SaleDetail.Headboard.SaleStatus !== 'C')">
                         <p class="text-95 text-dark-m2">
                           <i class="fa fa-exclamation-triangle text-danger-m2 mr-1"></i>
                           {{ isWebSale ? 'Comprobante solicitado' : 'Seleccione el tipo de' }}
@@ -270,10 +270,10 @@
                         </p>
 
                         <div>
-                          <form autocomplete="off" class="p-2 p-sm-3 bgc-secondary-l4 radius-1 btn-group btn-group-toggle mx-n3 mx-sm-0" data-toggle="buttons">
+                          <form autocomplete="off" class="sale-document-options p-2 p-sm-3 bgc-secondary-l4 radius-1 btn-group btn-group-toggle mx-n3 mx-sm-0" data-toggle="buttons">
                             <div [attr.role]="isWebSale ? null : 'button'" (click)="selectDocumentType('03')"
                               [attr.aria-disabled]="isWebDocumentLocked('03')"
-                              class="mr-1 p-3 border-2 btn btn-brc-tp shadow-sm btn-light btn-text-blue btn-h-lighter-blue btn-a-light-blue bgc-white"
+                              class="sale-document-option mr-1 p-3 border-2 btn btn-brc-tp shadow-sm btn-light btn-text-blue btn-h-lighter-blue btn-a-light-blue bgc-white"
                               [ngClass]="{'active': SelectedPaymentOption === '03', 'disabled': isWebDocumentLocked('03')}">
                               <input type="radio" name="place" id="place1" value="03"
                                 [checked]="SelectedPaymentOption === '03'" [disabled]="isWebSale">
@@ -283,7 +283,7 @@
 
                             <div [attr.role]="isWebSale ? null : 'button'" (click)="selectDocumentType('01')"
                               [attr.aria-disabled]="isWebDocumentLocked('01')"
-                              class="mr-1 p-3 border-2 btn btn-brc-tp shadow-sm btn-text-purple btn-light btn-h-lighter-purple btn-a-light-purple bgc-white"
+                              class="sale-document-option mr-1 p-3 border-2 btn btn-brc-tp shadow-sm btn-text-purple btn-light btn-h-lighter-purple btn-a-light-purple bgc-white"
                               [ngClass]="{'active': SelectedPaymentOption === '01', 'disabled': isWebDocumentLocked('01')}">
                               <input type="radio" name="place" id="place2" value="01"
                                 [checked]="SelectedPaymentOption === '01'" [disabled]="isWebSale">
@@ -292,14 +292,14 @@
                             </div>
 
                             <div *ngIf="isProformaSalesEnabled && !isWebSale" role="button" (click)="selectDocumentType('99')"
-                              class="mr-1 p-3 border-2 btn btn-brc-tp shadow-sm btn-text-green btn-light btn-h-lighter-green btn-a-light-green bgc-white"
+                              class="sale-document-option mr-1 p-3 border-2 btn btn-brc-tp shadow-sm btn-text-green btn-light btn-h-lighter-green btn-a-light-green bgc-white"
                               [ngClass]="{'active': SelectedPaymentOption === '99'}">
                               <input type="radio" name="place" id="placeProforma" value="99">
                               PROFORMA
                             </div>
 
                             <div *ngIf="isAdvancePaymentEnabled && !isWebSale" role="button" (click)="OpenAdvanceClientModal()"
-                              class="mr-1 p-3 border-2 btn btn-brc-tp shadow-sm btn-text-orange btn-light btn-h-lighter-orange btn-a-light-orange bgc-white"
+                              class="sale-document-option mr-1 p-3 border-2 btn btn-brc-tp shadow-sm btn-text-orange btn-light btn-h-lighter-orange btn-a-light-orange bgc-white"
                               [ngClass]="{'active': SelectedPaymentOption === 'advance'}">
                               <input type="radio" name="place" id="place3" value="1">
                               ANTICIPO
@@ -366,7 +366,7 @@
                       </div>
 
                       <a *ngIf="(SaleDetail.Headboard.SaleStatus !== 'C' && enableButtonPay)"
-                        class="row my-3 align-items-center bgc-green-d3 p-2 radius-1" 
+                        class="sale-payment-action row my-3 align-items-center bgc-green-d3 p-2 radius-1"
                         style="cursor: pointer;"
                         [attr.data-toggle]="shouldOpenPaymentModal() ? 'modal' : null"
                         [attr.data-target]="shouldOpenPaymentModal() ? '#TrxPaymentModal' : null"
@@ -385,7 +385,7 @@
                       </a>
 
                       <a *ngIf="(SaleDetail.Headboard.SaleStatus !== 'C' && !enableButtonPay)"
-                        class="row my-3 align-items-center bgc-green-d3 p-2 radius-1" 
+                        class="sale-payment-action row my-3 align-items-center bgc-green-d3 p-2 radius-1"
                         style="cursor: pointer;"
                         (click)="viewAlertSelectDocumentType()"
                       >
@@ -441,7 +441,7 @@
 
                   <hr class="brc-secondary-l3 border-t-2">
 
-                  <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
+                  <div class="sale-footer-actions mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
                     <div class="offset-md-5 col-md-9 text-nowrap">
                         <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4" 
                             type="reset"
@@ -569,8 +569,8 @@
 
 <div class="modal fade" id="TrxPaymentModal" tabindex="-1" role="dialog" aria-labelledby="TrxPaymentModal"
   aria-hidden="true">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content" style="width: 180%;" *ngIf="(SaleDetail.Headboard.SaleStatus !== 'C')">
+  <div class="modal-dialog payment-modal-dialog" role="document">
+    <div class="modal-content payment-modal-content" *ngIf="(SaleDetail.Headboard.SaleStatus !== 'C')">
 
       <div class="modal-body">
         <app-createtrxpayment
@@ -584,7 +584,7 @@
 
     </div>
 
-    <div class="modal-content" style="width: 100%;" *ngIf="(SaleDetail.Headboard.SaleStatus === 'C')">
+    <div class="modal-content payment-result-modal-content" *ngIf="(SaleDetail.Headboard.SaleStatus === 'C')">
       <div class="modal-body">
         <div class="alert fade show bgc-white text-dark-tp3 border-1 brc-secondary-l2 shadow-sm radius-0 py-3 d-flex align-items-start">
           <div class="position-tl w-102 m-n1px border-t-4 brc-success"></div>

@@ -15,6 +15,13 @@
                  type="text" [value]="productCod" readonly>
         </div>
 
+        <div class="form-group">
+          <label for="quickStockProductName">Nombre del producto</label>
+          <textarea id="quickStockProductName"
+                    class="form-control product-name" rows="2"
+                    [value]="productName" readonly></textarea>
+        </div>
+
         <div class="form-group mb-2">
           <label for="quickStockQuantity">Stock a ingresar</label>
           <div class="quantity-control">

@@ -1,0 +1,136 @@
+.payment-modal-content {
+  width: 180%;
+}
+
+.payment-result-modal-content {
+  width: 100%;
+}
+
+@media (max-width: 991.98px) {
+  .sale-document-selector {
+    display: block !important;
+    width: 100%;
+  }
+
+  .sale-document-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    width: 100%;
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+  }
+
+  .sale-document-options > .sale-document-option {
+    min-width: 0;
+    margin: 0 !important;
+    border-radius: 0.25rem !important;
+    white-space: normal;
+  }
+
+  .sale-footer-actions {
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+    padding-right: 1rem;
+    padding-left: 1rem;
+  }
+
+  .sale-footer-actions > div {
+    flex: 0 0 100%;
+    max-width: 100%;
+    margin-left: 0;
+    padding: 0;
+  }
+
+  .sale-footer-actions .btn {
+    width: 100%;
+    margin-left: 0 !important;
+  }
+
+  #TrxPaymentModal .payment-modal-dialog {
+    width: calc(100% - 1.5rem);
+    max-width: none;
+    margin: 0.75rem auto;
+  }
+
+  #TrxPaymentModal .payment-modal-content,
+  #TrxPaymentModal .payment-result-modal-content {
+    width: 100%;
+    max-height: calc(100vh - 1.5rem);
+    overflow: hidden;
+  }
+
+  #TrxPaymentModal .modal-body {
+    min-width: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  #TrxPaymentModal app-createtrxpayment {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .sale-page-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .sale-client-required-button,
+  .sale-client-button,
+  .sale-picking-confirm-button {
+    display: block;
+    width: 100%;
+    margin: 0.5rem 0 0 !important;
+  }
+
+  .sale-payment-action {
+    width: 100%;
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+  }
+
+  .sale-payment-action > [class*="col-"] {
+    flex: 0 0 100%;
+    max-width: 100%;
+    text-align: center !important;
+  }
+
+  .sale-payment-action > [class*="col-"] + [class*="col-"] {
+    margin-top: 0.25rem;
+  }
+
+  #PickingModal .modal-footer,
+  #ClientModal .modal-footer {
+    flex-wrap: wrap;
+  }
+
+  #PickingModal .modal-footer .btn,
+  #ClientModal .modal-footer .btn {
+    flex: 1 1 100%;
+    margin: 0.25rem 0;
+  }
+
+  #TrxPaymentModal .payment-modal-dialog {
+    width: calc(100% - 1rem);
+    margin: 0.5rem auto;
+  }
+
+  #TrxPaymentModal .payment-modal-content,
+  #TrxPaymentModal .payment-result-modal-content {
+    max-height: calc(100vh - 1rem);
+  }
+
+  #TrxPaymentModal .modal-body {
+    padding: 0.5rem;
+  }
+
+  #TrxPaymentModal .modal-footer {
+    flex-wrap: wrap;
+    padding: 0.75rem;
+  }
+}
