@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface CompanyRepository extends JpaRepository<CompanyEntity, String>,
         CcAdminRepository<CompanyEntity, String> {
@@ -50,4 +51,12 @@ public interface CompanyRepository extends JpaRepository<CompanyEntity, String>,
             select c.* from company c where c.Status = 'A' limit 1
             """, nativeQuery = true)
     CompanyEntity findMyCompany();
+
+    @Query(value = """
+            select c.*
+            from company c
+            order by c.CreationDate asc, c.CompanyCod asc
+            limit 1
+            """, nativeQuery = true)
+    Optional<CompanyEntity> findOnlyCompany();
 }

@@ -40,14 +40,24 @@ public class CompanyEntity extends AuditTableEntity implements Serializable {
 
         if (LegalName == null || LegalName.isBlank())
             throw new IllegalArgumentException("LegalName requerido");
+        if (LegalName.length() > 200)
+            throw new IllegalArgumentException("LegalName supera 200 caracteres");
+
+        if (TradeName != null && TradeName.length() > 200)
+            throw new IllegalArgumentException("TradeName supera 200 caracteres");
 
         if (FiscalAddress == null || FiscalAddress.isBlank())
             throw new IllegalArgumentException("FiscalAddress requerido");
+        if (FiscalAddress.length() > 300)
+            throw new IllegalArgumentException("FiscalAddress supera 300 caracteres");
+
+        if (Address != null && Address.length() > 128)
+            throw new IllegalArgumentException("Address supera 128 caracteres");
 
         if (UbigeoCod == null || !UbigeoCod.matches("^\\d{6}$"))
             throw new IllegalArgumentException("UbigeoCod debe tener 6 dígitos");
 
-        if (CountryCode != null && !CountryCode.matches("^[A-Z]{2}$"))
+        if (CountryCode == null || !CountryCode.matches("^[A-Z]{2}$"))
             throw new IllegalArgumentException("CountryCode debe ser ISO-3166-1 alfa-2");
 
         if (Department != null && Department.length() > 100)
@@ -59,9 +69,15 @@ public class CompanyEntity extends AuditTableEntity implements Serializable {
         if (District != null && District.length() > 100)
             throw new IllegalArgumentException("District supera 100 caracteres");
 
+        if (Phone != null && Phone.length() > 30)
+            throw new IllegalArgumentException("Phone supera 30 caracteres");
+
         if (Email != null && !Email.isBlank()
                 && !Email.matches("^[\\w.!#$%&’*+/=?`{|}~-]+@[\\w-]+(\\.[\\w-]+)+$"))
             throw new IllegalArgumentException("Email inválido");
+
+        if (Email != null && Email.length() > 150)
+            throw new IllegalArgumentException("Email supera 150 caracteres");
 
         if (Website != null && Website.length() > 150)
             throw new IllegalArgumentException("Website supera 150 caracteres");

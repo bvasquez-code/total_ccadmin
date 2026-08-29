@@ -4,7 +4,6 @@ import com.ccadmin.app.store.model.entity.CompanyEntity;
 import com.ccadmin.app.store.service.CompanyCreateService;
 import com.ccadmin.app.store.service.CompanySearchService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -24,6 +23,10 @@ public class CompanyShared {
         return this.searchService.findMyCompany();
     }
 
+    public CompanyEntity findOnlyCompany() {
+        return this.searchService.findOnlyCompany();
+    }
+
 
     public List<CompanyEntity> findActives() {
         return searchService.findActives();
@@ -32,6 +35,11 @@ public class CompanyShared {
     public CompanyEntity save(CompanyEntity company) {
         normalize(company);
         return createService.save(company);
+    }
+
+    public CompanyEntity saveOnlyCompany(CompanyEntity company) {
+        normalize(company);
+        return createService.saveOnlyCompany(company);
     }
 
     public List<CompanyEntity> saveAll(List<CompanyEntity> companies) {
@@ -58,10 +66,18 @@ public class CompanyShared {
         if (e == null) return;
         e.CompanyCod = normalizeCompanyCod(e.CompanyCod);
         if (e.CountryCode != null) e.CountryCode = e.CountryCode.trim().toUpperCase();
-        //if (e.TaxId != null) e.TaxId = e.TaxId.trim();
+        if (e.TaxId != null) e.TaxId = e.TaxId.trim();
+        if (e.LegalName != null) e.LegalName = e.LegalName.trim();
+        if (e.TradeName != null) e.TradeName = e.TradeName.trim();
+        if (e.FiscalAddress != null) e.FiscalAddress = e.FiscalAddress.trim();
+        if (e.Address != null) e.Address = e.Address.trim();
         if (e.UbigeoCod != null) e.UbigeoCod = e.UbigeoCod.trim();
         if (e.Department != null) e.Department = e.Department.trim();
         if (e.Province != null) e.Province = e.Province.trim();
         if (e.District != null) e.District = e.District.trim();
+        if (e.Phone != null) e.Phone = e.Phone.trim();
+        if (e.Email != null) e.Email = e.Email.trim();
+        if (e.Website != null) e.Website = e.Website.trim();
+        if (e.LogoPath != null) e.LogoPath = e.LogoPath.trim();
     }
 }

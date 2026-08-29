@@ -40,6 +40,31 @@ export class StoreService {
         return RespuestaWS;
     }
 
+    async FindCompanies() {
+        const url: string = `${AppSetting.API}/api/v1/store/findCompanies`;
+        return this.apiService.ExecuteGetService(url, {});
+    }
+
+    async FindCountries() {
+        const url: string = `${AppSetting.API}/api/v1/store/findCountries`;
+        return this.apiService.ExecuteGetService(url, {});
+    }
+
+    async FindDepartments() {
+        const url: string = `${AppSetting.API}/api/v1/store/findDepartments`;
+        return this.apiService.ExecuteGetService(url, {});
+    }
+
+    async FindProvinces(DepartmentCod: string) {
+        const url: string = `${AppSetting.API}/api/v1/store/findProvinces`;
+        return this.apiService.ExecuteGetService(url, { DepartmentCod: DepartmentCod });
+    }
+
+    async FindDistricts(ProvinceCod: string) {
+        const url: string = `${AppSetting.API}/api/v1/store/findDistricts`;
+        return this.apiService.ExecuteGetService(url, { ProvinceCod: ProvinceCod });
+    }
+
     async FindUbigeo(UbigeoCod: string) {
         let url: string = `${AppSetting.API}/api/v1/store/findUbigeo`;
         let RespuestaWS: ResponseWsDto;

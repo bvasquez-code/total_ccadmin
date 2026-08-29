@@ -2,15 +2,18 @@ package com.ccadmin.app.store.service;
 
 import com.ccadmin.app.sale.model.entity.StoreVirtualConfigEntity;
 import com.ccadmin.app.sale.repository.StoreVirtualConfigRepository;
+import com.ccadmin.app.shared.model.dto.LocationOptionDto;
 import com.ccadmin.app.shared.model.dto.ResponsePageSearchT;
 import com.ccadmin.app.shared.model.dto.SearchDto;
 import com.ccadmin.app.shared.service.SearchTService;
 import com.ccadmin.app.shared.service.SessionService;
+import com.ccadmin.app.shared.service.UbigeoSearchService;
 import com.ccadmin.app.store.model.dto.StoreInfoDto;
 import com.ccadmin.app.store.model.dto.StoreVirtualConfigRegisterDto;
+import com.ccadmin.app.store.model.entity.CompanyEntity;
 import com.ccadmin.app.store.model.entity.StoreEntity;
-import com.ccadmin.app.store.repository.CompanyRepository;
 import com.ccadmin.app.store.repository.StoreRepository;
+import com.ccadmin.app.store.shared.CompanyShared;
 
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +31,9 @@ public class StoreService extends SessionService {
     @Autowired
     private StoreRepository storeRepository;
     @Autowired
-    private CompanyRepository companyRepository;
+    private CompanyShared companyShared;
+    @Autowired
+    private UbigeoSearchService ubigeoSearchService;
     @Autowired
     private StoreVirtualConfigRepository storeVirtualConfigRepository;
 
@@ -48,11 +53,41 @@ public class StoreService extends SessionService {
         return this.storeRepository.findUbigeo(UbigeoCod);
     }
 
+    public List<CompanyEntity> findCompanies() {
+        return companyShared.findActives();
+    }
+
+    public List<LocationOptionDto> findCountries() {
+        return ubigeoSearchService.findCountries();
+    }
+
+    public List<LocationOptionDto> findDepartments() {
+        return ubigeoSearchService.findDepartments();
+    }
+
+    public List<LocationOptionDto> findProvinces(
+            String departmentCod
+    ) {
+        return ubigeoSearchService.findProvinces(departmentCod);
+    }
+
+    public List<LocationOptionDto> findDistricts(
+            String provinceCod
+    ) {
+        return ubigeoSearchService.findDistricts(provinceCod);
+    }
+
     public StoreInfoDto findStoreInfo(String StoreCod){
         StoreInfoDto storeInfo = new StoreInfoDto();
-        storeInfo.Company = this.companyRepository.findMyCompany();
-        storeInfo.CompanyUbigeo = this.storeRepository.findUbigeo(storeInfo.Company.UbigeoCod);
         storeInfo.Store = this.storeRepository.findById(StoreCod).get();
+        storeInfo.Company = storeInfo.Store.CompanyCod == null
+                || storeInfo.Store.CompanyCod.isBlank()
+                ? this.companyShared.findMyCompany()
+                : this.companyShared.findById(storeInfo.Store.CompanyCod);
+        if (storeInfo.Company == null) {
+            throw new IllegalArgumentException("No se encontro la compania asignada a la tienda");
+        }
+        storeInfo.CompanyUbigeo = this.storeRepository.findUbigeo(storeInfo.Company.UbigeoCod);
         storeInfo.StoreUbigeo = this.storeRepository.findUbigeo(storeInfo.Store.UbigeoCod);
         return storeInfo;
     }
@@ -79,6 +114,8 @@ public class StoreService extends SessionService {
     @Transactional
     public StoreEntity save(StoreEntity store)
     {
+
+        normalizeAndValidateStoreLocation(store);
 
         boolean exists = this.storeRepository.existsById(store.StoreCod);
 
@@ -152,6 +189,51 @@ public class StoreService extends SessionService {
             throw new IllegalArgumentException("SunatAddressTypeCode debe tener 4 digitos");
         }
         return code;
+    }
+
+    private void normalizeAndValidateStoreLocation(StoreEntity store) {
+        if (store == null) {
+            throw new IllegalArgumentException("Debe ingresar los datos de la tienda");
+        }
+
+        store.CompanyCod = store.CompanyCod == null
+                ? null
+                : store.CompanyCod.trim().toUpperCase();
+        if (store.CompanyCod == null || store.CompanyCod.isBlank()) {
+            throw new IllegalArgumentException("Debe seleccionar una compania");
+        }
+        CompanyEntity company = companyShared.findById(store.CompanyCod);
+        if (company == null || !"A".equals(company.Status)) {
+            throw new IllegalArgumentException("La compania seleccionada no esta disponible");
+        }
+
+        store.CountryCod = store.CountryCod == null || store.CountryCod.isBlank()
+                ? "PER"
+                : store.CountryCod.trim().toUpperCase();
+        boolean availableCountry = ubigeoSearchService.findCountries().stream()
+                .anyMatch(country -> store.CountryCod.equals(country.Code));
+        if (!availableCountry) {
+            throw new IllegalArgumentException("El pais seleccionado no esta disponible");
+        }
+
+        store.UbigeoCod = store.UbigeoCod == null ? null : store.UbigeoCod.trim();
+        if (store.UbigeoCod == null || store.UbigeoCod.isBlank()) {
+            throw new IllegalArgumentException("Debe ingresar el ubigeo de la tienda");
+        }
+        if (store.UbigeoCod.length() > 12) {
+            throw new IllegalArgumentException("El ubigeo no puede superar los 12 caracteres");
+        }
+        if ("PER".equals(store.CountryCod)) {
+            if (!store.UbigeoCod.matches("^\\d{6}$")) {
+                throw new IllegalArgumentException("El ubigeo de Peru debe tener 6 digitos");
+            }
+            String provinceCod = store.UbigeoCod.substring(0, 4);
+            boolean availableDistrict = ubigeoSearchService.findDistricts(provinceCod).stream()
+                    .anyMatch(district -> store.UbigeoCod.equals(district.Code));
+            if (!availableDistrict) {
+                throw new IllegalArgumentException("El distrito seleccionado no esta disponible");
+            }
+        }
     }
 
     private void validateVirtualConfig(StoreVirtualConfigEntity config) {

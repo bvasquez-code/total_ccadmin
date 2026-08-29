@@ -2,10 +2,13 @@ package com.ccadmin.app.store.service;
 
 import com.ccadmin.app.sale.model.entity.StoreVirtualConfigEntity;
 import com.ccadmin.app.sale.repository.StoreVirtualConfigRepository;
-import com.ccadmin.app.store.model.entity.StoreEntity;
+import com.ccadmin.app.shared.model.dto.LocationOptionDto;
+import com.ccadmin.app.shared.service.UbigeoSearchService;
 import com.ccadmin.app.store.model.dto.StoreVirtualConfigRegisterDto;
-import com.ccadmin.app.store.repository.CompanyRepository;
+import com.ccadmin.app.store.model.entity.CompanyEntity;
+import com.ccadmin.app.store.model.entity.StoreEntity;
 import com.ccadmin.app.store.repository.StoreRepository;
+import com.ccadmin.app.store.shared.CompanyShared;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -13,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -28,11 +32,38 @@ class StoreServiceTest {
     @Mock
     private StoreRepository storeRepository;
     @Mock
-    private CompanyRepository companyRepository;
+    private CompanyShared companyShared;
+    @Mock
+    private UbigeoSearchService ubigeoSearchService;
     @Mock
     private StoreVirtualConfigRepository storeVirtualConfigRepository;
     @InjectMocks
     private StoreService storeService;
+
+    @Test
+    void savesAStoreWithItsCompanyCountryAndPeruDistrict() {
+        StoreEntity store = new StoreEntity();
+        store.StoreCod = "T001";
+        store.CompanyCod = "COMP";
+        store.CountryCod = "PER";
+        store.UbigeoCod = "140101";
+
+        CompanyEntity company = new CompanyEntity();
+        company.CompanyCod = store.CompanyCod;
+        LocationOptionDto country = locationOption("PER", "Peru");
+        LocationOptionDto district = locationOption(store.UbigeoCod, "Chiclayo");
+
+        when(companyShared.findById(store.CompanyCod)).thenReturn(company);
+        when(ubigeoSearchService.findCountries()).thenReturn(List.of(country));
+        when(ubigeoSearchService.findDistricts("1401")).thenReturn(List.of(district));
+        when(storeRepository.existsById(store.StoreCod)).thenReturn(true);
+        when(storeRepository.save(store)).thenReturn(store);
+
+        StoreEntity result = storeService.save(store);
+
+        assertEquals(store, result);
+        verify(storeRepository).save(store);
+    }
 
     @Test
     void savesEditableVirtualStoreConfiguration() {
@@ -107,6 +138,13 @@ class StoreServiceTest {
         config.AllowsStorePickup = "S";
         config.PreparationTimeMinutes = 60;
         return config;
+    }
+
+    private LocationOptionDto locationOption(String code, String name) {
+        LocationOptionDto locationOption = new LocationOptionDto();
+        locationOption.Code = code;
+        locationOption.Name = name;
+        return locationOption;
     }
 
     private StoreVirtualConfigRegisterDto validRegister(

@@ -23,4 +23,5 @@ public class StoreEntity extends AuditTableEntity implements Serializable {
     public BigDecimal Latitude;
     public BigDecimal Longitude;
     public String CompanyCod;
+    public String CountryCod = "PER";
 }

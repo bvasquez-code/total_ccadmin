@@ -34,4 +34,8 @@ public class CompanySearchService {
     public CompanyEntity findMyCompany(){
         return this.companyRepository.findMyCompany();
     }
+
+    public CompanyEntity findOnlyCompany() {
+        return this.companyRepository.findOnlyCompany().orElse(null);
+    }
 }

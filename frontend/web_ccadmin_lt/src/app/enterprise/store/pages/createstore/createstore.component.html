@@ -64,6 +64,27 @@
 
                     <div class="form-group row">
                         <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0" for="store-company">
+                                Compañía
+                            </label>
+                        </div>
+
+                        <div class="col-sm-9">
+                            <select id="store-company"
+                                class="form-control col-sm-8 col-md-6"
+                                [(ngModel)]="Store.CompanyCod"
+                                [disabled]="IsLoadingOptions"
+                                name="CompanyCod">
+                                <option value="">Seleccione una compañía</option>
+                                <option *ngFor="let company of CompanyList" [value]="company.CompanyCod">
+                                    {{ company.LegalName }} ({{ company.TaxId }})
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
                             <label class="mb-0">
                                 Direccion
                             </label>
@@ -80,20 +101,119 @@
 
                     <div class="form-group row">
                         <div class="col-sm-3 col-form-label text-sm-right pr-0">
-                            <label class="mb-0">
-                                Ubigeo
+                            <label class="mb-0" for="store-country">
+                                País
                             </label>
                         </div>
 
                         <div class="col-sm-9">
-                            <input type="text"
-                                [maxLength]="12"
-                                (keypress)="validateKeypress($event,'txtUbigeoCod')"
+                            <select id="store-country"
                                 class="form-control col-sm-8 col-md-6"
-                                [(ngModel)]="Store.UbigeoCod"
-                                name="UbigeoCod">
+                                [(ngModel)]="Store.CountryCod"
+                                [disabled]="IsLoadingOptions || IsLoadingUbigeo"
+                                (change)="CountryChanged()"
+                                name="CountryCod">
+                                <option value="">Seleccione un país</option>
+                                <option *ngFor="let country of CountryList" [value]="country.Code">
+                                    {{ country.Name }}
+                                </option>
+                            </select>
                         </div>
                     </div>
+
+                    <ng-container *ngIf="isPeruCountry(); else manualUbigeo">
+                        <div class="form-group row">
+                            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                                <label class="mb-0" for="store-department">
+                                    Departamento
+                                </label>
+                            </div>
+
+                            <div class="col-sm-9">
+                                <select id="store-department"
+                                    class="form-control col-sm-8 col-md-6"
+                                    [(ngModel)]="DepartmentCod"
+                                    [disabled]="IsLoadingUbigeo"
+                                    (change)="DepartmentChanged()"
+                                    name="DepartmentCod">
+                                    <option value="">Seleccione un departamento</option>
+                                    <option *ngFor="let department of DepartmentList" [value]="department.Code">
+                                        {{ department.Name }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                                <label class="mb-0" for="store-province">
+                                    Provincia
+                                </label>
+                            </div>
+
+                            <div class="col-sm-9">
+                                <select id="store-province"
+                                    class="form-control col-sm-8 col-md-6"
+                                    [(ngModel)]="ProvinceCod"
+                                    [disabled]="!DepartmentCod || IsLoadingUbigeo"
+                                    (change)="ProvinceChanged()"
+                                    name="ProvinceCod">
+                                    <option value="">Seleccione una provincia</option>
+                                    <option *ngFor="let province of ProvinceList" [value]="province.Code">
+                                        {{ province.Name }}
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                                <label class="mb-0" for="store-district">
+                                    Distrito
+                                </label>
+                            </div>
+
+                            <div class="col-sm-9">
+                                <select id="store-district"
+                                    class="form-control col-sm-8 col-md-6"
+                                    [(ngModel)]="Store.UbigeoCod"
+                                    [disabled]="!ProvinceCod || IsLoadingUbigeo"
+                                    name="UbigeoCod">
+                                    <option value="">Seleccione un distrito</option>
+                                    <option *ngFor="let district of DistrictList" [value]="district.Code">
+                                        {{ district.Name }}
+                                    </option>
+                                </select>
+                                <small class="form-text text-muted" *ngIf="Store.UbigeoCod">
+                                    Ubigeo: {{ Store.UbigeoCod }}
+                                </small>
+                            </div>
+                        </div>
+                    </ng-container>
+
+                    <ng-template #manualUbigeo>
+                        <div class="form-group row" *ngIf="Store.CountryCod">
+                            <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                                <label class="mb-0" for="txtUbigeoCod">
+                                    Código postal o territorial
+                                </label>
+                            </div>
+
+                            <div class="col-sm-9">
+                                <input id="txtUbigeoCod"
+                                    type="text"
+                                    [maxLength]="12"
+                                    (keypress)="validateKeypress($event,'txtUbigeoCod')"
+                                    class="form-control col-sm-8 col-md-6"
+                                    [(ngModel)]="Store.UbigeoCod"
+                                    name="UbigeoCod"
+                                    placeholder="Ingrese el código manualmente">
+                                <small class="form-text text-muted">
+                                    Para tiendas fuera de Perú este código se ingresa manualmente.
+                                </small>
+                            </div>
+                        </div>
+                    </ng-template>
 
                     <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
                         <div class="offset-md-3 col-md-9 text-nowrap">

@@ -1,10 +1,10 @@
 package com.ccadmin.app.delivery.service;
 
-import com.ccadmin.app.delivery.model.dto.LocationOptionDto;
 import com.ccadmin.app.sale.model.entity.ClientAddressEntity;
 import com.ccadmin.app.sale.repository.ClientAddressRepository;
+import com.ccadmin.app.shared.model.dto.LocationOptionDto;
 import com.ccadmin.app.shared.repository.LocationRepository;
-import com.ccadmin.app.shared.repository.UbigeoRepository;
+import com.ccadmin.app.shared.service.UbigeoSearchService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -14,19 +14,19 @@ public class ClientAddressDeliverySearchService {
 
     private final ClientDeliveryContextService clientDeliveryContextService;
     private final ClientAddressRepository clientAddressRepository;
-    private final UbigeoRepository ubigeoRepository;
     private final LocationRepository locationRepository;
+    private final UbigeoSearchService ubigeoSearchService;
 
     public ClientAddressDeliverySearchService(
             ClientDeliveryContextService clientDeliveryContextService,
             ClientAddressRepository clientAddressRepository,
-            UbigeoRepository ubigeoRepository,
-            LocationRepository locationRepository
+            LocationRepository locationRepository,
+            UbigeoSearchService ubigeoSearchService
     ) {
         this.clientDeliveryContextService = clientDeliveryContextService;
         this.clientAddressRepository = clientAddressRepository;
-        this.ubigeoRepository = ubigeoRepository;
         this.locationRepository = locationRepository;
+        this.ubigeoSearchService = ubigeoSearchService;
     }
 
     public List<ClientAddressEntity> findAllForCurrentClient() {
@@ -47,15 +47,11 @@ public class ClientAddressDeliverySearchService {
     }
 
     public List<LocationOptionDto> findDepartments() {
-        return ubigeoRepository.findDepartments().stream()
-                .map(LocationOptionDto::new)
-                .toList();
+        return ubigeoSearchService.findDepartments();
     }
 
     public List<LocationOptionDto> findCountries() {
-        return locationRepository.findCountries().stream()
-                .map(LocationOptionDto::new)
-                .toList();
+        return ubigeoSearchService.findCountries();
     }
 
     public List<LocationOptionDto> findStates(String countryCod) {
@@ -86,20 +82,10 @@ public class ClientAddressDeliverySearchService {
     }
 
     public List<LocationOptionDto> findProvinces(String departmentCod) {
-        if (departmentCod == null || !departmentCod.matches("^\\d{2}$")) {
-            throw new IllegalArgumentException("El codigo de departamento debe tener 2 digitos");
-        }
-        return ubigeoRepository.findProvinces(departmentCod).stream()
-                .map(LocationOptionDto::new)
-                .toList();
+        return ubigeoSearchService.findProvinces(departmentCod);
     }
 
     public List<LocationOptionDto> findDistricts(String provinceCod) {
-        if (provinceCod == null || !provinceCod.matches("^\\d{4}$")) {
-            throw new IllegalArgumentException("El codigo de provincia debe tener 4 digitos");
-        }
-        return ubigeoRepository.findDistricts(provinceCod).stream()
-                .map(LocationOptionDto::new)
-                .toList();
+        return ubigeoSearchService.findDistricts(provinceCod);
     }
 }

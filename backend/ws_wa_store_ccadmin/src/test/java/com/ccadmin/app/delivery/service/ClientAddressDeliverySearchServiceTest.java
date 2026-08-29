@@ -4,7 +4,7 @@ import com.ccadmin.app.sale.model.entity.ClientAddressEntity;
 import com.ccadmin.app.sale.repository.ClientAddressRepository;
 import com.ccadmin.app.shared.model.dto.ClientSessionDto;
 import com.ccadmin.app.shared.repository.LocationRepository;
-import com.ccadmin.app.shared.repository.UbigeoRepository;
+import com.ccadmin.app.shared.service.UbigeoSearchService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,8 +22,8 @@ class ClientAddressDeliverySearchServiceTest {
 
     @Mock private ClientDeliveryContextService clientDeliveryContextService;
     @Mock private ClientAddressRepository clientAddressRepository;
-    @Mock private UbigeoRepository ubigeoRepository;
     @Mock private LocationRepository locationRepository;
+    @Mock private UbigeoSearchService ubigeoSearchService;
 
     private ClientAddressDeliverySearchService clientAddressDeliverySearchService;
 
@@ -32,8 +32,8 @@ class ClientAddressDeliverySearchServiceTest {
         clientAddressDeliverySearchService = new ClientAddressDeliverySearchService(
                 clientDeliveryContextService,
                 clientAddressRepository,
-                ubigeoRepository,
-                locationRepository
+                locationRepository,
+                ubigeoSearchService
         );
     }
 

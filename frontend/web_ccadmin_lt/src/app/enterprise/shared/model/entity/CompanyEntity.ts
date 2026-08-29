@@ -8,6 +8,9 @@ export class CompanyEntity extends AuditTableEntity {
   public FiscalAddress: string = '';
   public Address: string = '';
   public UbigeoCod: string = '';
+  public Department: string = '';
+  public Province: string = '';
+  public District: string = '';
   public CountryCode: string = 'PE';
   public Phone: string = '';
   public Email: string = '';

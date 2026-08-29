@@ -51,6 +51,64 @@ public class StoreController {
         }
     }
 
+    @GetMapping("findCompanies")
+    public ResponseEntity<ResponseWsDto> findCompanies() {
+        try {
+            return new ResponseEntity<>(
+                    new ResponseWsDto(this.storeService.findCompanies()), HttpStatus.OK);
+        } catch (Exception ex) {
+            return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @GetMapping("findCountries")
+    public ResponseEntity<ResponseWsDto> findCountries() {
+        try {
+            return new ResponseEntity<>(
+                    new ResponseWsDto(this.storeService.findCountries()), HttpStatus.OK);
+        } catch (Exception ex) {
+            return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @GetMapping("findDepartments")
+    public ResponseEntity<ResponseWsDto> findDepartments() {
+        try {
+            return new ResponseEntity<>(
+                    new ResponseWsDto(this.storeService.findDepartments()), HttpStatus.OK);
+        } catch (Exception ex) {
+            return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @GetMapping("findProvinces")
+    public ResponseEntity<ResponseWsDto> findProvinces(
+            @RequestParam String DepartmentCod
+    ) {
+        try {
+            return new ResponseEntity<>(
+                    new ResponseWsDto(this.storeService.findProvinces(DepartmentCod)),
+                    HttpStatus.OK
+            );
+        } catch (Exception ex) {
+            return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @GetMapping("findDistricts")
+    public ResponseEntity<ResponseWsDto> findDistricts(
+            @RequestParam String ProvinceCod
+    ) {
+        try {
+            return new ResponseEntity<>(
+                    new ResponseWsDto(this.storeService.findDistricts(ProvinceCod)),
+                    HttpStatus.OK
+            );
+        } catch (Exception ex) {
+            return new ResponseEntity<>(new ResponseWsDto(ex), HttpStatus.BAD_REQUEST);
+        }
+    }
+
     @GetMapping("findUbigeo")
     public ResponseEntity<ResponseWsDto> findUbigeo(@RequestParam String UbigeoCod) {
         try {

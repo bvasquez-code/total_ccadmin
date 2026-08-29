@@ -1,4 +1,4 @@
-package com.ccadmin.app.delivery.model.dto;
+package com.ccadmin.app.shared.model.dto;
 
 import com.ccadmin.app.shared.model.idto.ILocationOptionDto;
 

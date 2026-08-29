@@ -11,6 +11,8 @@ export class StoreEntity extends AuditTableEntity {
     public IsVirtualStoreEnabled: string;
     public Latitude: number | null;
     public Longitude: number | null;
+    public CompanyCod: string;
+    public CountryCod: string;
 
     constructor() {
         super();
@@ -23,5 +25,7 @@ export class StoreEntity extends AuditTableEntity {
         this.IsVirtualStoreEnabled = 'N';
         this.Latitude = null;
         this.Longitude = null;
+        this.CompanyCod = '';
+        this.CountryCod = 'PER';
     }
 }

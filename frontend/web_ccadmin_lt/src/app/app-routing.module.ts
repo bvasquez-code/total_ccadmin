@@ -71,6 +71,7 @@ import { ViewpucharseComponent } from './enterprise/pucharse/pages/viewpucharse/
 import { ListstoreComponent } from './enterprise/store/pages/liststore/liststore.component';
 import { CreatestoreComponent } from './enterprise/store/pages/createstore/createstore.component';
 import { CreatestorevirtualconfigComponent } from './enterprise/store/pages/createstorevirtualconfig/createstorevirtualconfig.component';
+import { ManagecompanyComponent } from './enterprise/store/pages/managecompany/managecompany.component';
 import { ListbusinessconfiggroupComponent } from './enterprise/businessconfiggroup/pages/listbusinessconfiggroup/listbusinessconfiggroup.component';
 import { CreatebusinessconfiggroupComponent } from './enterprise/businessconfiggroup/pages/createbusinessconfiggroup/createbusinessconfiggroup.component';
 import { CreatebusinessconfigComponent } from './enterprise/businessconfiggroup/pages/createbusinessconfig/createbusinessconfig.component';
@@ -216,6 +217,10 @@ const routes: Routes = [
       {
         path: 'enterprise/store/pages/createstorevirtualconfig',
         component: CreatestorevirtualconfigComponent
+      },
+      {
+        path: 'enterprise/store/pages/managecompany',
+        component: ManagecompanyComponent
       },
       {
         path: 'enterprise/businessconfiggroup/pages/listbusinessconfiggroup',

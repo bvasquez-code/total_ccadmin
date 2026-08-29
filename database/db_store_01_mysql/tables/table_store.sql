@@ -34,9 +34,12 @@ CREATE TABLE `store` (
   `ModifyDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `Status` char(1) NOT NULL DEFAULT 'A',
   `CompanyCod` varchar(4) DEFAULT NULL COMMENT 'CÃ³digo legible de la empresa (FK => company.CompanyCod).',
+  `CountryCod` varchar(3) NOT NULL DEFAULT 'PER' COMMENT 'Codigo ISO 3166-1 alfa-3 del pais donde se ubica la tienda.',
   PRIMARY KEY (`StoreCod`),
   KEY `idx_store_companycod` (`CompanyCod`),
+  KEY `idx_store_countrycod` (`CountryCod`),
   CONSTRAINT `fk_store_company` FOREIGN KEY (`CompanyCod`) REFERENCES `company` (`CompanyCod`),
+  CONSTRAINT `fk_store_country` FOREIGN KEY (`CountryCod`) REFERENCES `country` (`CountryCod`),
   CONSTRAINT `chk_store_virtual_enabled` CHECK (`IsVirtualStoreEnabled` IN ('S','N')),
   CONSTRAINT `chk_store_latitude` CHECK (`Latitude` IS NULL OR (`Latitude` BETWEEN -90 AND 90)),
   CONSTRAINT `chk_store_longitude` CHECK (`Longitude` IS NULL OR (`Longitude` BETWEEN -180 AND 180))
@@ -105,6 +108,36 @@ CREATE TABLE `store` (
             ALTER TABLE `store`
                 ADD CONSTRAINT `chk_store_virtual_enabled`
                 CHECK (`IsVirtualStoreEnabled` IN ('S','N'));
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'store'
+              AND column_name = 'CountryCod'
+        ) THEN
+            ALTER TABLE `store`
+                ADD COLUMN `CountryCod` varchar(3) NOT NULL DEFAULT 'PER'
+                    COMMENT 'Codigo ISO 3166-1 alfa-3 del pais donde se ubica la tienda.'
+                    AFTER `CompanyCod`;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.statistics
+            WHERE table_schema = DATABASE() AND table_name = 'store'
+              AND index_name = 'idx_store_countrycod'
+        ) THEN
+            ALTER TABLE `store`
+                ADD INDEX `idx_store_countrycod` (`CountryCod`);
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.table_constraints
+            WHERE table_schema = DATABASE() AND table_name = 'store'
+              AND constraint_name = 'fk_store_country'
+        ) THEN
+            ALTER TABLE `store`
+                ADD CONSTRAINT `fk_store_country`
+                FOREIGN KEY (`CountryCod`) REFERENCES `country` (`CountryCod`);
         END IF;
 
         IF NOT EXISTS (

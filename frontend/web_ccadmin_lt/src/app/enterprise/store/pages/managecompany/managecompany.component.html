@@ -1,0 +1,291 @@
+<div role="main" class="main-content">
+    <div class="page-content container container-plus">
+        <div class="card acard mt-2 mt-lg-3">
+            <div class="card-header">
+                <h3 class="card-title text-125 text-primary-d2">
+                    <i class="fa fa-building text-dark-l3 mr-1"></i>
+                    Administrar compañía
+                </h3>
+            </div>
+
+            <div class="card-body px-3 pb-1">
+                <div class="alert alert-info" *ngIf="!IsLoading && !IsExistingCompany">
+                    Registre la compañía principal. Después de guardarla, esta pantalla administrará
+                    únicamente ese registro.
+                </div>
+
+                <form class="mt-lg-3" autocomplete="off">
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0" for="company-code">Código</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <input id="company-code"
+                                type="text"
+                                maxlength="4"
+                                class="form-control col-sm-8 col-md-6 text-uppercase"
+                                [(ngModel)]="Company.CompanyCod"
+                                [readonly]="IsExistingCompany"
+                                [disabled]="IsLoading || IsSaving"
+                                (keypress)="validateKeypress($event, 'CompanyCod')"
+                                name="CompanyCod">
+                            <small class="form-text text-muted">
+                                Identificador de cuatro letras o números. No se puede cambiar después de crear la compañía.
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0" for="company-ruc">RUC</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <div class="input-group col-sm-8 col-md-6 p-0">
+                                <input id="company-ruc"
+                                    type="text"
+                                    maxlength="11"
+                                    class="form-control"
+                                    [(ngModel)]="Company.TaxId"
+                                    [disabled]="IsLoading || IsSaving || IsSearchingIdentity"
+                                    (keypress)="validateKeypress($event, 'TaxId')"
+                                    name="TaxId">
+                                <div class="input-group-append">
+                                    <button class="btn btn-primary"
+                                        type="button"
+                                        title="Consultar RUC"
+                                        [disabled]="IsLoading || IsSaving || IsSearchingIdentity"
+                                        (click)="searchByRuc()">
+                                        <i class="fa"
+                                            [class.fa-search]="!IsSearchingIdentity"
+                                            [class.fa-spinner]="IsSearchingIdentity"
+                                            [class.fa-spin]="IsSearchingIdentity"></i>
+                                        <span class="ml-1 d-none d-sm-inline">Consultar</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <small class="form-text text-muted">
+                                La consulta completa razón social, nombre comercial y domicilio fiscal.
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0" for="company-legal-name">Razón social</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <input id="company-legal-name"
+                                type="text"
+                                maxlength="200"
+                                class="form-control col-sm-8 col-md-6"
+                                [(ngModel)]="Company.LegalName"
+                                [disabled]="IsLoading || IsSaving"
+                                name="LegalName">
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0" for="company-trade-name">Nombre comercial</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <input id="company-trade-name"
+                                type="text"
+                                maxlength="200"
+                                class="form-control col-sm-8 col-md-6"
+                                [(ngModel)]="Company.TradeName"
+                                [disabled]="IsLoading || IsSaving"
+                                name="TradeName">
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0" for="company-fiscal-address">Domicilio fiscal</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <textarea id="company-fiscal-address"
+                                rows="2"
+                                maxlength="300"
+                                class="form-control col-sm-8 col-md-6"
+                                [(ngModel)]="Company.FiscalAddress"
+                                [disabled]="IsLoading || IsSaving"
+                                name="FiscalAddress"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0" for="company-address">Dirección comercial corta</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <input id="company-address"
+                                type="text"
+                                maxlength="128"
+                                class="form-control col-sm-8 col-md-6"
+                                [(ngModel)]="Company.Address"
+                                [disabled]="IsLoading || IsSaving"
+                                name="Address">
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0" for="company-country">País</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <input id="company-country"
+                                type="text"
+                                value="Perú (PE)"
+                                class="form-control col-sm-8 col-md-6"
+                                readonly>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0" for="company-department">Departamento</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <select id="company-department"
+                                class="form-control col-sm-8 col-md-6"
+                                [(ngModel)]="DepartmentCod"
+                                [disabled]="IsLoading || IsLoadingUbigeo || IsSaving"
+                                (change)="departmentChanged()"
+                                name="DepartmentCod">
+                                <option value="">Seleccione un departamento</option>
+                                <option *ngFor="let department of DepartmentList" [value]="department.Code">
+                                    {{ department.Name }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0" for="company-province">Provincia</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <select id="company-province"
+                                class="form-control col-sm-8 col-md-6"
+                                [(ngModel)]="ProvinceCod"
+                                [disabled]="!DepartmentCod || IsLoading || IsLoadingUbigeo || IsSaving"
+                                (change)="provinceChanged()"
+                                name="ProvinceCod">
+                                <option value="">Seleccione una provincia</option>
+                                <option *ngFor="let province of ProvinceList" [value]="province.Code">
+                                    {{ province.Name }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0" for="company-district">Distrito</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <select id="company-district"
+                                class="form-control col-sm-8 col-md-6"
+                                [(ngModel)]="Company.UbigeoCod"
+                                [disabled]="!ProvinceCod || IsLoading || IsLoadingUbigeo || IsSaving"
+                                (change)="districtChanged()"
+                                name="UbigeoCod">
+                                <option value="">Seleccione un distrito</option>
+                                <option *ngFor="let district of DistrictList" [value]="district.Code">
+                                    {{ district.Name }}
+                                </option>
+                            </select>
+                            <small class="form-text text-muted" *ngIf="Company.UbigeoCod">
+                                Ubigeo: {{ Company.UbigeoCod }}
+                            </small>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0" for="company-phone">Teléfono</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <input id="company-phone"
+                                type="text"
+                                maxlength="30"
+                                class="form-control col-sm-8 col-md-6"
+                                [(ngModel)]="Company.Phone"
+                                [disabled]="IsLoading || IsSaving"
+                                name="Phone">
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0" for="company-email">Correo corporativo</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <input id="company-email"
+                                type="email"
+                                maxlength="150"
+                                class="form-control col-sm-8 col-md-6"
+                                [(ngModel)]="Company.Email"
+                                [disabled]="IsLoading || IsSaving"
+                                name="Email">
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0" for="company-website">Sitio web</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <input id="company-website"
+                                type="text"
+                                maxlength="150"
+                                class="form-control col-sm-8 col-md-6"
+                                [(ngModel)]="Company.Website"
+                                [disabled]="IsLoading || IsSaving"
+                                name="Website">
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0" for="company-logo">Ruta o URL del logo</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <input id="company-logo"
+                                type="text"
+                                maxlength="500"
+                                class="form-control col-sm-8 col-md-6"
+                                [(ngModel)]="Company.LogoPath"
+                                [disabled]="IsLoading || IsSaving"
+                                name="LogoPath">
+                        </div>
+                    </div>
+
+                    <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
+                        <div class="offset-md-3 col-md-9 text-nowrap">
+                            <button class="btn btn-info btn-bold px-4"
+                                type="button"
+                                [disabled]="IsLoading || IsSaving"
+                                (click)="save()">
+                                <i class="fa mr-1"
+                                    [class.fa-check]="!IsSaving"
+                                    [class.fa-spinner]="IsSaving"
+                                    [class.fa-spin]="IsSaving"></i>
+                                Guardar
+                            </button>
+
+                            <button class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4"
+                                type="button"
+                                [disabled]="IsSaving"
+                                (click)="returnToStores()">
+                                <i class="fa fa-undo mr-1"></i>
+                                Volver
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
