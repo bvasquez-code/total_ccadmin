@@ -225,7 +225,8 @@
                                 Guardar
                             </a>
 
-                            <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4"
+                            <a *ngIf="!InitializationMode"
+                                class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4"
                                 type="reset"
                                 href="/enterprise/store/pages/liststore">
                                 <i class="fa fa-undo mr-1"></i>

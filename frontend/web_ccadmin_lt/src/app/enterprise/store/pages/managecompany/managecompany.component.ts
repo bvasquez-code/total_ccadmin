@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { PersonIdentityLookupService } from 'src/app/enterprise/person/service/person-identity-lookup.service';
@@ -14,6 +14,10 @@ import { StoreService } from '../../service/store.service';
   templateUrl: './managecompany.component.html'
 })
 export class ManagecompanyComponent implements OnInit {
+
+  @Input() InitializationMode: boolean = false;
+  @Output() ConfigurationCompleted: EventEmitter<CompanyEntity> =
+    new EventEmitter<CompanyEntity>();
 
   Company: CompanyEntity = new CompanyEntity();
   DepartmentCod: string = '';
@@ -114,6 +118,9 @@ export class ManagecompanyComponent implements OnInit {
       this.Company = Object.assign(new CompanyEntity(), response.Data ?? {});
       this.IsExistingCompany = true;
       this.toastrService.success('Compañía guardada correctamente.');
+      if (this.InitializationMode) {
+        this.ConfigurationCompleted.emit(this.Company);
+      }
     } finally {
       this.IsSaving = false;
     }
@@ -243,6 +250,10 @@ export class ManagecompanyComponent implements OnInit {
         this.Company.LegalName,
         'Debe ingresar la razón social.'
       );
+      if (this.InitializationMode
+          && this.Company.LegalName.trim().toUpperCase() === 'COMPANY_DEFAULT') {
+        throw new Error('Debe reemplazar la razón social predeterminada.');
+      }
       ValidationHelper.validLengthString(
         this.Company.LegalName,
         200,

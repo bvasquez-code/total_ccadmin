@@ -1,8 +1,11 @@
 import {
   Component,
   ElementRef,
+  EventEmitter,
+  Input,
   OnDestroy,
   OnInit,
+  Output,
   ViewChild
 } from '@angular/core';
 import { Router } from '@angular/router';
@@ -39,6 +42,9 @@ interface ProductPhotoState {
   styleUrls: ['./createproductquick.component.css']
 })
 export class CreateProductQuickComponent implements OnInit, OnDestroy {
+  @Input() InitializationMode: boolean = false;
+  @Output() ConfigurationCompleted: EventEmitter<string> =
+    new EventEmitter<string>();
   @ViewChild('frontPhotoInput') frontPhotoInput?: ElementRef<HTMLInputElement>;
   @ViewChild('sidePhotoInput') sidePhotoInput?: ElementRef<HTMLInputElement>;
   @ViewChild('barcodePhotoInput') barcodePhotoInput?: ElementRef<HTMLInputElement>;
@@ -415,6 +421,9 @@ export class CreateProductQuickComponent implements OnInit, OnDestroy {
         return;
       }
       this.toastr.success('Producto creado correctamente');
+      if (this.InitializationMode) {
+        this.ConfigurationCompleted.emit(this.productCod);
+      }
       const stockConfirmation = await this.alertService.waring(
         'El producto ya fue creado. ¿Desea registrar su stock inicial ahora?',
         'Registrar stock inicial'

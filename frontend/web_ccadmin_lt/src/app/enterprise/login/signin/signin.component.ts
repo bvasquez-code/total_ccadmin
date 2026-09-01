@@ -21,7 +21,11 @@ export class SigninComponent implements OnInit {
 
     if(this.dataSesionService.SessionExists())
     {
-      this.router.navigate(['/']);    
+      this.router.navigate([
+        this.dataSesionService.RequiresApplicationInitialization()
+          ? '/enterprise/system/pages/applicationinitialization'
+          : '/'
+      ]);
     }
 
   }

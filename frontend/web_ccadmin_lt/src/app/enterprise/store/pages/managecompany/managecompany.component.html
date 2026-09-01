@@ -275,7 +275,8 @@
                                 Guardar
                             </button>
 
-                            <button class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4"
+                            <button *ngIf="!InitializationMode"
+                                class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4"
                                 type="button"
                                 [disabled]="IsSaving"
                                 (click)="returnToStores()">

@@ -59,4 +59,12 @@ public interface CompanyRepository extends JpaRepository<CompanyEntity, String>,
             limit 1
             """, nativeQuery = true)
     Optional<CompanyEntity> findOnlyCompany();
+
+    @Query(value = """
+            select c.*
+            from company c
+            where c.LegalName = :legalName
+            limit 1
+            """, nativeQuery = true)
+    Optional<CompanyEntity> findByLegalName(@Param("legalName") String legalName);
 }

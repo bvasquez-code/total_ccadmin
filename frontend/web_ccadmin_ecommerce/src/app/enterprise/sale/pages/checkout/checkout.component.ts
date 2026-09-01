@@ -241,10 +241,7 @@ export class CheckoutComponent implements OnInit {
 
     this.IsSearchingBilling = true;
     try {
-      let person = await this.billingIdentityService.findCompanyByRuc(ruc);
-      if (!person) {
-        person = await this.billingIdentityService.findInternalCompanyByRuc(ruc);
-      }
+      const person = await this.billingIdentityService.findCompanyByRuc(ruc);
       if (person) {
         this.BillingPerson = person;
         this.BillingCompanyName = person.BusinessName || '';

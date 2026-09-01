@@ -94,22 +94,24 @@ import { SessionAccessGuard } from './enterprise/login/service/session-access.gu
 import { ViewproductComponent } from './enterprise/product/pages/viewproduct/viewproduct.component';
 import { CreateProductQuickComponent } from './enterprise/product/pages/createproductquick/createproductquick.component';
 import { CreateQuickStockEntryComponent } from './enterprise/inventory/pages/createquickstockentry/createquickstockentry.component';
+import { ApplicationInitializationComponent } from './enterprise/system/pages/applicationinitialization/applicationinitialization.component';
+import { ApplicationInitializationGuard } from './enterprise/login/service/application-initialization.guard';
 
 const routes: Routes = [
   {
     path: 'pages/permissiondenied',
     component: PermissiondeniedComponent,
-    canActivate: [SessionAccessGuard]
+    canActivate: [SessionAccessGuard, ApplicationInitializationGuard]
   },
   {
     path: '',
     component: MainComponent,
-    canActivate: [SessionAccessGuard]
+    canActivate: [SessionAccessGuard, ApplicationInitializationGuard]
   },
   {
     path: '',
     component: MainComponent,
-    canActivate: [SessionAccessGuard],
+    canActivate: [SessionAccessGuard, ApplicationInitializationGuard],
     children: [
       {
         path: 'pages/prueba',
@@ -122,8 +124,13 @@ const routes: Routes = [
     component: LoginComponent
   },
   {
+    path: 'enterprise/system/pages/applicationinitialization',
+    component: ApplicationInitializationComponent,
+    canActivate: [SessionAccessGuard, ApplicationInitializationGuard]
+  },
+  {
     path: '',
-    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, ApplicationInitializationGuard, MenuAccessGuard],
     children: [
       {
         path: 'enterprise/sale/pages/createpresale',
@@ -177,7 +184,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, ApplicationInitializationGuard, MenuAccessGuard],
     children: [
       { path: 'enterprise/inventory/pages/liststockentry', component: ListStockEntryComponent },
       { path: 'enterprise/inventory/pages/createstockentry', component: CreateStockEntryComponent },
@@ -196,7 +203,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, ApplicationInitializationGuard, MenuAccessGuard],
     children: [
       {
         path: 'enterprise/menu/pages/listmenu',
@@ -238,7 +245,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, ApplicationInitializationGuard, MenuAccessGuard],
     children: [
       {
         path: 'enterprise/user/pages/listuser',
@@ -260,7 +267,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, ApplicationInitializationGuard, MenuAccessGuard],
     children: [
       {
         path: 'enterprise/client/pages/listclient',
@@ -274,7 +281,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, ApplicationInitializationGuard, MenuAccessGuard],
     children: [
       {
         path: 'enterprise/supplier/pages/listsupplier',
@@ -288,7 +295,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, ApplicationInitializationGuard, MenuAccessGuard],
     children: [
       {
         path: 'enterprise/product/pages/listProduct',
@@ -362,7 +369,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, ApplicationInitializationGuard, MenuAccessGuard],
     children: [
       {
         path: 'enterprise/pucharse/pages/listpucharse',
@@ -389,7 +396,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, ApplicationInitializationGuard, MenuAccessGuard],
     children: [
       { path: 'enterprise/cash/pages/listcashregister', component: ListcashregisterComponent },
       { path: 'enterprise/cash/pages/createcashregister', component: CreatecashregisterComponent },
@@ -406,7 +413,7 @@ const routes: Routes = [
 
   {
     path: '',
-    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, ApplicationInitializationGuard, MenuAccessGuard],
     children: [
       {
         path: 'enterprise/trxpayment/pages/listtrxpayment',
@@ -424,7 +431,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, ApplicationInitializationGuard, MenuAccessGuard],
     children: [
       {
         path: 'enterprise/system/pages/appfile',
@@ -482,7 +489,7 @@ const routes: Routes = [
   },
   {
     path: '',
-    canActivateChild: [SessionAccessGuard, MenuAccessGuard],
+    canActivateChild: [SessionAccessGuard, ApplicationInitializationGuard, MenuAccessGuard],
     children: [
       { path: 'enterprise/transfer/pages/listtransferrequest', component: ListtransferrequestComponent },
       { path: 'enterprise/transfer/pages/createtransferrequest', component: CreatetransferrequestComponent },

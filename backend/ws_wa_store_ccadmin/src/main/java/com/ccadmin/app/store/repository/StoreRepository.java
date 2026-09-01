@@ -23,6 +23,14 @@ public interface StoreRepository extends JpaRepository<StoreEntity,String>, CcAd
     Optional<StoreEntity> findByStoreCod(@Param("storeCod") String storeCod);
 
     @Query(value = """
+            select s.*
+            from store s
+            where s.Name = :name
+            limit 1
+            """, nativeQuery = true)
+    Optional<StoreEntity> findByName(@Param("name") String name);
+
+    @Query(value = """
             select
                 s.StoreCod as StoreCod,
                 s.Name as Name,

@@ -1,6 +1,5 @@
 package com.ccadmin.app.security.controller;
 
-import com.ccadmin.app.product.model.dto.ProductRegisterDto;
 import com.ccadmin.app.security.service.SecurityService;
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +26,26 @@ public class SecurityController {
         catch (Exception ex)
         {
             return new ResponseEntity<ResponseWsDto>(new ResponseWsDto(ex),HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @GetMapping("findApplicationInitializationStatus")
+    public ResponseEntity<ResponseWsDto> findApplicationInitializationStatus()
+    {
+        try{
+            return new ResponseEntity<ResponseWsDto>(
+                    new ResponseWsDto(
+                            this.securityService.findApplicationInitializationStatus()
+                    )
+                    , HttpStatus.OK
+            );
+        }
+        catch (Exception ex)
+        {
+            return new ResponseEntity<ResponseWsDto>(
+                    new ResponseWsDto(ex),
+                    HttpStatus.BAD_REQUEST
+            );
         }
     }
 

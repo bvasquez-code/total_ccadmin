@@ -2,6 +2,7 @@ package com.ccadmin.app.security.service;
 
 import com.ccadmin.app.cash.repository.CashSessionRepository;
 import com.ccadmin.app.security.model.dto.SessionStorageDto;
+import com.ccadmin.app.security.model.dto.ApplicationInitializationStatusDto;
 import com.ccadmin.app.security.model.entity.AppSessionEntity;
 import com.ccadmin.app.security.model.entity.AppUserEntity;
 import com.ccadmin.app.security.repository.AppUserRepository;
@@ -19,6 +20,8 @@ public class SecurityService extends SessionService {
     private AppMenuShared appMenuShared;
     @Autowired
     private CashSessionRepository cashSessionRepository;
+    @Autowired
+    private ApplicationInitializationSearchService applicationInitializationSearchService;
 
     @Transactional
     public void createUserSession(String userCod, String token) {
@@ -45,6 +48,17 @@ public class SecurityService extends SessionService {
         sessionStorage.Names = appUser.Email;
         sessionStorage.StoreCod = getStoreCod();
         sessionStorage.AppMenuPermissions = this.appMenuShared.findByUser(appUser.UserCod);
+
+        ApplicationInitializationStatusDto initializationStatus =
+                applicationInitializationSearchService.findForUser(appUser.UserCod);
+        sessionStorage.ApplicationInitializationRequired = initializationStatus.Required;
+        sessionStorage.CompanyInitializationPending = initializationStatus.CompanyPending;
+        sessionStorage.StoreInitializationPending = initializationStatus.StorePending;
+        sessionStorage.DefaultStoreCod = initializationStatus.DefaultStoreCod;
         return sessionStorage;
+    }
+
+    public ApplicationInitializationStatusDto findApplicationInitializationStatus() {
+        return applicationInitializationSearchService.findForUser(getUserCod());
     }
 }

@@ -1,0 +1,69 @@
+<div class="page-content container container-plus initialization-page">
+  <div class="card dcard mb-3 initialization-header">
+    <div class="card-body px-3 px-md-4 py-4">
+      <div class="d-flex align-items-center mb-4">
+        <span class="initialization-icon mr-3">
+          <i class="fa fa-cogs"></i>
+        </span>
+        <div>
+          <h3 class="text-primary-d2 mb-1">Configuración inicial</h3>
+          <p class="text-grey-d1 mb-0">
+            Complete los cuatro pasos para comenzar a utilizar la aplicación.
+          </p>
+        </div>
+      </div>
+
+      <div class="initialization-steps">
+        <div *ngFor="let step of Steps; let index = index"
+          class="initialization-step"
+          [class.active]="index === CurrentStep"
+          [class.completed]="isCompleted(index)">
+          <span class="step-circle">
+            <i class="fa"
+              [ngClass]="isCompleted(index) ? 'fa-check' : step.icon"></i>
+          </span>
+          <div class="step-copy">
+            <strong>{{index + 1}}. {{step.title}}</strong>
+            <small>{{step.description}}</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="text-right mb-3" *ngIf="CurrentStep === 3">
+    <button class="btn btn-light-secondary px-4" type="button"
+      (click)="skipProductConfiguration()">
+      <i class="fa fa-forward mr-1"></i>
+      Omitir producto por ahora
+    </button>
+  </div>
+
+  <div [ngSwitch]="CurrentStep" class="initialization-content">
+    <app-managecompany
+      *ngSwitchCase="0"
+      [InitializationMode]="true"
+      (ConfigurationCompleted)="companyConfigured()">
+    </app-managecompany>
+
+    <app-createstore
+      *ngSwitchCase="1"
+      [InitializationMode]="true"
+      [InitialStoreCod]="ConfiguredStoreCod"
+      (ConfigurationCompleted)="storeConfigured($event)">
+    </app-createstore>
+
+    <app-createuser
+      *ngSwitchCase="2"
+      [InitializationMode]="true"
+      [InitialStoreCod]="ConfiguredStoreCod"
+      (ConfigurationCompleted)="administratorConfigured()">
+    </app-createuser>
+
+    <app-createproductquick
+      *ngSwitchCase="3"
+      [InitializationMode]="true"
+      (ConfigurationCompleted)="productConfigured()">
+    </app-createproductquick>
+  </div>
+</div>

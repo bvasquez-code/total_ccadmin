@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 import { ValidationHelper } from 'src/app/enterprise/shared/helper/ValidationHelper';
@@ -13,6 +13,11 @@ import { StoreService } from '../../service/store.service';
   templateUrl: './createstore.component.html'
 })
 export class CreatestoreComponent implements OnInit {
+
+  @Input() InitializationMode: boolean = false;
+  @Input() InitialStoreCod: string = '';
+  @Output() ConfigurationCompleted: EventEmitter<StoreEntity> =
+    new EventEmitter<StoreEntity>();
 
   private readonly PeruCountryCod: string = 'PER';
 
@@ -39,6 +44,9 @@ export class CreatestoreComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.LoadFormOptions();
+    if (this.InitialStoreCod) {
+      this.StoreCod = this.InitialStoreCod;
+    }
     if (this.StoreCod !== "") {
       await this.FindById(this.StoreCod);
       return;
@@ -101,6 +109,12 @@ export class CreatestoreComponent implements OnInit {
 
     if (!rpt.ErrorStatus) {
       this.toastrService.success("Operacion realizada con exito.");
+      if (this.InitializationMode) {
+        this.ConfigurationCompleted.emit(
+          Object.assign(new StoreEntity(), rpt.Data ?? this.Store)
+        );
+        return;
+      }
       this.router.navigate(['/enterprise/store/pages/liststore']);
     }
   }
@@ -112,6 +126,10 @@ export class CreatestoreComponent implements OnInit {
 
       ValidationHelper.validLengthString(store.Name, 32, "El nombre de la tienda solo puede tener 32 caracteres");
       ValidationHelper.validateIsNotEmpty(store.Name, "Debe ingresar un nombre para la tienda");
+      if (this.InitializationMode
+          && store.Name.trim().toUpperCase() === 'STORE_DEFAULT') {
+        throw new Error("Debe reemplazar el nombre predeterminado de la tienda");
+      }
 
       ValidationHelper.validLengthString(store.Description || '', 128, "La descripcion de la tienda solo puede tener 128 caracteres");
       ValidationHelper.validLengthString(store.Address || '', 128, "La direccion de la tienda solo puede tener 128 caracteres");

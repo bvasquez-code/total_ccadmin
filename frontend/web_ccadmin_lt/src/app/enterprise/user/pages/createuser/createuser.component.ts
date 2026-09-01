@@ -1,4 +1,12 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  EventEmitter,
+  Input,
+  OnInit,
+  Output,
+  ViewChild
+} from '@angular/core';
 import { AppUserEntity } from '../../model/entity/AppUserEntity';
 import { AppUserService } from '../../service/appuser.service';
 import { Router } from '@angular/router';
@@ -17,6 +25,11 @@ import { ResponsePageSearch } from 'src/app/enterprise/shared/model/dto/Response
   templateUrl: './createuser.component.html'
 })
 export class CreateuserComponent implements OnInit {
+
+  @Input() InitializationMode: boolean = false;
+  @Input() InitialStoreCod: string = '';
+  @Output() ConfigurationCompleted: EventEmitter<AppUserEntity> =
+    new EventEmitter<AppUserEntity>();
 
   @ViewChild('cboDocumentType') cboDocumentType!: ElementRef<HTMLSelectElement>;
   @ViewChild('txtDocumentNum') txtDocumentNum!: ElementRef<HTMLInputElement>;
@@ -44,24 +57,34 @@ export class CreateuserComponent implements OnInit {
     this.OriginalUserCod = (urlTree.queryParams['UserCod'] || '').trim();
     this.IsEditMode = this.OriginalUserCod.length > 0;
     this.AppUser.UserCod = this.OriginalUserCod;
-    this.findDataForm(this.AppUser.UserCod);
 
   }
 
   ngOnInit(): void {
+    void this.findDataForm(this.AppUser.UserCod);
   }
 
   async findDataForm(UserCod: string) {
     const rpt: ResponseWsDto = await this.appUserService.findDataForm(UserCod);
 
-    if (!rpt.Status) {
-      this.AppUser = rpt.DataAdditional.find(e => e.Name === "User")?.Data;
-      this.ProfileList = rpt.DataAdditional.find(e => e.Name === "ProfileList")?.Data;
-      this.StoreList = rpt.DataAdditional.find(e => e.Name === "StoreList")?.Data;
-
-      setTimeout(() => { this.loadingForm(this.AppUser); }, 100);
-
+    if (rpt.ErrorStatus) {
+      this.toastrService.error(rpt.Message || 'No se pudo cargar el formulario de usuario');
+      return;
     }
+
+    const user = rpt.DataAdditional.find(e => e.Name === "User")?.Data;
+    this.AppUser = Object.assign(new AppUserEntity(), user ?? {});
+    this.AppUser.Person = this.AppUser.Person || new AppUserEntity().Person;
+    this.AppUser.UserProfileList = this.AppUser.UserProfileList || [];
+    this.AppUser.UserStoreList = this.AppUser.UserStoreList || [];
+    this.ProfileList = rpt.DataAdditional.find(e => e.Name === "ProfileList")?.Data || [];
+    this.StoreList = rpt.DataAdditional.find(e => e.Name === "StoreList")?.Data || [];
+
+    if (this.InitializationMode) {
+      this.applyAdministratorDefaults();
+    }
+
+    setTimeout(() => { this.loadingForm(this.AppUser); }, 100);
   }
 
   loadingForm(AppUser: AppUserEntity) {
@@ -123,6 +146,12 @@ export class CreateuserComponent implements OnInit {
 
     if (!rpt.ErrorStatus) {
       this.toastrService.success("Usuario guardado correctamente.");
+      if (this.InitializationMode) {
+        this.ConfigurationCompleted.emit(
+          Object.assign(new AppUserEntity(), rpt.Data ?? this.AppUser)
+        );
+        return;
+      }
       this.router.navigate(['/enterprise/user/pages/listuser']);
     }
 
@@ -197,6 +226,17 @@ export class CreateuserComponent implements OnInit {
         ValidationHelper.validLengthString(appUser.Person.Email, 32, "El email solo puede tener 32 caracteres");
       }
 
+      if (this.InitializationMode) {
+        if (!appUser.UserProfileList.some(
+          profile => (profile.ProfileCod || '').trim().toUpperCase() === 'ROOT'
+        )) {
+          throw new Error("Debe asignar el perfil administrador al primer usuario");
+        }
+        if (appUser.UserStoreList.length === 0) {
+          throw new Error("Debe asignar una tienda al primer usuario administrador");
+        }
+      }
+
       return true;
     } catch (e: any) {
       this.toastrService.error(e.message);
@@ -254,6 +294,30 @@ export class CreateuserComponent implements OnInit {
     const IsChecked: boolean = (this.AppUser.UserStoreList.filter(e => e.StoreCod === Store.StoreCod).length > 0);
 
     return IsChecked;
+  }
+
+  private applyAdministratorDefaults(): void {
+    const administratorProfile = this.ProfileList.find(
+      profile => (profile.ProfileCod || '').trim().toUpperCase() === 'ROOT'
+    );
+    if (administratorProfile && !this.AppUser.UserProfileList.some(
+      profile => profile.ProfileCod === administratorProfile.ProfileCod
+    )) {
+      const userProfile = new UserProfileEntity();
+      userProfile.ProfileCod = administratorProfile.ProfileCod;
+      this.AppUser.UserProfileList.push(userProfile);
+    }
+
+    const administratorStore = this.StoreList.find(
+      store => store.StoreCod === this.InitialStoreCod
+    ) || this.StoreList[0];
+    if (administratorStore && !this.AppUser.UserStoreList.some(
+      store => store.StoreCod === administratorStore.StoreCod
+    )) {
+      const userStore = new UserStoreEntity();
+      userStore.StoreCod = administratorStore.StoreCod;
+      this.AppUser.UserStoreList.push(userStore);
+    }
   }
 
 }

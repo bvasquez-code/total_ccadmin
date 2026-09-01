@@ -9,7 +9,7 @@
 
     <div class="card dcard">
       <div class="card-body px-2 px-md-4">
-        <div class="mb-3">
+        <div class="mb-3" *ngIf="!InitializationMode">
           <a class="btn btn-light-secondary px-4"
              routerLink="/enterprise/product/pages/listProduct">
             <i class="fa fa-arrow-left mr-1"></i>Volver

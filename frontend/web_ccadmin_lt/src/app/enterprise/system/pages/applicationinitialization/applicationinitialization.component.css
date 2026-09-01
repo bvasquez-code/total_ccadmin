@@ -1,0 +1,80 @@
+.initialization-page {
+  max-width: 1500px;
+}
+
+.initialization-header {
+  border-top: 3px solid #2c87d3;
+}
+
+.initialization-icon {
+  align-items: center;
+  background: #e8f3fc;
+  border-radius: 50%;
+  color: #2675b9;
+  display: inline-flex;
+  flex: 0 0 3rem;
+  font-size: 1.35rem;
+  height: 3rem;
+  justify-content: center;
+}
+
+.initialization-steps {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.initialization-step {
+  align-items: center;
+  border: 1px solid #d9e2ea;
+  border-radius: .4rem;
+  color: #667788;
+  display: flex;
+  min-height: 4.5rem;
+  padding: .75rem;
+}
+
+.initialization-step.active {
+  background: #eef7ff;
+  border-color: #2c87d3;
+  color: #1f6098;
+}
+
+.initialization-step.completed {
+  background: #effaf3;
+  border-color: #73bd8c;
+  color: #397b50;
+}
+
+.step-circle {
+  align-items: center;
+  background: currentColor;
+  border-radius: 50%;
+  display: inline-flex;
+  flex: 0 0 2.25rem;
+  height: 2.25rem;
+  justify-content: center;
+  margin-right: .75rem;
+}
+
+.step-circle .fa {
+  color: #fff;
+}
+
+.step-copy small {
+  display: block;
+  line-height: 1.2;
+  margin-top: .2rem;
+}
+
+@media (max-width: 991.98px) {
+  .initialization-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575.98px) {
+  .initialization-steps {
+    grid-template-columns: 1fr;
+  }
+}

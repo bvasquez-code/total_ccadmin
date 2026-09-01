@@ -231,7 +231,10 @@ export class ApiService {
                         sessionStorageDto = rpt.Data;
 
                         this.dataSesionService.SaveSession(token, sessionStorageDto);
-                        location.reload();  
+                        const destination = this.dataSesionService.RequiresApplicationInitialization()
+                            ? '/enterprise/system/pages/applicationinitialization'
+                            : '/';
+                        window.location.replace(destination);
                     }
 
                 }).catch( function(e){

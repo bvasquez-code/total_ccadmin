@@ -81,7 +81,7 @@ export class PersonIdentityLookupService {
   }
 
   private async findCompanyByRuc(documentNumber: string): Promise<PersonEntity | null> {
-    const url = `${AppSetting.API_SUNAT_IDENTITY}/api/v1/sunatIdentity/findCompanyByRuc`;
+    const url = `${AppSetting.API}/api/v1/sunatIdentity/findCompanyByRuc`;
     const response: ResponseWsDto = await this.apiService.ExecuteGetService(url, {
       Ruc: documentNumber
     });
@@ -98,7 +98,7 @@ export class PersonIdentityLookupService {
     documentType: string,
     documentNumber: string
   ): Promise<PersonEntity | null> {
-    const url = `${AppSetting.API_SUNAT_IDENTITY}/api/v1/sunatIdentity/findPersonByDocument`;
+    const url = `${AppSetting.API}/api/v1/sunatIdentity/findPersonByDocument`;
     const response: ResponseWsDto = await this.apiService.ExecuteGetService(url, {
       DocumentType: documentType,
       DocumentNumber: documentNumber

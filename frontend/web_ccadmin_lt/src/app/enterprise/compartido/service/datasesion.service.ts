@@ -20,7 +20,11 @@ export class DataSesionService {
         'SessionID',
         'StoreCod',
         'Names',
-        'AppMenuPermissions'
+        'AppMenuPermissions',
+        'ApplicationInitializationRequired',
+        'CompanyInitializationPending',
+        'StoreInitializationPending',
+        'DefaultStoreCod'
     ];
     private readonly sessionSynchronizationKey: string = 'CcAdminSessionSynchronization';
 
@@ -39,6 +43,14 @@ export class DataSesionService {
         this.sessionStorageDto.StoreCod = this.ObtenerKeySesion( localStorage.getItem('StoreCod') );
         this.sessionStorageDto.Names = this.ObtenerKeySesion( localStorage.getItem('Names') );
         this.sessionStorageDto.AppMenuPermissions = this.obtenerPermisosMenuSesion();
+        this.sessionStorageDto.ApplicationInitializationRequired =
+            localStorage.getItem('ApplicationInitializationRequired') === 'true';
+        this.sessionStorageDto.CompanyInitializationPending =
+            localStorage.getItem('CompanyInitializationPending') === 'true';
+        this.sessionStorageDto.StoreInitializationPending =
+            localStorage.getItem('StoreInitializationPending') === 'true';
+        this.sessionStorageDto.DefaultStoreCod =
+            this.ObtenerKeySesion(localStorage.getItem('DefaultStoreCod'));
     }
 
     private ObtenerKeySesion( valor : any ) : string
@@ -76,6 +88,19 @@ export class DataSesionService {
         localStorage.setItem('Names', session.Names || '');
         localStorage.setItem('StoreCod', session.StoreCod || '');
         localStorage.setItem('AppMenuPermissions', JSON.stringify(session.AppMenuPermissions || []));
+        localStorage.setItem(
+            'ApplicationInitializationRequired',
+            String(Boolean(session.ApplicationInitializationRequired))
+        );
+        localStorage.setItem(
+            'CompanyInitializationPending',
+            String(Boolean(session.CompanyInitializationPending))
+        );
+        localStorage.setItem(
+            'StoreInitializationPending',
+            String(Boolean(session.StoreInitializationPending))
+        );
+        localStorage.setItem('DefaultStoreCod', session.DefaultStoreCod || '');
         localStorage.setItem('Token', token);
 
         this.ClearCurrentTabData();
@@ -114,6 +139,22 @@ export class DataSesionService {
         }else{
             return false;
         }
+    }
+
+    RequiresApplicationInitialization(): boolean
+    {
+        return this.sessionStorageDto.UserCod.toUpperCase() === 'ROOT'
+            && this.sessionStorageDto.ApplicationInitializationRequired;
+    }
+
+    CompleteApplicationInitialization(): void
+    {
+        localStorage.setItem('ApplicationInitializationRequired', 'false');
+        localStorage.setItem('CompanyInitializationPending', 'false');
+        localStorage.setItem('StoreInitializationPending', 'false');
+        localStorage.removeItem('DefaultStoreCod');
+        this.cargarInfoSesion();
+        this.notifySessionChange();
     }
 
     private obtenerPermisosMenuSesion(): AppMenuEntity[]

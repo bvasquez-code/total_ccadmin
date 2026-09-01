@@ -15,5 +15,9 @@ public class SessionStorageDto {
     public long SessionID;
     public String StoreCod;
     public List<AppMenuEntity> AppMenuPermissions;
+    public boolean ApplicationInitializationRequired;
+    public boolean CompanyInitializationPending;
+    public boolean StoreInitializationPending;
+    public String DefaultStoreCod;
 
 }

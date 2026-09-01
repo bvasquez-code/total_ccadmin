@@ -18,6 +18,10 @@ export class SessionStorageDto{
     public SessionID : number = 0;
     public StoreCod : string = "";
     public AppMenuPermissions : AppMenuEntity[] = [];
+    public ApplicationInitializationRequired : boolean = false;
+    public CompanyInitializationPending : boolean = false;
+    public StoreInitializationPending : boolean = false;
+    public DefaultStoreCod : string = "";
 
     constructor()
     {
