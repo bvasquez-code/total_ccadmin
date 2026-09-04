@@ -54,6 +54,8 @@ public class CreditNoteSunatPayloadBuildService {
         dto.SourceModule = "CREDIT_NOTE";
         dto.SourceDocumentCod = head.CreditNoteCod;
         dto.SourceDocumentType = "CREDIT_NOTE";
+        dto.StoreCod = head.StoreCod;
+        dto.AuditUserCod = head.CreationUser;
         dto.Series = documentNumber.series;
         dto.Correlative = documentNumber.correlative;
         dto.IssueDate = head.ModifyDate == null ? new Date() : head.ModifyDate;

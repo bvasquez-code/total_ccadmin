@@ -1,16 +1,8 @@
 package com.ccadmin.app.sunat.model.dto.sunat;
 
-import java.util.Date;
 import java.util.List;
 
-public class SunatReceiptProcessRequestDto {
-    public String SourceModule;
-    public String SourceDocumentCod;
-    public String SourceDocumentType;
-    public String Series;
-    public int Correlative;
-    public Date IssueDate;
-    public String IssueTime;
+public class SunatReceiptProcessRequestDto extends SunatProcessRequestDto {
     public String CurrencyCod;
     public String OperationTypeCode;
     public String PaymentCondition;

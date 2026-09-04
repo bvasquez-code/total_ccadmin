@@ -105,6 +105,7 @@ export class SidebarMenuConfigService {
                 { permission: "PR000004", label: "Kardex", url: "enterprise/product/pages/listkardex" },
                 { permission: "PR000008", label: "Visualizacion de detalle de kardex", url: "enterprise/product/pages/listkardex", urlShade: "enterprise/product/pages/listkardex", isVisible: false },
                 { permission: "SE000002", label: "Stock por zona", url: "enterprise/product/pages/listproductstock" },
+                { permission: "SE000003", label: "Envíos SUNAT", url: "enterprise/sunat/pages/listsunatsubmission" },
                 { permission: "SE000001", label: "Pagos", url: "enterprise/trxpayment/pages/listtrxpayment" },
                 { permission: "SE000001", label: "Ver pago", url: "enterprise/trxpayment/pages/viewtrxpayment", urlShade: "enterprise/trxpayment/pages/listtrxpayment", isVisible: false },
                 { permission: "SE000001", label: "Crear pago", url: "enterprise/trxpayment/pages/createtrxpayment", urlShade: "enterprise/trxpayment/pages/listtrxpayment", isVisible: false }

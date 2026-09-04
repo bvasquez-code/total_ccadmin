@@ -43,6 +43,8 @@ public class SaleSunatPayloadBuildService {
         dto.SourceModule = payload.sourceModule();
         dto.SourceDocumentCod = payload.sourceDocumentCod();
         dto.SourceDocumentType = payload.sourceDocumentType();
+        dto.StoreCod = saleDetail.Headboard.StoreCod;
+        dto.AuditUserCod = saleDetail.Headboard.CreationUser;
         dto.Series = payload.series();
         dto.Correlative = payload.correlative();
         dto.IssueDate = payload.issueDate();
@@ -64,6 +66,8 @@ public class SaleSunatPayloadBuildService {
         dto.SourceModule = payload.sourceModule();
         dto.SourceDocumentCod = payload.sourceDocumentCod();
         dto.SourceDocumentType = payload.sourceDocumentType();
+        dto.StoreCod = saleDetail.Headboard.StoreCod;
+        dto.AuditUserCod = saleDetail.Headboard.CreationUser;
         dto.Series = payload.series();
         dto.Correlative = payload.correlative();
         dto.IssueDate = payload.issueDate();

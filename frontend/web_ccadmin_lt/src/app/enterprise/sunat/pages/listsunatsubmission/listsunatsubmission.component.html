@@ -1,0 +1,221 @@
+<div role="main" class="main-content">
+  <div class="page-content container container-plus">
+    <div class="card-header">
+      <h3 class="card-title text-125 text-primary-d2">
+        <i class="fa fa-file-invoice text-dark-l3 mr-1"></i>
+        Seguimiento de envíos SUNAT
+      </h3>
+    </div>
+
+    <div class="row">
+      <div class="col-12">
+        <div class="card dcard">
+          <div class="card-body px-1 px-md-3">
+            <div class="d-flex justify-content-end mb-3">
+              <button class="btn px-4 btn-light-secondary"
+                type="button"
+                [disabled]="loading || retrying"
+                (click)="findAll(search.Page)">
+                <i class="fa fa-sync-alt mr-1" [ngClass]="loading ? 'fa-spin' : ''"></i>
+                Refrescar
+              </button>
+            </div>
+
+            <div class="row">
+              <div class="col-lg-4 col-md-6 mb-2">
+                <input class="form-control"
+                  type="text"
+                  placeholder="Código, documento, serie o ticket"
+                  [(ngModel)]="search.Query"
+                  (keyup.enter)="findAll(1)">
+              </div>
+              <div class="col-lg-2 col-md-6 mb-2">
+                <input class="form-control"
+                  type="text"
+                  maxlength="4"
+                  placeholder="Código de local"
+                  [(ngModel)]="search.StoreCod"
+                  (keyup.enter)="findAll(1)">
+              </div>
+              <div class="col-lg-3 col-md-6 mb-2">
+                <select class="form-control" [(ngModel)]="search.RequestType">
+                  <option value="">Todos los tipos</option>
+                  <option value="INVOICE">Factura</option>
+                  <option value="RECEIPT">Boleta</option>
+                  <option value="CREDIT_NOTE">Nota de crédito</option>
+                  <option value="DEBIT_NOTE">Nota de débito</option>
+                  <option value="DESPATCH_ADVICE">Guía de remisión</option>
+                </select>
+              </div>
+              <div class="col-lg-3 col-md-6 mb-2">
+                <select class="form-control" [(ngModel)]="search.SendStatus">
+                  <option value="">Todos los estados</option>
+                  <option value="P">Pendiente</option>
+                  <option value="W">Enviando</option>
+                  <option value="S">Enviado</option>
+                  <option value="E">Error</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-lg-3 col-md-4 mb-2">
+                <input class="form-control"
+                  type="date"
+                  title="Fecha inicial"
+                  [(ngModel)]="search.DateStart">
+              </div>
+              <div class="col-lg-3 col-md-4 mb-2">
+                <input class="form-control"
+                  type="date"
+                  title="Fecha final"
+                  [(ngModel)]="search.DateEnd">
+              </div>
+              <div class="col-lg-3 col-md-4 mb-2">
+                <button class="btn px-4 btn-primary"
+                  type="button"
+                  [disabled]="loading || retrying"
+                  (click)="findAll(1)">
+                  Buscar
+                </button>
+              </div>
+            </div>
+
+            <app-table
+              [data]="dataTablaGenetic"
+              [action]="this">
+            </app-table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<app-modalconfirm
+  [id]="'modal_sunat_submission_retry'"
+  [title]="'Confirmar reenvío SUNAT'"
+  [message]="retryMessage()"
+  [action]="this">
+</app-modalconfirm>
+
+<div class="modal fade" id="modal_sunat_submission_detail" tabindex="-1"
+  role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered sunat-detail-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header align-items-center py-3">
+        <div>
+          <h5 class="modal-title text-primary-d3 mb-0">
+            <i class="fa fa-file-invoice mr-2 text-primary"></i>
+            Detalle del envío SUNAT
+          </h5>
+          <div class="text-85 text-grey-m1 mt-1" *ngIf="selectedSubmission">
+            {{selectedSubmission.SunatSubmissionCod}}
+          </div>
+        </div>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body px-3 px-md-4 py-3" *ngIf="selectedSubmission as submission">
+        <div class="sunat-status-summary d-flex align-items-center justify-content-between flex-wrap mb-3">
+          <div class="mr-3 mb-2 mb-sm-0">
+            <div class="sunat-detail-label">Documento fiscal</div>
+            <div class="sunat-document-number">
+              {{submission.Series}}-{{submission.Correlative}}
+            </div>
+          </div>
+          <div class="d-flex align-items-center flex-wrap">
+            <span class="badge text-white px-3 py-2 mr-2"
+              [ngClass]="sendStatusBadgeClass(submission.SendStatus)">
+              {{sendStatusDescription(submission.SendStatus)}}
+            </span>
+            <span class="badge text-white px-3 py-2"
+              [ngClass]="sunatStatusBadgeClass(submission.SunatStatus)">
+              SUNAT: {{constants.sunatStatusDescription(submission.SunatStatus)}}
+            </span>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <div class="sunat-detail-card h-100">
+              <h6 class="sunat-section-title">
+                <i class="fa fa-receipt mr-2"></i>Documento
+              </h6>
+              <div class="sunat-detail-item">
+                <div class="sunat-detail-label">Documento origen</div>
+                <div class="sunat-detail-value">{{submission.SourceDocumentCod}}</div>
+              </div>
+              <div class="sunat-detail-item">
+                <div class="sunat-detail-label">Tipo</div>
+                <div class="sunat-detail-value">
+                  {{constants.requestTypeDescription(submission.RequestType)}}
+                </div>
+              </div>
+              <div class="sunat-detail-item">
+                <div class="sunat-detail-label">Local</div>
+                <div class="sunat-detail-value">
+                  {{submission.StoreCod}} - {{submission.StoreName}}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="col-md-6 mb-3">
+            <div class="sunat-detail-card h-100">
+              <h6 class="sunat-section-title">
+                <i class="fa fa-cloud-upload-alt mr-2"></i>Respuesta SUNAT
+              </h6>
+              <div class="sunat-detail-item">
+                <div class="sunat-detail-label">Código remoto</div>
+                <div class="sunat-detail-value">
+                  {{submission.RemoteSunatDocumentCod || '-'}}
+                </div>
+              </div>
+              <div class="sunat-detail-item">
+                <div class="sunat-detail-label">Ticket</div>
+                <div class="sunat-detail-value">{{submission.SunatTicket || '-'}}</div>
+              </div>
+              <div class="sunat-detail-item">
+                <div class="sunat-detail-label">Respuesta HTTP</div>
+                <div class="sunat-detail-value">
+                  {{submission.LastResponseStatus || '-'}}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sunat-audit-box row mx-0">
+          <div class="col-md-4 sunat-audit-item">
+            <div class="sunat-detail-label">Intentos realizados</div>
+            <div class="sunat-detail-value">{{submission.AttemptCount}}</div>
+          </div>
+          <div class="col-md-4 sunat-audit-item">
+            <div class="sunat-detail-label">Último usuario</div>
+            <div class="sunat-detail-value">{{submission.LastAttemptUser || '-'}}</div>
+          </div>
+          <div class="col-md-4 sunat-audit-item">
+            <div class="sunat-detail-label">Último intento</div>
+            <div class="sunat-detail-value">
+              {{(submission.LastAttemptDate | date: 'dd/MM/yyyy HH:mm:ss') || '-'}}
+            </div>
+          </div>
+        </div>
+
+        <div class="alert alert-danger mt-3 mb-0" *ngIf="submission.LastErrorReason">
+          <strong><i class="fa fa-exclamation-triangle mr-2"></i>Motivo del error</strong>
+          <div class="mt-1 sunat-error-detail">
+            {{submission.LastErrorReason}}
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-light-secondary px-4" data-dismiss="modal">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

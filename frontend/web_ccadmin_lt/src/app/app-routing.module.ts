@@ -90,6 +90,7 @@ import { ListBulkLoadComponent } from './enterprise/bulkload/pages/listbulkload/
 import { CreateBulkLoadComponent } from './enterprise/bulkload/pages/createbulkload/createbulkload.component';
 import { CreateBulkLoadProductsComponent } from './enterprise/bulkload/pages/createbulkloadproducts/createbulkloadproducts.component';
 import { ViewBulkLoadComponent } from './enterprise/bulkload/pages/viewbulkload/viewbulkload.component';
+import { ListSunatSubmissionComponent } from './enterprise/sunat/pages/listsunatsubmission/listsunatsubmission.component';
 import { SessionAccessGuard } from './enterprise/login/service/session-access.guard';
 import { ViewproductComponent } from './enterprise/product/pages/viewproduct/viewproduct.component';
 import { CreateProductQuickComponent } from './enterprise/product/pages/createproductquick/createproductquick.component';
@@ -198,7 +199,8 @@ const routes: Routes = [
       { path: 'enterprise/bulkload/pages/listbulkload', component: ListBulkLoadComponent },
       { path: 'enterprise/bulkload/pages/createbulkload', component: CreateBulkLoadComponent },
       { path: 'enterprise/bulkload/pages/createbulkloadproducts', component: CreateBulkLoadProductsComponent },
-      { path: 'enterprise/bulkload/pages/viewbulkload', component: ViewBulkLoadComponent }
+      { path: 'enterprise/bulkload/pages/viewbulkload', component: ViewBulkLoadComponent },
+      { path: 'enterprise/sunat/pages/listsunatsubmission', component: ListSunatSubmissionComponent }
     ]
   },
   {

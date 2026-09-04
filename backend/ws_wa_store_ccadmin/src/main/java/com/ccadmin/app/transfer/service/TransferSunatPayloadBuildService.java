@@ -85,6 +85,8 @@ public class TransferSunatPayloadBuildService {
         dto.SourceModule = "TRANSFER";
         dto.SourceDocumentCod = head.TransferCod;
         dto.SourceDocumentType = "TRANSFER";
+        dto.StoreCod = head.StoreCodOrigin;
+        dto.AuditUserCod = head.CreationUser;
         dto.Series = documentNumber.series;
         dto.Correlative = documentNumber.correlative;
         dto.IssueDate = head.DispatchDate == null ? new Date() : head.DispatchDate;

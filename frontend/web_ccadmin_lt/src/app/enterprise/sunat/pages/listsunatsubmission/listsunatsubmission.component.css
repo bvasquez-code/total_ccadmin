@@ -1,0 +1,84 @@
+:host .sunat-detail-dialog {
+  width: calc(100% - 2rem);
+  max-width: 880px;
+}
+
+:host .sunat-status-summary {
+  padding: 0.9rem 1rem;
+  background-color: #f3f6f9;
+  border: 1px solid #e1e6eb;
+  border-radius: 0.25rem;
+}
+
+:host .sunat-document-number {
+  color: #2c3e50;
+  font-size: 1.2rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+:host .sunat-detail-card {
+  padding: 1rem;
+  background-color: #fff;
+  border: 1px solid #e1e6eb;
+  border-radius: 0.25rem;
+}
+
+:host .sunat-section-title {
+  margin-bottom: 0.35rem;
+  padding-bottom: 0.65rem;
+  color: #2878b5;
+  border-bottom: 1px solid #edf0f2;
+  font-weight: 600;
+}
+
+:host .sunat-detail-item {
+  padding: 0.55rem 0;
+}
+
+:host .sunat-detail-item + .sunat-detail-item {
+  border-top: 1px solid #f0f2f4;
+}
+
+:host .sunat-detail-label {
+  margin-bottom: 0.15rem;
+  color: #7a8490;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.025rem;
+  text-transform: uppercase;
+}
+
+:host .sunat-detail-value {
+  color: #3f4650;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+:host .sunat-audit-box {
+  padding: 0.8rem 0.25rem;
+  background-color: #f8f9fa;
+  border-radius: 0.25rem;
+}
+
+:host .sunat-audit-item {
+  padding-top: 0.2rem;
+  padding-bottom: 0.2rem;
+}
+
+:host .sunat-error-detail {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (max-width: 767.98px) {
+  :host .sunat-detail-dialog {
+    width: calc(100% - 1rem);
+    margin-right: auto;
+    margin-left: auto;
+  }
+
+  :host .sunat-audit-item + .sunat-audit-item {
+    margin-top: 0.65rem;
+  }
+}
