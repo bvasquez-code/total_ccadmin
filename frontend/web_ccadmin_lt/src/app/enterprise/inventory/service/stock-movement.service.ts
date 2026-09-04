@@ -30,11 +30,14 @@ export class StockMovementService {
 
   quickCreateAndConfirm(
     ProductCod: string,
-    Quantity: number
+    Quantity: number,
+    NumUnitPrice: number = 0,
+    LotNumber: string | null = null,
+    ExpirationDate: string | null = null
   ): Promise<ResponseWsDto> {
     return this.apiService.ExecutePostService(
       `${this.url('entry')}/quickCreateAndConfirm`,
-      { ProductCod, Quantity }
+      { ProductCod, Quantity, NumUnitPrice, LotNumber, ExpirationDate }
     );
   }
 

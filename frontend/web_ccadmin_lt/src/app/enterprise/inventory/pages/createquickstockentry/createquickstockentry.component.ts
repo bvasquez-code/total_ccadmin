@@ -22,6 +22,11 @@ export class CreateQuickStockEntryComponent implements OnInit {
   productName = '';
   quantity = 0;
   quantityText = '0';
+  unitCostEnabled = false;
+  numUnitPrice = 0;
+  lotAndExpirationEnabled = false;
+  lotNumber = '';
+  expirationDate: string | null = null;
   saving = false;
 
   private barcode = '';
@@ -90,10 +95,36 @@ export class CreateQuickStockEntryComponent implements OnInit {
     this.syncQuantityText();
   }
 
+  toggleUnitCost(): void {
+    this.unitCostEnabled = !this.unitCostEnabled;
+    if (!this.unitCostEnabled) this.numUnitPrice = 0;
+  }
+
+  toggleLotAndExpiration(): void {
+    this.lotAndExpirationEnabled = !this.lotAndExpirationEnabled;
+    if (!this.lotAndExpirationEnabled) {
+      this.lotNumber = '';
+      this.expirationDate = null;
+    }
+  }
+
   async save(): Promise<void> {
     if (this.saving || !this.commitQuantityInput()) return;
     if (!Number.isInteger(this.quantity) || this.quantity <= 0) {
       this.toastr.warning('Ingrese una cantidad mayor a cero');
+      return;
+    }
+
+    const unitPrice = this.unitCostEnabled ? Number(this.numUnitPrice) : 0;
+    if (!Number.isFinite(unitPrice) || unitPrice < 0
+      || unitPrice > 99999999999999.99) {
+      this.toastr.warning('Ingrese un precio de costo válido y no negativo');
+      return;
+    }
+    const lotNumber = this.lotAndExpirationEnabled
+      ? this.clean(this.lotNumber) : '';
+    if (lotNumber.length > 32) {
+      this.toastr.warning('El lote admite hasta 32 caracteres');
       return;
     }
 
@@ -106,7 +137,11 @@ export class CreateQuickStockEntryComponent implements OnInit {
     this.saving = true;
     try {
       const response = await this.stockMovementService.quickCreateAndConfirm(
-        this.productCod, this.quantity
+        this.productCod,
+        this.quantity,
+        unitPrice,
+        lotNumber || null,
+        this.lotAndExpirationEnabled ? this.expirationDate : null
       );
       if (response.ErrorStatus) {
         this.toastr.error(response.Message);

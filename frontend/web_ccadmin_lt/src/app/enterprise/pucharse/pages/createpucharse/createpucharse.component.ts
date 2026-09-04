@@ -50,6 +50,7 @@ export class CreatepucharseComponent implements IRegisterForm<PucharseRequestReg
   supplierInfo: string = '';
   supplierNotFound: boolean = false;
   isSavingDetail: boolean = false;
+  isProductSearchOpen: boolean = true;
 
   constructor(
     private pucharseRequestHeadService: PucharseRequestHeadService,

@@ -11,6 +11,7 @@ export class StockMovementHead {
   OriginStockEntryCod: string | null = null;
   OriginStockExitCod: string | null = null;
   ProcessStatus: 'P' | 'C' | 'R' | 'X' = 'P'; // P=Pendiente, C=Confirmado, R=Rechazado, X=Anulado
+  NumTotalPrice: number = 0;
   Observation: string = '';
   CreationDate?: Date;
   ConfirmUser?: string;
@@ -34,6 +35,8 @@ export class StockMovementDetail {
   ProductUnitName: string = 'NIU';
   ProductUnitFactor: number = 1;
   NumUnit: number = 0;
+  NumUnitPrice: number = 0;
+  NumTotalPrice: number = 0;
   NumUnitPending: number = 0;
   NumUnitResolvedIn: number = 0;
   NumUnitResolvedOut: number = 0;

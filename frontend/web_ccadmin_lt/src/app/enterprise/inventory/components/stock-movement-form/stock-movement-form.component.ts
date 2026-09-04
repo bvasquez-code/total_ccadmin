@@ -57,9 +57,18 @@ import { StockMovementService } from '../../service/stock-movement.service';
             </ng-container>
 
             <ng-template #originalEditor>
-              <div class="row">
-                <div class="col-md-5" *ngIf="!readonly">
-                  <h5 class="text-primary">Productos</h5>
+              <div *ngIf="!readonly" class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h5 class="text-primary mb-0">Productos</h5>
+                  <button type="button" class="btn btn-sm btn-outline-secondary"
+                          (click)="isProductSearchOpen = !isProductSearchOpen"
+                          [attr.aria-expanded]="isProductSearchOpen">
+                    <i class="fa mr-1" [ngClass]="isProductSearchOpen ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                    {{ isProductSearchOpen ? 'Ocultar buscador' : 'Mostrar buscador' }}
+                  </button>
+                </div>
+
+                <ng-container *ngIf="isProductSearchOpen">
                   <div class="d-flex align-items-center mb-2">
                     <input type="text" class="form-control mr-2" placeholder="Buscar producto"
                            [(ngModel)]="productQuery" (keyup.enter)="searchProducts()">
@@ -68,8 +77,8 @@ import { StockMovementService } from '../../service/stock-movement.service';
                     </button>
                   </div>
 
-                  <div class="table-responsive">
-                    <table class="table table-bordered">
+                  <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+                    <table class="table table-bordered table-hover mb-0">
                       <thead>
                         <tr>
                           <th>Codigo</th>
@@ -98,22 +107,42 @@ import { StockMovementService } from '../../service/stock-movement.service';
                       </tbody>
                     </table>
                   </div>
-                </div>
+                </ng-container>
+              </div>
 
-                <div [ngClass]="readonly ? 'col-md-12' : 'col-md-7'">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <h5 class="text-primary mb-0">Detalle</h5>
+              <div>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <h5 class="text-primary mb-0">Detalle</h5>
+                  <div class="text-right">
                     <span class="text-muted text-90">{{ register.DetailList.length }} producto(s)</span>
+                    <strong *ngIf="mode==='create'" class="d-block text-primary">
+                      Total: {{ register.Head.NumTotalPrice | number:'1.2-2' }}
+                    </strong>
                   </div>
-                  <app-stock-movement-detail-editor
-                    [detailList]="register.DetailList"
-                    [warehouseList]="warehouseList"
-                    [unavailableReasonList]="unavailableReasonList"
-                    [useUnavailableReason]="register.Head.MovementMode==='N'"
-                    [readonly]="readonly"
-                    (remove)="removeDetail($event)">
-                  </app-stock-movement-detail-editor>
                 </div>
+                <div class="custom-control custom-switch text-right mb-2" *ngIf="mode==='create'">
+                  <input
+                    type="checkbox"
+                    class="custom-control-input"
+                    id="switchStockMovementWithLots"
+                    name="switchStockMovementWithLots"
+                    [(ngModel)]="isMovementWithLots"
+                    [disabled]="saving || readonly || register.DetailList.length > 0">
+                  <label class="custom-control-label" for="switchStockMovementWithLots">
+                    Registrar con lotes y fecha de vencimiento
+                  </label>
+                </div>
+                <app-stock-movement-detail-editor
+                  [detailList]="register.DetailList"
+                  [warehouseList]="warehouseList"
+                  [unavailableReasonList]="unavailableReasonList"
+                  [useUnavailableReason]="register.Head.MovementMode==='N'"
+                  [readonly]="readonly"
+                  [showPrices]="mode==='create'"
+                  [showLots]="isMovementWithLots"
+                  (pricesChange)="recalculateTotalPrice()"
+                  (remove)="removeDetail($event)">
+                </app-stock-movement-detail-editor>
               </div>
             </ng-template>
 
@@ -165,11 +194,43 @@ import { StockMovementService } from '../../service/stock-movement.service';
             <div class="form-group">
               <label>Cantidad</label>
               <div class="input-group">
-                <input type="number" min="0" class="form-control" [(ngModel)]="visibleQuantity"
+                <input type="number" min="0" class="form-control" [ngModel]="visibleQuantity"
+                       (ngModelChange)="updateSelectedQuantity($event)"
                        (keyup.enter)="addProduct()">
                 <div class="input-group-append">
                   <span class="input-group-text">{{ selectedProduct.ProductUnitName || 'NIU' }}</span>
                 </div>
+              </div>
+            </div>
+            <ng-container *ngIf="isMovementWithLots">
+              <div class="form-group">
+                <label>Lote</label>
+                <input type="text" maxlength="32" class="form-control"
+                       [(ngModel)]="selectedLotNumber">
+              </div>
+              <div class="form-group">
+                <label>Fecha de vencimiento <span class="text-muted">(opcional)</span></label>
+                <input type="date" class="form-control"
+                       [(ngModel)]="selectedExpirationDate">
+              </div>
+            </ng-container>
+            <div class="form-group">
+              <label>Precio unitario ({{ selectedProduct.ProductUnitName || 'NIU' }})</label>
+              <div class="input-group">
+                <div class="input-group-prepend"><span class="input-group-text">S/</span></div>
+                <input type="number" min="0" step="0.01" class="form-control text-right"
+                       [ngModel]="selectedVisibleUnitPrice"
+                       (ngModelChange)="updateSelectedUnitPrice($event)">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Precio total</label>
+              <div class="input-group">
+                <div class="input-group-prepend"><span class="input-group-text">S/</span></div>
+                <input type="number" min="0" step="0.01" class="form-control text-right"
+                       [ngModel]="selectedTotalPrice"
+                       (ngModelChange)="updateSelectedTotalPrice($event)"
+                       (keyup.enter)="addProduct()">
               </div>
             </div>
           </div>
@@ -199,9 +260,16 @@ export class StockMovementFormComponent implements OnInit {
   productQuery: string = '';
   selectedWarehouse: string = '';
   visibleQuantity: number = 0;
+  selectedVisibleUnitPrice: number = 0;
+  selectedTotalPrice: number = 0;
+  selectedLotNumber: string = '';
+  selectedExpirationDate: string | null = null;
+  isMovementWithLots: boolean = false;
+  isProductSearchOpen: boolean = true;
   code: string = '';
   originCode: string = '';
   saving: boolean = false;
+  private readonly maxLotNumberLength: number = 32;
 
   constructor(
     private service: StockMovementService,
@@ -264,7 +332,12 @@ export class StockMovementFormComponent implements OnInit {
 
     if (loaded) {
       if (this.mode === 'resolve') this.prepareResolution(loaded);
-      else this.register = this.hydrate(loaded);
+      else {
+        this.register = this.hydrate(loaded);
+        this.isMovementWithLots = this.register.DetailList.some(detail =>
+          !!detail.LotNumber || !!detail.ExpirationDate
+        );
+      }
     } else {
       this.register.Head.ProcessType = 'O';
       this.register.Head.MovementMode = 'D';
@@ -317,7 +390,32 @@ export class StockMovementFormComponent implements OnInit {
       ? this.warehouseList[0].WarehouseCod
       : '';
     this.visibleQuantity = 0;
+    this.selectedVisibleUnitPrice = 0;
+    this.selectedTotalPrice = 0;
+    this.selectedLotNumber = '';
+    this.selectedExpirationDate = null;
     (window as any).$('#modalExceptionalStockProduct').modal('show');
+  }
+
+  updateSelectedQuantity(value: number | string | null): void {
+    this.visibleQuantity = this.nonNegativeNumber(value);
+    this.selectedTotalPrice = this.roundMoney(
+      this.visibleQuantity * this.selectedVisibleUnitPrice
+    );
+  }
+
+  updateSelectedUnitPrice(value: number | string | null): void {
+    this.selectedVisibleUnitPrice = this.nonNegativeMoney(value);
+    this.selectedTotalPrice = this.roundMoney(
+      this.visibleQuantity * this.selectedVisibleUnitPrice
+    );
+  }
+
+  updateSelectedTotalPrice(value: number | string | null): void {
+    this.selectedTotalPrice = this.nonNegativeMoney(value);
+    this.selectedVisibleUnitPrice = this.visibleQuantity > 0
+      ? this.roundMoney(this.selectedTotalPrice / this.visibleQuantity)
+      : 0;
   }
 
   async addProduct(): Promise<void> {
@@ -327,6 +425,11 @@ export class StockMovementFormComponent implements OnInit {
       if (!product.ProductCod) throw new Error('Seleccione un producto');
       if (!this.selectedWarehouse) throw new Error('Seleccione un almacen');
       if (!(this.visibleQuantity > 0)) throw new Error('Ingrese una cantidad mayor a cero');
+      const lotNumber = this.selectedLotNumber.trim();
+      if (this.isMovementWithLots && !lotNumber) throw new Error('Ingrese el lote');
+      if (lotNumber.length > this.maxLotNumberLength) {
+        throw new Error('El lote no puede superar 32 caracteres');
+      }
       const infoResponse = await this.productService.findDetailById(
         product.ProductCod, this.session.getSessionStorageDto().StoreCod
       );
@@ -346,15 +449,31 @@ export class StockMovementFormComponent implements OnInit {
       detail.ProductUnitName = info.Config?.ProductUnitName || product.ProductUnitName || 'NIU';
       detail.ProductUnitFactor = factor;
       detail.NumUnit = internalQuantity;
+      detail.LotNumber = lotNumber;
+      detail.ExpirationDate = this.isMovementWithLots ? this.selectedExpirationDate : null;
+      detail.NumUnitPrice = ProductUnitHelper.toInternalUnitPrice(
+        this.selectedVisibleUnitPrice,
+        factor
+      );
+      detail.NumTotalPrice = this.selectedTotalPrice;
       if (this.register.DetailList.some(item =>
         item.ProductCod === detail.ProductCod && item.Variant === detail.Variant
-        && item.WarehouseCod === detail.WarehouseCod && (item.LotNumber || '') === '')) {
-        throw new Error('El producto ya fue agregado para el mismo almacen');
+        && item.WarehouseCod === detail.WarehouseCod
+        && this.normalizeLotNumber(item.LotNumber) === detail.LotNumber
+        && this.normalizeExpirationDate(item.ExpirationDate) === detail.ExpirationDate)) {
+        throw new Error(this.isMovementWithLots
+          ? 'El producto ya fue agregado para el mismo almacen, lote y vencimiento'
+          : 'El producto ya fue agregado para el mismo almacen');
       }
       this.register.DetailList.push(detail);
+      this.recalculateTotalPrice();
       this.selectedProduct = new ProductSearchEntity();
       this.selectedWarehouse = '';
       this.visibleQuantity = 0;
+      this.selectedVisibleUnitPrice = 0;
+      this.selectedTotalPrice = 0;
+      this.selectedLotNumber = '';
+      this.selectedExpirationDate = null;
       this.btnCloseProductModal?.nativeElement.click();
       await this.save(false);
     } catch (error: any) {
@@ -366,7 +485,19 @@ export class StockMovementFormComponent implements OnInit {
     return (product?.IsDigital || 'N').trim().toUpperCase() === 'S';
   }
 
-  removeDetail(index: number): void { this.register.DetailList.splice(index, 1); }
+  removeDetail(index: number): void {
+    this.register.DetailList.splice(index, 1);
+    this.recalculateTotalPrice();
+  }
+
+  recalculateTotalPrice(): void {
+    this.register.Head.NumTotalPrice = this.roundMoney(
+      this.register.DetailList.reduce(
+        (total, detail) => total + Number(detail.NumTotalPrice || 0),
+        0
+      )
+    );
+  }
 
   async save(confirm: boolean): Promise<void> {
     if (this.saving) return;
@@ -410,9 +541,30 @@ export class StockMovementFormComponent implements OnInit {
     const request = this.hydrate(this.register);
     if (!request.DetailList.length) throw new Error('Debe agregar al menos un producto');
     if (!request.Head.ReasonCode) throw new Error('Seleccione el motivo');
+    request.DetailList.forEach(detail => {
+      detail.LotNumber = this.normalizeLotNumber(detail.LotNumber);
+      detail.ExpirationDate = this.normalizeExpirationDate(detail.ExpirationDate);
+      if (this.isMovementWithLots && !detail.LotNumber) {
+        throw new Error('Debe indicar lote para todos los productos');
+      }
+      if (detail.LotNumber.length > this.maxLotNumberLength) {
+        throw new Error('El lote no puede superar 32 caracteres');
+      }
+    });
+    if (this.hasDuplicateDetail(request.DetailList)) {
+      throw new Error(this.isMovementWithLots
+        ? 'No puede repetir el mismo producto, almacen, lote y vencimiento'
+        : 'No puede repetir el mismo producto y almacen');
+    }
     if (request.Head.MovementMode === 'N' && request.DetailList.some(item => !item.UnavailableReasonCode)) {
       throw new Error('Seleccione el motivo de no disponible en todos los productos');
     }
+    request.Head.NumTotalPrice = this.roundMoney(
+      request.DetailList.reduce(
+        (total, detail) => total + Number(detail.NumTotalPrice || 0),
+        0
+      )
+    );
     return request;
   }
 
@@ -482,8 +634,52 @@ export class StockMovementFormComponent implements OnInit {
   private hydrate(data: any): StockMovementRegister {
     const result = new StockMovementRegister();
     result.Head = Object.assign(new StockMovementHead(), data?.Head || {});
-    result.DetailList = (data?.DetailList || []).map((item: any) => Object.assign(new StockMovementDetail(), item));
+    result.DetailList = (data?.DetailList || []).map((item: any) => {
+      const detail = Object.assign(new StockMovementDetail(), item);
+      detail.LotNumber = this.normalizeLotNumber(detail.LotNumber);
+      detail.ExpirationDate = this.normalizeExpirationDate(detail.ExpirationDate);
+      return detail;
+    });
     return result;
+  }
+
+  private hasDuplicateDetail(detailList: StockMovementDetail[]): boolean {
+    const keys = new Set<string>();
+    return detailList.some(detail => {
+      const key = [
+        detail.ProductCod,
+        detail.Variant,
+        detail.WarehouseCod,
+        this.normalizeLotNumber(detail.LotNumber),
+        this.normalizeExpirationDate(detail.ExpirationDate) || ''
+      ].join('|');
+      if (keys.has(key)) return true;
+      keys.add(key);
+      return false;
+    });
+  }
+
+  private normalizeLotNumber(value: string | null | undefined): string {
+    return (value || '').trim();
+  }
+
+  private normalizeExpirationDate(value: string | null | undefined): string | null {
+    if (!value) return null;
+    const match = String(value).match(/^\d{4}-\d{2}-\d{2}/);
+    return match ? match[0] : null;
+  }
+
+  private roundMoney(value: number): number {
+    return Number(Number(value || 0).toFixed(2));
+  }
+
+  private nonNegativeMoney(value: number | string | null): number {
+    return this.roundMoney(this.nonNegativeNumber(value));
+  }
+
+  private nonNegativeNumber(value: number | string | null): number {
+    const amount = Number(value || 0);
+    return Number.isFinite(amount) && amount > 0 ? amount : 0;
   }
 
   private additional(response: any, name: string): any {

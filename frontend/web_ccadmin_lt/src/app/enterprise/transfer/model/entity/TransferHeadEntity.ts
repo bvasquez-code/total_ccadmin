@@ -9,6 +9,7 @@ export class TransferHeadEntity extends AuditTableEntity {
     public StoreCodRequestedBy: string;
     public TransferStatus: string;
     public ReceiveStatus: string;
+    public NumTotalPrice: number;
     public DispatchDate?: Date | any;
     public ArrivalDate?: Date | any;
     public UserOriginConfirm: string;
@@ -27,6 +28,7 @@ export class TransferHeadEntity extends AuditTableEntity {
         this.StoreCodRequestedBy = '';
         this.TransferStatus = 'P';
         this.ReceiveStatus = 'P';
+        this.NumTotalPrice = 0;
         this.DispatchDate = null;
         this.ArrivalDate = null;
         this.UserOriginConfirm = '';

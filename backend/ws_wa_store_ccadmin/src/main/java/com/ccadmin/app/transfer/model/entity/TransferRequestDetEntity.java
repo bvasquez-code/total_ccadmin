@@ -7,6 +7,7 @@ import com.ccadmin.app.transfer.model.entity.id.TransferRequestDetId;
 import jakarta.persistence.*;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "transfer_request_det")
@@ -23,6 +24,8 @@ public class TransferRequestDetEntity extends AuditTableEntity implements Serial
     public String WarehouseCodOrigin;
     public String WarehouseCodDest;
     public int NumUnit;
+    public BigDecimal NumUnitPrice = BigDecimal.ZERO;
+    public BigDecimal NumTotalPrice = BigDecimal.ZERO;
     public String ProductUnitName = "NIU";
     public int ProductUnitFactor = 1;
     public int NumUnitDispatch;

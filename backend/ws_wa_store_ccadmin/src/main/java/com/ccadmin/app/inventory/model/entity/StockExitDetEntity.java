@@ -9,6 +9,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.Date;
 
 @Entity
@@ -27,6 +28,8 @@ public class StockExitDetEntity extends AuditTableEntity implements Serializable
     public String ProductUnitName;
     public Integer ProductUnitFactor;
     public Integer NumUnit;
+    public BigDecimal NumUnitPrice = BigDecimal.ZERO;
+    public BigDecimal NumTotalPrice = BigDecimal.ZERO;
     public Integer NumUnitPending;
     public Integer NumUnitResolvedIn;
     public Integer NumUnitResolvedOut;

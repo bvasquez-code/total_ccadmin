@@ -30,10 +30,12 @@ public final class StockEntryDetEntityFactory {
         stockEntryDetail.ProductCod = line.ProductCod;
         stockEntryDetail.Variant = line.Variant;
         stockEntryDetail.WarehouseCod = line.WarehouseCod;
-        stockEntryDetail.LotNumber = "";
+        stockEntryDetail.LotNumber = line.LotNumber;
+        stockEntryDetail.ExpirationDate = line.ExpirationDate;
         stockEntryDetail.ProductUnitName = line.ProductUnitName;
         stockEntryDetail.ProductUnitFactor = line.ProductUnitFactor;
         stockEntryDetail.NumUnit = line.NumUnit;
+        stockEntryDetail.NumUnitPrice = line.NumUnitPrice;
         stockEntryDetail.Observation = "Carga masiva " + bulkLoadCod
                 + ", fila Excel " + line.SourceRowNumber;
         return stockEntryDetail;

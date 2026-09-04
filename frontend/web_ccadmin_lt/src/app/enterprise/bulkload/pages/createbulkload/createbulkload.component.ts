@@ -136,7 +136,7 @@ export class CreateBulkLoadComponent implements OnInit {
       definition.types,
       definition.labels
     ]);
-    productSheet['!cols'] = [{ wch: 24 }, { wch: 24 }];
+    productSheet['!cols'] = definition.headers.map(() => ({ wch: 24 }));
     XLSX.utils.book_append_sheet(workbook, productSheet, definition.productSheet);
     if (definition.requiresDestinations) {
       const stores = XLSX.utils.aoa_to_sheet([
@@ -168,7 +168,7 @@ export class CreateBulkLoadComponent implements OnInit {
     this.loading = true;
     try {
       const buffer = await file.arrayBuffer();
-      const workbook = XLSX.read(buffer, { type: 'array' });
+      const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
       this.sourceWorkbook = workbook;
       const request = this.parseWorkbook(workbook, file.name);
       if (this.localErrors.length > 0 || request === null) {
@@ -667,7 +667,13 @@ export class CreateBulkLoadComponent implements OnInit {
       const rowNumber = index + 4;
       const productCod = this.text(row[0]);
       const rawValue = row[1];
-      if (productCod === '' && this.text(rawValue) === '') return;
+      const isStockEntry = this.type === BulkLoadConstants.TYPE_STOCK_ENTRY;
+      const rawUnitPrice = isStockEntry ? row[2] : '';
+      const rawLotNumber = isStockEntry ? row[3] : '';
+      const rawExpirationDate = isStockEntry ? row[4] : '';
+      if (productCod === '' && this.text(rawValue) === ''
+        && this.text(rawUnitPrice) === '' && this.text(rawLotNumber) === ''
+        && this.text(rawExpirationDate) === '') return;
       if (productCod === '') {
         this.addLocalError(definition.productSheet, rowNumber, '',
           'ProductCod', '', 'PRODUCT_REQUIRED', 'El código de producto es obligatorio');
@@ -694,19 +700,120 @@ export class CreateBulkLoadComponent implements OnInit {
           definition.valueField ?? 'Value', this.text(rawValue), 'STOCK_FORMAT',
           'La cantidad debe cumplir NUMERO(7): entero entre 1 y 9999999');
       }
+
+      const unitPrice = isStockEntry
+        ? this.parseOptionalStockUnitPrice(rawUnitPrice, definition.productSheet, rowNumber)
+        : null;
+      const lotNumber = isStockEntry ? this.text(rawLotNumber) : '';
+      if (isStockEntry && lotNumber.length > 32) {
+        this.addLocalError(definition.productSheet, rowNumber, '',
+          'LotNumber', lotNumber, 'LOT_LENGTH',
+          'El lote admite hasta 32 caracteres');
+      }
+      const expirationDate = isStockEntry
+        ? this.parseOptionalStockExpirationDate(
+          rawExpirationDate, definition.productSheet, rowNumber
+        )
+        : null;
+
+      const payload: Record<string, unknown> = {
+        ProductCod: productCod,
+        [definition.valueField ?? 'Value']:
+          numeric === null ? this.text(rawValue) : numeric
+      };
+      if (isStockEntry) {
+        payload['NumUnitPrice'] = unitPrice;
+        payload['LotNumber'] = lotNumber || null;
+        payload['ExpirationDate'] = expirationDate;
+      }
       result.push({
         RowNumber: rowNumber,
         ProductCod: productCod,
         Value: numeric === null ? this.text(rawValue) : String(numeric),
         BusinessKey: productCod,
-        Payload: {
-          ProductCod: productCod,
-          [definition.valueField ?? 'Value']:
-            numeric === null ? this.text(rawValue) : numeric
-        }
+        Payload: payload
       });
     });
     return result;
+  }
+
+  private parseOptionalStockUnitPrice(
+    value: unknown,
+    sheetName: string,
+    rowNumber: number
+  ): number | string {
+    if (this.text(value) === '') return 0;
+    const unitPrice = this.numeric(value);
+    if (unitPrice === null) {
+      this.addLocalError(sheetName, rowNumber, '', 'NumUnitPrice',
+        this.text(value), 'PRICE_FORMAT',
+        'El precio unitario debe ser numérico');
+      return this.text(value);
+    }
+    if (unitPrice < 0 || unitPrice > 99999999999999.99
+      || this.decimalPlaces(value) > 2) {
+      this.addLocalError(sheetName, rowNumber, '', 'NumUnitPrice',
+        this.text(value), 'PRICE_FORMAT',
+        'El precio unitario debe cumplir NUMERO(16,2) y no ser negativo');
+    }
+    return unitPrice;
+  }
+
+  private parseOptionalStockExpirationDate(
+    value: unknown,
+    sheetName: string,
+    rowNumber: number
+  ): string | null {
+    if (this.text(value) === '') return null;
+    const expirationDate = this.toDateOnly(value);
+    if (expirationDate === null) {
+      this.addLocalError(sheetName, rowNumber, '', 'ExpirationDate',
+        this.text(value), 'EXPIRATION_DATE_FORMAT',
+        'La fecha de vencimiento debe cumplir DD/MM/YYYY');
+    }
+    return expirationDate;
+  }
+
+  private toDateOnly(value: unknown): string | null {
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      return this.formatDateOnly(
+        value.getFullYear(), value.getMonth() + 1, value.getDate()
+      );
+    }
+    if (typeof value === 'number') {
+      const excelDate = XLSX.SSF.parse_date_code(value);
+      return excelDate
+        ? this.formatDateOnly(excelDate.y, excelDate.m, excelDate.d)
+        : null;
+    }
+
+    const text = this.text(value);
+    const dayFirst = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (dayFirst) {
+      return this.validDateOnly(
+        Number(dayFirst[3]), Number(dayFirst[2]), Number(dayFirst[1])
+      );
+    }
+    const yearFirst = text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (yearFirst) {
+      return this.validDateOnly(
+        Number(yearFirst[1]), Number(yearFirst[2]), Number(yearFirst[3])
+      );
+    }
+    return null;
+  }
+
+  private validDateOnly(year: number, month: number, day: number): string | null {
+    const date = new Date(year, month - 1, day);
+    if (date.getFullYear() !== year || date.getMonth() !== month - 1
+      || date.getDate() !== day) return null;
+    return this.formatDateOnly(year, month, day);
+  }
+
+  private formatDateOnly(year: number, month: number, day: number): string {
+    return `${year.toString().padStart(4, '0')}`
+      + `-${month.toString().padStart(2, '0')}`
+      + `-${day.toString().padStart(2, '0')}`;
   }
 
   private parseStoreRows(rows: unknown[][]): BulkLoadStoreRow[] {
@@ -776,9 +883,18 @@ export class CreateBulkLoadComponent implements OnInit {
     if (this.type === BulkLoadConstants.TYPE_STOCK_ENTRY) {
       return {
         productSheet: 'PRODUCTO_STOCK',
-        headers: ['ProductCod', 'NumPhysicalStock'],
-        types: ['TEXTO(20)', 'NUMERO(7)'],
-        labels: ['CODIGO DE PRODUCTO', 'STOCK'],
+        headers: [
+          'ProductCod', 'NumPhysicalStock', 'NumUnitPrice',
+          'LotNumber', 'ExpirationDate'
+        ],
+        types: [
+          'TEXTO(20)', 'NUMERO(7)', 'NUMERO',
+          'TEXTO(32)', 'FECHA(DD/MM/YYYY)'
+        ],
+        labels: [
+          'CODIGO DE PRODUCTO', 'STOCK', 'PRECIO UNITARIO(*)',
+          'LOTE(*)', 'FECHA VENCIMIENTO(*)'
+        ],
         valueField: 'NumPhysicalStock',
         templateFileName: 'FORMATO_CARGA_DE_STOCK.xlsx',
         requiresDestinations: true

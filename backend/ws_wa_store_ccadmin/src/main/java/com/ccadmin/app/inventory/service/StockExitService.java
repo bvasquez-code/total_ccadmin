@@ -1,6 +1,7 @@
 package com.ccadmin.app.inventory.service;
 
 import com.ccadmin.app.inventory.model.constants.StockMovementConstants;
+import com.ccadmin.app.inventory.model.calculation.StockMovementPriceCalculator;
 import com.ccadmin.app.inventory.model.dto.*;
 import com.ccadmin.app.inventory.model.entity.StockExitDetEntity;
 import com.ccadmin.app.inventory.model.entity.StockExitHeadEntity;
@@ -23,6 +24,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -261,6 +263,7 @@ public class StockExitService extends SessionService {
         validation.requireReason(9, head.ReasonCode, "El motivo de retiro");
         head.ProcessType = StockMovementConstants.PROCESS_ORIGINAL;
         head.OriginStockExitCod = null;
+        head.NumTotalPrice = BigDecimal.ZERO;
         for (StockExitDetEntity d : details) {
             validation.positive(d.NumUnit, "La cantidad");
             if (d.ProductCod == null || d.ProductCod.isBlank() || d.Variant == null || d.WarehouseCod == null) {
@@ -268,6 +271,14 @@ public class StockExitService extends SessionService {
             }
             d.ProductUnitFactor = d.ProductUnitFactor == null || d.ProductUnitFactor <= 0 ? 1 : d.ProductUnitFactor;
             d.ProductUnitName = clean(d.ProductUnitName).isEmpty() ? "UNIDAD" : d.ProductUnitName;
+            var priceAmounts = StockMovementPriceCalculator.normalize(
+                    d.NumUnit, d.NumUnitPrice, d.NumTotalPrice
+            );
+            d.NumUnitPrice = priceAmounts.unitPrice();
+            d.NumTotalPrice = priceAmounts.totalPrice();
+            head.NumTotalPrice = StockMovementPriceCalculator.add(
+                    head.NumTotalPrice, d.NumTotalPrice
+            );
             d.LotNumber = clean(d.LotNumber);
             d.NumUnitPending = 0;
             d.NumUnitResolvedIn = 0;

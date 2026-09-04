@@ -11,6 +11,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "transfer_det")
@@ -27,6 +28,8 @@ public class TransferDetEntity extends AuditTableEntity implements Serializable 
     public String WarehouseCodOrigin;
     public String WarehouseCodDest;
     public int NumUnit;
+    public BigDecimal NumUnitPrice = BigDecimal.ZERO;
+    public BigDecimal NumTotalPrice = BigDecimal.ZERO;
     public String ProductUnitName = "NIU";
     public int ProductUnitFactor = 1;
     public int NumUnitDispatch;

@@ -94,6 +94,16 @@ public class StockEntryBulkLoadHandler implements BulkLoadTypeHandler {
             line.NumUnit = BulkLoadHandlerSupport.integer(
                     detail.Payload.get("NumPhysicalStock")
             );
+            line.NumUnitPrice = BulkLoadHandlerSupport.decimal(
+                    detail.Payload.get("NumUnitPrice")
+            );
+            String lotNumber = BulkLoadHandlerSupport.text(
+                    detail.Payload.get("LotNumber")
+            );
+            line.LotNumber = lotNumber.isBlank() ? null : lotNumber;
+            line.ExpirationDate = BulkLoadHandlerSupport.date(
+                    detail.Payload.get("ExpirationDate")
+            );
             request.DetailList.add(line);
         }
 

@@ -24,6 +24,7 @@ BEGIN
           `StoreCodRequestedBy` varchar(4) DEFAULT NULL COMMENT 'Codigo del local que solicita/ordena la transferencia (ej. super local central). Puede ser distinto a origen/destino',
           `TransferStatus` char(1) NOT NULL DEFAULT 'P' COMMENT 'Estado del proceso: P=Pending, T=Direct transfer draft, C=Confirmed, D=Dispatched, F=Finalized, R=Rejected, X=Cancelled',
           `ReceiveStatus` char(1) NOT NULL DEFAULT 'P' COMMENT 'Estado de recepcion: P=Pending, C=Confirmed, R=Rejected, X=Cancelled',
+          `NumTotalPrice` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Monto total del documento, calculado como la suma de sus detalles',
           `DispatchDate` datetime DEFAULT NULL COMMENT 'Fecha/hora real de despacho desde origen',
           `ArrivalDate` datetime DEFAULT NULL COMMENT 'Fecha/hora real de recepcion/llegada a destino',
           `UserOriginConfirm` varchar(16) DEFAULT NULL COMMENT 'Usuario que confirma/autoriza la salida en el local origen',
@@ -45,7 +46,8 @@ BEGIN
           KEY `fk_transfer_request_head_store_reqby` (`StoreCodRequestedBy`),
           CONSTRAINT `fk_transfer_request_head_store_dest` FOREIGN KEY (`StoreCodDest`) REFERENCES `store` (`StoreCod`),
           CONSTRAINT `fk_transfer_request_head_store_origin` FOREIGN KEY (`StoreCodOrigin`) REFERENCES `store` (`StoreCod`),
-          CONSTRAINT `fk_transfer_request_head_store_reqby` FOREIGN KEY (`StoreCodRequestedBy`) REFERENCES `store` (`StoreCod`)
+          CONSTRAINT `fk_transfer_request_head_store_reqby` FOREIGN KEY (`StoreCodRequestedBy`) REFERENCES `store` (`StoreCod`),
+          CONSTRAINT `chk_transfer_request_head_total_price` CHECK (`NumTotalPrice` >= 0)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Cabecera de solicitud de transferencia de productos entre locales';
 
         SELECT 'Tabla transfer_request_head creada desde cero.' AS Mensaje;
@@ -64,6 +66,27 @@ BEGIN
                 COMMENT 'Estado de recepcion: P=Pending, C=Confirmed, R=Rejected, X=Cancelled'
                 AFTER `TransferStatus`;
             SELECT 'Columna ReceiveStatus agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'transfer_request_head'
+              AND column_name = 'NumTotalPrice'
+        ) THEN
+            ALTER TABLE `transfer_request_head`
+                ADD COLUMN `NumTotalPrice` decimal(16,2) NOT NULL DEFAULT '0.00'
+                COMMENT 'Monto total del documento, calculado como la suma de sus detalles'
+                AFTER `ReceiveStatus`;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.table_constraints
+            WHERE table_schema = DATABASE() AND table_name = 'transfer_request_head'
+              AND constraint_name = 'chk_transfer_request_head_total_price'
+        ) THEN
+            ALTER TABLE `transfer_request_head`
+                ADD CONSTRAINT `chk_transfer_request_head_total_price`
+                CHECK (`NumTotalPrice` >= 0);
         END IF;
 
         IF NOT EXISTS (

@@ -264,6 +264,8 @@ public class TransferCreateService extends SessionService {
                 det.WarehouseCodOrigin = detRequest.WarehouseCodOrigin;
                 det.WarehouseCodDest = detRequest.WarehouseCodDest;
                 det.NumUnit = detRequest.NumUnit > 0 ? detRequest.NumUnit : detRequest.NumUnitDispatch;
+                det.NumUnitPrice = detRequest.NumUnitPrice;
+                det.NumTotalPrice = detRequest.NumTotalPrice;
                 det.NumUnitDispatch = detRequest.NumUnitDispatch;
                 det.NumUnitReception = 0;
                 det.ProductUnitName = detRequest.ProductUnitName;

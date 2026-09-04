@@ -25,6 +25,8 @@ BEGIN
           `WarehouseCodOrigin` varchar(8) DEFAULT NULL COMMENT 'Código de almacén origen (FK warehouse.WarehouseCod). Null si no se usa almacén',
           `WarehouseCodDest` varchar(8) DEFAULT NULL COMMENT 'Código de almacén destino (FK warehouse.WarehouseCod). Null si no se usa almacén',
           `NumUnit` decimal(16,3) NOT NULL COMMENT 'Cantidad de unidades a transferir (permite decimales si aplica)',
+          `NumUnitPrice` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Precio por unidad interna del producto',
+          `NumTotalPrice` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Monto total correspondiente al detalle',
           `ProductUnitName` varchar(32) NOT NULL DEFAULT 'NIU' COMMENT 'Unidad visible usada al registrar el detalle',
           `ProductUnitFactor` int NOT NULL DEFAULT '1' COMMENT 'Factor usado al registrar el detalle',
           `NumUnitDispatch` decimal(16,3) DEFAULT NULL COMMENT 'Cantidad de unidades efectivamente despachadas',
@@ -46,7 +48,8 @@ BEGIN
           CONSTRAINT `fk_transfer_det_head` FOREIGN KEY (`TransferCod`) REFERENCES `transfer_head` (`TransferCod`),
           CONSTRAINT `fk_transfer_det_product` FOREIGN KEY (`ProductCod`) REFERENCES `product` (`ProductCod`),
           CONSTRAINT `fk_transfer_det_wh_dest` FOREIGN KEY (`WarehouseCodDest`) REFERENCES `warehouse` (`WarehouseCod`),
-          CONSTRAINT `fk_transfer_det_wh_origin` FOREIGN KEY (`WarehouseCodOrigin`) REFERENCES `warehouse` (`WarehouseCod`)
+          CONSTRAINT `fk_transfer_det_wh_origin` FOREIGN KEY (`WarehouseCodOrigin`) REFERENCES `warehouse` (`WarehouseCod`),
+          CONSTRAINT `chk_transfer_det_prices` CHECK (`NumUnitPrice` >= 0 AND `NumTotalPrice` >= 0)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='Detalle de productos transferidos entre locales (ítems de la transferencia)';
 
         SELECT 'Tabla transfer_det creada desde cero.' AS Mensaje;
@@ -56,6 +59,38 @@ BEGIN
         -- CASO: LA TABLA YA EXISTE -> APLICAR ALTERS
         -- =============================================
         
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'transfer_det'
+              AND column_name = 'NumUnitPrice'
+        ) THEN
+            ALTER TABLE `transfer_det`
+                ADD COLUMN `NumUnitPrice` decimal(16,2) NOT NULL DEFAULT '0.00'
+                COMMENT 'Precio por unidad interna del producto'
+                AFTER `NumUnit`;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'transfer_det'
+              AND column_name = 'NumTotalPrice'
+        ) THEN
+            ALTER TABLE `transfer_det`
+                ADD COLUMN `NumTotalPrice` decimal(16,2) NOT NULL DEFAULT '0.00'
+                COMMENT 'Monto total correspondiente al detalle'
+                AFTER `NumUnitPrice`;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.table_constraints
+            WHERE table_schema = DATABASE() AND table_name = 'transfer_det'
+              AND constraint_name = 'chk_transfer_det_prices'
+        ) THEN
+            ALTER TABLE `transfer_det`
+                ADD CONSTRAINT `chk_transfer_det_prices`
+                CHECK (`NumUnitPrice` >= 0 AND `NumTotalPrice` >= 0);
+        END IF;
+
         -- AGREGANDO COLUMNA ItemNumber
         IF NOT EXISTS (
             SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'transfer_det' 

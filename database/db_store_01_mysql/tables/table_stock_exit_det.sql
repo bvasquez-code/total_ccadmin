@@ -27,6 +27,8 @@ BEGIN
           `ProductUnitName` varchar(32) NOT NULL DEFAULT 'NIU' COMMENT 'Unidad visible usada al registrar el detalle',
           `ProductUnitFactor` int NOT NULL DEFAULT '1' COMMENT 'Factor de conversion entre unidad visible y unidad interna',
           `NumUnit` int NOT NULL COMMENT 'Cantidad interna original que se pretende retirar',
+          `NumUnitPrice` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Precio por unidad interna del producto',
+          `NumTotalPrice` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Monto total correspondiente al detalle',
           `NumUnitPending` int NOT NULL DEFAULT '0' COMMENT 'Cantidad interna que permanece no disponible',
           `NumUnitResolvedIn` int NOT NULL DEFAULT '0' COMMENT 'Cantidad interna resuelta que regresa a disponible',
           `NumUnitResolvedOut` int NOT NULL DEFAULT '0' COMMENT 'Cantidad interna resuelta que sale definitivamente',
@@ -67,6 +69,7 @@ BEGIN
               AND (`NumUnitPending` + `NumUnitResolvedIn` + `NumUnitResolvedOut`) <= `NumUnit`
           ),
           CONSTRAINT `chk_stock_exit_det_factor` CHECK (`ProductUnitFactor` > 0),
+          CONSTRAINT `chk_stock_exit_det_prices` CHECK (`NumUnitPrice` >= 0 AND `NumTotalPrice` >= 0),
           CONSTRAINT `chk_stock_exit_det_resolved_out_type` CHECK (
               `ResolvedOutType` IS NULL OR `ResolvedOutType` in (_utf8mb4'B',_utf8mb4'D')
           ),
@@ -87,6 +90,38 @@ BEGIN
         -- =============================================
         -- CASO: LA TABLA YA EXISTE -> APLICAR ALTERS
         -- =============================================
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'stock_exit_det'
+              AND column_name = 'NumUnitPrice'
+        ) THEN
+            ALTER TABLE `stock_exit_det`
+                ADD COLUMN `NumUnitPrice` decimal(16,2) NOT NULL DEFAULT '0.00'
+                COMMENT 'Precio por unidad interna del producto'
+                AFTER `NumUnit`;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'stock_exit_det'
+              AND column_name = 'NumTotalPrice'
+        ) THEN
+            ALTER TABLE `stock_exit_det`
+                ADD COLUMN `NumTotalPrice` decimal(16,2) NOT NULL DEFAULT '0.00'
+                COMMENT 'Monto total correspondiente al detalle'
+                AFTER `NumUnitPrice`;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.table_constraints
+            WHERE table_schema = DATABASE() AND table_name = 'stock_exit_det'
+              AND constraint_name = 'chk_stock_exit_det_prices'
+        ) THEN
+            ALTER TABLE `stock_exit_det`
+                ADD CONSTRAINT `chk_stock_exit_det_prices`
+                CHECK (`NumUnitPrice` >= 0 AND `NumTotalPrice` >= 0);
+        END IF;
+
         IF NOT EXISTS (
             SELECT * FROM information_schema.columns
             WHERE table_schema = DATABASE() AND table_name = 'stock_exit_det'

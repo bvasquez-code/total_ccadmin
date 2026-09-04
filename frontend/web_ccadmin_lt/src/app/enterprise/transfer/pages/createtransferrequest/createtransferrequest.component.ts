@@ -51,6 +51,7 @@ export class CreatetransferrequestComponent implements OnInit, IRegisterForm<Tra
   conversionValidationMessage: string = '';
   isSavingDetail: boolean = false;
   selectedVisibleQuantity: number = 0;
+  isProductSearchOpen: boolean = true;
 
   constructor(
     private transferService: TransferService,

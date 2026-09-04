@@ -3,6 +3,7 @@ package com.ccadmin.app.inventory.service;
 import com.ccadmin.app.bulkload.model.constants.BulkLoadConstants;
 import com.ccadmin.app.bulkload.model.dto.*;
 import com.ccadmin.app.inventory.model.constants.StockMovementConstants;
+import com.ccadmin.app.inventory.model.calculation.StockMovementPriceCalculator;
 import com.ccadmin.app.inventory.model.dto.*;
 import com.ccadmin.app.inventory.model.entity.StockEntryDetEntity;
 import com.ccadmin.app.inventory.model.entity.StockEntryHeadEntity;
@@ -39,6 +40,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
@@ -159,6 +164,12 @@ public class StockEntryCreateService extends SessionService {
         int visibleQuantity = stockMovementValidationService.positive(
                 request.Quantity, "La cantidad"
         );
+        BigDecimal unitPrice = parseBulkUnitPrice(request.NumUnitPrice);
+        if (unitPrice == null) {
+            throw new IllegalArgumentException(
+                    "El precio unitario debe cumplir NUMERO(16,2) y no ser negativo"
+            );
+        }
         String storeCod = getStoreCod();
         String userCod = getUserCod();
 
@@ -212,6 +223,9 @@ public class StockEntryCreateService extends SessionService {
                 .isEmpty() ? "NIU" : productConfig.ProductUnitName;
         stockEntryDetail.ProductUnitFactor = productUnitFactor;
         stockEntryDetail.NumUnit = internalQuantity;
+        stockEntryDetail.NumUnitPrice = unitPrice;
+        stockEntryDetail.LotNumber = request.LotNumber;
+        stockEntryDetail.ExpirationDate = request.ExpirationDate;
         stockEntryDetail.Observation = "Carga inicial desde creacion rapida";
 
         List<StockEntryDetEntity> stockEntryDetails =
@@ -257,6 +271,15 @@ public class StockEntryCreateService extends SessionService {
             detail.Payload.put("StoreCod", storeCod);
             detail.Payload.put("NumPhysicalStock",
                     context.quantityMap.getOrDefault(row.RowNumber, row.Value));
+            detail.Payload.put("NumUnitPrice",
+                    context.unitPriceMap.getOrDefault(
+                            row.RowNumber, BigDecimal.ZERO
+                    ));
+            detail.Payload.put("LotNumber", context.lotNumberMap.get(row.RowNumber));
+            detail.Payload.put(
+                    "ExpirationDate",
+                    context.expirationDateMap.get(row.RowNumber)
+            );
             detail.Payload.put("Variant", BulkLoadConstants.DEFAULT_VARIANT);
             detail.Payload.put("WarehouseCod",
                     context.warehouse == null ? null : context.warehouse.WarehouseCod);
@@ -487,6 +510,44 @@ public class StockEntryCreateService extends SessionService {
                 context.quantityMap.put(row.RowNumber, quantity);
             }
 
+            Object rawUnitPrice = payloadValue(row, "NumUnitPrice");
+            BigDecimal unitPrice = parseBulkUnitPrice(rawUnitPrice);
+            if (unitPrice == null) {
+                context.rowError(row.RowNumber, bulkError(
+                        "PRODUCTO_STOCK", rowNumber, null,
+                        "NumUnitPrice", text(rawUnitPrice), "PRICE_FORMAT",
+                        "El precio unitario debe cumplir NUMERO(16,2) y no ser negativo"
+                ));
+            } else {
+                context.unitPriceMap.put(row.RowNumber, unitPrice);
+            }
+
+            String lotNumber = text(payloadValue(row, "LotNumber"));
+            if (lotNumber.length() > 32) {
+                context.rowError(row.RowNumber, bulkError(
+                        "PRODUCTO_STOCK", rowNumber, null,
+                        "LotNumber", lotNumber, "LOT_LENGTH",
+                        "El lote admite hasta 32 caracteres"
+                ));
+            } else {
+                context.lotNumberMap.put(
+                        row.RowNumber, lotNumber.isBlank() ? null : lotNumber
+                );
+            }
+
+            Object rawExpirationDate = payloadValue(row, "ExpirationDate");
+            String expirationDate = parseBulkExpirationDate(rawExpirationDate);
+            if (!text(rawExpirationDate).isBlank() && expirationDate == null) {
+                context.rowError(row.RowNumber, bulkError(
+                        "PRODUCTO_STOCK", rowNumber, null,
+                        "ExpirationDate", text(rawExpirationDate),
+                        "EXPIRATION_DATE_FORMAT",
+                        "La fecha de vencimiento debe cumplir DD/MM/YYYY"
+                ));
+            } else {
+                context.expirationDateMap.put(row.RowNumber, expirationDate);
+            }
+
             ProductVariantId variantId = new ProductVariantId();
             variantId.ProductCod = productCod;
             variantId.Variant = BulkLoadConstants.DEFAULT_VARIANT;
@@ -549,6 +610,46 @@ public class StockEntryCreateService extends SessionService {
         }
     }
 
+    private BigDecimal parseBulkUnitPrice(Object value) {
+        String text = text(value);
+        if (text.isBlank()) return BigDecimal.ZERO.setScale(2);
+        if (!text.matches("^[+-]?\\d+(?:[.,]\\d+)?$")) return null;
+        try {
+            BigDecimal price = new BigDecimal(text.replace(",", "."));
+            if (price.signum() < 0
+                    || price.compareTo(new BigDecimal("99999999999999.99")) > 0
+                    || Math.max(0, price.stripTrailingZeros().scale()) > 2) {
+                return null;
+            }
+            return price.setScale(2);
+        } catch (RuntimeException exception) {
+            return null;
+        }
+    }
+
+    private String parseBulkExpirationDate(Object value) {
+        String text = text(value);
+        if (text.isBlank()) return null;
+        try {
+            return LocalDate.parse(text).toString();
+        } catch (DateTimeParseException ignored) {
+            try {
+                return LocalDate.parse(
+                        text,
+                        DateTimeFormatter.ofPattern("dd/MM/uuuu")
+                                .withResolverStyle(ResolverStyle.STRICT)
+                ).toString();
+            } catch (DateTimeParseException invalidDate) {
+                return null;
+            }
+        }
+    }
+
+    private Object payloadValue(BulkLoadSourceRowDto row, String field) {
+        return row.Payload != null && row.Payload.containsKey(field)
+                ? row.Payload.get(field) : null;
+    }
+
     private BulkLoadErrorDto bulkError(String sheet, Integer row, String store,
                                        String field, String value,
                                        String code, String detail) {
@@ -572,6 +673,9 @@ public class StockEntryCreateService extends SessionService {
         private final List<BulkLoadErrorDto> globalErrors = new ArrayList<>();
         private final Map<Integer, List<BulkLoadErrorDto>> rowErrorMap = new HashMap<>();
         private final Map<Integer, Object> quantityMap = new HashMap<>();
+        private final Map<Integer, BigDecimal> unitPriceMap = new HashMap<>();
+        private final Map<Integer, String> lotNumberMap = new HashMap<>();
+        private final Map<Integer, String> expirationDateMap = new HashMap<>();
         private final Map<Integer, ProductConfigEntity> configMap = new HashMap<>();
 
         private void globalError(BulkLoadErrorDto error) {
@@ -750,6 +854,7 @@ public class StockEntryCreateService extends SessionService {
         );
         stockEntryHead.ProcessType = StockMovementConstants.PROCESS_ORIGINAL;
         stockEntryHead.OriginStockEntryCod = null;
+        stockEntryHead.NumTotalPrice = BigDecimal.ZERO;
         for (StockEntryDetEntity stockEntryDetail : stockEntryDetails) {
             stockMovementValidationService.positive(
                     stockEntryDetail.NumUnit, "La cantidad"
@@ -767,7 +872,24 @@ public class StockEntryCreateService extends SessionService {
             stockEntryDetail.ProductUnitName =
                     clean(stockEntryDetail.ProductUnitName).isEmpty()
                             ? "UNIDAD" : stockEntryDetail.ProductUnitName;
-            stockEntryDetail.LotNumber = clean(stockEntryDetail.LotNumber);
+            var priceAmounts = StockMovementPriceCalculator.normalize(
+                    stockEntryDetail.NumUnit,
+                    stockEntryDetail.NumUnitPrice,
+                    stockEntryDetail.NumTotalPrice
+            );
+            stockEntryDetail.NumUnitPrice = priceAmounts.unitPrice();
+            stockEntryDetail.NumTotalPrice = priceAmounts.totalPrice();
+            stockEntryHead.NumTotalPrice = StockMovementPriceCalculator.add(
+                    stockEntryHead.NumTotalPrice,
+                    stockEntryDetail.NumTotalPrice
+            );
+            String lotNumber = clean(stockEntryDetail.LotNumber);
+            if (lotNumber.length() > 32) {
+                throw new IllegalArgumentException(
+                        "El lote admite hasta 32 caracteres"
+                );
+            }
+            stockEntryDetail.LotNumber = lotNumber.isBlank() ? null : lotNumber;
             stockEntryDetail.NumUnitPending = 0;
             stockEntryDetail.NumUnitResolvedIn = 0;
             stockEntryDetail.NumUnitResolvedOut = 0;
@@ -880,6 +1002,10 @@ public class StockEntryCreateService extends SessionService {
 
     private String clean(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private String text(Object value) {
+        return value == null ? "" : value.toString().trim();
     }
 
     private String appendObservation(String current, String added) {

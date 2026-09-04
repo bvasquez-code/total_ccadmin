@@ -1,5 +1,9 @@
 package com.ccadmin.app.inventory.service;
 
+import com.ccadmin.app.bulkload.model.dto.BulkLoadParsedRequestDto;
+import com.ccadmin.app.bulkload.model.dto.BulkLoadPreparedDto;
+import com.ccadmin.app.bulkload.model.dto.BulkLoadSourceRowDto;
+import com.ccadmin.app.bulkload.model.dto.BulkLoadStoreRowDto;
 import com.ccadmin.app.inventory.model.constants.StockMovementConstants;
 import com.ccadmin.app.inventory.model.dto.StockEntryBulkCreateDto;
 import com.ccadmin.app.inventory.model.dto.StockEntryBulkLineDto;
@@ -34,10 +38,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.math.BigDecimal;
+import java.sql.Date;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -163,6 +170,9 @@ class StockEntryCreateServiceTest {
         StockEntryQuickCreateDto request = new StockEntryQuickCreateDto();
         request.ProductCod = "00000035";
         request.Quantity = 7;
+        request.NumUnitPrice = new BigDecimal("12.50");
+        request.LotNumber = "LOTE-QUICK";
+        request.ExpirationDate = Date.valueOf("2027-10-30");
 
         ProductEntity product = new ProductEntity();
         product.ProductCod = request.ProductCod;
@@ -213,9 +223,86 @@ class StockEntryCreateServiceTest {
                     StockEntryDetEntity detail = details.iterator().next();
                     return request.ProductCod.equals(detail.ProductCod)
                             && warehouse.WarehouseCod.equals(detail.WarehouseCod)
-                            && detail.NumUnit == 7;
+                            && detail.NumUnit == 7
+                            && request.NumUnitPrice.equals(detail.NumUnitPrice)
+                            && request.LotNumber.equals(detail.LotNumber)
+                            && request.ExpirationDate.equals(detail.ExpirationDate);
                 })
         );
         verify(kardexCreateService).saveAll(anyList(), anyList());
+    }
+
+    @Test
+    void bulkPreparationKeepsOptionalCostLotAndExpirationDate() {
+        BulkLoadParsedRequestDto request = new BulkLoadParsedRequestDto();
+        BulkLoadSourceRowDto row = new BulkLoadSourceRowDto();
+        row.RowNumber = 4;
+        row.ProductCod = "TEC008";
+        row.Value = "7";
+        row.Payload.put("NumUnitPrice", "12.50");
+        row.Payload.put("LotNumber", " LOTE-001 ");
+        row.Payload.put("ExpirationDate", "30/10/2027");
+        request.RowList.add(row);
+        BulkLoadSourceRowDto rowWithoutOptionalValues =
+                new BulkLoadSourceRowDto();
+        rowWithoutOptionalValues.RowNumber = 5;
+        rowWithoutOptionalValues.ProductCod = "TEC009";
+        rowWithoutOptionalValues.Value = "3";
+        request.RowList.add(rowWithoutOptionalValues);
+        BulkLoadStoreRowDto storeRow = new BulkLoadStoreRowDto();
+        storeRow.RowNumber = 4;
+        storeRow.StoreCod = "T001";
+        request.StoreList.add(storeRow);
+
+        com.ccadmin.app.store.model.entity.StoreEntity store =
+                new com.ccadmin.app.store.model.entity.StoreEntity();
+        store.StoreCod = "T001";
+        WarehouseEntity warehouse = new WarehouseEntity();
+        warehouse.WarehouseCod = "T0010001";
+        ProductEntity product = new ProductEntity();
+        product.ProductCod = row.ProductCod;
+        ProductVariantEntity variant = new ProductVariantEntity(row.ProductCod);
+        ProductConfigEntity productConfig = new ProductConfigEntity();
+        productConfig.ProductCod = row.ProductCod;
+        productConfig.StoreCod = store.StoreCod;
+        productConfig.ProductUnitName = "NIU";
+        productConfig.ProductUnitFactor = 1;
+
+        when(businessConfigRepository.countActiveByGroupIdAndConfigCod(
+                8, "CARGA_MASIVA_STOCK"
+        )).thenReturn(1);
+        when(storeRepository.findById("T001")).thenReturn(Optional.of(store));
+        when(warehouseShared.findMainWarehouseByStore("T001"))
+                .thenReturn(warehouse);
+        when(productRepository.findById(
+                org.mockito.ArgumentMatchers.anyString()
+        )).thenReturn(Optional.of(product));
+        when(productVariantRepository.findById(
+                org.mockito.ArgumentMatchers.any()
+        )).thenReturn(Optional.of(variant));
+        when(productConfigRepository.findById(
+                org.mockito.ArgumentMatchers.any(ProductConfigID.class)
+        )).thenReturn(Optional.of(productConfig));
+        when(productInfoRepository.existsById(
+                org.mockito.ArgumentMatchers.any()
+        )).thenReturn(true);
+        when(productInfoWarehouseRepository.existsById(
+                org.mockito.ArgumentMatchers.any()
+        )).thenReturn(true);
+
+        BulkLoadPreparedDto result =
+                stockEntryCreateService.prepareBulkStockLoad(request);
+
+        assertEquals(0, result.ErrorList.size());
+        assertEquals(new BigDecimal("12.50"),
+                result.DetailList.getFirst().Payload.get("NumUnitPrice"));
+        assertEquals("LOTE-001",
+                result.DetailList.getFirst().Payload.get("LotNumber"));
+        assertEquals("2027-10-30",
+                result.DetailList.getFirst().Payload.get("ExpirationDate"));
+        assertEquals(new BigDecimal("0.00"),
+                result.DetailList.get(1).Payload.get("NumUnitPrice"));
+        assertNull(result.DetailList.get(1).Payload.get("LotNumber"));
+        assertNull(result.DetailList.get(1).Payload.get("ExpirationDate"));
     }
 }

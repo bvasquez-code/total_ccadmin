@@ -11,6 +11,8 @@ export class TransferRequestDetEntity extends AuditTableEntity {
     public WarehouseCodOrigin: string
     public WarehouseCodDest: string;
     public NumUnit: number;
+    public NumUnitPrice: number;
+    public NumTotalPrice: number;
     public ProductUnitName: string;
     public ProductUnitFactor: number;
     public NumUnitDispatch: number;
@@ -30,6 +32,8 @@ export class TransferRequestDetEntity extends AuditTableEntity {
         this.WarehouseCodOrigin = '';
         this.WarehouseCodDest = '';
         this.NumUnit = 0;
+        this.NumUnitPrice = 0;
+        this.NumTotalPrice = 0;
         this.ProductUnitName = 'NIU';
         this.ProductUnitFactor = 1;
         this.NumUnitDispatch = 0;
@@ -49,6 +53,8 @@ export class TransferRequestDetEntity extends AuditTableEntity {
         entity.WarehouseCodOrigin = this.WarehouseCodOrigin;
         entity.WarehouseCodDest = this.WarehouseCodDest;
         entity.NumUnit = this.NumUnit;
+        entity.NumUnitPrice = this.NumUnitPrice;
+        entity.NumTotalPrice = this.NumTotalPrice;
         entity.ProductUnitName = this.ProductUnitName;
         entity.ProductUnitFactor = this.ProductUnitFactor;
         entity.NumUnitDispatch = this.NumUnitDispatch;

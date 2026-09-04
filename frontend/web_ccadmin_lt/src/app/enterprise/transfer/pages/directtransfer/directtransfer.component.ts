@@ -72,6 +72,7 @@ export class DirecttransferComponent implements OnInit {
   isSavingDetail: boolean = false;
   hasTransferDraft: boolean = false;
   selectedVisibleQuantity: number = 0;
+  isProductSearchOpen: boolean = true;
   private readonly maxLotNumberLength: number = 32;
 
   transportModeList = [

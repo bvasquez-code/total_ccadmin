@@ -14,6 +14,8 @@ import com.ccadmin.app.inventory.model.entity.StockExitHeadEntity;
 import com.ccadmin.app.shared.model.myconst.StatusConst;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
+import java.sql.Date;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -55,10 +57,12 @@ class InventoryModelFactoryTest {
         assertEquals(source.ProductCod, detail.ProductCod);
         assertEquals(source.Variant, detail.Variant);
         assertEquals(source.WarehouseCod, detail.WarehouseCod);
-        assertEquals("", detail.LotNumber);
+        assertEquals(source.LotNumber, detail.LotNumber);
+        assertEquals(source.ExpirationDate, detail.ExpirationDate);
         assertEquals(source.ProductUnitName, detail.ProductUnitName);
         assertEquals(source.ProductUnitFactor, detail.ProductUnitFactor);
         assertEquals(source.NumUnit, detail.NumUnit);
+        assertEquals(source.NumUnitPrice, detail.NumUnitPrice);
         assertEquals(
                 "Carga masiva " + request.BulkLoadCod
                         + ", fila Excel " + source.SourceRowNumber,
@@ -123,6 +127,9 @@ class InventoryModelFactoryTest {
         line.ProductUnitName = "NIU";
         line.ProductUnitFactor = 1;
         line.NumUnit = 7;
+        line.NumUnitPrice = new BigDecimal("12.50");
+        line.LotNumber = "LOTE-001";
+        line.ExpirationDate = Date.valueOf("2027-10-30");
         request.DetailList.add(line);
         return request;
     }

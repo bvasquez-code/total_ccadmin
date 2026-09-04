@@ -4,6 +4,8 @@ import com.ccadmin.app.bulkload.model.dto.BulkLoadErrorDto;
 import com.ccadmin.app.bulkload.model.dto.BulkLoadSourceRowDto;
 
 import java.math.BigDecimal;
+import java.sql.Date;
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -41,6 +43,15 @@ final class BulkLoadHandlerSupport {
 
     static int integer(Object value) {
         return decimal(value).intValueExact();
+    }
+
+    static Date date(Object value) {
+        if (value instanceof Date date) return date;
+        if (value instanceof java.util.Date date) {
+            return new Date(date.getTime());
+        }
+        String text = text(value);
+        return text.isEmpty() ? null : Date.valueOf(LocalDate.parse(text));
     }
 
     static int sourceRow(Integer rowNumber) {

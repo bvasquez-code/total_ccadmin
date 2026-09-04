@@ -110,6 +110,8 @@ public class TransferRequestDetService extends SessionService {
         detail.WarehouseCodOrigin = source.WarehouseCodOrigin;
         detail.WarehouseCodDest = source.WarehouseCodDest;
         detail.NumUnit = source.NumUnit;
+        detail.NumUnitPrice = source.NumUnitPrice;
+        detail.NumTotalPrice = source.NumTotalPrice;
         detail.ProductUnitName = source.ProductUnitName;
         detail.ProductUnitFactor = source.ProductUnitFactor;
         detail.NumUnitDispatch = source.NumUnitDispatch;

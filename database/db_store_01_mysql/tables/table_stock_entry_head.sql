@@ -24,6 +24,7 @@ BEGIN
           `ReasonCode` varchar(64) DEFAULT NULL COMMENT 'ConfigCod del motivo de entrada. business_config GroupId=8',
           `OriginStockEntryCod` varchar(16) DEFAULT NULL COMMENT 'Codigo de la entrada original. Obligatorio solo para ProcessType=R',
           `ProcessStatus` char(1) NOT NULL DEFAULT 'P' COMMENT 'Estado del proceso: P=Pendiente, C=Confirmado, R=Rechazado, X=Anulado',
+          `NumTotalPrice` decimal(16,2) NOT NULL DEFAULT '0.00' COMMENT 'Monto total del documento, calculado como la suma de sus detalles',
           `Observation` varchar(512) DEFAULT NULL COMMENT 'Observacion general del movimiento',
           `ConfirmUser` varchar(16) DEFAULT NULL COMMENT 'Usuario que confirmo el movimiento',
           `ConfirmDate` datetime DEFAULT NULL COMMENT 'Fecha y hora de confirmacion',
@@ -49,6 +50,7 @@ BEGIN
                   AND `ReasonCode` IS NULL AND `OriginStockEntryCod` IS NOT NULL)
           ),
           CONSTRAINT `chk_stock_entry_head_process_status` CHECK (`ProcessStatus` in (_utf8mb4'P',_utf8mb4'C',_utf8mb4'R',_utf8mb4'X')),
+          CONSTRAINT `chk_stock_entry_head_total_price` CHECK (`NumTotalPrice` >= 0),
           CONSTRAINT `chk_stock_entry_head_status` CHECK (`Status` in (_utf8mb4'A',_utf8mb4'I'))
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
           COMMENT='Cabecera de entradas excepcionales de stock y sus resoluciones';
@@ -58,6 +60,27 @@ BEGIN
         -- =============================================
         -- CASO: LA TABLA YA EXISTE -> APLICAR ALTERS
         -- =============================================
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'stock_entry_head'
+              AND column_name = 'NumTotalPrice'
+        ) THEN
+            ALTER TABLE `stock_entry_head`
+                ADD COLUMN `NumTotalPrice` decimal(16,2) NOT NULL DEFAULT '0.00'
+                COMMENT 'Monto total del documento, calculado como la suma de sus detalles'
+                AFTER `ProcessStatus`;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.table_constraints
+            WHERE table_schema = DATABASE() AND table_name = 'stock_entry_head'
+              AND constraint_name = 'chk_stock_entry_head_total_price'
+        ) THEN
+            ALTER TABLE `stock_entry_head`
+                ADD CONSTRAINT `chk_stock_entry_head_total_price`
+                CHECK (`NumTotalPrice` >= 0);
+        END IF;
+
         IF EXISTS (
             SELECT * FROM information_schema.table_constraints
             WHERE table_schema = DATABASE() AND table_name = 'stock_entry_head'

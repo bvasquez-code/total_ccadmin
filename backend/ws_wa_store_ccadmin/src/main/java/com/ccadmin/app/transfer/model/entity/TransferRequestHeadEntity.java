@@ -7,6 +7,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.Date;
 
 @Entity
@@ -21,6 +22,7 @@ public class TransferRequestHeadEntity extends AuditTableEntity implements Seria
     public String StoreCodRequestedBy;
     public String TransferStatus;
     public String ReceiveStatus;
+    public BigDecimal NumTotalPrice = BigDecimal.ZERO;
     public Date DispatchDate;
     public Date ArrivalDate;
     public String UserOriginConfirm;

@@ -256,6 +256,9 @@
                     || type === constants.TYPE_PRODUCT_CREATE">Producto</th>
                   <th *ngIf="type === constants.TYPE_PRODUCT_PRICE">Precio</th>
                   <th *ngIf="type === constants.TYPE_STOCK_ENTRY">Cantidad a agregar</th>
+                  <th *ngIf="type === constants.TYPE_STOCK_ENTRY">Costo unitario</th>
+                  <th *ngIf="type === constants.TYPE_STOCK_ENTRY">Lote</th>
+                  <th *ngIf="type === constants.TYPE_STOCK_ENTRY">Vencimiento</th>
                   <th *ngIf="type === constants.TYPE_STOCK_ENTRY">Almacén</th>
                   <th *ngIf="type === constants.TYPE_PRODUCT_CREATE">Nombre</th>
                   <th *ngIf="type === constants.TYPE_PRODUCT_CREATE">Marca</th>
@@ -293,6 +296,15 @@
                   </td>
                   <td *ngIf="type === constants.TYPE_STOCK_ENTRY">
                     {{detailValue(detail, 'NumPhysicalStock')}}
+                  </td>
+                  <td *ngIf="type === constants.TYPE_STOCK_ENTRY">
+                    {{detailValue(detail, 'NumUnitPrice') || '0'}}
+                  </td>
+                  <td *ngIf="type === constants.TYPE_STOCK_ENTRY">
+                    {{detailValue(detail, 'LotNumber') || '—'}}
+                  </td>
+                  <td *ngIf="type === constants.TYPE_STOCK_ENTRY">
+                    {{detailValue(detail, 'ExpirationDate') || '—'}}
                   </td>
                   <td *ngIf="type === constants.TYPE_STOCK_ENTRY">
                     {{detailValue(detail, 'WarehouseCod')}}

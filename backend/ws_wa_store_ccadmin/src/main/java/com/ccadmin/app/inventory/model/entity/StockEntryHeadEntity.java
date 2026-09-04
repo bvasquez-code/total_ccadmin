@@ -7,6 +7,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.Date;
 
 @Entity
@@ -20,6 +21,7 @@ public class StockEntryHeadEntity extends AuditTableEntity implements Serializab
     public String ReasonCode;
     public String OriginStockEntryCod;
     public String ProcessStatus;
+    public BigDecimal NumTotalPrice = BigDecimal.ZERO;
     public String Observation;
     public String ConfirmUser;
     public Date ConfirmDate;

@@ -36,19 +36,26 @@
 
             <hr />
 
-            <div class="row">
-              <div class="col-md-6">
-                <h5 class="text-primary">Productos</h5>
+            <div class="mb-4">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="text-primary mb-0">Productos</h5>
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                  (click)="isProductSearchOpen = !isProductSearchOpen"
+                  [attr.aria-expanded]="isProductSearchOpen">
+                  <i class="fa mr-1" [ngClass]="isProductSearchOpen ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                  {{ isProductSearchOpen ? 'Ocultar buscador' : 'Mostrar buscador' }}
+                </button>
+              </div>
+
+              <ng-container *ngIf="isProductSearchOpen">
                 <div class="d-flex align-items-center mb-2">
                   <input type="text" class="form-control mr-2" placeholder="Buscar producto" #txtSearch
                     (keyup.enter)="FindAllProduct(1)" />
                   <button class="btn btn-primary" (click)="FindAllProduct(1)" [disabled]="isSavingDetail">Buscar</button>
                 </div>
 
-
-
-                <div class="table-responsive">
-                  <table class="table table-bordered">
+                <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+                  <table class="table table-bordered table-hover mb-0">
                     <thead>
                       <tr>
                         <th>Código</th>
@@ -80,47 +87,46 @@
                       </tr>
                     </tbody>
                   </table>
-
-                  <!-- Pagination -->
-                  <div class="d-flex justify-content-end mt-2">
-                    <a type="button" class="btn btn-sm btn-secondary mr-1" (click)="FindAllProductNext(-1)">Prev</a>
-                    <a type="button" class="btn btn-sm btn-secondary" (click)="FindAllProductNext(1)">Next</a>
-                  </div>
                 </div>
-              </div>
 
-              <div class="col-md-6">
-                <h5 class="text-primary">Detalle de solicitud</h5>
-                <div class="table-responsive">
-                  <table class="table table-bordered">
-                    <thead>
-                      <tr>
-                        <th>Producto</th>
-                        <th class="text-center">Cantidad</th>
-                        <th class="text-center">Opciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr *ngFor="let detail of transferRequestRegister.transferDetList">
-                        <td>{{ detail.Product.ProductName }}</td>
-                        <td class="text-center">{{ toVisibleQuantity(detail.NumUnit, detail.ProductUnitFactor) }} {{ detail.ProductUnitName }}</td>
-                        <td class="text-center text-nowrap">
-                          <button type="button" class="btn btn-sm btn-info mr-1" (click)="editDetail(detail)"
-                            data-toggle="modal" data-target="#modalProduct" [disabled]="isSavingDetail" title="Editar">
-                            <i class="fa fa-edit"></i>
-                          </button>
-                          <button type="button" class="btn btn-sm btn-danger" (click)="removeProduct(detail)"
-                            [disabled]="isSavingDetail" title="Eliminar">
-                            <i class="fa fa-trash"></i>
-                          </button>
-                        </td>
-                      </tr>
-                      <tr *ngIf="transferRequestRegister.transferDetList.length === 0">
-                        <td colspan="3" class="text-center text-muted">Sin productos seleccionados</td>
-                      </tr>
-                    </tbody>
-                  </table>
+                <div class="d-flex justify-content-end mt-2">
+                  <a type="button" class="btn btn-sm btn-secondary mr-1" (click)="FindAllProductNext(-1)">Prev</a>
+                  <a type="button" class="btn btn-sm btn-secondary" (click)="FindAllProductNext(1)">Next</a>
                 </div>
+              </ng-container>
+            </div>
+
+            <div>
+              <h5 class="text-primary">Detalle de solicitud</h5>
+              <div class="table-responsive">
+                <table class="table table-bordered">
+                  <thead>
+                    <tr>
+                      <th>Producto</th>
+                      <th class="text-center">Cantidad</th>
+                      <th class="text-center">Opciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let detail of transferRequestRegister.transferDetList">
+                      <td>{{ detail.Product.ProductName }}</td>
+                      <td class="text-center">{{ toVisibleQuantity(detail.NumUnit, detail.ProductUnitFactor) }} {{ detail.ProductUnitName }}</td>
+                      <td class="text-center text-nowrap">
+                        <button type="button" class="btn btn-sm btn-info mr-1" (click)="editDetail(detail)"
+                          data-toggle="modal" data-target="#modalProduct" [disabled]="isSavingDetail" title="Editar">
+                          <i class="fa fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-danger" (click)="removeProduct(detail)"
+                          [disabled]="isSavingDetail" title="Eliminar">
+                          <i class="fa fa-trash"></i>
+                        </button>
+                      </td>
+                    </tr>
+                    <tr *ngIf="transferRequestRegister.transferDetList.length === 0">
+                      <td colspan="3" class="text-center text-muted">Sin productos seleccionados</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
 

@@ -28,16 +28,26 @@
 
         <hr />
 
-        <div class="row">
-          <div class="col-md-5">
-            <h5 class="text-primary">Productos</h5>
+        <div class="mb-4">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="text-primary mb-0">Productos</h5>
+            <button type="button" class="btn btn-sm btn-outline-secondary"
+              (click)="isProductSearchOpen = !isProductSearchOpen"
+              [attr.aria-expanded]="isProductSearchOpen">
+              <i class="fa mr-1" [ngClass]="isProductSearchOpen ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+              {{ isProductSearchOpen ? 'Ocultar buscador' : 'Mostrar buscador' }}
+            </button>
+          </div>
+
+          <ng-container *ngIf="isProductSearchOpen">
             <div class="d-flex align-items-center mb-2">
-              <input type="text" class="form-control mr-2" placeholder="Buscar producto" #txtSearch />
+              <input type="text" class="form-control mr-2" placeholder="Buscar producto" #txtSearch
+                (keyup.enter)="FindAllProduct(1)" />
               <button class="btn btn-primary" (click)="FindAllProduct(1)" [disabled]="isSavingDetail">Buscar</button>
             </div>
 
-            <div class="table-responsive">
-              <table class="table table-bordered">
+            <div class="table-responsive" style="max-height: 320px; overflow-y: auto;">
+              <table class="table table-bordered table-hover mb-0">
                 <thead>
                   <tr>
                     <th>Codigo</th>
@@ -69,61 +79,61 @@
                 </tbody>
               </table>
             </div>
+          </ng-container>
+        </div>
+
+        <div>
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="text-primary mb-0">Detalle</h5>
+          </div>
+          <div class="custom-control custom-switch text-right mb-2">
+            <input
+              type="checkbox"
+              class="custom-control-input"
+              id="switchDirectTransferWithLots"
+              name="switchDirectTransferWithLots"
+              [(ngModel)]="isTransferWithLots"
+              [disabled]="isSavingDetail || transferRequestRegister.transferDetList.length > 0">
+            <label class="custom-control-label" for="switchDirectTransferWithLots">
+              Transferir con lotes y fecha de vencimiento
+            </label>
           </div>
 
-          <div class="col-md-7">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-              <h5 class="text-primary mb-0">Detalle</h5>
-            </div>
-            <div class="custom-control custom-switch text-right mb-2">
-              <input
-                type="checkbox"
-                class="custom-control-input"
-                id="switchDirectTransferWithLots"
-                name="switchDirectTransferWithLots"
-                [(ngModel)]="isTransferWithLots"
-                [disabled]="isSavingDetail || transferRequestRegister.transferDetList.length > 0">
-              <label class="custom-control-label" for="switchDirectTransferWithLots">
-                Transferir con lotes y fecha de vencimiento
-              </label>
-            </div>
-
-            <div class="table-responsive">
-              <table class="table table-bordered">
-                <thead>
-                  <tr>
-                    <th>Producto</th>
-                    <th class="text-center">Cantidad</th>
-                    <th *ngIf="isTransferWithLots">Lote</th>
-                    <th *ngIf="isTransferWithLots">Vencimiento</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let detail of transferRequestRegister.transferDetList">
-                    <td>{{ detail.ProductCod +' - '+ detail.Product.ProductName || detail.ProductCod }}</td>
-                    <td class="text-center">{{ toVisibleQuantity(detail.NumUnit, detail.ProductUnitFactor) }} {{ detail.ProductUnitName }}</td>
-                    <td *ngIf="isTransferWithLots">{{ detail.LotNumber || 'SN' }}</td>
-                    <td *ngIf="isTransferWithLots">{{ detail.ExpirationDate ? (detail.ExpirationDate | date:'dd/MM/yyyy') : '' }}</td>
-                    <td class="text-center text-nowrap">
-                      <button type="button" class="btn btn-sm btn-info mr-1"
-                        (click)="editDetail(detail)" data-toggle="modal"
-                        [attr.data-target]="isTransferWithLots ? '#modalLotDispatch' : '#modalProduct'"
-                        [disabled]="isSavingDetail" title="Editar">
-                        <i class="fa fa-edit"></i>
-                      </button>
-                      <button class="btn btn-sm btn-danger" (click)="removeProduct(detail)"
-                        [disabled]="isSavingDetail" title="Eliminar">
-                        <i class="fa fa-trash"></i>
-                      </button>
-                    </td>
-                  </tr>
-                  <tr *ngIf="transferRequestRegister.transferDetList.length === 0">
-                    <td [attr.colspan]="isTransferWithLots ? 5 : 3" class="text-center text-muted">Sin productos seleccionados</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+          <div class="table-responsive">
+            <table class="table table-bordered">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th class="text-center">Cantidad</th>
+                  <th *ngIf="isTransferWithLots">Lote</th>
+                  <th *ngIf="isTransferWithLots">Vencimiento</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let detail of transferRequestRegister.transferDetList">
+                  <td>{{ detail.ProductCod +' - '+ detail.Product.ProductName || detail.ProductCod }}</td>
+                  <td class="text-center">{{ toVisibleQuantity(detail.NumUnit, detail.ProductUnitFactor) }} {{ detail.ProductUnitName }}</td>
+                  <td *ngIf="isTransferWithLots">{{ detail.LotNumber || 'SN' }}</td>
+                  <td *ngIf="isTransferWithLots">{{ detail.ExpirationDate ? (detail.ExpirationDate | date:'dd/MM/yyyy') : '' }}</td>
+                  <td class="text-center text-nowrap">
+                    <button type="button" class="btn btn-sm btn-info mr-1"
+                      (click)="editDetail(detail)" data-toggle="modal"
+                      [attr.data-target]="isTransferWithLots ? '#modalLotDispatch' : '#modalProduct'"
+                      [disabled]="isSavingDetail" title="Editar">
+                      <i class="fa fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" (click)="removeProduct(detail)"
+                      [disabled]="isSavingDetail" title="Eliminar">
+                      <i class="fa fa-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="transferRequestRegister.transferDetList.length === 0">
+                  <td [attr.colspan]="isTransferWithLots ? 5 : 3" class="text-center text-muted">Sin productos seleccionados</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
