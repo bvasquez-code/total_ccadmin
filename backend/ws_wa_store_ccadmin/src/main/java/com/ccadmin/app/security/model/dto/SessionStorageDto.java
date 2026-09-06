@@ -14,6 +14,7 @@ public class SessionStorageDto {
     public String Names;
     public long SessionID;
     public String StoreCod;
+    public List<com.ccadmin.app.store.model.entity.StoreEntity> StoreList;
     public List<AppMenuEntity> AppMenuPermissions;
     public boolean ApplicationInitializationRequired;
     public boolean CompanyInitializationPending;

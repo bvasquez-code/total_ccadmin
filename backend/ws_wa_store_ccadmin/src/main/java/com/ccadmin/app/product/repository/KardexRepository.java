@@ -26,6 +26,33 @@ public interface KardexRepository extends JpaRepository<KardexEntity,Long>, CcAd
             @Param("StoreCod") String StoreCod
     );
 
+    @Query(value = """
+            select k.* from kardex k
+            where k.SourceTable = :sourceTable
+              and k.OperationCod = :operationCode
+              and k.StoreCod = :storeCode
+            order by k.kardexID
+            for update
+            """, nativeQuery = true)
+    List<KardexEntity> findTraceabilityMovementsForUpdate(
+            @Param("sourceTable") String sourceTable,
+            @Param("operationCode") String operationCode,
+            @Param("storeCode") String storeCode
+    );
+
+    @Query(value = """
+            select k.* from kardex k
+            where k.SourceTable = :sourceTable
+              and k.OperationCod = :operationCode
+              and k.StoreCod = :storeCode
+            order by k.kardexID
+            """, nativeQuery = true)
+    List<KardexEntity> findTraceabilityMovements(
+            @Param("sourceTable") String sourceTable,
+            @Param("operationCode") String operationCode,
+            @Param("storeCode") String storeCode
+    );
+
     @Override
     @Query( value = """
             select count(1) from kardex k

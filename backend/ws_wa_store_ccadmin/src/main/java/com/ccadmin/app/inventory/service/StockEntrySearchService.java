@@ -70,11 +70,15 @@ public class StockEntrySearchService extends SessionService {
     }
 
     public StockEntryRegisterDto findById(String code) {
+        return this.findById(code, getStoreCod());
+    }
+
+    public StockEntryRegisterDto findById(String code, String storeCode) {
         StockEntryHeadEntity stockEntryHead = stockEntryHeadRepository.findById(code)
                 .orElseThrow(() ->
                         new IllegalArgumentException("No existe la entrada de stock")
                 );
-        requireStore(stockEntryHead.StoreCod);
+        requireStore(stockEntryHead.StoreCod, storeCode);
         List<StockEntryDetEntity> stockEntryDetails =
                 stockEntryDetRepository.findByCode(code);
         populateProductNames(stockEntryDetails);
@@ -131,6 +135,12 @@ public class StockEntrySearchService extends SessionService {
             throw new IllegalArgumentException(
                     "El documento pertenece a otra tienda"
             );
+        }
+    }
+
+    private void requireStore(String documentStoreCode, String requestedStoreCode) {
+        if (requestedStoreCode == null || !requestedStoreCode.equals(documentStoreCode)) {
+            throw new IllegalArgumentException("El documento pertenece a otra tienda");
         }
     }
 

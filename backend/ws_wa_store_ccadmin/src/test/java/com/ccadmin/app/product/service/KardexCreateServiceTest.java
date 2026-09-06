@@ -11,6 +11,7 @@ import com.ccadmin.app.product.repository.ProductInfoRepository;
 import com.ccadmin.app.product.repository.ProductInfoWarehouseRepository;
 import com.ccadmin.app.product.shared.ProductFindCreateShared;
 import com.ccadmin.app.product.shared.ProductOperationConfigShared;
+import com.ccadmin.app.producttraceability.event.ProductTraceabilityConfirmedOperationEvent;
 import com.ccadmin.app.sale.model.entity.SaleDetWarehouseEntity;
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
 import org.junit.jupiter.api.Test;
@@ -18,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.List;
 import java.util.Optional;
@@ -45,6 +47,8 @@ class KardexCreateServiceTest {
     private ProductFindCreateShared productFindCreateShared;
     @Mock
     private ProductOperationConfigShared productOperationConfigShared;
+    @Mock
+    private ApplicationEventPublisher applicationEventPublisher;
     @InjectMocks
     private KardexCreateService kardexCreateService;
 
@@ -97,6 +101,9 @@ class KardexCreateServiceTest {
         assertEquals(8, productStock.NumTotalStock);
         verify(kardexRepository).save(kardexList.get(0));
         verify(kardexZoneRepository, times(3)).save(any(KardexZoneEntity.class));
+        verify(applicationEventPublisher).publishEvent(
+                new ProductTraceabilityConfirmedOperationEvent("sale_head", "V001", "T001")
+        );
         verify(kardexRepository, never()).findLastMovement(
                 "PR001", "0000", "A001", "T001"
         );

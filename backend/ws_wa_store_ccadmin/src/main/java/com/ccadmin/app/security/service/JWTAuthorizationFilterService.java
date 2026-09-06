@@ -40,6 +40,7 @@ public class JWTAuthorizationFilterService extends OncePerRequestFilter {
                     sessionDto.SessionID = appSession.SessionID;
                     sessionDto.CashSessionID = appSession.CashSessionID;
                     sessionDto.UserCod = appSession.UserCod;
+                    sessionDto.StoreCod = appSession.getSelectedStoreCod();
                     userNamePAT.setDetails(sessionDto);
                     SecurityContextHolder.getContext().setAuthentication(userNamePAT);
                 }

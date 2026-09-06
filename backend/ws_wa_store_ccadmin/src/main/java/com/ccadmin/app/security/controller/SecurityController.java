@@ -14,6 +14,19 @@ public class SecurityController {
     @Autowired
     private SecurityService securityService;
 
+    @Autowired
+    private com.ccadmin.app.security.service.SessionStoreCreateService sessionStoreCreateService;
+
+    @PostMapping("selectStore")
+    public ResponseEntity<ResponseWsDto> selectStore(@RequestBody com.ccadmin.app.shared.model.dto.SessionDto request) {
+        try {
+            sessionStoreCreateService.selectStore(request.StoreCod);
+            return ResponseEntity.ok(new ResponseWsDto(securityService.findUserSession()));
+        } catch (Exception exception) {
+            return ResponseEntity.badRequest().body(new ResponseWsDto(exception));
+        }
+    }
+
     @GetMapping("findUserSession")
     public ResponseEntity<ResponseWsDto> findUserSession()
     {

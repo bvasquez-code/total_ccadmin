@@ -15,3 +15,34 @@
     font-size: 0.8rem;
     opacity: 0.85;
 }
+
+.current-store {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.current-store-details {
+    min-width: 0;
+}
+
+.current-store-label {
+    display: block;
+    font-size: 0.75rem;
+    opacity: 0.85;
+}
+
+.current-store-name {
+    display: block;
+    max-width: 40vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+}
+
+@media (max-width: 575.98px) {
+    .current-store-name {
+        max-width: 35vw;
+        font-size: 0.85rem;
+    }
+}

@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("api/v1/PucharseDet")
 public class PucharseDetController {
-    public static Logger log = LogManager.getLogger(PucharseController.class);
+    public static Logger log = LogManager.getLogger(PucharseDetController.class);
     @Autowired
     private PucharseDetService pucharseDetService;
     @PostMapping("confirm")

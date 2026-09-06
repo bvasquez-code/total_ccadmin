@@ -13,6 +13,7 @@ import com.ccadmin.app.product.repository.ProductInfoRepository;
 import com.ccadmin.app.product.repository.ProductInfoWarehouseRepository;
 import com.ccadmin.app.product.shared.ProductFindCreateShared;
 import com.ccadmin.app.product.shared.ProductOperationConfigShared;
+import com.ccadmin.app.producttraceability.event.ProductTraceabilityConfirmedOperationEvent;
 import com.ccadmin.app.pucharse.exception.PucharseException;
 import com.ccadmin.app.pucharse.model.constants.PucharseConstants;
 import com.ccadmin.app.pucharse.model.entity.PucharseDetDeliveryEntity;
@@ -31,7 +32,9 @@ import com.ccadmin.app.transfer.model.constants.TransferConstants;
 import com.ccadmin.app.transfer.model.entity.TransferDetEntity;
 import com.ccadmin.app.transfer.model.entity.TransferRequestDetEntity;
 import jakarta.transaction.Transactional;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -43,6 +46,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Date;
 
+@Slf4j
 @Service
 public class KardexCreateService {
 
@@ -64,6 +68,8 @@ public class KardexCreateService {
     private ProductFindCreateShared productFindCreateShared;
     @Autowired
     private ProductOperationConfigShared productOperationConfigShared;
+    @Autowired
+    private ApplicationEventPublisher applicationEventPublisher;
 
     public List<KardexZoneEntity> buildPresaleReservation(
             PresaleHeadEntity presaleHead,
@@ -678,7 +684,31 @@ public class KardexCreateService {
         }
 
         this.saveStock(productStockMap, warehouseStockMap, zoneMovementList);
+        this.publishTraceabilityEvents(savedKardexList);
         return List.copyOf(savedKardexList);
+    }
+
+    private void publishTraceabilityEvents(List<KardexEntity> movementList) {
+        movementList.stream()
+                .map(movement -> new ProductTraceabilityConfirmedOperationEvent(
+                        movement.SourceTable,
+                        movement.OperationCod,
+                        movement.StoreCod
+                ))
+                .distinct()
+                .forEach(event -> {
+                    try {
+                        this.applicationEventPublisher.publishEvent(event);
+                    } catch (RuntimeException exception) {
+                        log.error(
+                                "TRAZABILIDAD_EVENTO_NO_PUBLICADO -->> {} | {} | {}",
+                                event.sourceTable(),
+                                event.operationCode(),
+                                event.storeCode(),
+                                exception
+                        );
+                    }
+                });
     }
 
     private void lockStock(

@@ -67,7 +67,7 @@ public class PucharseDetService extends SessionService {
         originDet.NumUnitDelivered = delivery.NumUnit;
         originDet.IsKardexAffected = "S";
         originDet.addSession(getUserCod(),false);
-        delivery.addSession(getUserCod(),false);
+        delivery.addSession(getUserCod(), true);
 
         List<KardexEntity> kardexList = this.kardexShared.buildPurchaseReceipt(
                 pucharseHead, List.of(delivery), getUserCod()

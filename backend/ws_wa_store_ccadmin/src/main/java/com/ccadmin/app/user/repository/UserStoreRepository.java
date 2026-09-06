@@ -14,13 +14,16 @@ public interface UserStoreRepository extends JpaRepository<UserStoreEntity, User
 
 
     @Query(value = """
-            select us.StoreCod  from user_store us where us.UserCod = :userCod and us.IsMainStore = 'S'
+            select us.StoreCod  from user_store us where us.UserCod = :userCod and us.Status = 'A' order by (us.IsMainStore = 'S') desc, us.StoreCod limit 1
             """, nativeQuery = true)
     public String getMainStore(@Param("userCod") String userCod);
 
 
+    @Query(value = "select * from user_store where UserCod = :userCod", nativeQuery = true)
+    List<UserStoreEntity> findAllByUserCod(@Param("userCod") String userCod);
+
     @Query(value = """
-            select us.* from user_store us where us.UserCod = :userCod
+            select us.* from user_store us where us.UserCod = :userCod and us.Status = 'A'
             """, nativeQuery = true)
     List<UserStoreEntity> findByUserCod(@Param("userCod") String userCod);
 

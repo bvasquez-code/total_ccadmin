@@ -1,6 +1,5 @@
 import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { Router } from '@angular/router';
-import { RespuestaWsDto } from '../../compartido/entity/RespuestaWsDto';
 import { LoginService } from '../service/login.service';
 import { DataSesionService } from '../../compartido/service/datasesion.service';
 
@@ -35,12 +34,18 @@ export class SigninComponent implements OnInit {
 
 
 
-  async IniciarSesion() {
+  IsSigningIn = false;
 
-    const response : RespuestaWsDto = this.g_loginService.IniciarSesion(
+  async IniciarSesion() {
+    if (this.IsSigningIn) return;
+    this.IsSigningIn = true;
+    try {
+
+    await this.g_loginService.IniciarSesion(
         this.txt_usuario.nativeElement.value,
         this.txt_password.nativeElement.value
-      );    
+      );
+    } finally { this.IsSigningIn = false; }
   }
 
 }

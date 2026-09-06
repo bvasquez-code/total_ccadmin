@@ -19,6 +19,30 @@ public class AppSessionEntity extends AuditTableEntity implements Serializable {
     public String SessionOjb;
     public Date DeleteDate;
 
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    public String getSelectedStoreCod() {
+        if (SessionOjb == null || SessionOjb.isBlank()) return null;
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().readTree(SessionOjb)
+                    .path("StoreCod").asText(null);
+        } catch (java.io.IOException exception) {
+            throw new IllegalStateException("El contexto de sesion no es valido", exception);
+        }
+    }
+
+    public void selectStore(String storeCod) {
+        try {
+            var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            var context = SessionOjb == null || SessionOjb.isBlank()
+                    ? mapper.createObjectNode()
+                    : (com.fasterxml.jackson.databind.node.ObjectNode) mapper.readTree(SessionOjb);
+            context.put("StoreCod", storeCod);
+            SessionOjb = mapper.writeValueAsString(context);
+        } catch (java.io.IOException exception) {
+            throw new IllegalStateException("No se pudo guardar el contexto de sesion", exception);
+        }
+    }
+
     public AppSessionEntity()
     {
 

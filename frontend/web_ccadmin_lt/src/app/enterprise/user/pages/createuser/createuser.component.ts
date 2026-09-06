@@ -83,6 +83,7 @@ export class CreateuserComponent implements OnInit {
     if (this.InitializationMode) {
       this.applyAdministratorDefaults();
     }
+    this.normalizeMainStore();
 
     setTimeout(() => { this.loadingForm(this.AppUser); }, 100);
   }
@@ -99,7 +100,21 @@ export class CreateuserComponent implements OnInit {
     this.txtEmail.nativeElement.value = AppUser.Person.Email;
   }
 
+  IsSaving = false;
+
   async save() {
+    if (this.IsSaving) return;
+    this.IsSaving = true;
+    try {
+      await this.saveUser();
+    } catch (error: any) {
+      this.toastrService.error(error?.message || 'No se pudo guardar el usuario');
+    } finally {
+      this.IsSaving = false;
+    }
+  }
+
+  private async saveUser() {
     if (!this.AppUser) this.AppUser = new AppUserEntity();
 
     this.AppUser.UserCod = (this.IsEditMode
@@ -136,7 +151,7 @@ export class CreateuserComponent implements OnInit {
     }
     if (userWithSameDocument) {
       this.toastrService.error(
-        `El número de documento ya está asignado al usuario ${userWithSameDocument.UserCod}.`
+        `El nÃºmero de documento ya estÃ¡ asignado al usuario ${userWithSameDocument.UserCod}.`
       );
       this.txtDocumentNum.nativeElement.focus();
       return;
@@ -152,7 +167,14 @@ export class CreateuserComponent implements OnInit {
         );
         return;
       }
-      this.router.navigate(['/enterprise/user/pages/listuser']);
+      this.OriginalUserCod = this.AppUser.UserCod;
+      this.IsEditMode = true;
+      await this.router.navigate(['/enterprise/user/pages/createuser'], {
+        queryParams: { UserCod: this.OriginalUserCod }, replaceUrl: true
+      });
+      await this.findDataForm(this.OriginalUserCod);
+    } else {
+      this.toastrService.error(rpt.Message || 'No se pudo guardar el usuario');
     }
 
   }
@@ -198,19 +220,19 @@ export class CreateuserComponent implements OnInit {
 
   validate(appUser: AppUserEntity): boolean {
     try {
-      ValidationHelper.validLengthString(appUser.UserCod, 16, "El código de usuario solo puede tener 16 caracteres");
-      ValidationHelper.validateIsNotEmpty(appUser.UserCod, "Debe ingresar un código de usuario");
+      ValidationHelper.validLengthString(appUser.UserCod, 16, "El cÃ³digo de usuario solo puede tener 16 caracteres");
+      ValidationHelper.validateIsNotEmpty(appUser.UserCod, "Debe ingresar un cÃ³digo de usuario");
 
       if (appUser.PasswordDecoded) {
-        ValidationHelper.validLengthString(appUser.PasswordDecoded, 100, "La contraseña solo puede tener 100 caracteres");
+        ValidationHelper.validLengthString(appUser.PasswordDecoded, 100, "La contraseÃ±a solo puede tener 100 caracteres");
       }
-      ValidationHelper.validateIsNotEmpty(appUser.PasswordDecoded, "Debe ingresar una contraseña");
+      ValidationHelper.validateIsNotEmpty(appUser.PasswordDecoded, "Debe ingresar una contraseÃ±a");
 
       ValidationHelper.validateIsNotEmpty(appUser.Person.DocumentType, "Debe seleccionar un tipo de documento");
       ValidationHelper.validLengthString(appUser.Person.DocumentType, 2, "El tipo de documento solo puede tener 2 caracteres");
 
-      ValidationHelper.validLengthString(appUser.Person.DocumentNum, 16, "El número de documento solo puede tener 16 caracteres");
-      ValidationHelper.validateIsNotEmpty(appUser.Person.DocumentNum, "Debe ingresar un número de documento");
+      ValidationHelper.validLengthString(appUser.Person.DocumentNum, 16, "El nÃºmero de documento solo puede tener 16 caracteres");
+      ValidationHelper.validateIsNotEmpty(appUser.Person.DocumentNum, "Debe ingresar un nÃºmero de documento");
 
       ValidationHelper.validLengthString(appUser.Person.Names, 128, "Los nombres solo pueden tener 128 caracteres");
       ValidationHelper.validateIsNotEmpty(appUser.Person.Names, "Debe ingresar los nombres");
@@ -286,6 +308,23 @@ export class CreateuserComponent implements OnInit {
         UserStore
       );
     }
+    this.normalizeMainStore();
+  }
+
+  selectMainStore(store: StoreEntity): void {
+    this.AppUser.UserStoreList.forEach(item => {
+      item.IsMainStore = item.StoreCod === store.StoreCod ? 'S' : 'N';
+    });
+  }
+
+  isMainStore(store: StoreEntity): boolean {
+    return this.AppUser.UserStoreList.some(item => item.StoreCod === store.StoreCod && item.IsMainStore === 'S');
+  }
+
+  private normalizeMainStore(): void {
+    const stores = this.AppUser.UserStoreList;
+    const mainStore = stores.find(store => store.IsMainStore === 'S') || stores[0];
+    stores.forEach(store => store.IsMainStore = store === mainStore ? 'S' : 'N');
   }
 
   IsCheckedStore(Store: StoreEntity): boolean {

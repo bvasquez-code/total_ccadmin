@@ -169,7 +169,8 @@
                                             <thead>
                                                 <tr class="bgc-info text-white brc-black-tp10">
                                                     <th>Lista de tiendas</th>
-                                                    <th></th>
+                                                    <th>Asignada</th>
+                                                    <th>Tienda principal (Main Store)</th>
                                                 </tr>
                                             </thead>
 
@@ -184,6 +185,11 @@
                                                                 (click)="CheckedStore(item)"
                                                                 [checked]="IsCheckedStore(item)">
                                                         </label>
+                                                    </td>
+                                                    <td>
+                                                        <input type="radio" name="mainStore" [attr.aria-label]="'Tienda principal: ' + item.Name"
+                                                            [disabled]="!IsCheckedStore(item)" [checked]="isMainStore(item)"
+                                                            (change)="selectMainStore(item)">
                                                     </td>
                                                 </tr>
                                             </tbody>

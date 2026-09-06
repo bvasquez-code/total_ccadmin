@@ -17,6 +17,7 @@ export class SessionStorageDto{
     public Names : string = "";
     public SessionID : number = 0;
     public StoreCod : string = "";
+    public StoreList: { StoreCod: string; Name: string }[] = [];
     public AppMenuPermissions : AppMenuEntity[] = [];
     public ApplicationInitializationRequired : boolean = false;
     public CompanyInitializationPending : boolean = false;

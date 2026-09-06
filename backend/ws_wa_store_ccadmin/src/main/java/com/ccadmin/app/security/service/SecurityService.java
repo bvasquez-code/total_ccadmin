@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class SecurityService extends SessionService {
     @Autowired
+    private com.ccadmin.app.store.shared.StoreShared storeShared;
+    @Autowired
     private AppUserRepository appUserRepository;
     @Autowired
     private AppMenuShared appMenuShared;
@@ -28,7 +30,10 @@ public class SecurityService extends SessionService {
         String storeCod = userStoreShared.getMainStore(userCod);
         Long cashSessionId = cashSessionRepository.findOpenIdByUserAndStore(userCod, storeCod)
                 .orElse(null);
-        appSessionRepository.save(new AppSessionEntity(userCod, token, cashSessionId));
+        AppSessionEntity session = new AppSessionEntity(userCod, token, cashSessionId);
+        if (userStoreShared.findByUserCod(userCod).size() == 1) session.selectStore(storeCod);
+        else session.CashSessionID = null;
+        appSessionRepository.save(session);
     }
 
     @Transactional
@@ -46,7 +51,9 @@ public class SecurityService extends SessionService {
         sessionStorage.PersonCod = appUser.PersonCod;
         sessionStorage.Email = appUser.Email;
         sessionStorage.Names = appUser.Email;
-        sessionStorage.StoreCod = getStoreCod();
+        sessionStorage.StoreCod = appSession.getSelectedStoreCod();
+        sessionStorage.StoreList = userStoreShared.findByUserCod(appUser.UserCod).stream()
+                .map(store -> storeShared.findById(store.StoreCod)).filter(java.util.Objects::nonNull).toList();
         sessionStorage.AppMenuPermissions = this.appMenuShared.findByUser(appUser.UserCod);
 
         ApplicationInitializationStatusDto initializationStatus =

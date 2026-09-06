@@ -1,3 +1,6 @@
+import { AlertService } from '../../shared/service/AlertService';
+import { ToastrService } from 'ngx-toastr';
+import { AppSetting } from 'src/app/config/app.setting';
 import {Injectable} from '@angular/core';
 import {HttpClient, HttpHeaders} from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
@@ -15,6 +18,8 @@ export class ApiService {
 
     constructor(
          private http: HttpClient,
+         private alertService: AlertService,
+         private toastrService: ToastrService,
          private router: Router,
          private dataSesionService: DataSesionService,
     ){}
@@ -205,43 +210,36 @@ export class ApiService {
 
     async ExecutePostServiceLogin(URL: string, Request : any, URLDataLogin : string)
     {
-        let token : any = "";
-        this.http
-            .post<any>(URL, Request,{observe: 'response'})
-            .subscribe(resp => {
-
-                console.log({ resp : resp } )
-
-                token = resp.headers.get('Authorization') || '';
-
-                this.http.get<any>(URLDataLogin, {
-                    headers: new HttpHeaders(this.createHeaders(token))
-                })
-                .toPromise()
-                .then(data => { 
-
-                    let rpt : ResponseWsDto = data;
-
-                    console.log( data );
-
-                    if( !rpt.ErrorStatus )
-                    {
-                        let sessionStorageDto : SessionStorageDto = new SessionStorageDto();
-
-                        sessionStorageDto = rpt.Data;
-
-                        this.dataSesionService.SaveSession(token, sessionStorageDto);
-                        const destination = this.dataSesionService.RequiresApplicationInitialization()
-                            ? '/enterprise/system/pages/applicationinitialization'
-                            : '/';
-                        window.location.replace(destination);
-                    }
-
-                }).catch( function(e){
-                    alert("Error en el servicio :"+e.error.mensaje);
+        try {
+            const response = await this.http.post(URL, Request, { observe: 'response' }).toPromise();
+            const token = response?.headers.get('Authorization') || '';
+            if (!token) throw new Error('No se recibio una sesion valida');
+            const headers = new HttpHeaders(this.createHeaders(token));
+            const result = await this.http.get<ResponseWsDto>(URLDataLogin, { headers }).toPromise();
+            if (!result || result.ErrorStatus) throw new Error(result?.Message || 'No se pudo cargar la sesion');
+            let session: SessionStorageDto = result.Data;
+            if ((session.StoreList || []).length > 1) {
+                const selection = await this.alertService.selectStore(session.StoreList, async storeCod => {
+                    try {
+                        const selected = await this.http.post<ResponseWsDto>(
+                            `${AppSetting.API}/api/v1/security/selectStore`, { StoreCod: storeCod }, { headers }
+                        ).toPromise();
+                        if (!selected || selected.ErrorStatus) return false;
+                        session = selected.Data;
+                        return true;
+                    } catch { return false; }
                 });
-
-            });
+                if (!selection.isConfirmed) return;
+            }
+            if (!session.StoreCod && !session.ApplicationInitializationRequired) {
+                throw new Error('El usuario no tiene tiendas asignadas. Contacta al administrador.');
+            }
+            this.dataSesionService.SaveSession(token, session);
+            window.location.replace(this.dataSesionService.RequiresApplicationInitialization()
+                ? '/enterprise/system/pages/applicationinitialization' : '/');
+        } catch (error: any) {
+            this.toastrService.error(error?.error?.Message || error.message || 'No se pudo iniciar sesion');
+        }
     }
 
 }

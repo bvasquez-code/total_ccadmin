@@ -75,9 +75,13 @@ public class StockExitService extends SessionService {
     }
 
     public StockExitRegisterDto findById(String code) {
+        return this.findById(code, getStoreCod());
+    }
+
+    public StockExitRegisterDto findById(String code, String storeCode) {
         StockExitHeadEntity head = headRepository.findById(code)
                 .orElseThrow(() -> new IllegalArgumentException("No existe el retiro de stock"));
-        requireStore(head.StoreCod);
+        requireStore(head.StoreCod, storeCode);
         List<StockExitDetEntity> details = detRepository.findByCode(code);
         populateProductNames(details);
         return StockExitRegisterDtoFactory.fromEntities(head, details);
@@ -349,6 +353,12 @@ public class StockExitService extends SessionService {
 
     private void requireStore(String storeCod) {
         if (!getStoreCod().equals(storeCod)) throw new IllegalArgumentException("El documento pertenece a otra tienda");
+    }
+
+    private void requireStore(String documentStoreCode, String requestedStoreCode) {
+        if (requestedStoreCode == null || !requestedStoreCode.equals(documentStoreCode)) {
+            throw new IllegalArgumentException("El documento pertenece a otra tienda");
+        }
     }
 
     private String clean(String value) {

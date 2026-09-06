@@ -22,7 +22,7 @@ CREATE TABLE `kardex` (
   `kardexID` bigint NOT NULL AUTO_INCREMENT,
   `OperationCod` varchar(16) NOT NULL COMMENT 'Codigo de operacion',
   `ItemNumber` int DEFAULT NULL COMMENT 'Número de ítem/secuencia del documento origen',
-  `SourceTable` varchar(20) NOT NULL COMMENT 'Tabla origen',
+  `SourceTable` varchar(32) NOT NULL COMMENT 'Tabla origen',
   `TypeOperation` char(1) NOT NULL COMMENT 'tipo de operacion',
   `ProductCod` varchar(20) NOT NULL COMMENT 'Codigo de producto',
   `Variant` varchar(4) NOT NULL DEFAULT (_utf8mb4'0000') COMMENT 'Codigo de variante',
@@ -70,6 +70,20 @@ CREATE TABLE `kardex` (
         ) THEN
             ALTER TABLE `kardex` ADD COLUMN `ItemNumber` int DEFAULT NULL COMMENT 'Número de ítem/secuencia del documento origen' AFTER `OperationCod`;
             SELECT 'Columna ItemNumber agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        -- AMPLIANDO ORIGEN PARA NOMBRES COMO transfer_request_head
+        IF EXISTS (
+            SELECT * FROM information_schema.columns
+            WHERE table_schema = DATABASE()
+              AND table_name = 'kardex'
+              AND column_name = 'SourceTable'
+              AND character_maximum_length < 32
+        ) THEN
+            ALTER TABLE `kardex`
+                MODIFY COLUMN `SourceTable` varchar(32) NOT NULL
+                COMMENT 'Tabla origen';
+            SELECT 'Columna SourceTable ampliada a 32 caracteres.' AS Mensaje;
         END IF;
 
         -- AGREGANDO COLUMNA LotNumber

@@ -26,6 +26,17 @@ public abstract class SessionService {
 
     public String getStoreCod()
     {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getDetails() instanceof SessionDto session) {
+            if (session.StoreCod == null || session.StoreCod.isBlank()) {
+                throw new IllegalStateException("Debe seleccionar una tienda para continuar");
+            }
+            if (userStoreShared.findByUserCod(getUserCod()).stream()
+                    .noneMatch(store -> session.StoreCod.equals(store.StoreCod))) {
+                throw new IllegalStateException("La tienda de la sesion ya no esta asignada al usuario");
+            }
+            return session.StoreCod;
+        }
         return this.userStoreShared.getMainStore(getUserCod());
     }
 

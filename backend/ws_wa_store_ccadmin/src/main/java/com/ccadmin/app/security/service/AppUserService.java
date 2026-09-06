@@ -11,8 +11,6 @@ import com.ccadmin.app.shared.model.dto.SearchDto;
 import com.ccadmin.app.shared.service.SearchService;
 import com.ccadmin.app.shared.service.SessionService;
 import com.ccadmin.app.store.shared.StoreShared;
-import com.ccadmin.app.user.model.entity.UserStoreEntity;
-import com.ccadmin.app.user.repository.UserStoreRepository;
 import com.ccadmin.app.user.shared.UserStoreShared;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,7 +32,7 @@ public class AppUserService extends SessionService {
     @Autowired
     private UserProfileRepository userProfileRepository;
     @Autowired
-    private UserStoreRepository userStoreRepository;
+    private com.ccadmin.app.user.service.UserStoreCreateService userStoreCreateService;
 
     @Autowired
     private PersonShared personShared;
@@ -89,14 +87,8 @@ public class AppUserService extends SessionService {
             item.addSession(getUserCod(),!this.appUserRepository.existsById(user.UserCod));
             item.UserCod = user.UserCod;
         }
-        for(var item : user.UserStoreList)
-        {
-            item.addSession(getUserCod(),!this.appUserRepository.existsById(user.UserCod));
-            item.UserCod = user.UserCod;
-            item.IsMainStore = "S";
-        }
         this.userProfileRepository.saveAll(user.UserProfileList);
-        this.userStoreRepository.saveAll(user.UserStoreList);
+        this.userStoreCreateService.save(user.UserCod, user.UserStoreList, getUserCod());
 
         return user;
     }

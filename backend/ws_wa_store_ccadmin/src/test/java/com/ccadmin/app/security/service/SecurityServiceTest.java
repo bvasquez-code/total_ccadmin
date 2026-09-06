@@ -40,6 +40,7 @@ class SecurityServiceTest {
 
     @Test
     void carriesTheOpenCashSessionIntoTheNewApplicationSession() {
+        when(userStoreShared.findByUserCod("USER01")).thenReturn(java.util.List.of(new com.ccadmin.app.user.model.entity.UserStoreEntity()));
         when(userStoreShared.getMainStore("USER01")).thenReturn("T001");
         when(cashSessionRepository.findOpenIdByUserAndStore("USER01", "T001"))
                 .thenReturn(Optional.of(15L));
@@ -50,6 +51,21 @@ class SecurityServiceTest {
         verify(appSessionRepository).save(sessionCaptor.capture());
         assertEquals("USER01", sessionCaptor.getValue().UserCod);
         assertEquals("TOKEN", sessionCaptor.getValue().Token);
+        assertEquals("T001", sessionCaptor.getValue().getSelectedStoreCod());
         assertEquals(15L, sessionCaptor.getValue().CashSessionID);
+    }
+    @Test
+    void multipleStoresRequireSelectionBeforeSettingCashContext() {
+        when(userStoreShared.getMainStore("USER01")).thenReturn("T001");
+        when(userStoreShared.findByUserCod("USER01")).thenReturn(java.util.List.of(
+            new com.ccadmin.app.user.model.entity.UserStoreEntity(),
+            new com.ccadmin.app.user.model.entity.UserStoreEntity()));
+        when(cashSessionRepository.findOpenIdByUserAndStore("USER01", "T001"))
+            .thenReturn(Optional.of(15L));
+        service.createUserSession("USER01", "TOKEN");
+        ArgumentCaptor<AppSessionEntity> captor = ArgumentCaptor.forClass(AppSessionEntity.class);
+        verify(appSessionRepository).save(captor.capture());
+        org.junit.jupiter.api.Assertions.assertNull(captor.getValue().getSelectedStoreCod());
+        org.junit.jupiter.api.Assertions.assertNull(captor.getValue().CashSessionID);
     }
 }
