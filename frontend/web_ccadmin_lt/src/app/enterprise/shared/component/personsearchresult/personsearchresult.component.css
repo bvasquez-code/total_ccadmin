@@ -1,0 +1,20 @@
+:host {
+  max-height: calc(100vh - 3.5rem);
+  overflow: hidden;
+}
+
+.modal-body {
+  min-width: 0;
+  overflow-y: auto;
+}
+
+@media (max-width: 575.98px) {
+  .modal-footer {
+    flex-wrap: wrap;
+  }
+
+  .modal-footer .btn {
+    flex: 1 1 100%;
+    margin: 0.25rem 0;
+  }
+}

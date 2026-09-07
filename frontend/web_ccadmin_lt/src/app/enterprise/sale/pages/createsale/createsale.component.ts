@@ -223,8 +223,11 @@ export class CreatesaleComponent implements OnInit {
     this.ClientSearchMode = "sale";
     this.SelectedPaymentOption = DocumentType;
     this.DocumentType = DocumentType;
-    if (DocumentType === "03") {
-      await this.saveBillingForBuyer("03");
+    if (DocumentType === "03" || (DocumentType === "01" && this.hasBuyerWithValidRuc())) {
+      if (!await this.saveBillingForBuyer(DocumentType)) {
+        this.enableButtonPay = false;
+        return;
+      }
     } else if (DocumentType === "01" && !this.isCurrentBillingCompatible()) {
       this.OpenClientModal("billing");
     } else if (DocumentType === "99") {
@@ -381,6 +384,13 @@ export class CreatesaleComponent implements OnInit {
 
   hasClient(): boolean {
     return this.SaleDetail.Headboard.ClientCod !== "" && this.SaleDetail.Headboard.ClientCod !== null && this.SaleDetail.Headboard.ClientCod !== undefined;
+  }
+
+  private hasBuyerWithValidRuc(): boolean {
+    const person = this.SaleDetail.Headboard.Client?.Person;
+    return this.hasClient()
+      && (person?.DocumentType || "").trim().replace(/^0+/, "") === "6"
+      && /^[0-9]{11}$/.test((person?.DocumentNum || "").trim());
   }
 
   requiresClientForSelectedDocument(): boolean {
@@ -586,7 +596,8 @@ export class CreatesaleComponent implements OnInit {
         this.ClientDocumentNum
       );
       if (!identity.person) {
-        this.toastrService.error("No fue posible obtener los datos de la persona indicada.");
+        this.openClientRegistration();
+        this.toastrService.info("No se encontraron datos de la persona indicada. Puede ingresarlos manualmente.");
         return;
       }
       await this.saveBillingPerson(identity.person, this.DocumentType);
@@ -600,11 +611,15 @@ export class CreatesaleComponent implements OnInit {
         await this.SaveClientSale(rpt.Data);
       }
       else {
-        this.ShowClientRegister = true;
-        this.ShowClientSearch = false;
-        this.ShowClient = false;
+        this.openClientRegistration();
       }
     }
+  }
+
+  private openClientRegistration(): void {
+    this.ShowClientRegister = true;
+    this.ShowClientSearch = false;
+    this.ShowClient = false;
   }
 
   async ResponseResultFormSaleClient(event: any) {
@@ -623,8 +638,13 @@ export class CreatesaleComponent implements OnInit {
     if (!rpt.ErrorStatus) {
       this.SaleDetail.Headboard.ClientCod = client.ClientCod;
       this.SaleDetail.Headboard.Client = client;
-      if (this.ClientSearchMode === "sale" && this.SelectedPaymentOption === "03") {
-        await this.saveBillingForBuyer("03");
+      if (this.ClientSearchMode === "sale"
+        && (this.SelectedPaymentOption === "03"
+          || (this.SelectedPaymentOption === "01" && !this.isWebSale && this.hasBuyerWithValidRuc()))) {
+        if (!await this.saveBillingForBuyer(this.SelectedPaymentOption)) {
+          this.enableButtonPay = false;
+          return;
+        }
       }
       this.ShowClientRegister = false;
       this.ShowClientSearch = false;
@@ -674,14 +694,6 @@ export class CreatesaleComponent implements OnInit {
       : (this.SaleDetail.Headboard.Client?.Person?.DocumentType || "");
   }
 
-  getSearchResultDocumentLabel(): string {
-    const documentType = this.getSearchResultDocumentType().replace(/^0+/, "");
-    if (documentType === "6") return "RUC";
-    if (documentType === "1") return "DNI";
-    if (documentType === "4") return "Carnet de extranjería";
-    return "Documento";
-  }
-
   getSearchResultContextLabel(): string {
     if (this.ClientSearchMode === "billing") return "Datos de facturación";
     if (this.ClientSearchMode === "advance") return "Persona del anticipo";
@@ -694,14 +706,19 @@ export class CreatesaleComponent implements OnInit {
       : (this.SaleDetail.Headboard.Client?.Person?.Address || "");
   }
 
-  isSearchResultCompany(): boolean {
-    return this.getSearchResultDocumentType().replace(/^0+/, "") === "6";
-  }
-
   private async saveBillingForBuyer(documentType: string): Promise<boolean> {
     const request = new SaleBillingEntity();
     request.SaleCod = this.SaleDetail.Headboard.SaleCod;
     request.DocumentTypeRequest = documentType;
+    if (documentType === "01") {
+      const buyer = this.SaleDetail.Headboard.Client;
+      request.Person = buyer.Person;
+      request.PersonCod = buyer.Person.PersonCod || buyer.PersonCod || "";
+    }
+    return this.saveBillingRequest(request);
+  }
+
+  private async saveBillingRequest(request: SaleBillingEntity): Promise<boolean> {
     const response = await this.saleservice.saveBilling(request);
     if (response.ErrorStatus) {
       this.toastrService.error(response.Message || "No se pudieron guardar los datos de facturacion.");
@@ -717,12 +734,7 @@ export class CreatesaleComponent implements OnInit {
     request.DocumentTypeRequest = documentType;
     request.PersonCod = person.PersonCod || "";
     request.Person = person;
-    const response = await this.saleservice.saveBilling(request);
-    if (response.ErrorStatus) {
-      this.toastrService.error(response.Message || "No se pudieron guardar los datos de facturacion.");
-      return false;
-    }
-    this.SaleDetail.SaleBilling = response.Data;
+    if (!await this.saveBillingRequest(request)) return false;
     this.ShowClientRegister = false;
     this.ShowClientSearch = false;
     this.ShowClient = true;

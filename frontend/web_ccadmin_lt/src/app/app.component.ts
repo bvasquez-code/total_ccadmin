@@ -1,3 +1,4 @@
+import { SpinnerService } from './enterprise/shared/service/spinner.service';
 import { Component, HostListener } from '@angular/core';
 import { Router } from '@angular/router';
 import { DataSesionService } from './enterprise/compartido/service/datasesion.service';
@@ -10,10 +11,12 @@ import { DataSesionService } from './enterprise/compartido/service/datasesion.se
 export class AppComponent {
 
   title = 'ccadmin2';
+  readonly IsLoading$ = this.spinnerService.IsLoading$;
 
   constructor(
     private dataSesionService: DataSesionService,
-    private router: Router
+    private router: Router,
+    private spinnerService: SpinnerService
   ) {
   }
 

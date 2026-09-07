@@ -51,6 +51,7 @@ import { ListcategoryComponent } from './enterprise/product/pages/listcategory/l
 import { CreatepucharseComponent } from './enterprise/pucharse/pages/createpucharse/createpucharse.component';
 import { ListpucharseComponent } from './enterprise/pucharse/pages/listpucharse/listpucharse.component';
 import { FormatoMonedaPeruanaPipe } from './enterprise/shared/pipe/FormatoMonedaPeruana.pipe';
+import { PersonSearchResultComponent } from './enterprise/shared/component/personsearchresult/personsearchresult.component';
 import { ModalconfirmComponent } from './enterprise/shared/component/modalconfirm/modalconfirm.component';
 import { ConfirmpucharseComponent } from './enterprise/pucharse/pages/confirmpucharse/confirmpucharse.component';
 import { ListreceptionComponent } from './enterprise/pucharse/pages/listreception/listreception.component';
@@ -175,6 +176,7 @@ import { CreateQuickStockEntryComponent } from './enterprise/inventory/pages/cre
     ListpucharseComponent,
     FormatoMonedaPeruanaPipe,
     ModalconfirmComponent,
+    PersonSearchResultComponent,
     ConfirmpucharseComponent,
     ListreceptionComponent,
     CreatetrxpaymentComponent,

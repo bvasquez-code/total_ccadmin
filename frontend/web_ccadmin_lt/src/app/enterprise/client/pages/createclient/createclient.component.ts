@@ -7,6 +7,8 @@ import { ToastrService } from 'ngx-toastr';
 import { ValidationHelper } from 'src/app/enterprise/shared/helper/ValidationHelper';
 import { PersonEntity } from 'src/app/enterprise/person/model/entity/PersonEntity';
 import { PersonIdentityLookupService } from 'src/app/enterprise/person/service/person-identity-lookup.service';
+import { SpinnerService } from 'src/app/enterprise/shared/service/spinner.service';
+import { PersonNameHelper } from 'src/app/enterprise/person/helper/PersonNameHelper';
 
 @Component({
   selector: 'app-createclient',
@@ -17,6 +19,7 @@ export class CreateclientComponent implements OnInit{
   @Input() InputDocumentNum : string = ""; 
   @Input() InputDocumentType : string = "";
   @Input() InvokeType : string = "form";
+  @Input() SearchIdentityOnLoad: boolean = false;
   @Output() ResultForm = new EventEmitter<object>();
 
   @ViewChild('cboPersonType') cboPersonType!: ElementRef<HTMLSelectElement>;
@@ -43,7 +46,8 @@ export class CreateclientComponent implements OnInit{
     private clientService : ClientService,
     private personIdentityLookupService: PersonIdentityLookupService,
     private router: Router,
-    private toastrService: ToastrService
+    private toastrService: ToastrService,
+    private spinnerService: SpinnerService
   )
   {
     let urlTree : any = this.router.parseUrl(this.router.url);
@@ -75,6 +79,7 @@ export class CreateclientComponent implements OnInit{
 
   async save()
   {
+    if (this.IsSearchingIdentity) return;
     if(!this.Client) this.Client = new ClientEntity();
 
       this.Client.Person.PersonType = this.cboPersonType.nativeElement.value;
@@ -88,6 +93,10 @@ export class CreateclientComponent implements OnInit{
       this.Client.Person.CellPhone = this.txtCellPhone.nativeElement.value;
       this.Client.Person.Email = this.txtEmail.nativeElement.value;
       this.Client.Person.Phone = this.txtPhone.nativeElement.value;
+      PersonNameHelper.applyCommercialNameFallback(this.Client.Person);
+      if (this.IsLegalPerson && this.txtCommercialName) {
+        this.txtCommercialName.nativeElement.value = this.Client.Person.CommercialName;
+      }
 
       if (this.ExistingRegisterMessage) return;
 
@@ -212,6 +221,7 @@ export class CreateclientComponent implements OnInit{
     if (!this.validateDocumentForSearch(DocumentType, DocumentNum)) return;
 
     this.IsSearchingIdentity = true;
+    this.spinnerService.show();
     try {
       const identityResult = await this.personIdentityLookupService.findByDocument(
         DocumentType,
@@ -224,7 +234,7 @@ export class CreateclientComponent implements OnInit{
       }
 
       this.Client.Person = identityResult.person;
-      this.loadingPerson(this.Client.Person);
+      await this.loadingPerson(this.Client.Person);
       this.IsDocumentLocked = true;
       this.toastrService.success(
         identityResult.source === 'SUNAT'
@@ -235,6 +245,7 @@ export class CreateclientComponent implements OnInit{
       this.toastrService.error(error?.message || "No fue posible consultar el documento.");
     } finally {
       this.IsSearchingIdentity = false;
+      this.spinnerService.hide();
     }
   }
 
@@ -279,8 +290,9 @@ export class CreateclientComponent implements OnInit{
     return false;
   }
 
-  loadingPerson(Person : PersonEntity)
+  async loadingPerson(Person : PersonEntity): Promise<void>
   {
+    PersonNameHelper.applyCommercialNameFallback(Person);
     this.cboPersonType.nativeElement.value = Person.PersonType;
     this.changePersonType();
     this.cboDocumentType.nativeElement.value = Person.DocumentType;
@@ -289,16 +301,15 @@ export class CreateclientComponent implements OnInit{
     this.txtEmail.nativeElement.value = Person.Email;
     this.txtPhone.nativeElement.value = Person.Phone;
 
-    setTimeout(() => {
-      if (this.IsLegalPerson) {
-        if (this.txtCommercialName) this.txtCommercialName.nativeElement.value = Person.CommercialName;
-        if (this.txtBusinessName) this.txtBusinessName.nativeElement.value = Person.BusinessName;
-        if (this.txtAddress) this.txtAddress.nativeElement.value = Person.Address;
-      } else {
-        if (this.txtNames) this.txtNames.nativeElement.value = Person.Names;
-        if (this.txtLastNames) this.txtLastNames.nativeElement.value = Person.LastNames;
-      }
-    }, 100);
+    await new Promise<void>(resolve => setTimeout(resolve, 100));
+    if (this.IsLegalPerson) {
+      if (this.txtCommercialName) this.txtCommercialName.nativeElement.value = Person.CommercialName;
+      if (this.txtBusinessName) this.txtBusinessName.nativeElement.value = Person.BusinessName;
+      if (this.txtAddress) this.txtAddress.nativeElement.value = Person.Address;
+    } else {
+      if (this.txtNames) this.txtNames.nativeElement.value = Person.Names;
+      if (this.txtLastNames) this.txtLastNames.nativeElement.value = Person.LastNames;
+    }
   }
 
   loadingForm( Client : ClientEntity )
@@ -320,9 +331,12 @@ export class CreateclientComponent implements OnInit{
         this.changePersonType();
       }
 
-      setTimeout(() => {
+      setTimeout(async () => {
         this.txtDocumentNum.nativeElement.value = this.InputDocumentNum;
         this.cboDocumentType.nativeElement.value = this.InputDocumentType;
+        if (this.SearchIdentityOnLoad) {
+          await this.findPersonByDocumentNum();
+        }
       }, 0);
     }
     

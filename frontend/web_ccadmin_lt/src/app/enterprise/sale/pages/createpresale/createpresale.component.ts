@@ -567,14 +567,7 @@ export class CreatepresaleComponent implements OnInit {
 
     if (!rpt.ErrorStatus) {
       if (rpt.Data != null) {
-        let Client: ClientEntity = rpt.Data;
-
-        this.shoppingCartService.AddClient(Client);
-        this.updateShoppingCart();
-
-        this.ShowClientRegister = false;
-        this.ShowClientSearch = false;
-        this.ShowClient = true;
+        this.selectClient(rpt.Data);
 
       }
       else {
@@ -587,8 +580,11 @@ export class CreatepresaleComponent implements OnInit {
 
   ResponseResultFormClient(event: any) {
     this.ResultFormClient = event;
+    this.selectClient(event);
+  }
 
-    this.shoppingCartService.AddClient(event);
+  private selectClient(client: ClientEntity): void {
+    this.shoppingCartService.AddClient(client);
     this.updateShoppingCart();
 
     this.ShowClientRegister = false;
@@ -598,6 +594,8 @@ export class CreatepresaleComponent implements OnInit {
   }
 
   OpenClientModal() {
+    this.DocumentType = "01";
+    this.DocumentNum = "";
     this.ShowClient = false;
     this.ShowClientRegister = false;
     this.ShowClientSearch = true;
@@ -639,10 +637,14 @@ export class CreatepresaleComponent implements OnInit {
   }
 
   getInfoClient(): string {
-    if (this.ShoppingCart.Headboard.Client.Person.DocumentNum) {
-      return this.ShoppingCart.Headboard.Client.Person.DocumentNum + ' - ' + this.ShoppingCart.Headboard.Client.Person.Names + ' ' + this.ShoppingCart.Headboard.Client.Person.LastNames;
-    }
-    return '';
+    const person = this.ShoppingCart.Headboard.Client?.Person;
+    return person?.DocumentNum ? person.DocumentNum + ' - ' + this.getNameClient() : '';
+  }
+
+  getNameClient(): string {
+    const person = this.ShoppingCart.Headboard.Client?.Person;
+    if (!person) return '';
+    return person.BusinessName || person.CommercialName || (person.Names + ' ' + person.LastNames);
   }
 
   @HostListener('document:keydown', ['$event'])

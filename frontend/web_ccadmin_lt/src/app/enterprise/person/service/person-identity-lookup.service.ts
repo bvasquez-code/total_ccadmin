@@ -11,6 +11,8 @@ import {
 } from '../model/dto/SunatIdentityDto';
 import { PersonEntity } from '../model/entity/PersonEntity';
 import { PersonService } from './person.service';
+import { SpinnerService } from '../../shared/service/spinner.service';
+import { PersonNameHelper } from '../helper/PersonNameHelper';
 
 @Injectable({
   providedIn: 'root'
@@ -19,7 +21,8 @@ export class PersonIdentityLookupService {
 
   public constructor(
     private apiService: ApiService,
-    private personService: PersonService
+    private personService: PersonService,
+    private spinnerService: SpinnerService
   ) {
   }
 
@@ -27,25 +30,16 @@ export class PersonIdentityLookupService {
     documentType: string,
     documentNumber: string
   ): Promise<PersonIdentityLookupResultDto> {
-    const internalPerson = await this.findInternallySafely(documentType, documentNumber);
-    const sunatPerson = await this.findInSunatSafely(documentType, documentNumber);
+    return this.spinnerService.run<PersonIdentityLookupResultDto>(async () => {
+      const internalPerson = await this.findInternallySafely(documentType, documentNumber);
+      const sunatPerson = await this.findInSunatSafely(documentType, documentNumber);
+      const person = internalPerson && sunatPerson
+        ? this.mergeIdentityData(internalPerson, sunatPerson)
+        : sunatPerson || internalPerson;
 
-    if (internalPerson && sunatPerson) {
-      return {
-        person: this.mergeIdentityData(internalPerson, sunatPerson),
-        source: 'SUNAT'
-      };
-    }
-
-    if (sunatPerson) {
-      return { person: sunatPerson, source: 'SUNAT' };
-    }
-
-    if (internalPerson) {
-      return { person: internalPerson, source: 'INTERNAL' };
-    }
-
-    return { person: null, source: null };
+      if (person) PersonNameHelper.applyCommercialNameFallback(person);
+      return { person, source: sunatPerson ? 'SUNAT' : (internalPerson ? 'INTERNAL' : null) };
+    });
   }
 
   private async findInternallySafely(
@@ -250,6 +244,6 @@ export class PersonIdentityLookupService {
   }
 
   private meaningfulValue(value: string | null): boolean {
-    return !!value && value.trim() !== '-';
+    return !!value?.trim() && value.trim() !== '-';
   }
 }

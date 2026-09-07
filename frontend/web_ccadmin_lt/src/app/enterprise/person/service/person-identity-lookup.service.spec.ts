@@ -3,17 +3,20 @@ import { ApiService } from '../../compartido/service/api.service';
 import { PersonEntity } from '../model/entity/PersonEntity';
 import { PersonIdentityLookupService } from './person-identity-lookup.service';
 import { PersonService } from './person.service';
+import { SpinnerService } from '../../shared/service/spinner.service';
 
 describe('PersonIdentityLookupService', () => {
   let apiService: jasmine.SpyObj<ApiService>;
   let personService: jasmine.SpyObj<PersonService>;
   let service: PersonIdentityLookupService;
+  let spinnerService: SpinnerService;
 
   beforeEach(() => {
     apiService = jasmine.createSpyObj<ApiService>('ApiService', ['ExecuteGetService']);
     personService = jasmine.createSpyObj<PersonService>('PersonService', ['findByDocumentNum']);
     personService.findByDocumentNum.and.returnValue(Promise.resolve(responseWithData(null)));
-    service = new PersonIdentityLookupService(apiService, personService);
+    spinnerService = new SpinnerService();
+    service = new PersonIdentityLookupService(apiService, personService, spinnerService);
   });
 
   it('maps a company returned by SUNAT', async () => {
@@ -227,6 +230,50 @@ describe('PersonIdentityLookupService', () => {
     expect(result.person?.Address).toBe('AV. INTERNA 456');
     expect(result.person?.CellPhone).toBe('999111222');
     expect(result.person?.Email).toBe('empresa@correo.pe');
+  });
+
+  [null, '', '   ', '-'].forEach(tradeName => {
+    it('uses the legal name for a missing trade name: ' + JSON.stringify(tradeName), async () => {
+      apiService.ExecuteGetService.and.returnValue(Promise.resolve(responseWithData({
+        found: true,
+        company: { legalName: 'EMPRESA SIN NOMBRE COMERCIAL', tradeName }
+      })));
+      const result = await service.findByDocument('06', '20123456789');
+      expect(result.person?.CommercialName).toBe('EMPRESA SIN NOMBRE COMERCIAL');
+      expect(spinnerService.isLoading).toBeFalse();
+    });
+  });
+
+  it('uses the internal legal name when identity fails and the stored commercial name is empty', async () => {
+    personService.findByDocumentNum.and.returnValue(Promise.resolve(responseWithData(
+      Object.assign(new PersonEntity(), {
+        PersonType: '04', DocumentType: '06', DocumentNum: '20123456789',
+        BusinessName: 'EMPRESA INTERNA', CommercialName: ''
+      })
+    )));
+    apiService.ExecuteGetService.and.callFake(async () => { throw new Error('Unavailable'); });
+    const result = await service.findByDocument('06', '20123456789');
+    expect(result.person?.CommercialName).toBe('EMPRESA INTERNA');
+    expect(spinnerService.isLoading).toBeFalse();
+  });
+
+  it('keeps the loader throughout identity lookup and releases it when no data can be obtained', async () => {
+    let lookupStarted!: () => void;
+    let finishLookup!: () => void;
+    const started = new Promise<void>(resolve => lookupStarted = resolve);
+    const finished = new Promise<void>(resolve => finishLookup = resolve);
+    apiService.ExecuteGetService.and.callFake(async () => {
+      lookupStarted();
+      await finished;
+      throw new Error('Identity unavailable');
+    });
+    const result = service.findByDocument('06', '20123456789');
+    expect(spinnerService.isLoading).toBeTrue();
+    await started;
+    expect(spinnerService.isLoading).toBeTrue();
+    finishLookup();
+    expect((await result).person).toBeNull();
+    expect(spinnerService.isLoading).toBeFalse();
   });
 
   function responseWithData(data: unknown): ResponseWsDto {

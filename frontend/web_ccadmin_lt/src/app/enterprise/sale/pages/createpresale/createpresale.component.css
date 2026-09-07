@@ -64,14 +64,6 @@
   width: 180%;
 }
 
-.presale-client-result-content {
-  width: 120%;
-}
-
-.client-result-data {
-  min-width: 0;
-}
-
 @media (max-width: 991.98px) {
   .product-card {
     height: auto;
@@ -101,8 +93,7 @@
 
   #ProductModal .presale-product-modal-content,
   #ClientModal .presale-client-search-content,
-  #ClientModal .presale-client-register-content,
-  #ClientModal .presale-client-result-content {
+  #ClientModal .presale-client-register-content {
     width: 100%;
   }
 
@@ -230,22 +221,6 @@
   #ClientModal .modal-footer .btn {
     flex: 1 1 auto;
     margin: 0.25rem;
-  }
-
-  .client-result-card,
-  .client-result-data {
-    width: 100%;
-    text-align: center;
-  }
-
-  .client-result-name {
-    margin-right: 0;
-    font-size: 1.25rem;
-    line-height: 1.35;
-  }
-
-  .client-result-document {
-    margin-top: 0.25rem;
   }
 }
 

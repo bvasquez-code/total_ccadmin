@@ -812,16 +812,17 @@
       <div class="modal-body">
 
         <div class="mb-3 row">
-          <label for="staticEmail" class="col-sm-4 col-form-label">Tipo documento</label>
+          <label class="col-sm-4 col-form-label">Tipo documento</label>
           <div class="col-sm-8">
             <select class="form-control" #cboDocumentType>
               <option value="01">DNI</option>
-              <option value="02">CARNET DE EXTRANJERIA</option>
+              <option value="04">CARNET DE EXTRANJERIA</option>
+              <option value="06">RUC</option>
             </select>
           </div>
         </div>
         <div class="mb-3 row">
-          <label for="inputPassword" class="col-sm-4 col-form-label">N° Documento</label>
+          <label class="col-sm-4 col-form-label">N° Documento</label>
           <div class="col-sm-8">
             <input type="text" class="form-control" #txtDocumentNum>
           </div>
@@ -844,7 +845,7 @@
 
       <div class="modal-body">
         <app-createclient (ResultForm)="ResponseResultFormClient($event)" [InputDocumentNum]="DocumentNum"
-          [InputDocumentType]="DocumentType" [InvokeType]="'modal'">
+          [InputDocumentType]="DocumentType" [SearchIdentityOnLoad]="true" [InvokeType]="'modal'">
         </app-createclient>
       </div>
 
@@ -856,39 +857,14 @@
     </div>
   </div>
 
-  <div class="modal-dialog presale-client-modal-dialog" role="document" *ngIf="(ShowClient === true)">
-    <div class="modal-content presale-client-result-content">
-
-      <div class="modal-body" *ngIf="(ShoppingCart.Headboard.Client!=null)">
-        <div class="client-result-card p-2 py-lg-3 d-flex flex-column flex-sm-row pos-rel mx-1 align-items-center align-items-sm-stretch justify-content-start justify-content-lg-center ccard">
-          <div class="pl-sm-1">
-            <span class="d-inline-block bgc-purple-tp1 p-3 radius-round text-center border-2 brc-black-tp11">
-              <i class="far fa-user text-white text-170 w-3 mx-3px"></i>
-            </span>
-          </div>
-          <div class="client-result-data pl-sm-25 mt-2 mt-sm-0">
-            <div class="d-flex align-items-center justify-content-center justify-content-sm-between justify-content-md-start">
-              <span class="client-result-name text-grey-d3 text-160 mr-sm-4 text-break">
-                {{ ShoppingCart.Headboard.Client.Person.Names }} {{ ShoppingCart.Headboard.Client.Person.LastNames }}
-              </span>
-              <!-- <div class="text-danger opacity-2 pr-1 font-bolder">
-                4%
-                <i class="fas fa-long-arrow-alt-down text-120"></i>
-              </div> -->
-            </div>
-            <div class="client-result-document text-break">
-              N° Documento : {{ ShoppingCart.Headboard.Client.Person.DocumentNum }}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="modal-footer">
-        <button type="button" class="btn btn-primary" data-dismiss="modal">
-          Ok
-        </button>
-      </div>
-    </div>
+  <div class="modal-dialog presale-client-modal-dialog" style="max-width: 680px;" role="document" *ngIf="ShowClient && ShoppingCart.Headboard.Client">
+    <app-personsearchresult class="modal-content"
+      [name]="getNameClient()"
+      [documentType]="ShoppingCart.Headboard.Client.Person.DocumentType || ''"
+      [documentNumber]="ShoppingCart.Headboard.Client.Person.DocumentNum || ''"
+      [address]="ShoppingCart.Headboard.Client.Person.Address || ''"
+      [contextLabel]="'Cliente de la preventa'">
+    </app-personsearchresult>
   </div>
 
 </div>

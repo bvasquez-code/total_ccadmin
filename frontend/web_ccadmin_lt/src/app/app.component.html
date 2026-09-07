@@ -1,5 +1,5 @@
 <app-spinner></app-spinner>
-<div class="body-container" *ngIf="(getSession() == true)">
+<div class="body-container" *ngIf="(getSession() == true)" [attr.inert]="(IsLoading$ | async) ? '' : null" [attr.aria-busy]="IsLoading$ | async">
     <app-header></app-header>
 
     <div class="main-container bgc-white">
@@ -13,6 +13,6 @@
 
     </div>
 </div>
-<div class="body-container" *ngIf="(getSession() == false)">
+<div class="body-container" *ngIf="(getSession() == false)" [attr.inert]="(IsLoading$ | async) ? '' : null" [attr.aria-busy]="IsLoading$ | async">
     <router-outlet></router-outlet>
 </div>
