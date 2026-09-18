@@ -1,0 +1,37 @@
+.financial-result {
+    border-left: 4px solid currentColor;
+}
+.financial-card {
+    min-height: 128px;
+}
+.financial-value {
+    font-size: clamp(1.3rem, 2.5vw, 2rem);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+.financial-chart {
+    width: 100%;
+    min-width: 540px;
+    display: block;
+}
+.financial-chart text {
+    fill: #64748b;
+    font: 12px Arial, sans-serif;
+}
+.financial-chart polyline {
+    fill: none;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.financial-chart circle {
+    stroke: white;
+    stroke-width: 1.5;
+}
+.financial-legend {
+    display: inline-block;
+    width: 24px;
+    border-top: 3px solid;
+    vertical-align: middle;
+    margin-right: 6px;
+}

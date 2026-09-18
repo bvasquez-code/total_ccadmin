@@ -98,6 +98,8 @@ import { CreateQuickStockEntryComponent } from './enterprise/inventory/pages/cre
 import { ApplicationInitializationComponent } from './enterprise/system/pages/applicationinitialization/applicationinitialization.component';
 import { ApplicationInitializationGuard } from './enterprise/login/service/application-initialization.guard';
 
+import { REPORT_ROUTES } from './enterprise/report/report.routes';
+
 const routes: Routes = [
   {
     path: 'pages/permissiondenied',
@@ -187,6 +189,7 @@ const routes: Routes = [
     path: '',
     canActivateChild: [SessionAccessGuard, ApplicationInitializationGuard, MenuAccessGuard],
     children: [
+      ...REPORT_ROUTES,
       { path: 'enterprise/inventory/pages/liststockentry', component: ListStockEntryComponent },
       { path: 'enterprise/inventory/pages/createstockentry', component: CreateStockEntryComponent },
       { path: 'enterprise/inventory/pages/createquickstockentry', component: CreateQuickStockEntryComponent },

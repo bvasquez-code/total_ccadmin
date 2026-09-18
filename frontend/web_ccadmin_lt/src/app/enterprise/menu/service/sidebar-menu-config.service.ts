@@ -1,3 +1,4 @@
+import { REPORT_MENU } from '../../report/report-menu.config';
 import { Injectable } from "@angular/core";
 import { SidebarMenuConfigDto } from "../model/dto/SidebarMenuConfigDto";
 
@@ -7,6 +8,7 @@ import { SidebarMenuConfigDto } from "../model/dto/SidebarMenuConfigDto";
 export class SidebarMenuConfigService {
 
     private readonly menuConfig: SidebarMenuConfigDto[] = [
+        REPORT_MENU,
         new SidebarMenuConfigDto({
             permission: "VT000000",
             label: "ventas",

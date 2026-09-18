@@ -130,6 +130,18 @@ import { ViewproductComponent } from './enterprise/product/pages/viewproduct/vie
 import { CreateProductQuickComponent } from './enterprise/product/pages/createproductquick/createproductquick.component';
 import { CreateQuickStockEntryComponent } from './enterprise/inventory/pages/createquickstockentry/createquickstockentry.component';
 
+import { SalesReportComponent } from './enterprise/report/pages/salesreport/salesreport.component';
+import { SoldProductsReportComponent } from './enterprise/report/pages/soldproductsreport/soldproductsreport.component';
+import { StockReportComponent } from './enterprise/report/pages/stockreport/stockreport.component';
+import { PaymentMethodsReportComponent } from './enterprise/report/pages/paymentmethodsreport/paymentmethodsreport.component';
+import { DocumentsReportComponent } from './enterprise/report/pages/documentsreport/documentsreport.component';
+import { ClientsReportComponent } from './enterprise/report/pages/clientsreport/clientsreport.component';
+import { OrdersReportComponent } from './enterprise/report/pages/ordersreport/ordersreport.component';
+import { CreditNotesReportComponent } from './enterprise/report/pages/creditnotesreport/creditnotesreport.component';
+import { ProfitReportComponent } from './enterprise/report/pages/profitreport/profitreport.component';
+
+import { PurchaseSalesReportComponent } from './enterprise/report/pages/purchasesalesreport/purchasesalesreport.component';
+
 @NgModule({
   declarations: [
     AppComponent,
@@ -251,6 +263,16 @@ import { CreateQuickStockEntryComponent } from './enterprise/inventory/pages/cre
     ViewproductComponent,
     CreateProductQuickComponent,
     CreateQuickStockEntryComponent,
+    SalesReportComponent,
+    SoldProductsReportComponent,
+    StockReportComponent,
+    PaymentMethodsReportComponent,
+    DocumentsReportComponent,
+    ClientsReportComponent,
+    OrdersReportComponent,
+    CreditNotesReportComponent,
+    ProfitReportComponent,
+    PurchaseSalesReportComponent,
   ],
   imports: [
     BrowserModule,

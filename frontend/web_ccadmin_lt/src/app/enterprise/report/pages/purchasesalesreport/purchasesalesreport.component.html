@@ -1,0 +1,178 @@
+<div role="main" class="main-content">
+  <div class="page-content container container-plus">
+    <div class="card-header mb-3">
+      <h1 class="card-title text-150 text-primary-d2">
+        <i class="fa fa-balance-scale mr-2" aria-hidden="true"></i>{{ title }}
+      </h1>
+    </div>
+    <p class="text-grey-d1">{{ description }}</p>
+
+    <div class="card dcard mb-3">
+      <div class="card-body">
+        <form (ngSubmit)="findAll(1, filters.Query)" autocomplete="off">
+          <fieldset [disabled]="loading || exporting">
+            <div class="row">
+              <div class="col-md-3 mb-3">
+                <label for="report-period">Período</label>
+                <select id="report-period" name="period" class="form-control" [(ngModel)]="period.Mode">
+                  <option value="MONTH">Año y mes</option><option value="RANGE">Fechas específicas</option>
+                </select>
+              </div>
+              <ng-container *ngIf="period.Mode === 'MONTH'">
+                <div class="col-md-2 mb-3">
+                  <label for="report-year">Año</label>
+                  <input id="report-year" name="year" class="form-control" type="number" min="1000" max="9998"
+                         required [(ngModel)]="period.Year">
+                </div>
+                <div class="col-md-3 mb-3">
+                  <label for="report-month">Mes</label>
+                  <select id="report-month" name="month" class="form-control" [(ngModel)]="period.Month">
+                    <option *ngFor="let month of months; let index = index" [ngValue]="index + 1">{{ month }}</option>
+                  </select>
+                </div>
+              </ng-container>
+              <ng-container *ngIf="period.Mode === 'RANGE'">
+                <div class="col-md-3 mb-3">
+                  <label for="report-date-from">Desde</label>
+                  <input id="report-date-from" name="dateFrom" type="date" class="form-control" required [(ngModel)]="filters.DateFrom">
+                </div>
+                <div class="col-md-3 mb-3">
+                  <label for="report-date-to">Hasta</label>
+                  <input id="report-date-to" name="dateTo" type="date" class="form-control" required [(ngModel)]="filters.DateTo">
+                </div>
+              </ng-container>
+              <div class="col-md-3 mb-3">
+                <label for="report-store">Tienda</label>
+                <select id="report-store" name="store" class="form-control" [disabled]="loadingFormData" [(ngModel)]="filters.StoreCod">
+                  <option value="">Todas las tiendas</option>
+                  <option *ngFor="let store of storeList" [value]="store.StoreCod">{{ store.StoreCod }} - {{ store.Name }}</option>
+                </select>
+              </div>
+              <div class="col-md-3 mb-3">
+                <label for="report-currency">Moneda</label>
+                <select id="report-currency" name="currency" class="form-control" [disabled]="loadingFormData" [(ngModel)]="filters.CurrencyCod">
+                  <option value="">Todas, con resúmenes separados</option>
+                  <option value="UNKNOWN">Sin moneda identificada</option>
+                  <option *ngFor="let currency of currencyList" [value]="currency.CurrencyCod">{{ currency.CurrencyCod }} - {{ currency.CurrencyName }}</option>
+                </select>
+              </div>
+              <div class="col-md-3 mb-3">
+                <label for="report-state">Operaciones</label>
+                <select id="report-state" name="state" class="form-control" [(ngModel)]="filters.State">
+                  <option value="">Todas</option><option value="PURCHASE">Compras</option><option value="SALE">Ventas</option><option value="CREDIT_NOTE">Notas de crédito</option>
+                  <option value="TRANSFER">Transferencias</option><option value="STOCK_ENTRY">Entradas de stock</option><option value="STOCK_EXIT">Salidas de stock</option>
+                </select>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="report-query">Buscar</label>
+                <input id="report-query" name="query" class="form-control" maxlength="128" [(ngModel)]="filters.Query"
+                       placeholder="Documento, referencia, tienda de transferencia o cliente / proveedor">
+              </div>
+            </div>
+            <div class="d-flex flex-wrap">
+              <button type="submit" class="btn btn-primary mr-2 mb-2">
+                <i class="fa fa-search mr-1" aria-hidden="true"></i>{{ loading ? 'Consultando...' : 'Consultar' }}
+              </button>
+              <button type="button" class="btn btn-light-secondary mr-2 mb-2" (click)="resetFilters()">Restablecer</button>
+              <button type="button" class="btn btn-success mb-2 ml-md-auto" (click)="exportExcel()"
+                      [disabled]="!appliedFilters || !responsePageSearch.TotalResult">
+                <i class="fa fa-file-excel mr-1" aria-hidden="true"></i>{{ exporting ? 'Exportando...' : 'Exportar Excel' }}
+              </button>
+            </div>
+          </fieldset>
+        </form>
+      </div>
+    </div>
+
+    <div class="alert alert-danger" role="alert" *ngIf="errorMessage">{{ errorMessage }}</div>
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3" *ngIf="appliedFilters">
+      <span class="text-grey-d1">{{ appliedStoreName }} · Del {{ appliedFilters.DateFrom | date:'dd/MM/yyyy' }} al {{ appliedFilters.DateTo | date:'dd/MM/yyyy' }} · Todos los resultados del filtro</span>
+      <div *ngIf="overviewData?.Summary?.length">
+        <label for="summary-currency" class="mr-2 mb-0">Resumen y gráfico en</label>
+        <select id="summary-currency" class="custom-select w-auto" [(ngModel)]="summaryCurrency"
+                (ngModelChange)="updateChart()" [disabled]="loading || exporting">
+          <option *ngFor="let item of overviewData?.Summary" [value]="item.CurrencyCod">{{ currencyLabel(item.CurrencyCod) }}</option>
+        </select>
+      </div>
+    </div>
+
+    <ng-container *ngIf="summary as totals">
+      <div class="row" aria-live="polite">
+        <div class="col-md-4 mb-3">
+          <div class="card dcard financial-card"><div class="card-body">
+            <div class="text-grey-d1">Salidas valorizadas (+) · {{ currencyLabel(totals.CurrencyCod) }}</div>
+            <div class="financial-value font-weight-bold">{{ totals.Sales | number:'1.2-2' }}</div>
+            <small class="text-grey">Ventas, transferencias enviadas y salidas de stock</small>
+          </div></div>
+        </div>
+        <div class="col-md-4 mb-3">
+          <div class="card dcard financial-card"><div class="card-body">
+            <div class="text-grey-d1">Entradas valorizadas (−) · {{ currencyLabel(totals.CurrencyCod) }}</div>
+            <div class="financial-value font-weight-bold">{{ totals.Purchases | number:'1.2-2' }}</div>
+            <small class="text-grey">Compras, transferencias recibidas, devoluciones y entradas de stock</small>
+          </div></div>
+        </div>
+        <div class="col-md-4 mb-3">
+          <div class="card dcard financial-card financial-result" [ngClass]="totals.KnownResult >= 0 ? 'text-success' : 'text-danger'"><div class="card-body">
+            <div>Saldo del período · {{ currencyLabel(totals.CurrencyCod) }}</div>
+            <div class="financial-value font-weight-bold">{{ totals.KnownResult > 0 ? '+' : '' }}{{ totals.KnownResult | number:'1.2-2' }}</div>
+            <small>{{ totals.KnownResult > 0 ? 'El valor de las salidas supera al de las entradas' : totals.KnownResult < 0 ? 'El valor de las entradas supera al de las salidas' : 'Entradas y salidas equilibradas' }}</small>
+          </div></div>
+        </div>
+      </div>
+      <div class="card dcard mb-3" *ngIf="trend as chart">
+        <div class="card-body">
+          <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">
+            <div>
+              <h2 class="text-125 mb-1">Entradas y salidas valorizadas en el tiempo</h2>
+              <span class="text-grey-d1">{{ currencyLabel(totals.CurrencyCod) }} · {{ cumulative ? 'Acumulado desde el inicio del período' : 'Movimientos de cada día' }}</span>
+            </div>
+            <div>
+              <label for="chart-mode" class="sr-only">Vista del gráfico</label>
+              <select id="chart-mode" class="custom-select w-auto" [(ngModel)]="cumulative" (ngModelChange)="updateChart()">
+                <option [ngValue]="true">Acumulado</option><option [ngValue]="false">Por día</option>
+              </select>
+            </div>
+          </div>
+          <div class="text-90 mb-2">
+            <span class="mr-4"><span class="financial-legend" style="border-color:#18794e"></span>Salidas valorizadas</span>
+            <span><span class="financial-legend" style="border-color:#c96a13;border-top-style:dashed"></span>Entradas valorizadas</span>
+          </div>
+          <div class="overflow-auto">
+            <svg class="financial-chart" viewBox="0 0 960 290" role="img"
+                 [attr.aria-label]="'Entradas y salidas valorizadas ' + (cumulative ? 'acumuladas' : 'por día') + ' en ' + currencyLabel(totals.CurrencyCod)">
+              <title>Comparación de entradas y salidas de la tienda</title>
+              <g *ngFor="let tick of chart.Ticks">
+                <line x1="80" x2="900" [attr.y1]="tick.Y" [attr.y2]="tick.Y" stroke="#e2e8f0"></line>
+                <text x="72" [attr.y]="tick.Y + 4" text-anchor="end">{{ tick.Value | number:'1.0-0' }}</text>
+              </g>
+              <line x1="80" x2="900" [attr.y1]="chart.ZeroY" [attr.y2]="chart.ZeroY" stroke="#94a3b8" stroke-dasharray="4 4"></line>
+              <polyline [attr.points]="chart.SalesLine" stroke="#18794e"></polyline>
+              <polyline [attr.points]="chart.PurchasesLine" stroke="#c96a13" stroke-dasharray="7 4"></polyline>
+              <g *ngFor="let point of chart.Points">
+                <circle [attr.cx]="point.X" [attr.cy]="point.SalesY" r="3" fill="#18794e">
+                  <title>{{ point.Date }} · Salidas: {{ point.Sales | number:'1.2-2' }} {{ currencyLabel(totals.CurrencyCod) }}</title>
+                </circle>
+                <circle [attr.cx]="point.X" [attr.cy]="point.PurchasesY" r="3" fill="#c96a13">
+                  <title>{{ point.Date }} · Entradas: {{ point.Purchases | number:'1.2-2' }} {{ currencyLabel(totals.CurrencyCod) }}</title>
+                </circle>
+              </g>
+              <text *ngFor="let date of chart.Dates" [attr.x]="date.X" y="270" text-anchor="middle">{{ date.Label | date:'dd/MM' }}</text>
+            </svg>
+          </div>
+          <p class="text-90 text-grey-d1 mb-0">Se usa la fecha de cada movimiento. Las transferencias se muestran por tienda de origen y destino y los días sin movimientos se incluyen.</p>
+        </div>
+      </div>
+    </ng-container>
+
+    <div class="alert alert-secondary" role="status" *ngIf="hasSearched && !responsePageSearch.TotalResult">
+      No se encontraron operaciones con los filtros indicados.
+    </div>
+    <p class="text-grey-d1 text-90" *ngIf="hasSearched && responsePageSearch.TotalResult">
+      Detalle de todas las monedas seleccionadas. Excel incluye detalle, resumen por moneda y evolución diaria, hasta 10 000 filas de detalle.
+    </p>
+    <div class="table-responsive" [attr.aria-busy]="loading" *ngIf="hasSearched && responsePageSearch.TotalResult">
+      <app-table [data]="dataTablaGenetic" [action]="this"></app-table>
+    </div>
+  </div>
+</div>

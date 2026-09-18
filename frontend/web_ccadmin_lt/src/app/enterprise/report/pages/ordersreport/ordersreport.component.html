@@ -1,0 +1,83 @@
+<div role="main" class="main-content">
+  <div class="page-content container container-plus">
+    <div class="page-header pb-3 mb-3 d-flex align-items-center justify-content-between">
+      <div>
+        <div class="text-90 text-grey-m1 mb-1">Reportes</div>
+        <h1 class="page-title text-primary-d2 text-150 mb-0">
+          <i class="fa fa-clipboard-list mr-2" aria-hidden="true"></i>{{ title }}
+        </h1>
+      </div>
+    </div>
+    <p class="alert bgc-blue-l4 brc-blue-m3 text-dark-m2">{{ description }}</p>
+
+    <div class="card dcard mb-3">
+      <div class="card-body">
+        <form (ngSubmit)="findAll(1, filters.Query)" autocomplete="off">
+          <fieldset [disabled]="loading || exporting">
+            <div class="row">
+              <div class="col-md-3 mb-3">
+                <label for="report-date-from">Desde</label>
+                <input id="report-date-from" name="dateFrom" type="date" class="form-control" [(ngModel)]="filters.DateFrom" required>
+              </div>
+              <div class="col-md-3 mb-3">
+                <label for="report-date-to">Hasta</label>
+                <input id="report-date-to" name="dateTo" type="date" class="form-control" [(ngModel)]="filters.DateTo" required>
+              </div>
+              <div class="col-md-3 mb-3">
+                <label for="report-store">Local</label>
+                <select id="report-store" name="store" class="form-control" [disabled]="loadingFormData" [(ngModel)]="filters.StoreCod">
+                  <option value="">Todas las tiendas</option>
+                  <option *ngFor="let store of storeList" [value]="store.StoreCod">{{ store.StoreCod }} - {{ store.Name }}</option>
+                </select>
+              </div>
+              <div class="col-md-3 mb-3">
+                <label for="report-currency">Moneda</label>
+                <select id="report-currency" name="currency" class="form-control" [disabled]="loadingFormData" [(ngModel)]="filters.CurrencyCod">
+                  <option value="">Todas</option>
+                  <option *ngFor="let currency of currencyList" [value]="currency.CurrencyCod">{{ currency.CurrencyCod }} - {{ currency.CurrencyName }}</option>
+                </select>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label for="report-query">Buscar</label>
+                <input id="report-query" name="query" class="form-control" maxlength="128"
+                       placeholder="Pedido, venta, cliente o seguimiento" [(ngModel)]="filters.Query">
+              </div>
+              <div class="col-md-3 mb-3">
+                <label for="report-state">Estado del pedido</label>
+                <select id="report-state" name="state" class="form-control" [(ngModel)]="filters.State">
+                  <option value="">Todos</option>
+                  <option value="P">Pendiente</option>
+                  <option value="C">Confirmado</option>
+                  <option value="X">Anulado</option>
+                  <option value="R">Rechazado</option>
+                  <option value="F">Finalizado</option>
+                </select>
+              </div>
+            </div>
+            <div class="d-flex flex-wrap align-items-center">
+              <button type="submit" class="btn btn-primary mr-2 mb-2">
+                <i class="fa fa-search mr-1" aria-hidden="true"></i>{{ loading ? 'Consultando...' : 'Consultar' }}
+              </button>
+              <button type="button" class="btn btn-light-secondary mr-2 mb-2" (click)="resetFilters()">Restablecer filtros</button>
+              <button type="button" class="btn btn-success mb-2 ml-md-auto" (click)="exportExcel()"
+                      [disabled]="!appliedFilters || !responsePageSearch.TotalResult">
+                <i class="fa fa-file-excel mr-1" aria-hidden="true"></i>{{ exporting ? 'Exportando...' : 'Exportar Excel' }}
+              </button>
+            </div>
+          </fieldset>
+        </form>
+      </div>
+    </div>
+    <div class="alert alert-danger" role="alert" *ngIf="errorMessage">{{ errorMessage }}</div>
+    <div class="d-flex flex-wrap justify-content-between text-90 text-grey-d1 mb-2" *ngIf="appliedFilters">
+      <span>Período consultado: {{ appliedFilters.DateFrom }} al {{ appliedFilters.DateTo }}.</span>
+      <span>Excel incluye todos los resultados de los filtros aplicados, hasta 10 000 filas.</span>
+    </div>
+    <div class="alert alert-secondary" role="status" *ngIf="hasSearched && !responsePageSearch.TotalResult">
+      No se encontraron resultados con los filtros indicados.
+    </div>
+    <div class="table-responsive" [attr.aria-busy]="loading" *ngIf="hasSearched && responsePageSearch.TotalResult">
+      <app-table [data]="dataTablaGenetic" [action]="this"></app-table>
+    </div>
+  </div>
+</div>

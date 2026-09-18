@@ -85,7 +85,7 @@ public interface ProductInfoRepository extends JpaRepository<ProductInfoEntity, 
                     ) LIKE CONCAT('%', :query, '%')
                     OR product_info.ProductCod = :id
               )
-            ORDER BY product.ProductName, product_info.ProductCod, product_info.Variant
+            ORDER BY product_info.NumTotalStock desc,product.ProductName, product_info.Variant asc
             LIMIT :init, :limit
             """, nativeQuery = true)
     @Override

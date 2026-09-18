@@ -29,7 +29,7 @@ export class AlertService
         });
     }
 
-    waring(text : string = "Esta acciÃ³n no podra ser revertida",title : string = "Â¿EstÃ¡s seguro?") : Promise<SweetAlertResult<any>>
+    waring(text : string = "Esta acción no podra ser revertida",title : string = "¿Estás seguro?") : Promise<SweetAlertResult<any>>
     {
         return Swal.fire({
             title: title,
@@ -38,7 +38,7 @@ export class AlertService
             showCancelButton: true,
             confirmButtonColor: '#3085d6',
             cancelButtonColor: '#d33',
-            confirmButtonText: 'SÃ­, confirmar',
+            confirmButtonText: 'Sí, confirmar',
             cancelButtonText: 'No, cancelar'
         });
     }
@@ -52,7 +52,7 @@ export class AlertService
             showCancelButton: true,
             confirmButtonColor: '#3085d6',
             cancelButtonColor: '#d33',
-            confirmButtonText: 'Si, confirmar',
+            confirmButtonText: 'Sí, confirmar',
             cancelButtonText: 'No, cancelar'
         });
     }
