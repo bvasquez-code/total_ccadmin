@@ -2,6 +2,7 @@ package com.ccadmin.app.sale.service;
 
 import com.ccadmin.app.payment.model.entity.TrxPaymentEntity;
 import com.ccadmin.app.payment.shared.TrxPaymentShared;
+import com.ccadmin.app.payment.repository.MercadoPagoAttemptRepository;
 import com.ccadmin.app.sale.exception.SalePaymentException;
 import com.ccadmin.app.sale.model.dto.SalePaymentRegisterDto;
 import com.ccadmin.app.sale.model.dto.SalesContextDto;
@@ -31,6 +32,8 @@ public class SalePaymentCreateService extends SessionService {
     private TrxPaymentShared trxPaymentShared;
     @Autowired
     private SalesContextService salesContextService;
+    @Autowired
+    private MercadoPagoAttemptRepository mercadoPagoAttemptRepository;
 
     @Transactional
     public SalePaymentEntity save(SalePaymentRegisterDto payment) throws Exception {
@@ -55,6 +58,9 @@ public class SalePaymentCreateService extends SessionService {
 
         if(!StatusConst.PENDING.equals(saleHead.SaleStatus)){
             throw new SalePaymentException("Sale is no longer pending");
+        }
+        if (mercadoPagoAttemptRepository.hasPendingPayment(saleHead.SaleCod)) {
+            throw new SalePaymentException("El pedido tiene un pago de Mercado Pago en verificacion");
         }
 
         TrxPaymentEntity trxPayment = this.trxPaymentShared.findById(payment.TrxPaymentId);

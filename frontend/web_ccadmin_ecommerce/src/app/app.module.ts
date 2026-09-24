@@ -18,6 +18,7 @@ import { AddressModalComponent } from './enterprise/client/component/address-mod
 import { StorefrontFooterComponent } from './enterprise/main/footer/storefront-footer.component';
 import { StorefrontHeaderComponent } from './enterprise/main/header/storefront-header.component';
 import { CheckoutComponent } from './enterprise/sale/pages/checkout/checkout.component';
+import { MercadoPagoModalComponent } from './enterprise/sale/pages/mercado-pago-modal/mercado-pago-modal.component';
 import { OrdersComponent } from './enterprise/sale/pages/orders/orders.component';
 import { LoadingComponent } from './enterprise/shared/component/loading/loading.component';
 import { LocationSelectorComponent } from './enterprise/store/component/location-selector/location-selector.component';
@@ -39,6 +40,7 @@ import { LoadingInterceptor } from './interceptors/LoadingInterceptor';
     ProfileComponent,
     AddressModalComponent,
     CheckoutComponent,
+    MercadoPagoModalComponent,
     OrdersComponent
   ],
   imports: [

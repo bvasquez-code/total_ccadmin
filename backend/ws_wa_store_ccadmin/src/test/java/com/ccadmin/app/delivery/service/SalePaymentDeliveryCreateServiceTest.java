@@ -3,6 +3,7 @@ package com.ccadmin.app.delivery.service;
 import com.ccadmin.app.delivery.model.dto.SalePaymentDeliveryRegisterDto;
 import com.ccadmin.app.delivery.model.dto.SaleDeliveryAccessTokenPayloadDto;
 import com.ccadmin.app.payment.model.entity.TrxPaymentEntity;
+import com.ccadmin.app.payment.repository.MercadoPagoAttemptRepository;
 import com.ccadmin.app.payment.service.TrxPaymentCreateService;
 import com.ccadmin.app.payment.service.TrxPaymentDocumentCreateService;
 import com.ccadmin.app.sale.model.dto.SalePaymentRegisterDto;
@@ -42,7 +43,21 @@ class SalePaymentDeliveryCreateServiceTest {
     @Mock private SaleDeliveryAccessTokenService saleDeliveryAccessTokenService;
     @Mock private TrxPaymentDocumentCreateService trxPaymentDocumentCreateService;
     @Mock private PaymentMethodShared paymentMethodShared;
+    @Mock private MercadoPagoAttemptRepository mercadoPagoAttemptRepository;
     @InjectMocks private SalePaymentDeliveryCreateService service;
+
+    @Test
+    void rejectsManualCardPaymentsBeforePersistingAnything() {
+        for (String code : java.util.List.of("TC001", "TD001")) {
+            var request = new SalePaymentDeliveryRegisterDto();
+            request.OrderToken = "order-token";
+            request.TrxPayment = new TrxPaymentEntity();
+            request.TrxPayment.PaymentMethodCod = code;
+            request.TrxPayment.TypeMovement = "I";
+            assertThrows(IllegalArgumentException.class, () -> service.save(request));
+        }
+        org.mockito.Mockito.verifyNoInteractions(trxPaymentCreateService, salePaymentCreateService);
+    }
 
     @Test
     void registersWebPaymentThroughExistingTransactionAndSalePaymentCores() throws Exception {

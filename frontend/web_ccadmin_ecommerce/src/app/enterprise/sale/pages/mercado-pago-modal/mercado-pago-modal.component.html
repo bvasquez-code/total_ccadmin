@@ -1,0 +1,31 @@
+<div class="payment-modal-backdrop" (click)="close()"></div>
+<section #dialog class="payment-modal" role="dialog" aria-modal="true" aria-labelledby="mercado-pago-title" tabindex="-1">
+  <header>
+    <div><span>Mercado Pago</span><h2 id="mercado-pago-title">{{ PaymentMethodCod === 'TD001' ? 'Tarjeta de débito' : 'Tarjeta de crédito' }}</h2></div>
+    <button type="button" class="btn btn-light" aria-label="Cerrar pago" [disabled]="IsSubmitting" (click)="close()">×</button>
+  </header>
+  <div class="payment-modal-content">
+    <div class="payment-total" *ngIf="Configuration">
+      <strong>{{ Configuration.CurrencyCod }} {{ Configuration.Amount | number:'1.2-2' }}</strong>
+      <span class="badge badge-warning" *ngIf="Configuration.TestMode">Modo de prueba</span>
+    </div>
+    <p class="text-muted">Ingresa los datos de tu tarjeta en el formulario seguro de Mercado Pago.</p>
+    <div class="alert alert-danger" role="alert" *ngIf="ErrorMessage">{{ ErrorMessage }}</div>
+    <div class="alert" aria-live="polite" *ngIf="Payment" [class.alert-success]="Payment.State === 'C'"
+      [class.alert-warning]="Payment.State === 'P'" [class.alert-danger]="Payment.State === 'F'">
+      {{ Payment.Message }}
+      <small class="d-block" *ngIf="Payment.PaymentId">Operación: {{ Payment.PaymentId }}</small>
+    </div>
+    <div class="text-center py-3" *ngIf="IsLoading || IsSubmitting" role="status">
+      <i class="fa fa-spinner fa-spin mr-2"></i>{{ IsSubmitting ? 'Verificando el pago...' : 'Cargando formulario seguro...' }}
+    </div>
+    <div [id]="ContainerId" [hidden]="Payment?.State === 'P' || Payment?.State === 'C'"></div>
+    <div class="payment-actions">
+      <button class="btn btn-primary" type="button" *ngIf="Payment?.State === 'P'" [disabled]="IsSubmitting" (click)="refresh()">Consultar estado</button>
+      <button class="btn btn-outline-primary" type="button" *ngIf="Payment?.State === 'P' && PendingRequest && ErrorMessage"
+        [disabled]="IsSubmitting" (click)="retrySubmission()">Reintentar el mismo pago</button>
+      <button class="btn btn-primary" type="button" *ngIf="Payment?.State === 'F'" [disabled]="IsSubmitting || IsLoading" (click)="retry()">Intentar nuevamente</button>
+      <button class="btn btn-outline-secondary" type="button" [disabled]="IsSubmitting" (click)="close()">{{ Payment?.State === 'C' ? 'Volver al pedido' : 'Cerrar' }}</button>
+    </div>
+  </div>
+</section>

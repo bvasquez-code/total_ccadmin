@@ -43,6 +43,7 @@
             <div class="form-group col-md-8">
               <label for="payment-method">Medio de pago</label>
               <select id="payment-method" class="form-control" name="PaymentMethodCod"
+                [disabled]="IsSavingPayment || HasPendingMercadoPago"
                 [(ngModel)]="SelectedPaymentMethodCod" (change)="onPaymentMethodChange()">
                 <option *ngFor="let paymentMethod of PaymentMethodList"
                   [value]="paymentMethod.PaymentMethodCod">
@@ -56,6 +57,7 @@
             </div>
           </div>
 
+          <div class="alert alert-info" *ngIf="HasPendingMercadoPago">Tu pago con Mercado Pago está en verificación. Consulta su estado antes de realizar otro pago.</div>
           <div class="payment-proof" *ngIf="requiresPaymentProof()">
             <div class="payment-proof-heading d-flex align-items-start justify-content-between">
               <div class="d-flex flex-column">
@@ -91,7 +93,7 @@
           <button type="button" class="btn btn-primary"
             [disabled]="IsSavingPayment || (requiresPaymentProof() && !PaymentProofDocument)"
             (click)="addPayment()">
-            <i class="fa fa-lock mr-2"></i>{{ IsSavingPayment ? 'Procesando pago...' : 'Realizar pago' }}
+            <i class="fa fa-lock mr-2"></i>{{ IsSavingPayment ? 'Procesando pago...' : (HasPendingMercadoPago ? 'Consultar pago' : (usesMercadoPago() ? 'Pagar con Mercado Pago' : 'Realizar pago')) }}
           </button>
         </ng-container>
 
@@ -398,6 +400,10 @@
     </div>
   </ng-container>
 </main>
+
+<app-mercado-pago-modal *ngIf="IsMercadoPagoModalVisible" [OrderToken]="OrderToken"
+  [PaymentMethodCod]="SelectedPaymentMethodCod" (closed)="IsMercadoPagoModalVisible = false"
+  (paymentChanged)="mercadoPagoChanged($event)"></app-mercado-pago-modal>
 
 <app-address-modal
   [Visible]="IsAddressModalVisible"

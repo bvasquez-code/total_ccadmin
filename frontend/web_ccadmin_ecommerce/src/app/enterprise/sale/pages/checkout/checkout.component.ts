@@ -29,6 +29,8 @@ import { SaleBillingEntity } from '../../model/entity/SaleBillingEntity';
 import { CheckoutService } from '../../service/checkout.service';
 import { BillingIdentityService } from '../../service/billing-identity.service';
 import { PersonEntity } from '../../../client/model/entity/ClientEntity';
+import { MercadoPagoService } from '../../service/mercado-pago.service';
+import { MercadoPagoResultDto } from '../../model/dto/MercadoPagoDto';
 
 interface DeliveryOption {
   Code: string;
@@ -53,6 +55,8 @@ export class CheckoutComponent implements OnInit {
   public PaymentMethodList: PaymentMethodEntity[] = [];
   public SelectedPaymentMethodCod: string = '';
   public IsSavingPayment: boolean = false;
+  public IsMercadoPagoModalVisible = false;
+  public HasPendingMercadoPago = false;
   public OrderLoadError: boolean = false;
   public AddressList: ClientAddressEntity[] = [];
   public Coverage: DeliveryCoverageDto | null = null;
@@ -89,6 +93,7 @@ export class CheckoutComponent implements OnInit {
     private clientSessionService: ClientSessionService,
     private clientAddressService: ClientAddressService,
     private checkoutService: CheckoutService,
+    private mercadoPagoService: MercadoPagoService,
     private billingIdentityService: BillingIdentityService,
     private activatedRoute: ActivatedRoute,
     private router: Router,
@@ -326,6 +331,11 @@ export class CheckoutComponent implements OnInit {
   }
 
   public async addPayment(): Promise<void> {
+    if (this.IsSavingPayment) return;
+    if (this.usesMercadoPago() || this.HasPendingMercadoPago) {
+      this.IsMercadoPagoModalVisible = true;
+      return;
+    }
     const paymentMethod = this.selectedPaymentMethod();
     const amount = this.outstandingBalance();
 
@@ -415,13 +425,23 @@ export class CheckoutComponent implements OnInit {
   }
 
   public requiresPaymentProof(): boolean {
-    return this.selectedPaymentMethod()?.IsPaymentProofRequired === 'S';
+    return !this.usesMercadoPago() && this.selectedPaymentMethod()?.IsPaymentProofRequired === 'S';
+  }
+
+  public usesMercadoPago(): boolean {
+    return this.SelectedPaymentMethodCod === 'TC001' || this.SelectedPaymentMethodCod === 'TD001';
+  }
+
+  public async mercadoPagoChanged(payment: MercadoPagoResultDto | null): Promise<void> {
+    this.HasPendingMercadoPago = payment?.State === 'P';
+    if (payment?.State === 'C') await this.loadSaleData();
   }
 
   public onPaymentMethodChange(): void {
     if (!this.requiresPaymentProof()) {
       this.clearPaymentProof();
     }
+    if (this.usesMercadoPago() && !this.hasRegisteredPayment()) this.IsMercadoPagoModalVisible = true;
   }
 
   public onPaymentProofSelected(event: Event): void {
@@ -703,6 +723,19 @@ export class CheckoutComponent implements OnInit {
       || !this.PaymentMethodList.some(item => item.PaymentMethodCod === this.SelectedPaymentMethodCod)) {
       this.SelectedPaymentMethodCod = this.PaymentMethodList[0]?.PaymentMethodCod || '';
     }
+    if (!this.hasRegisteredPayment()) {
+      const paymentResponse = await this.mercadoPagoService.status(this.OrderToken);
+      if (!paymentResponse.ErrorStatus) {
+        const payment = paymentResponse.Data as MercadoPagoResultDto | null;
+        this.HasPendingMercadoPago = payment?.State === 'P';
+        if (this.HasPendingMercadoPago) this.SelectedPaymentMethodCod = payment?.PaymentMethodCod || 'TC001';
+        if (payment?.State === 'C') {
+          // Reload the order once after reconciliation; the payment now exists in the normal sale detail.
+          const refreshed = await this.checkoutService.findSaleData(this.OrderToken);
+          if (!refreshed.ErrorStatus) this.SaleDetail = (refreshed.DataAdditional.find(item => item.Name === 'SaleDetail')?.Data as SaleDetailDto) || this.SaleDetail;
+        }
+      }
+    } else { this.HasPendingMercadoPago = false; }
   }
 
   private buildPayment(
@@ -721,10 +754,6 @@ export class CheckoutComponent implements OnInit {
     payment.AmountReturned = 0;
     payment.TypeMovement = 'I';
 
-    if (this.isCard(paymentMethod)) {
-      payment.CardNumber = '4578************';
-      payment.CardHolderName = 'Cliente web';
-    }
     if (!this.isCash(paymentMethod)) {
       payment.TransactionId = this.generateTransactionId();
     }

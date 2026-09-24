@@ -3,6 +3,8 @@ package com.ccadmin.app.delivery.service;
 import com.ccadmin.app.delivery.model.dto.SalePaymentDeliveryRegisterDto;
 import com.ccadmin.app.delivery.model.dto.SaleDeliveryAccessTokenPayloadDto;
 import com.ccadmin.app.payment.model.entity.TrxPaymentEntity;
+import com.ccadmin.app.payment.model.entity.TrxPaymentDocumentEntity;
+import com.ccadmin.app.payment.repository.MercadoPagoAttemptRepository;
 import com.ccadmin.app.payment.service.TrxPaymentCreateService;
 import com.ccadmin.app.payment.service.TrxPaymentDocumentCreateService;
 import com.ccadmin.app.sale.model.dto.SalePaymentRegisterDto;
@@ -19,6 +21,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Service
 public class SalePaymentDeliveryCreateService {
@@ -31,6 +34,7 @@ public class SalePaymentDeliveryCreateService {
     private final SaleDeliveryAccessTokenService saleDeliveryAccessTokenService;
     private final TrxPaymentDocumentCreateService trxPaymentDocumentCreateService;
     private final PaymentMethodShared paymentMethodShared;
+    private final MercadoPagoAttemptRepository mercadoPagoAttemptRepository;
 
     public SalePaymentDeliveryCreateService(
             ClientDeliveryContextService clientDeliveryContextService,
@@ -40,7 +44,8 @@ public class SalePaymentDeliveryCreateService {
             SalePaymentCreateService salePaymentCreateService,
             SaleDeliveryAccessTokenService saleDeliveryAccessTokenService,
             TrxPaymentDocumentCreateService trxPaymentDocumentCreateService,
-            PaymentMethodShared paymentMethodShared
+            PaymentMethodShared paymentMethodShared,
+            MercadoPagoAttemptRepository mercadoPagoAttemptRepository
     ) {
         this.clientDeliveryContextService = clientDeliveryContextService;
         this.saleHeadRepository = saleHeadRepository;
@@ -50,9 +55,10 @@ public class SalePaymentDeliveryCreateService {
         this.saleDeliveryAccessTokenService = saleDeliveryAccessTokenService;
         this.trxPaymentDocumentCreateService = trxPaymentDocumentCreateService;
         this.paymentMethodShared = paymentMethodShared;
+        this.mercadoPagoAttemptRepository = mercadoPagoAttemptRepository;
     }
 
-    @Transactional
+    @Transactional(rollbackOn = Exception.class)
     public SalePaymentEntity save(SalePaymentDeliveryRegisterDto request) throws Exception {
         validateRequest(request);
         ClientSessionDto clientSession = clientDeliveryContextService.getCurrentClient();
@@ -67,12 +73,7 @@ public class SalePaymentDeliveryCreateService {
                 "La venta web no existe o no pertenece al cliente autenticado"
         ));
 
-        if (!StatusConst.PENDING.equals(saleHead.SaleStatus)) {
-            throw new IllegalArgumentException("La venta ya no se encuentra pendiente");
-        }
-        if (salePaymentRepository.countTotalPayment(saleHead.SaleCod) > 0) {
-            throw new IllegalArgumentException("El pedido ya tiene un pago registrado");
-        }
+        validateUnpaidSale(saleHead);
 
         PaymentMethodEntity paymentMethod = this.paymentMethodShared.findActiveWebSaleById(
                 request.TrxPayment.PaymentMethodCod
@@ -81,13 +82,37 @@ public class SalePaymentDeliveryCreateService {
                 request.DocumentList,
                 "S".equals(paymentMethod.IsPaymentProofRequired)
         );
+        return persistPayment(saleHead, request.TrxPayment, request.DocumentList);
+    }
 
-        prepareFullPayment(request.TrxPayment, saleHead);
-        request.TrxPayment.TrxPaymentId = null;
-        TrxPaymentEntity trxPayment = trxPaymentCreateService.saveWeb(request.TrxPayment);
+    // Internal entry point: only server-verified provider responses reach this method.
+    @Transactional(rollbackOn = Exception.class)
+    public SalePaymentEntity saveApprovedGatewayPayment(SaleHeadEntity saleHead, TrxPaymentEntity trxPayment) throws Exception {
+        validateUnpaidSale(saleHead);
+        return persistPayment(saleHead, trxPayment, List.of());
+    }
+
+    private void validateUnpaidSale(SaleHeadEntity saleHead) {
+        if (!StatusConst.PENDING.equals(saleHead.SaleStatus)) {
+            throw new IllegalArgumentException("La venta ya no se encuentra pendiente");
+        }
+        if (salePaymentRepository.countTotalPayment(saleHead.SaleCod) > 0) {
+            throw new IllegalArgumentException("El pedido ya tiene un pago registrado");
+        }
+
+        if (mercadoPagoAttemptRepository.hasPendingPayment(saleHead.SaleCod)) {
+            throw new IllegalArgumentException("Hay un pago de Mercado Pago pendiente de verificacion");
+        }
+    }
+
+    private SalePaymentEntity persistPayment(SaleHeadEntity saleHead, TrxPaymentEntity requestedPayment,
+                                            List<TrxPaymentDocumentEntity> documents) throws Exception {
+        prepareFullPayment(requestedPayment, saleHead);
+        requestedPayment.TrxPaymentId = null;
+        TrxPaymentEntity trxPayment = trxPaymentCreateService.saveWeb(requestedPayment);
         this.trxPaymentDocumentCreateService.saveWeb(
                 trxPayment.TrxPaymentId,
-                request.DocumentList
+                documents
         );
 
         SalePaymentRegisterDto salePayment = new SalePaymentRegisterDto();
@@ -128,6 +153,9 @@ public class SalePaymentDeliveryCreateService {
         }
         if ("NC001".equals(request.TrxPayment.PaymentMethodCod)) {
             throw new IllegalArgumentException("La nota de credito no es un medio de pago manual");
+        }
+        if ("TC001".equals(request.TrxPayment.PaymentMethodCod) || "TD001".equals(request.TrxPayment.PaymentMethodCod)) {
+            throw new IllegalArgumentException("El pago con tarjeta debe procesarse mediante Mercado Pago");
         }
     }
 }

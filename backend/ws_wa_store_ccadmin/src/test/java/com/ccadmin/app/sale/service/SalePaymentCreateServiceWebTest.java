@@ -1,5 +1,7 @@
 package com.ccadmin.app.sale.service;
 
+import com.ccadmin.app.payment.repository.MercadoPagoAttemptRepository;
+
 import com.ccadmin.app.payment.model.entity.TrxPaymentEntity;
 import com.ccadmin.app.payment.shared.TrxPaymentShared;
 import com.ccadmin.app.sale.model.dto.SalePaymentRegisterDto;
@@ -28,6 +30,7 @@ class SalePaymentCreateServiceWebTest {
     @Mock private SaleHeadRepository saleHeadRepository;
     @Mock private TrxPaymentShared trxPaymentShared;
     @Mock private SalesContextService salesContextService;
+    @Mock private MercadoPagoAttemptRepository mercadoPagoAttemptRepository;
     @InjectMocks private SalePaymentCreateService salePaymentCreateService;
 
     @Test

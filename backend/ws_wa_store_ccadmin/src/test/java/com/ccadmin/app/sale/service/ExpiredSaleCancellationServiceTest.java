@@ -1,5 +1,7 @@
 package com.ccadmin.app.sale.service;
 
+import com.ccadmin.app.payment.repository.MercadoPagoAttemptRepository;
+
 import com.ccadmin.app.product.repository.KardexZoneRepository;
 import com.ccadmin.app.product.shared.KardexShared;
 import com.ccadmin.app.sale.exception.SaleException;
@@ -32,6 +34,35 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ExpiredSaleCancellationServiceTest {
+    @Mock private MercadoPagoAttemptRepository mercadoPagoAttemptRepository;
+
+    @Test
+    void blocksManualCancellationBeforeReleasingCreditNotesOrStock() {
+        var presale = confirmedPresale();
+        var sale = new SaleHeadEntity();
+        sale.SaleCod = "SALE1";
+        when(presaleHeadRepository.findByIdForUpdate(presale.PresaleCod)).thenReturn(Optional.of(presale));
+        when(kardexZoneRepository.countByOperationEvent(
+                SaleConstants.KARDEX_ZONE_SOURCE_PRESALE, presale.PresaleCod,
+                SaleConstants.KARDEX_ZONE_EVENT_RESERVATION)).thenReturn(1);
+        when(saleHeadRepository.findByPresaleCodForUpdate(presale.PresaleCod)).thenReturn(Optional.of(sale));
+        when(mercadoPagoAttemptRepository.hasPendingPayment("SALE1")).thenReturn(true);
+        assertThrows(SaleException.class, () -> cancellationService.cancelPresale(presale.PresaleCod, false));
+        org.mockito.Mockito.verifyNoInteractions(creditNoteApplicationCreateService, kardexShared);
+    }
+
+    @Test
+    void doesNotExpireAnOrderWithAnUnresolvedGatewayCharge() throws Exception {
+        var sale = new SaleHeadEntity();
+        sale.SaleCod = "SALE1";
+        sale.SaleStatus = "P";
+        sale.CreationDate = new java.util.Date(0);
+        when(saleHeadRepository.findByIdForUpdate("SALE1")).thenReturn(Optional.of(sale));
+        when(mercadoPagoAttemptRepository.hasPendingPayment("SALE1")).thenReturn(true);
+        org.junit.jupiter.api.Assertions.assertFalse(cancellationService.cancelExpiredSale("SALE1", new java.util.Date(), "SYSTEM"));
+        verify(saleHeadRepository, never()).save(org.mockito.ArgumentMatchers.any());
+        org.mockito.Mockito.verifyNoInteractions(creditNoteApplicationCreateService, kardexShared);
+    }
 
     @Mock
     private SaleHeadRepository saleHeadRepository;

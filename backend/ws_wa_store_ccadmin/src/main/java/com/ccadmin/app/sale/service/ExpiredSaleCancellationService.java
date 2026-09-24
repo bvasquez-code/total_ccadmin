@@ -1,6 +1,7 @@
 package com.ccadmin.app.sale.service;
 
 import com.ccadmin.app.product.shared.KardexShared;
+import com.ccadmin.app.payment.repository.MercadoPagoAttemptRepository;
 import com.ccadmin.app.product.model.entity.KardexZoneEntity;
 import com.ccadmin.app.product.repository.KardexZoneRepository;
 import com.ccadmin.app.sale.exception.SaleException;
@@ -50,6 +51,8 @@ public class ExpiredSaleCancellationService extends SessionService {
     private CreditNoteApplicationCreateService creditNoteApplicationCreateService;
     @Autowired
     private SaleDeliveryRepository saleDeliveryRepository;
+    @Autowired
+    private MercadoPagoAttemptRepository mercadoPagoAttemptRepository;
 
     public PresaleCancellationDetailDto findCancellationDetail(String presaleCod) throws SaleException {
         PresaleHeadEntity presaleHead = this.presaleHeadRepository.findById(presaleCod)
@@ -100,6 +103,9 @@ public class ExpiredSaleCancellationService extends SessionService {
         }
 
         SaleHeadEntity saleHead = saleOptional.get();
+        if (mercadoPagoAttemptRepository.hasPendingPayment(saleHead.SaleCod)) {
+            throw new SaleException("El pedido tiene un pago de Mercado Pago en verificacion");
+        }
         this.creditNoteApplicationCreateService.releaseBySale(
                 saleHead.SaleCod,
                 getUserCod()
@@ -125,6 +131,9 @@ public class ExpiredSaleCancellationService extends SessionService {
             return false;
         }
         if (saleHead.CreationDate == null || saleHead.CreationDate.after(expirationLimit)) {
+            return false;
+        }
+        if (mercadoPagoAttemptRepository.hasPendingPayment(saleCod)) {
             return false;
         }
         this.creditNoteApplicationCreateService.releaseBySale(saleCod, userCod);
