@@ -235,6 +235,7 @@ export class CreateproductconfigComponent implements OnInit {
     copy.NumMaxStock = Number(config.NumMaxStock || 0);
     copy.NumMinStock = Number(config.NumMinStock || 0);
     copy.IsDigital = (config.IsDigital || "N").trim().toUpperCase();
+    copy.IsPublic = (config.IsPublic || "S").trim().toUpperCase();
     copy.IsDiscontable = config.IsDiscontable || "N";
     copy.DiscountType = config.DiscountType || "-";
     copy.NumDiscountMax = Number(config.NumDiscountMax || 0);

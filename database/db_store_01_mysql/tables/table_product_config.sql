@@ -25,6 +25,7 @@ CREATE TABLE `product_config` (
   `NumMaxStock` int DEFAULT '0',
   `NumMinStock` int DEFAULT '0',
   `IsDigital` char(1) NOT NULL DEFAULT 'N' COMMENT 'S: no controla stock ni genera Kardex; N: producto inventariable',
+  `IsPublic` char(1) NOT NULL DEFAULT 'S' COMMENT 'S: visible en web externa; N: solo web interna, por producto y tienda',
   `IsDiscontable` char(1) DEFAULT 'N',
   `DiscountType` char(2) DEFAULT NULL,
   `NumDiscountMax` decimal(16,2) DEFAULT '0.00',
@@ -38,6 +39,7 @@ CREATE TABLE `product_config` (
   `Status` char(1) NOT NULL DEFAULT 'A',
   PRIMARY KEY (`ProductCod`,`StoreCod`),
   KEY `fk_product_config_store` (`StoreCod`),
+  CONSTRAINT `chk_product_config_is_public` CHECK (`IsPublic` IN ('S','N')),
   CONSTRAINT `chk_product_config_is_digital` CHECK (`IsDigital` IN ('S','N')),
   CONSTRAINT `chk_product_config_product_unit_factor` CHECK (`ProductUnitFactor` >= 1),
   CONSTRAINT `fk_product_config_product` FOREIGN KEY (`ProductCod`) REFERENCES `product` (`ProductCod`),
@@ -73,6 +75,22 @@ CREATE TABLE `product_config` (
             ALTER TABLE `product_config` ADD COLUMN `IsDigital` char(1) NOT NULL DEFAULT 'N'
             COMMENT 'S: no controla stock ni genera Kardex; N: producto inventariable' AFTER `NumMinStock`;
             SELECT 'Columna IsDigital agregada exitosamente.' AS Mensaje;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'product_config'
+            AND column_name = 'IsPublic'
+        ) THEN
+            ALTER TABLE `product_config` ADD COLUMN `IsPublic` char(1) NOT NULL DEFAULT 'S'
+            COMMENT 'S: visible en web externa; N: solo web interna, por producto y tienda' AFTER `IsDigital`;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT * FROM information_schema.table_constraints WHERE table_schema = DATABASE() AND table_name = 'product_config'
+            AND constraint_name = 'chk_product_config_is_public'
+        ) THEN
+            ALTER TABLE `product_config` ADD CONSTRAINT `chk_product_config_is_public`
+            CHECK (`IsPublic` IN ('S','N'));
         END IF;
 
         IF NOT EXISTS (
@@ -129,13 +147,13 @@ CREATE TABLE `product_config` (
 
             INSERT INTO `product_config` (
                 `ProductCod`, `StoreCod`, `NumPrice`, `NumMaxStock`, `NumMinStock`,
-                `IsDigital`, `IsDiscontable`, `DiscountType`, `NumDiscountMax`, `ProductUnitName`,
+                `IsDigital`, `IsPublic`, `IsDiscontable`, `DiscountType`, `NumDiscountMax`, `ProductUnitName`,
                 `ProductUnitFactor`, `Version`, `CreationUser`, `CreationDate`,
                 `ModifyUser`, `ModifyDate`, `Status`
             )
             SELECT
                 base.`ProductCod`, s.`StoreCod`, base.`NumPrice`, base.`NumMaxStock`, base.`NumMinStock`,
-                base.`IsDigital`, base.`IsDiscontable`, base.`DiscountType`, base.`NumDiscountMax`, base.`ProductUnitName`,
+                base.`IsDigital`, base.`IsPublic`, base.`IsDiscontable`, base.`DiscountType`, base.`NumDiscountMax`, base.`ProductUnitName`,
                 base.`ProductUnitFactor`, base.`Version`, base.`CreationUser`, base.`CreationDate`,
                 base.`ModifyUser`, base.`ModifyDate`, base.`Status`
             FROM (

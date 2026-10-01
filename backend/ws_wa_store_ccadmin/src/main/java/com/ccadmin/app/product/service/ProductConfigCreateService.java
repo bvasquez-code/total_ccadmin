@@ -375,6 +375,7 @@ public class ProductConfigCreateService extends SessionService {
         config.NumMaxStock = source.NumMaxStock;
         config.NumMinStock = source.NumMinStock;
         config.IsDigital = source.IsDigital;
+        config.IsPublic = source.IsPublic;
         config.IsDiscontable = source.IsDiscontable;
         config.DiscountType = source.DiscountType;
         config.NumDiscountMax = source.NumDiscountMax;
@@ -392,6 +393,7 @@ public class ProductConfigCreateService extends SessionService {
         target.NumMaxStock = source.NumMaxStock;
         target.NumMinStock = source.NumMinStock;
         target.IsDigital = source.IsDigital;
+        target.IsPublic = source.IsPublic;
         target.ProductUnitName = source.ProductUnitName;
         target.ProductUnitFactor = source.ProductUnitFactor;
         target.IsDiscontable = source.IsDiscontable;

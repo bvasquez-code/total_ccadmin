@@ -8,6 +8,7 @@ export class ProductConfigEntity extends AuditTableEntity
     public NumMaxStock: number = 0;
     public NumMinStock: number = 0;
     public IsDigital: string = "N";
+    public IsPublic: string = "S";
     public IsDiscontable: string = "";
     public DiscountType: string = "";
     public NumDiscountMax: number = 0;

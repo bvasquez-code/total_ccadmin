@@ -32,6 +32,7 @@ public class ProductFindSearchService {
 
     public ResponsePageSearchT<ProductSearchEntity> query(ProductSearchDto productSearch)
     {
+        boolean publicOnly = isExternalSearch(productSearch.SearchOrigin);
         if(productSearch.Query != null && isPositiveInteger(productSearch.Query)){
             ProductBarcodeEntity productBarcode = this.productBarcodeRepository.findById(productSearch.Query).orElse(null);
             if(productBarcode!=null){
@@ -43,7 +44,8 @@ public class ProductFindSearchService {
                 productSearch.Query,
                 productSearch.Query,
                 productSearch.StoreCod,
-                productSearch.StockMin
+                productSearch.StockMin,
+                publicOnly
         );
         int limitSearchProduct = 12;
         productSearch.setLimit(limitSearchProduct);
@@ -60,6 +62,7 @@ public class ProductFindSearchService {
                 productSearch.Query,
                 productSearch.StoreCod,
                 productSearch.StockMin,
+                publicOnly,
                 productSearch.SortedBy,
                 productSearch.DirectionSortedBy,
                 productSearch.Init,
@@ -77,6 +80,16 @@ public class ProductFindSearchService {
         return rpt;
     }
 
+    private boolean isExternalSearch(String searchOrigin) {
+        if (searchOrigin == null || searchOrigin.isBlank() || "internal".equalsIgnoreCase(searchOrigin.trim())) {
+            return false;
+        }
+        if ("external".equalsIgnoreCase(searchOrigin.trim())) {
+            return true;
+        }
+        throw new IllegalArgumentException("SearchOrigin debe ser internal o external");
+    }
+
     private void rankingProduct(ResponsePageSearchT<ProductSearchEntity> search){
         ProductSearchRankingService productSearchRankingService = new ProductSearchRankingService(this.productRankingService,search);
         this.genericQueuedService.addQueued(productSearchRankingService);
@@ -90,13 +103,17 @@ public class ProductFindSearchService {
     }
 
     public ProductSearchEntity findAvailability(String productCod, String storeCod) {
+        return findAvailability(productCod, storeCod, false);
+    }
+
+    public ProductSearchEntity findAvailability(String productCod, String storeCod, boolean publicOnly) {
         if (productCod == null || productCod.isBlank()) {
             throw new IllegalArgumentException("El producto es obligatorio");
         }
         if (storeCod == null || storeCod.isBlank()) {
             throw new IllegalArgumentException("La tienda es obligatoria");
         }
-        ProductSearchEntity product = productSearchRepository.findAvailableProduct(productCod, storeCod)
+        ProductSearchEntity product = productSearchRepository.findAvailableProduct(productCod, storeCod, publicOnly)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "El producto no está disponible en la tienda seleccionada"
                 ));

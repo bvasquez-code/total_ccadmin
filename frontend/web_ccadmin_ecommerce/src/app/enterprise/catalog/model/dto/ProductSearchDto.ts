@@ -1,4 +1,5 @@
 export class ProductSearchDto {
+  public SearchOrigin: string = 'external';
   public Query: string = '';
   public Page: number = 1;
   public BrandCod: string = '';

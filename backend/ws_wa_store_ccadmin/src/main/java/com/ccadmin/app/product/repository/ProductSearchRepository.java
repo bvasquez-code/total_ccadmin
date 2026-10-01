@@ -98,12 +98,18 @@ public interface ProductSearchRepository extends JpaRepository<ProductSearchEnti
             where ps.ProductCod = :productCod
               and ps.StoreCod = :storeCod
               and ps.Status = 'A'
+              and (:publicOnly = false or exists (
+                  select 1 from product_config pc
+                  where pc.ProductCod = ps.ProductCod and pc.StoreCod = ps.StoreCod
+                    and pc.IsPublic = 'S'
+              ))
               and (ps.IsDigital = 'S' or ps.NumPhysicalStock >= greatest(1, ps.ProductUnitFactor))
             limit 1
             """, nativeQuery = true)
     Optional<ProductSearchEntity> findAvailableProduct(
             @Param("productCod") String productCod,
-            @Param("storeCod") String storeCod
+            @Param("storeCod") String storeCod,
+            @Param("publicOnly") boolean publicOnly
     );
 
 
@@ -113,6 +119,11 @@ public interface ProductSearchRepository extends JpaRepository<ProductSearchEnti
         where (ps.ProductCod = :id or ps.ProductName like %:query%) 
           and ps.StoreCod = :storeCod 
           and ps.Status = 'A'
+          and (:publicOnly = false or exists (
+              select 1 from product_config pc
+              where pc.ProductCod = ps.ProductCod and pc.StoreCod = ps.StoreCod
+                and pc.IsPublic = 'S'
+          ))
           and (ps.IsDigital = 'S' or ps.NumPhysicalStock >= :stockMin)
         order by
             CASE WHEN :orderBy = 'trend' THEN ps.NumTrend END
@@ -128,6 +139,7 @@ public interface ProductSearchRepository extends JpaRepository<ProductSearchEnti
             @Param("query") String query,
             @Param("storeCod") String storeCod,
             @Param("stockMin") int stockMin,
+            @Param("publicOnly") boolean publicOnly,
             @Param("orderBy") String orderBy,
             @Param("direction") String direction,
             @Param("init") int init,
@@ -140,13 +152,19 @@ public interface ProductSearchRepository extends JpaRepository<ProductSearchEnti
         where (ps.ProductCod = :id or ps.ProductName like %:query%) 
           and ps.StoreCod = :storeCod 
           and ps.Status = 'A'
+          and (:publicOnly = false or exists (
+              select 1 from product_config pc
+              where pc.ProductCod = ps.ProductCod and pc.StoreCod = ps.StoreCod
+                and pc.IsPublic = 'S'
+          ))
           and (ps.IsDigital = 'S' or ps.NumPhysicalStock >= :stockMin)
         """, nativeQuery = true)
     public int countByQueryTextStorePersonalized(
             @Param("id") String id,
             @Param("query") String query,
             @Param("storeCod") String storeCod,
-            @Param("stockMin") int stockMin
+            @Param("stockMin") int stockMin,
+            @Param("publicOnly") boolean publicOnly
     );
 
 }

@@ -36,6 +36,7 @@ public class ProductDeliverySearchService {
         }
         storeDeliverySearchService.validateVirtualStore(request.StoreCod);
 
+        request.SearchOrigin = "external";
         request.StockMin = 1;
         request.SortedBy = normalize(request.SortedBy, ALLOWED_SORT_FIELDS, "trend");
         request.DirectionSortedBy = normalize(
@@ -48,7 +49,7 @@ public class ProductDeliverySearchService {
 
     public ProductSearchEntity findAvailability(String productCod, String storeCod) {
         storeDeliverySearchService.validateVirtualStore(storeCod);
-        return productFindSearchService.findAvailability(productCod, storeCod);
+        return productFindSearchService.findAvailability(productCod, storeCod, true);
     }
 
     public ProductDeliveryDetailDto findDetail(String productCod, String storeCod) {

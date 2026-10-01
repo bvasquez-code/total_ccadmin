@@ -39,6 +39,7 @@ class ProductDeliverySearchServiceTest {
         ProductSearchDto request = new ProductSearchDto();
         request.StoreCod = "T001";
         request.StockMin = 0;
+        request.SearchOrigin = "internal";
         request.SortedBy = "unsafe-column";
         request.DirectionSortedBy = "sideways";
         @SuppressWarnings("unchecked")
@@ -52,6 +53,7 @@ class ProductDeliverySearchServiceTest {
 
         assertEquals(expected, result);
         assertEquals(1, request.StockMin);
+        assertEquals("external", request.SearchOrigin);
         assertEquals("trend", request.SortedBy);
         assertEquals("desc", request.DirectionSortedBy);
         verify(storeDeliverySearchService).validateVirtualStore("T001");
@@ -65,7 +67,7 @@ class ProductDeliverySearchServiceTest {
 
         when(storeDeliverySearchService.validateVirtualStore("T001"))
                 .thenReturn(new StoreVirtualConfigEntity());
-        when(productFindSearchService.findAvailability("TEC007", "T001")).thenReturn(product);
+        when(productFindSearchService.findAvailability("TEC007", "T001", true)).thenReturn(product);
         when(productSearchService.findPictureList("TEC007")).thenReturn(pictureList);
 
         ProductDeliveryDetailDto result = productDeliverySearchService.findDetail("TEC007", "T001");

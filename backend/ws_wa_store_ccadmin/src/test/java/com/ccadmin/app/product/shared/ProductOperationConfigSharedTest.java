@@ -73,6 +73,19 @@ class ProductOperationConfigSharedTest {
         verify(productInfoRepository, never()).findInfoStoreForUpdate("P001", "T001");
     }
 
+    @Test
+    void normalizesPublicIndicatorAndRejectsInvalidValues() {
+        ProductConfigEntity config = new ProductConfigEntity();
+        config.IsPublic = null;
+        productOperationConfigShared.normalize(config);
+        assertEquals("S", config.IsPublic);
+        config.IsPublic = " n ";
+        productOperationConfigShared.normalize(config);
+        assertEquals("N", config.IsPublic);
+        config.IsPublic = "X";
+        assertThrows(IllegalArgumentException.class, () -> productOperationConfigShared.normalize(config));
+    }
+
     private ProductConfigEntity config(String isDigital) {
         ProductConfigEntity config = new ProductConfigEntity();
         config.ProductCod = "P001";

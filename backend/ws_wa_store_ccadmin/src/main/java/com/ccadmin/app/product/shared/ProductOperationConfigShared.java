@@ -42,6 +42,11 @@ public class ProductOperationConfigShared {
         } else {
             config.IsDigital = config.IsDigital.trim().toUpperCase();
         }
+        config.IsPublic = config.IsPublic == null || config.IsPublic.isBlank()
+                ? "S" : config.IsPublic.trim().toUpperCase();
+        if (!"S".equals(config.IsPublic) && !"N".equals(config.IsPublic)) {
+            throw new IllegalArgumentException("El indicador de producto publico debe ser S o N");
+        }
         return config;
     }
 
