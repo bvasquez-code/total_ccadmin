@@ -11,7 +11,7 @@ export const environment = {
   settings: {
     // backend: "http://192.168.100.10:8090"
     backend: "http://localhost:8090"
-    // backend: 'https://hkr2dmrz-8090.brs.devtunnels.ms'
+    // backend: 'https://2n1jz84j-8090.brs.devtunnels.ms'
   }
 };
 

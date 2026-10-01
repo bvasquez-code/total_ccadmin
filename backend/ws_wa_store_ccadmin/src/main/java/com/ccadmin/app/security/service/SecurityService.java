@@ -1,6 +1,8 @@
 package com.ccadmin.app.security.service;
 
 import com.ccadmin.app.cash.repository.CashSessionRepository;
+import com.ccadmin.app.person.model.entity.PersonEntity;
+import com.ccadmin.app.person.shared.PersonShared;
 import com.ccadmin.app.security.model.dto.SessionStorageDto;
 import com.ccadmin.app.security.model.dto.ApplicationInitializationStatusDto;
 import com.ccadmin.app.security.model.entity.AppSessionEntity;
@@ -12,12 +14,16 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Objects;
+
 @Service
 public class SecurityService extends SessionService {
     @Autowired
     private com.ccadmin.app.store.shared.StoreShared storeShared;
     @Autowired
     private AppUserRepository appUserRepository;
+    @Autowired
+    private PersonShared personShared;
     @Autowired
     private AppMenuShared appMenuShared;
     @Autowired
@@ -45,12 +51,14 @@ public class SecurityService extends SessionService {
         AppSessionEntity appSession = this.appSessionRepository.findActiveBySessionId(getSessionID())
                 .orElseThrow(() -> new IllegalStateException("La sesión autenticada ya no se encuentra activa"));
         AppUserEntity appUser = this.appUserRepository.findById(getUserCod()).get();
+        PersonEntity person = this.personShared.findById(appUser.PersonCod);
 
         sessionStorage.SessionID = appSession.SessionID;
         sessionStorage.Token = appSession.Token;
         sessionStorage.PersonCod = appUser.PersonCod;
         sessionStorage.Email = appUser.Email;
-        sessionStorage.Names = appUser.Email;
+        sessionStorage.Names = (Objects.toString(person.Names, "").trim() + " "
+                + Objects.toString(person.LastNames, "").trim()).trim();
         sessionStorage.StoreCod = appSession.getSelectedStoreCod();
         sessionStorage.StoreList = userStoreShared.findByUserCod(appUser.UserCod).stream()
                 .map(store -> storeShared.findById(store.StoreCod)).filter(java.util.Objects::nonNull).toList();

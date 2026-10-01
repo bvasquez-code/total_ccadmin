@@ -11,6 +11,7 @@ import { ListuserComponent } from './enterprise/user/pages/listuser/listuser.com
 import { CreateuserComponent } from './enterprise/user/pages/createuser/createuser.component';
 import { ListprofileComponent } from './enterprise/user/pages/listprofile/listprofile.component';
 import { CreateprofileComponent } from './enterprise/user/pages/createprofile/createprofile.component';
+import { MyProfileComponent } from './enterprise/user/pages/myprofile/myprofile.component';
 import { CreatesaleComponent } from './enterprise/sale/pages/createsale/createsale.component';
 import { ViewsaleComponent } from './enterprise/sale/pages/viewsale/viewsale.component';
 import { CreatesaledocumentComponent } from './enterprise/sale/pages/createsaledocument/createsaledocument.component';
@@ -101,6 +102,11 @@ import { ApplicationInitializationGuard } from './enterprise/login/service/appli
 import { REPORT_ROUTES } from './enterprise/report/report.routes';
 
 const routes: Routes = [
+  {
+    path: 'enterprise/user/pages/myprofile',
+    component: MyProfileComponent,
+    canActivate: [SessionAccessGuard, ApplicationInitializationGuard]
+  },
   {
     path: 'pages/permissiondenied',
     component: PermissiondeniedComponent,

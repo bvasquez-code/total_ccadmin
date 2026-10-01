@@ -1,0 +1,44 @@
+<div class="page-content container container-plus">
+  <div class="page-header pb-3">
+    <h1 class="page-title text-primary-d2 text-150">
+      <i class="fa fa-user mr-2" aria-hidden="true"></i>
+      Mi perfil
+    </h1>
+  </div>
+
+  <div class="row">
+    <div class="col-12 col-lg-8">
+      <section class="card dcard" aria-labelledby="profile-details-title">
+        <div class="card-header">
+          <h2 id="profile-details-title" class="card-title text-125 text-primary-d2">
+            Datos de mi cuenta
+          </h2>
+        </div>
+        <div class="card-body">
+          <p class="text-grey-d1 mb-4">Consulta los datos de tu cuenta y la tienda de tu sesión actual.</p>
+
+          <dl class="row mb-0">
+            <dt class="col-sm-4 text-grey-d2 mb-1 mb-sm-3">Nombre completo</dt>
+            <dd class="col-sm-8 text-break mb-3">{{ userNames || 'No registrado' }}</dd>
+
+            <dt class="col-sm-4 text-grey-d2 mb-1 mb-sm-3">Código de usuario</dt>
+            <dd class="col-sm-8 text-break mb-3">{{ userCode || 'No registrado' }}</dd>
+
+            <dt class="col-sm-4 text-grey-d2 mb-1 mb-sm-3">Correo electrónico</dt>
+            <dd class="col-sm-8 text-break mb-3">{{ email || 'No registrado' }}</dd>
+
+            <dt class="col-sm-4 text-grey-d2 mb-1 mb-sm-0">Código de tienda actual</dt>
+            <dd class="col-sm-8 text-break mb-0">{{ storeCode || 'Sin tienda seleccionada' }}</dd>
+          </dl>
+        </div>
+      </section>
+
+      <div class="mt-4">
+        <a class="btn btn-outline-primary" routerLink="/">
+          <i class="fa fa-home mr-1" aria-hidden="true"></i>
+          Volver al inicio
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

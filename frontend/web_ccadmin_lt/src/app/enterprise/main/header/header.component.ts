@@ -1,5 +1,4 @@
-import { StoreService } from '../../store/service/store.service';
-import { ToastrService } from 'ngx-toastr';
+import { CurrentStoreService } from '../../store/service/current-store.service';
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { DataSesionService } from '../../compartido/service/datasesion.service';
@@ -16,10 +15,13 @@ export class HeaderComponent implements OnInit {
   userNames: string = '';
   userCode: string = '';
 
+  isViewMegaLi : boolean = false;
+  isViewTasksLi : boolean = false;
+  isViewNotificationsLi : boolean = false;
+
   constructor(
     private router: Router,
-    private storeService: StoreService,
-    private toastrService: ToastrService,
+    private currentStoreService: CurrentStoreService,
     private dataSesionService: DataSesionService,
   ) { }
 
@@ -32,16 +34,7 @@ export class HeaderComponent implements OnInit {
   }
 
   private async loadCurrentStore(): Promise<void> {
-    try {
-      const response = await this.storeService.FindById(this.storeCode);
-      if (response.ErrorStatus) {
-        this.toastrService.error(response.Message || 'No se pudo cargar el nombre de la tienda actual');
-        return;
-      }
-      this.storeName = response.Data?.Name?.trim() || '';
-    } catch {
-      this.toastrService.error('No se pudo cargar el nombre de la tienda actual');
-    }
+    this.storeName = await this.currentStoreService.getCurrentStoreName();
   }
 
   Logout()

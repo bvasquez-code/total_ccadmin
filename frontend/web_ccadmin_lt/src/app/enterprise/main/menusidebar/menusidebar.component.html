@@ -1,5 +1,5 @@
 <div id="sidebar"
-  [ngClass]="isOpenMenu === true ? 'sidebar sidebar-fixed expandable sidebar-light has-open' : 'sidebar sidebar-fixed expandable sidebar-light'"
+  [ngClass]="(isOpenMenu || isFiltering) ? 'sidebar sidebar-fixed expandable sidebar-light has-open' : 'sidebar sidebar-fixed expandable sidebar-light'"
   class="sidebar sidebar-fixed expandable sidebar-light has-open">
   <div class="sidebar-inner">
 
@@ -46,11 +46,15 @@
 
           <div class="fadeable d-inline-flex align-items-center ml-3 ml-lg-0">
             <i class="fa fa-search mr-n3 text-info-m1"></i>
-            <input type="text" class="sidebar-search-input pl-4 pr-3 mr-n2" maxlength="60" placeholder="Search ..."
-              aria-label="Search">
-            <a href="#" class="ml-n25 px-2 py-1 radius-round bgc-h-secondary-l2 mb-2px">
-              <i class="fa fa-microphone px-3px text-dark-tp5"></i>
-            </a>
+            <input #menuSearchInput type="text" class="sidebar-search-input pl-4 pr-3 mr-n2"
+              maxlength="60" placeholder="Buscar menú..." aria-label="Buscar en mis menús"
+              aria-controls="user-sidebar-menus" [value]="menuSearch"
+              (input)="filterMenus(menuSearchInput.value)" (keydown.escape)="filterMenus('')">
+            <button type="button" class="btn btn-link ml-n25 px-2 py-1 radius-round bgc-h-secondary-l2 mb-2px"
+              [class.invisible]="!menuSearch" [disabled]="!menuSearch" aria-label="Limpiar búsqueda"
+              (click)="filterMenus(''); menuSearchInput.focus()">
+              <i class="fa fa-times px-3px text-dark-tp5" aria-hidden="true"></i>
+            </button>
           </div>
         </div>
       </div>
@@ -983,10 +987,10 @@
 
       </ul>
 
-      <ul class="nav has-active-border active-on-right">
-        <ng-template [ngIf]="(g_list_menu.length > 0)" *ngFor="let menu of g_list_menu">
+      <ul id="user-sidebar-menus" class="nav has-active-border active-on-right">
+        <ng-container *ngFor="let menu of filteredMenus">
 
-          <li [ngClass]="menu.flg_menu_activo === true ? 'nav-item open' : 'nav-item'">
+          <li [ngClass]="(isFiltering || menu.flg_menu_activo) ? 'nav-item open' : 'nav-item'">
 
             <a href="{{ menu.url }}" class="nav-link" *ngIf="( menu.list_sub_menu.length === 0)">
               <i class="{{ menu.icono }}"></i>
@@ -996,7 +1000,7 @@
             </a>
 
             <a href="#"
-              [ngClass]="menu.flg_menu_activo === true ? 'nav-link dropdown-toggle' : 'nav-link dropdown-toggle collapsed'"
+              [ngClass]="(isFiltering || menu.flg_menu_activo) ? 'nav-link dropdown-toggle' : 'nav-link dropdown-toggle collapsed'"
               *ngIf="( menu.list_sub_menu.length > 0)">
               <i class="{{ menu.icono }}"></i>
               <span class="nav-text fadeable">
@@ -1009,12 +1013,12 @@
             <b class="sub-arrow" *ngIf="( menu.list_sub_menu.length === 0)"></b>
 
             <div
-              [ngClass]="menu.flg_menu_activo === true ? 'hideable submenu collapse show' : 'hideable submenu collapse'"
+              [ngClass]="(isFiltering || menu.flg_menu_activo) ? 'hideable submenu collapse show' : 'hideable submenu collapse'"
               *ngIf="( menu.list_sub_menu.length > 0)">
 
               <ul class="submenu-inner">
 
-                <a *ngFor="let sub_menu of menu.list_sub_menu">
+                <ng-container *ngFor="let sub_menu of menu.list_sub_menu">
                   <li class="nav-item" *ngIf="( sub_menu.IsVisible === true )">
                     <a href="{{ sub_menu.url }}" class="nav-link"
                       [ngStyle]="{ 'background': sub_menu.shadedMenu ? '#eff5ef' : '' }">
@@ -1023,17 +1027,21 @@
                       </span>
                     </a>
                   </li>
-                </a>
+                </ng-container>
 
               </ul>
 
             </div>
 
           </li>
-        </ng-template>
+        </ng-container>
 
       </ul>
 
+      <div *ngIf="isFiltering && filteredMenus.length === 0" role="status"
+        class="px-3 py-3 text-grey-d1">
+        No se encontraron menús.
+      </div>
     </div><!-- /.sidebar scroll -->
 
 

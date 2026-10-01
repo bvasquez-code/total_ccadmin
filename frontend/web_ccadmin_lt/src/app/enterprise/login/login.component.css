@@ -1,0 +1,32 @@
+:host {
+    display: block;
+}
+
+.login-page {
+    min-height: 100vh;
+    padding: 1.5rem 1rem;
+}
+
+.login-card {
+    width: 100%;
+    max-width: 30rem;
+}
+
+.login-logo-frame {
+    position: relative;
+    height: 5rem;
+    max-width: 22rem;
+    margin: 0 auto;
+    overflow: hidden;
+}
+
+/* El PNG incluye márgenes transparentes amplios sobre y debajo del logo. */
+.login-logo {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    display: block;
+    width: 100%;
+    height: auto;
+    transform: translateY(-50%);
+}

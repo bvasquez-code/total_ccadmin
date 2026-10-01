@@ -27,6 +27,7 @@ import { ListuserComponent } from './enterprise/user/pages/listuser/listuser.com
 import { CreateuserComponent } from './enterprise/user/pages/createuser/createuser.component';
 import { ListprofileComponent } from './enterprise/user/pages/listprofile/listprofile.component';
 import { CreateprofileComponent } from './enterprise/user/pages/createprofile/createprofile.component';
+import { MyProfileComponent } from './enterprise/user/pages/myprofile/myprofile.component';
 import { SpinnerComponent } from './enterprise/shared/component/spinner/spinner.component';
 import { SpinnerInterceptor } from './interceptors/SpinnerInterceptor';
 
@@ -166,6 +167,7 @@ import { PurchaseSalesReportComponent } from './enterprise/report/pages/purchase
     CreateuserComponent,
     ListprofileComponent,
     CreateprofileComponent,
+    MyProfileComponent,
     SpinnerComponent,
     CreatesaleComponent,
     ViewsaleComponent,

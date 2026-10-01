@@ -17,6 +17,9 @@ export class MenusidebarComponent implements OnInit {
   public g_flg_menu_defecto: boolean = false;
   public g_list_menu: MenuPagina[] = [];
   public isOpenMenu: boolean = false;
+  public menuSearch = '';
+  public isFiltering = false;
+  public filteredMenus: MenuPagina[] = [];
 
   private readonly defaultIcon = "nav-icon fa fa-cube";
   constructor(
@@ -36,6 +39,38 @@ export class MenusidebarComponent implements OnInit {
     const menuConfig = this.sidebarMenuConfigService.getMenuConfig();
     menuConfig.forEach(config => this.addMenuIfAllowed(config));
     this.markActiveMenu();
+    this.filterMenus(this.menuSearch);
+  }
+
+  filterMenus(query: string): void {
+    this.menuSearch = query;
+    const normalizedQuery = this.normalizeSearch(query);
+    this.isFiltering = normalizedQuery.length > 0;
+
+    if (!this.isFiltering) {
+      this.filteredMenus = this.g_list_menu;
+      return;
+    }
+
+    const terms = normalizedQuery.split(/\s+/);
+    const matches = (label: string) => {
+      const normalizedLabel = this.normalizeSearch(label);
+      return terms.every(term => normalizedLabel.includes(term));
+    };
+
+    this.filteredMenus = this.g_list_menu.flatMap(menu => {
+      if (!menu.IsVisible) return [];
+      if (menu.list_sub_menu.length === 0) return matches(menu.des_menu) ? [menu] : [];
+
+      const children = menu.list_sub_menu.filter(submenu =>
+        submenu.IsVisible && matches(`${menu.des_menu} ${submenu.des_menu}`)
+      );
+      return children.length > 0 ? [{ ...menu, list_sub_menu: children }] : [];
+    });
+  }
+
+  private normalizeSearch(value: string): string {
+    return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   }
 
   private addMenuIfAllowed(config: SidebarMenuConfigDto): void {
