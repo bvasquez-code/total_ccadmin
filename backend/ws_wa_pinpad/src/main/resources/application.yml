@@ -3,16 +3,20 @@ server:
   port: 6669
 
 pinpad:
-  agent-token: "change-me-local-token"
-  storage-path: "C:/pinpad-agent"
+  # demo | culqi. Culqi requiere un bean CulqiTerminalClient implementado con su SDK oficial.
+  provider: ${PINPAD_PROVIDER:demo}
+  agent-token: ${PINPAD_AGENT_TOKEN:change-me-local-token}
+  storage-path: ${PINPAD_STORAGE_PATH:C:/pinpad-agent}
   timeout-seconds: 120
-  simulator-enabled: true
   wait-final-result-on-register: true
   register-wait-timeout-seconds: 5
   simulator-min-delay-millis: 1000
   simulator-max-delay-millis: 3000
-  terminal-id: "TERM-DEMO-001"
-  merchant-id: "MERCHANT-DEMO-001"
+  terminal-id: ${PINPAD_TERMINAL_ID:TERM-DEMO-001}
+  merchant-id: ${PINPAD_MERCHANT_ID:MERCHANT-DEMO-001}
+  # Habilitar billeteras solo cuando el contrato del terminal confirme su soporte.
+  culqi-supported-payment-methods:
+    - CARD
   allowed-currency: "PEN"
   allowed-origins:
     - "http://localhost:4200"

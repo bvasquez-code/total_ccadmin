@@ -2,6 +2,7 @@ package com.local.app.pinpad.model.dto;
 
 import com.local.app.pinpad.enums.PinpadPaymentMethod;
 import com.local.app.pinpad.enums.PinpadPaymentStatus;
+import com.local.app.pinpad.enums.PinpadProvider;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -9,6 +10,7 @@ import java.time.LocalDateTime;
 public class PinpadPaymentDetailDto {
 
     private String paymentId;
+    private PinpadProvider provider;
     private String saleCod;
     private BigDecimal amount;
     private Long amountCents;
@@ -47,6 +49,8 @@ public class PinpadPaymentDetailDto {
     private String rawResponseJson;
 
     public String getPaymentId() { return paymentId; }
+    public PinpadProvider getProvider() { return provider; }
+    public void setProvider(PinpadProvider provider) { this.provider = provider; }
     public void setPaymentId(String paymentId) { this.paymentId = paymentId; }
     public String getSaleCod() { return saleCod; }
     public void setSaleCod(String saleCod) { this.saleCod = saleCod; }

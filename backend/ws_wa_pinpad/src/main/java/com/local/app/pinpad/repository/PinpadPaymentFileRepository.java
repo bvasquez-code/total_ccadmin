@@ -5,6 +5,7 @@ import com.local.app.pinpad.config.PinpadAgentProperties;
 import com.local.app.pinpad.constants.PinpadConstants;
 import com.local.app.pinpad.enums.PinpadErrorCode;
 import com.local.app.pinpad.enums.PinpadPaymentStatus;
+import com.local.app.pinpad.enums.PinpadProvider;
 import com.local.app.pinpad.exception.PinpadPaymentException;
 import com.local.app.pinpad.model.dto.PinpadPaymentAckDto;
 import com.local.app.pinpad.model.dto.PinpadPaymentDetailDto;
@@ -86,10 +87,7 @@ public class PinpadPaymentFileRepository {
         dto.setUpdatedAt(LocalDateTime.now());
         Path target = folderForStatus(dto.getStatus()).resolve(fileName(dto.getPaymentId()));
         write(target, dto);
-        Path processing = root().resolve(PinpadConstants.FOLDER_PROCESSING).resolve(fileName(dto.getPaymentId()));
-        if (!processing.equals(target) && Files.exists(processing)) {
-            deleteQuietly(processing);
-        }
+        removeOtherCopies(dto.getPaymentId(), target);
     }
 
     public Optional<PinpadPaymentDetailDto> findByPaymentId(String paymentId) {
@@ -104,6 +102,21 @@ public class PinpadPaymentFileRepository {
                     .map(this::read);
         } catch (IOException e) {
             throw storageException("No se pudo revisar pagos en proceso", e);
+        }
+    }
+
+    public Optional<PinpadPaymentDetailDto> findFirstUnresolved() {
+        Optional<PinpadPaymentDetailDto> processing = findFirstProcessing();
+        if (processing.isPresent()) {
+            return processing;
+        }
+        try (Stream<Path> paths = Files.list(root().resolve(PinpadConstants.FOLDER_UNKNOWN))) {
+            return paths.filter(path -> path.getFileName().toString().endsWith(".json"))
+                    .map(this::read)
+                    .filter(payment -> payment.getProvider() == PinpadProvider.CULQI)
+                    .findFirst();
+        } catch (IOException exception) {
+            throw storageException("No se pudo revisar pagos pendientes de conciliacion", exception);
         }
     }
 

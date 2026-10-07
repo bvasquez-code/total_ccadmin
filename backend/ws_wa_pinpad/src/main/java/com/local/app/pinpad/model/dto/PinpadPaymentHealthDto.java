@@ -6,6 +6,7 @@ public class PinpadPaymentHealthDto {
     private String agentVersion;
     private String pinpadStatus;
     private boolean simulatorEnabled;
+    private String provider;
     private String terminalId;
     private String merchantId;
     private String activePaymentId;
@@ -17,6 +18,8 @@ public class PinpadPaymentHealthDto {
     public String getPinpadStatus() { return pinpadStatus; }
     public void setPinpadStatus(String pinpadStatus) { this.pinpadStatus = pinpadStatus; }
     public boolean isSimulatorEnabled() { return simulatorEnabled; }
+    public String getProvider() { return provider; }
+    public void setProvider(String provider) { this.provider = provider; }
     public void setSimulatorEnabled(boolean simulatorEnabled) { this.simulatorEnabled = simulatorEnabled; }
     public String getTerminalId() { return terminalId; }
     public void setTerminalId(String terminalId) { this.terminalId = terminalId; }

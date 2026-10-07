@@ -5,7 +5,6 @@ import com.local.app.pinpad.enums.PinpadErrorCode;
 import com.local.app.pinpad.enums.PinpadPaymentMethod;
 import com.local.app.pinpad.enums.PinpadPaymentStatus;
 import com.local.app.pinpad.model.dto.PinpadPaymentDetailDto;
-import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -13,7 +12,6 @@ import java.util.Locale;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
-@Component
 public class PinpadSimulatorAdapter implements PinpadAdapter {
 
     private final PinpadAgentProperties properties;

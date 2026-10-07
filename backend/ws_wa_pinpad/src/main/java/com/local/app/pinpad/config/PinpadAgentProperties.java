@@ -1,5 +1,7 @@
 package com.local.app.pinpad.config;
 
+import com.local.app.pinpad.enums.PinpadProvider;
+import com.local.app.pinpad.enums.PinpadPaymentMethod;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.util.ArrayList;
@@ -12,6 +14,8 @@ public class PinpadAgentProperties {
     private String storagePath = "C:/pinpad-agent";
     private long timeoutSeconds = 120;
     private boolean simulatorEnabled = true;
+    private PinpadProvider provider;
+    private List<PinpadPaymentMethod> culqiSupportedPaymentMethods = new ArrayList<>(List.of(PinpadPaymentMethod.CARD));
     private boolean waitFinalResultOnRegister = true;
     private long registerWaitTimeoutSeconds = 5;
     private long simulatorMinDelayMillis = 1000;
@@ -27,7 +31,12 @@ public class PinpadAgentProperties {
     public void setStoragePath(String storagePath) { this.storagePath = storagePath; }
     public long getTimeoutSeconds() { return timeoutSeconds; }
     public void setTimeoutSeconds(long timeoutSeconds) { this.timeoutSeconds = timeoutSeconds; }
-    public boolean isSimulatorEnabled() { return simulatorEnabled; }
+    // Compatibilidad con configuraciones anteriores que solo tenian simulator-enabled.
+    public PinpadProvider getProvider() { return provider != null ? provider : (simulatorEnabled ? PinpadProvider.DEMO : PinpadProvider.CULQI); }
+    public void setProvider(PinpadProvider provider) { this.provider = provider; }
+    public List<PinpadPaymentMethod> getCulqiSupportedPaymentMethods() { return culqiSupportedPaymentMethods; }
+    public void setCulqiSupportedPaymentMethods(List<PinpadPaymentMethod> methods) { this.culqiSupportedPaymentMethods = methods; }
+    public boolean isSimulatorEnabled() { return getProvider() == PinpadProvider.DEMO; }
     public void setSimulatorEnabled(boolean simulatorEnabled) { this.simulatorEnabled = simulatorEnabled; }
     public boolean isWaitFinalResultOnRegister() { return waitFinalResultOnRegister; }
     public void setWaitFinalResultOnRegister(boolean waitFinalResultOnRegister) { this.waitFinalResultOnRegister = waitFinalResultOnRegister; }
