@@ -28,6 +28,7 @@ CREATE TABLE `trx_payments` (
   `CardExpirationDate` date DEFAULT NULL COMMENT 'Fecha de expiraciÃ³n de la tarjeta',
   `CardCVV` varchar(4) DEFAULT NULL COMMENT 'CÃ³digo de verificaciÃ³n de la tarjeta',
   `TransactionId` varchar(64) DEFAULT NULL COMMENT 'ID de la transacciÃ³n (proporcionado por POS o PayPal)',
+  `PinpadPaymentId` varchar(96) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL COMMENT 'Referencia estable del agente local; UNIQUE evita registrar dos veces una aprobacion',
   `PaymentStatus` varchar(16) NOT NULL COMMENT 'Estado del pago (Exitoso, Fallido, etc.)',
   `CurrencyCod` varchar(5) NOT NULL COMMENT 'codigo de moneda',
   `CurrencyCodSys` varchar(5) NOT NULL COMMENT 'codigo de moneda del sistema',
@@ -42,6 +43,7 @@ CREATE TABLE `trx_payments` (
   `TypeMovement` char(1) NOT NULL DEFAULT 'I' COMMENT 'Tipo de movimiento (I:Ingreso, E:Extorno)',
   `ReversalOfTrxPaymentId` bigint DEFAULT NULL COMMENT 'Extorno de este pago original',
   PRIMARY KEY (`TrxPaymentId`),
+  UNIQUE KEY `uk_trx_payments_pinpad_payment` (`PinpadPaymentId`),
   KEY `fk_card_payments_payment` (`PaymentMethodCod`),
   KEY `idx_trx_payments_reversal_of` (`ReversalOfTrxPaymentId`),
   KEY `idx_trx_payments_cash_session` (`CashSessionID`),
@@ -57,6 +59,25 @@ CREATE TABLE `trx_payments` (
         SELECT 'Tabla trx_payments creada desde cero.' AS Mensaje;
 
     ELSE
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = DATABASE() AND table_name = 'trx_payments'
+              AND column_name = 'PinpadPaymentId'
+        ) THEN
+            ALTER TABLE `trx_payments`
+                ADD COLUMN `PinpadPaymentId` varchar(96) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL
+                COMMENT 'Referencia estable del agente local; UNIQUE evita registrar dos veces una aprobacion'
+                AFTER `TransactionId`;
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.statistics
+            WHERE table_schema = DATABASE() AND table_name = 'trx_payments'
+              AND index_name = 'uk_trx_payments_pinpad_payment'
+        ) THEN
+            ALTER TABLE `trx_payments`
+                ADD UNIQUE KEY `uk_trx_payments_pinpad_payment` (`PinpadPaymentId`);
+        END IF;
         -- =============================================
         -- CASO: LA TABLA YA EXISTE -> APLICAR ALTERS
         -- =============================================

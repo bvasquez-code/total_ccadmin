@@ -1,0 +1,12 @@
+# Se carga automaticamente como ./pinpad-cajas.yml o ./config/pinpad-cajas.yml.
+# Registrar identificador, tienda y caja. No se requieren claves ni variables de entorno.
+# En una instalacion local se puede usar directamente el archivo creado por el agente.
+pinpad:
+  browser:
+    agents:
+      CAJA01:
+        store-cod: "T001"
+        register-cod: "CAJA0001"
+      CAJA02:
+        store-cod: "T001"
+        register-cod: "CAJA0002"

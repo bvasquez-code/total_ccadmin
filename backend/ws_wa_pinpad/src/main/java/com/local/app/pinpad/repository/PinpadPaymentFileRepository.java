@@ -5,7 +5,6 @@ import com.local.app.pinpad.config.PinpadAgentProperties;
 import com.local.app.pinpad.constants.PinpadConstants;
 import com.local.app.pinpad.enums.PinpadErrorCode;
 import com.local.app.pinpad.enums.PinpadPaymentStatus;
-import com.local.app.pinpad.enums.PinpadProvider;
 import com.local.app.pinpad.exception.PinpadPaymentException;
 import com.local.app.pinpad.model.dto.PinpadPaymentAckDto;
 import com.local.app.pinpad.model.dto.PinpadPaymentDetailDto;
@@ -113,7 +112,7 @@ public class PinpadPaymentFileRepository {
         try (Stream<Path> paths = Files.list(root().resolve(PinpadConstants.FOLDER_UNKNOWN))) {
             return paths.filter(path -> path.getFileName().toString().endsWith(".json"))
                     .map(this::read)
-                    .filter(payment -> payment.getProvider() == PinpadProvider.CULQI)
+                    .filter(payment -> payment.getProvider() != null && payment.getProvider().requiresReconciliation())
                     .findFirst();
         } catch (IOException exception) {
             throw storageException("No se pudo revisar pagos pendientes de conciliacion", exception);

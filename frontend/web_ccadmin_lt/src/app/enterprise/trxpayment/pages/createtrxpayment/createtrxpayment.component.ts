@@ -36,6 +36,8 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
   creditNoteDetail : CreditNoteDetailDto = new CreditNoteDetailDto();
   selectedPaymentMethodCod: string = "";
   showPaymentMethodDropdown: boolean = false;
+  savingPayment: boolean = false;
+  pendingPinpadPayment: TrxPaymentEntity | null = null;
 
   txtAmountPaidConfigHtml : ElementHtmlDto = new ElementHtmlDto();
   cboCurrencyCodConfigHtml : ElementHtmlDto = new ElementHtmlDto();
@@ -73,6 +75,20 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
   }
 
   async Save(): Promise<void> {
+    if (this.savingPayment) return;
+    this.savingPayment = true;
+    try {
+      if (this.pendingPinpadPayment) {
+        await this.submitPayment(this.pendingPinpadPayment);
+      } else {
+        await this.saveNewPayment();
+      }
+    } finally {
+      this.savingPayment = false;
+    }
+  }
+
+  private async saveNewPayment(): Promise<void> {
 
     if (this.isReversalMode()) {
       await this.SaveReversal();
@@ -87,19 +103,14 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
 
     let outstandingBalance : number = this.toMoney(this.TrxPaymentComponenRequest.InputOutstandingBalance);
 
-    if(paymentMethod){
-
-      if(this.IsCash(paymentMethod)){
-        this.trxPayment = this.transactionCash();
-      }
-      if(this.IsCard(paymentMethod)){
-        this.trxPayment = this.transactionPos();
-      }
-      if(this.IsMethodPaymentOwn(paymentMethod)){
-        this.trxPayment = this.transactionCreditNote();
-      }
-      this.trxPayment.PaymentMethodCod = paymentMethod.PaymentMethodCod;
+    if (!paymentMethod) {
+      this.toastrService.error("Seleccione un medio de pago valido.");
+      return;
     }
+    this.trxPayment = this.IsPinpad(paymentMethod)
+      ? this.transactionPos()
+      : this.IsMethodPaymentOwn(paymentMethod) ? this.transactionCreditNote() : this.transactionManual();
+    this.trxPayment.PaymentMethodCod = paymentMethod.PaymentMethodCod;
 
     if(Currency){
       this.trxPayment.CurrencyCod = Currency.CurrencyCod;
@@ -119,7 +130,7 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
       return;
     }
     if(paymentMethod){
-      if(this.IsCard(paymentMethod) && this.trxPayment.AmountPaid > outstandingBalance){
+      if(this.IsPinpad(paymentMethod) && this.trxPayment.AmountPaid > outstandingBalance){
         this.toastrService.error("Para este tipos de medios de pago no se puede pagar montos superiores al saldo.");
         return;
       }
@@ -135,11 +146,20 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
 
     if (!confirmResult?.isConfirmed) return;
 
-    const rpt : ResponseWsDto = await this.trxPaymentService.Save(this.trxPayment);
+    if (this.trxPayment.PaymentPlatform === 'POS') {
+      this.pendingPinpadPayment = this.trxPayment;
+    }
+    await this.submitPayment(this.trxPayment);
+  }
+
+  private async submitPayment(payment: TrxPaymentEntity): Promise<void> {
+    const rpt : ResponseWsDto = await this.trxPaymentService.Save(payment);
 
     if(!rpt.ErrorStatus){
 
       const trxPaymentResult : TrxPaymentEntity = rpt.Data;
+
+      this.pendingPinpadPayment = null;
 
       this.TrxPaymentComponenRequest.TrxPaymentList.push(trxPaymentResult);
 
@@ -151,6 +171,9 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
 
       this.toastrService.success("Se realiza el pago exitosamente");
     }else{
+      if (rpt.Data?.CanStartNewPayment === true) {
+        this.pendingPinpadPayment = null;
+      }
       this.toastrService.error(rpt.Message);
     }
 
@@ -250,9 +273,9 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
     const returnedAmount: string = trxPayment.AmountReturned > 0
       ? `<div>Vuelto: <b>${trxPayment.CurrencyCod} ${this.toMoney(Number(trxPayment.AmountReturned || 0)).toFixed(2)}</b></div>`
       : "";
-    const transactionId: string = trxPayment.TransactionId ? trxPayment.TransactionId : "-";
-    const cardMessage: string = this.isCardPayment(trxPayment)
-      ? `<div class="mt-2 text-danger"><i class="fa fa-credit-card mr-1"></i> Pase la tarjeta por el pinpad y confirme solo si la operacion fue aceptada.</div>`
+    const transactionId: string = trxPayment.PinpadPaymentId || trxPayment.TransactionId || "-";
+    const pinpadMessage: string = paymentMethod && this.IsPinpad(paymentMethod)
+      ? `<div class="mt-2 text-primary">Al confirmar se iniciara el cobro. Siga las instrucciones del pinpad y espere el resultado.</div>`
       : "";
     const paymentMethodMedia: string = this.getPaymentMethodAlertMedia(trxPayment);
     const message: string = `
@@ -266,7 +289,7 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
         <div>Plataforma: <b>${trxPayment.PaymentPlatform}</b></div>
         <div>Referencia: <b>${transactionId}</b></div>
         ${returnedAmount}
-        ${cardMessage}
+        ${pinpadMessage}
       </div>
     `;
 
@@ -300,16 +323,15 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
     let TrxPayment : TrxPaymentEntity = new TrxPaymentEntity();
 
     TrxPayment.PaymentPlatform = "POS";
-    TrxPayment.CardNumber = "4578************"
-    TrxPayment.CardHolderName = "Cliente Generico"
-    TrxPayment.PaymentStatus = "OK";
-    TrxPayment.TransactionId = this.generateIdFromDate();
+    TrxPayment.PaymentStatus = "PENDING";
+    TrxPayment.PinpadPaymentId = this.generateIdFromDate() + '-' +
+      Array.from(crypto.getRandomValues(new Uint32Array(4))).map(value => value.toString(16)).join('-');
 
     return TrxPayment;
 
   }
 
-  transactionCash():TrxPaymentEntity{
+  transactionManual():TrxPaymentEntity{
 
     let TrxPayment : TrxPaymentEntity = new TrxPaymentEntity();
 
@@ -338,6 +360,10 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
 
   IsCard(paymentMethod : PaymentMethodEntity){
       return (paymentMethod.PaymentMethodType === "1002" || paymentMethod.PaymentMethodType === "1003");
+  }
+
+  IsPinpad(paymentMethod: PaymentMethodEntity): boolean {
+    return this.IsCard(paymentMethod) || paymentMethod.PaymentMethodType === "1006";
   }
 
   IsMethodPaymentOwn(paymentMethod : PaymentMethodEntity){
@@ -425,6 +451,8 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
   }
 
   getSaveButtonLabel(): string {
+    if (this.savingPayment) return "Procesando pago...";
+    if (this.pendingPinpadPayment) return "Consultar pago pendiente";
     return this.isReversalMode() ? "Revertir siguiente pago" : "Guardar";
   }
 

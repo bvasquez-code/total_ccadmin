@@ -21,12 +21,23 @@ public class TrxPaymentCreateService extends SessionService {
     @Autowired
     private CurrencyShared currencyShared;
 
+    @Autowired
+    private PinpadPaymentCreateService pinpadPaymentCreateService;
+
     public TrxPaymentEntity save(TrxPaymentEntity trxPayment) {
         return this.save(trxPayment, getUserCod(), getCashSessionID());
     }
 
     public TrxPaymentEntity saveWeb(TrxPaymentEntity trxPayment) {
         return this.save(trxPayment, AuditUserConstants.USER_WEB, null);
+    }
+
+    public com.ccadmin.app.payment.model.dto.PinpadBrowserInstructionsDto preparePinpad(TrxPaymentEntity trxPayment) {
+        String userCod = getUserCod();
+        Long cashSessionID = getCashSessionID();
+        rejectManualCreditNotePayment(trxPayment);
+        prepareForSave(trxPayment, userCod, cashSessionID);
+        return pinpadPaymentCreateService.prepare(trxPayment, userCod, cashSessionID, getStoreCod());
     }
 
     private TrxPaymentEntity save(
@@ -37,16 +48,30 @@ public class TrxPaymentCreateService extends SessionService {
         rejectManualCreditNotePayment(trxPayment);
         prepareForSave(trxPayment, userCod, cashSessionID);
         validatePaymentCreditNote(trxPayment);
-        return this.trxPaymentRepository.save(trxPayment);
+        return savePrepared(trxPayment, userCod, cashSessionID);
     }
 
     public List<TrxPaymentEntity> saveAll(List<TrxPaymentEntity> trxPaymentList) {
+        String userCod = getUserCod();
+        Long cashSessionID = getCashSessionID();
         trxPaymentList.forEach(trxPayment -> {
             rejectManualCreditNotePayment(trxPayment);
-            prepareForSave(trxPayment, getUserCod(), getCashSessionID());
+            prepareForSave(trxPayment, userCod, cashSessionID);
             validatePaymentCreditNote(trxPayment);
         });
+        if (trxPaymentList.stream().anyMatch(PinpadPaymentCreateService::requiresPinpad)) {
+            // Each physical approval commits independently and can be recovered by the same reference.
+            return trxPaymentList.stream()
+                    .map(payment -> savePrepared(payment, userCod, cashSessionID)).toList();
+        }
         return this.trxPaymentRepository.saveAll(trxPaymentList);
+    }
+
+    private TrxPaymentEntity savePrepared(TrxPaymentEntity trxPayment, String userCod, Long cashSessionID) {
+        if (PinpadPaymentCreateService.requiresPinpad(trxPayment)) {
+            return pinpadPaymentCreateService.pay(trxPayment, userCod, cashSessionID, getStoreCod());
+        }
+        return this.trxPaymentRepository.save(trxPayment);
     }
 
     public TrxPaymentEntity saveCreditNoteApplication(TrxPaymentEntity trxPayment) {
@@ -82,6 +107,18 @@ public class TrxPaymentCreateService extends SessionService {
             String userCod,
             Long cashSessionID
     ) {
+        if (trxPayment.TrxPaymentId != null && trxPayment.TrxPaymentId > 0
+                && !PinpadPaymentCreateService.requiresPinpad(trxPayment)) {
+            this.trxPaymentRepository.findById(trxPayment.TrxPaymentId).ifPresent(existing -> {
+                if (existing.PinpadPaymentId != null) {
+                    throw new TrxPaymentBuildException("No se puede sobrescribir un pago confirmado por pinpad");
+                }
+            });
+        }
+        if (!PinpadPaymentCreateService.requiresPinpad(trxPayment)
+                && trxPayment.PinpadPaymentId != null && !trxPayment.PinpadPaymentId.isBlank()) {
+            throw new TrxPaymentBuildException("La referencia pinpad solo puede guardarse mediante un pago POS");
+        }
         trxPayment.CashSessionID = cashSessionID;
         trxPayment.addSession(userCod);
         trxPayment.validate();

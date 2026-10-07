@@ -19,7 +19,7 @@ public class PinpadCorsConfig implements WebMvcConfigurer {
         registry.addMapping("/**")
                 .allowedOrigins(properties.getAllowedOrigins().toArray(String[]::new))
                 .allowedMethods("GET", "POST", "OPTIONS")
-                .allowedHeaders("Content-Type", PinpadConstants.HEADER_AGENT_TOKEN)
+                .allowedHeaders("Content-Type", "Authorization", PinpadConstants.HEADER_AGENT_TOKEN)
                 .maxAge(3600);
     }
 }

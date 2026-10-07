@@ -1,0 +1,23 @@
+# Se crea automaticamente en el primer arranque. Editar este archivo por caja.
+# Mantener solo la entrada de esta PC; registrar su identificador, tienda y caja en el backend.
+server:
+  address: 127.0.0.1
+  port: ${PINPAD_PORT:8094}
+
+pinpad:
+  agent-id: ${PINPAD_AGENT_ID:CAJA01}
+  provider: ${PINPAD_PROVIDER:demo} # demo | culqi | niubiz; los proveedores fisicos requieren su conector.
+  backend-authorization-url: http://127.0.0.1:8090/api/v1/TrxPayment/authorizePinpad
+  agent-token: ${PINPAD_AGENT_TOKEN:__AGENT_TOKEN__}
+  terminal-id: ${PINPAD_TERMINAL_ID:TERM-DEMO-001}
+  merchant-id: ${PINPAD_MERCHANT_ID:MERCHANT-DEMO-001}
+  storage-path: ${PINPAD_STORAGE_PATH:C:/pinpad-agent}
+  allowed-origins:
+    - http://localhost:4200
+    - http://127.0.0.1:4200
+    # Agregar aqui el origen HTTPS de la web de este cliente.
+  browser:
+    agents:
+      CAJA01: # Debe coincidir con agent-id.
+        store-cod: "T001"
+        register-cod: "CAJA0001"

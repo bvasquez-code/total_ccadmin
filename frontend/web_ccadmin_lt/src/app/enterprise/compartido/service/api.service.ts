@@ -115,6 +115,15 @@ export class ApiService {
         });
     }
 
+    public InvokeLocalPostService(URL: string, Request: any, localToken?: string): Observable<any> {
+        // Local operations use only the short-lived agent token, never the normal API headers.
+        return this.http.post<any>(URL, Request, {
+            headers: new HttpHeaders(localToken
+                ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localToken}` }
+                : { 'Content-Type': 'application/json' })
+        });
+    }
+
     public InvokePostFormDataService(URL: string, Request: FormData): Observable<any> {
         const token = this.dataSesionService.GetToken();
         if (!token) {

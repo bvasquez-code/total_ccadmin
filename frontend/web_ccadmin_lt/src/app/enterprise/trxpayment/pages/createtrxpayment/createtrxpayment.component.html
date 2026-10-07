@@ -10,6 +10,12 @@
             </div>
 
             <div class="card-body px-3 pb-1">
+                <div class="alert alert-warning" *ngIf="pendingPinpadPayment">
+                    Pago en proceso de confirmacion: {{ pendingPinpadPayment.CurrencyCod }}
+                    {{ pendingPinpadPayment.AmountPaid | number:'1.2-2' }}.
+                    Referencia: {{ pendingPinpadPayment.PinpadPaymentId }}.
+                    Consulte el resultado antes de registrar otro cobro. Mantenga este formulario abierto.
+                </div>
                 <form class="mt-lg-3" autocomplete="off">
 
                     <div class="form-group row">
@@ -248,6 +254,8 @@
                                 class="btn btn-info btn-bold col-sm-8" 
                                 type="button"
                                 (click)="Save()"
+                                [class.disabled]="savingPayment"
+                                [attr.aria-disabled]="savingPayment"
                             >
                                 <i class="fa fa-check mr-1"></i>
                                 {{ getSaveButtonLabel() }}

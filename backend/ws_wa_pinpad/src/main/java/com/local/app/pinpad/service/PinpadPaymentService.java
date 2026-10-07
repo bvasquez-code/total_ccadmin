@@ -282,7 +282,7 @@ public class PinpadPaymentService {
     }
 
     private boolean isRealPayment(PinpadPaymentDetailDto detail) {
-        return detail.getProvider() == PinpadProvider.CULQI;
+        return detail.getProvider() != null && detail.getProvider().requiresReconciliation();
     }
 
     private boolean isUnresolved(PinpadPaymentDetailDto detail) {
@@ -360,9 +360,12 @@ public class PinpadPaymentService {
         }
         if (!Objects.equals(existing.getAmountCents(), request.getAmountCents())
                 || !Objects.equals(existing.getCurrency(), request.getCurrency().toUpperCase(Locale.ROOT))
-                || existing.getPaymentMethod() != request.getPaymentMethod()) {
+                || existing.getPaymentMethod() != request.getPaymentMethod()
+                || !Objects.equals(existing.getCashier(), request.getCashier())
+                || !Objects.equals(existing.getInternalPaymentCode(), request.getInternalPaymentCode())
+                || !Objects.equals(existing.getExternalReference(), request.getExternalReference())) {
             throw new PinpadPaymentException(PinpadErrorCode.IDEMPOTENCY_AMOUNT_MISMATCH,
-                    "paymentId existente con monto, moneda o medio de pago distinto", HttpStatus.CONFLICT);
+                    "paymentId existente con monto, moneda, medio de pago o cajero distinto", HttpStatus.CONFLICT);
         }
     }
 

@@ -1,6 +1,7 @@
 package com.ccadmin.app.payment.model.entity;
 
 import com.ccadmin.app.payment.exception.TrxPaymentBuildException;
+import com.ccadmin.app.payment.model.dto.PinpadSignedMessageDto;
 import com.ccadmin.app.shared.model.entity.AuditTableEntity;
 import com.ccadmin.app.shared.util.NumberUtil;
 import jakarta.persistence.*;
@@ -23,6 +24,16 @@ public class TrxPaymentEntity extends AuditTableEntity implements Serializable {
     public Date CardExpirationDate;
     public String CardCVV;
     public String TransactionId;
+    @Column(length = 96)
+    public String PinpadPaymentId;
+    @Transient
+    public PinpadSignedMessageDto PinpadResult;
+    @Transient
+    public PinpadSignedMessageDto PinpadAckCommand;
+    @Transient
+    public String PinpadAckUrl;
+    @Transient
+    public String PinpadLoginUrl;
     public String PaymentStatus;
     public String CurrencyCod;
     public String CurrencyCodSys;

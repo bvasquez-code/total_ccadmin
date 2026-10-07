@@ -1,4 +1,5 @@
 import { AuditTableEntity } from "src/app/enterprise/shared/model/entity/AuditTableEntity";
+import { PinpadSignedMessageDto } from "../dto/PinpadBrowserInstructionsDto";
 
 export class TrxPaymentEntity extends AuditTableEntity {
 
@@ -10,6 +11,11 @@ export class TrxPaymentEntity extends AuditTableEntity {
     public CardExpirationDate: Date;
     public CardCVV: string;
     public TransactionId: string | null;
+    public PinpadPaymentId: string | null = null;
+    public PinpadResult?: PinpadSignedMessageDto;
+    public PinpadAckCommand?: PinpadSignedMessageDto;
+    public PinpadAckUrl?: string;
+    public PinpadLoginUrl?: string;
     public PaymentStatus: string;
     public CurrencyCod: string;
     public CurrencyCodSys: string;

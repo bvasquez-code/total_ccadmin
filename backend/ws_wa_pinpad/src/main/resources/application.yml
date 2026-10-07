@@ -1,9 +1,15 @@
+spring:
+  config:
+    import: optional:file:./pinpad-cajas.yml,optional:file:./config/pinpad-cajas.yml
+
 server:
   address: 127.0.0.1
-  port: 6669
+  port: ${PINPAD_PORT:8094}
 
 pinpad:
-  # demo | culqi. Culqi requiere un bean CulqiTerminalClient implementado con su SDK oficial.
+  agent-id: ${PINPAD_AGENT_ID:}
+  backend-authorization-url: ${PINPAD_BACKEND_AUTHORIZATION_URL:http://127.0.0.1:8090/api/v1/TrxPayment/authorizePinpad}
+  # demo | culqi | niubiz. Los proveedores fisicos requieren un cliente implementado con su kit (ver README.md).
   provider: ${PINPAD_PROVIDER:demo}
   agent-token: ${PINPAD_AGENT_TOKEN:change-me-local-token}
   storage-path: ${PINPAD_STORAGE_PATH:C:/pinpad-agent}
@@ -16,6 +22,8 @@ pinpad:
   merchant-id: ${PINPAD_MERCHANT_ID:MERCHANT-DEMO-001}
   # Habilitar billeteras solo cuando el contrato del terminal confirme su soporte.
   culqi-supported-payment-methods:
+    - CARD
+  niubiz-supported-payment-methods:
     - CARD
   allowed-currency: "PEN"
   allowed-origins:

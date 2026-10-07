@@ -1,6 +1,7 @@
 package com.ccadmin.app.payment.controller;
 
 import com.ccadmin.app.payment.model.entity.TrxPaymentEntity;
+import com.ccadmin.app.payment.exception.PinpadPaymentException;
 import com.ccadmin.app.payment.service.TrxPaymentCreateService;
 import com.ccadmin.app.payment.service.TrxPaymentDocumentSearchService;
 import com.ccadmin.app.payment.service.TrxPaymentSearchService;
@@ -27,6 +28,16 @@ public class TrxPaymentController {
     @Autowired
     private TrxPaymentDocumentSearchService trxPaymentDocumentSearchService;
 
+    @Autowired
+    private com.ccadmin.app.payment.service.PinpadAuthorizationCreateService pinpadAuthorizationCreateService;
+
+    @PostMapping("authorizePinpad")
+    public ResponseEntity<ResponseWsDto> authorizePinpad(
+            @RequestBody com.ccadmin.app.payment.model.dto.PinpadAgentAuthorizationRequestDto request) {
+        try { return ResponseEntity.ok(new ResponseWsDto(pinpadAuthorizationCreateService.authorize(request))); }
+        catch (Exception exception) { return ResponseEntity.badRequest().body(paymentError(exception)); }
+    }
+
     @PostMapping("save")
     public ResponseEntity<ResponseWsDto> save(@RequestBody TrxPaymentEntity trxPayment)
     {
@@ -39,7 +50,16 @@ public class TrxPaymentController {
         catch (Exception ex)
         {
             log.error("Error : {}",ex.getMessage(), ex);
-            return new ResponseEntity<ResponseWsDto>(new ResponseWsDto(ex),HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<ResponseWsDto>(paymentError(ex),HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("preparePinpad")
+    public ResponseEntity<ResponseWsDto> preparePinpad(@RequestBody TrxPaymentEntity trxPayment) {
+        try {
+            return ResponseEntity.ok(new ResponseWsDto(trxPaymentCreateService.preparePinpad(trxPayment)));
+        } catch (Exception exception) {
+            return ResponseEntity.badRequest().body(paymentError(exception));
         }
     }
 
@@ -55,8 +75,20 @@ public class TrxPaymentController {
         catch (Exception ex)
         {
             log.error("Error : {}",ex.getMessage(), ex);
-            return new ResponseEntity<ResponseWsDto>(new ResponseWsDto(ex),HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<ResponseWsDto>(paymentError(ex),HttpStatus.BAD_REQUEST);
         }
+    }
+
+    private ResponseWsDto paymentError(Exception exception) {
+        ResponseWsDto response = new ResponseWsDto(exception);
+        response.Data = null;
+        if (exception instanceof PinpadPaymentException pinpadException) {
+            response.Data = java.util.Map.of(
+                    "PinpadPaymentId", pinpadException.PinpadPaymentId,
+                    "PaymentStatus", pinpadException.PaymentStatus,
+                    "CanStartNewPayment", pinpadException.CanStartNewPayment);
+        }
+        return response;
     }
 
     @GetMapping("findById")

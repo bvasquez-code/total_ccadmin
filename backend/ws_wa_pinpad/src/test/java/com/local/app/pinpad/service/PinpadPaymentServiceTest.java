@@ -3,8 +3,10 @@ package com.local.app.pinpad.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.local.app.pinpad.adapter.PinpadAdapterResult;
 import com.local.app.pinpad.adapter.PinpadCulqiAdapter;
+import com.local.app.pinpad.adapter.PinpadNiubizAdapter;
 import com.local.app.pinpad.adapter.PinpadSimulatorAdapter;
 import com.local.app.pinpad.adapter.culqi.CulqiTerminalClient;
+import com.local.app.pinpad.adapter.niubiz.NiubizTerminalClient;
 import com.local.app.pinpad.config.PinpadAgentProperties;
 import com.local.app.pinpad.enums.PinpadPaymentMethod;
 import com.local.app.pinpad.enums.PinpadPaymentStatus;
@@ -231,6 +233,91 @@ class PinpadPaymentServiceTest {
         assertThat(paymentService.health().getProvider()).isEqualTo("demo");
     }
 
+    @Test
+    void niubizUnknownSurvivesRestartAndIsReconciledWithoutChargingAgain() {
+        NiubizTerminalClient niubizTerminalClient = useNiubiz();
+        when(niubizTerminalClient.processPayment(any())).thenThrow(new IllegalStateException("transport failure"));
+        assertThat(paymentService.registerPayment(request("niubiz-1")).getStatus()).isEqualTo(PinpadPaymentStatus.UNKNOWN);
+        paymentService.shutdown();
+        paymentService = new PinpadPaymentService(paymentFileRepository, new PinpadNiubizAdapter(properties, niubizTerminalClient),
+                properties, objectMapper);
+        paymentService.restoreActivePayment();
+        assertThat(paymentService.health().getProvider()).isEqualTo("niubiz");
+        assertThat(paymentService.health().getActivePaymentId()).isEqualTo("niubiz-1");
+        assertThatThrownBy(() -> paymentService.registerPayment(request("niubiz-2"))).isInstanceOf(PinpadPaymentException.class);
+        assertThatThrownBy(() -> paymentService.ackPayment("niubiz-1", null)).isInstanceOf(PinpadPaymentException.class);
+        when(niubizTerminalClient.queryPayment("niubiz-1")).thenReturn(Optional.of(approved()));
+        assertThat(paymentService.findPayment("niubiz-1").getStatus()).isEqualTo(PinpadPaymentStatus.APPROVED);
+        assertThat(Files.exists(storage.resolve("unknown/niubiz-1.json"))).isFalse();
+        assertThat(paymentService.ackPayment("niubiz-1", null).getStatus()).isEqualTo(PinpadPaymentStatus.READ);
+        verify(niubizTerminalClient, times(1)).processPayment(any());
+    }
+
+    @Test
+    void niubizTimeoutBlocksNewChargesUntilTheOriginalPaymentIsResolved() {
+        NiubizTerminalClient niubizTerminalClient = useNiubiz();
+        PinpadPaymentDetailDto interrupted = persistedPayment("niubiz-1", PinpadPaymentStatus.PROCESSING);
+        interrupted.setStartedAt(LocalDateTime.now().minusMinutes(10));
+        paymentFileRepository.saveProcessing(interrupted);
+        paymentService.restoreActivePayment();
+        assertThat(paymentService.findPayment("niubiz-1").getStatus()).isEqualTo(PinpadPaymentStatus.UNKNOWN);
+        assertThatThrownBy(() -> paymentService.registerPayment(request("niubiz-2"))).isInstanceOf(PinpadPaymentException.class);
+        when(niubizTerminalClient.cancelPayment("niubiz-1")).thenReturn(approved());
+        assertThat(paymentService.cancelPayment("niubiz-1").getStatus()).isEqualTo(PinpadPaymentStatus.APPROVED);
+        verify(niubizTerminalClient, never()).processPayment(any());
+    }
+
+    @Test
+    void niubizCannotQueryCancelOrReuseCulqiResults() {
+        paymentFileRepository.saveFinal(persistedPayment("culqi-1", PinpadPaymentStatus.UNKNOWN));
+        NiubizTerminalClient niubizTerminalClient = useNiubiz();
+        paymentService.restoreActivePayment();
+        assertThat(paymentService.findPayment("culqi-1").getStatus()).isEqualTo(PinpadPaymentStatus.UNKNOWN);
+        assertThatThrownBy(() -> paymentService.cancelPayment("culqi-1")).isInstanceOf(PinpadPaymentException.class);
+        assertThatThrownBy(() -> paymentService.registerPayment(request("culqi-1"))).isInstanceOf(PinpadPaymentException.class);
+        assertThatThrownBy(() -> paymentService.registerPayment(request("niubiz-1"))).isInstanceOf(PinpadPaymentException.class);
+        verifyNoInteractions(niubizTerminalClient);
+    }
+
+    @Test
+    void switchingToCulqiCannotHideUncertainNiubizPayment() {
+        useNiubiz();
+        paymentFileRepository.saveFinal(persistedPayment("niubiz-1", PinpadPaymentStatus.UNKNOWN));
+        paymentService.shutdown();
+        properties.setProvider(PinpadProvider.CULQI);
+        paymentService = createService();
+        paymentService.restoreActivePayment();
+        assertThatThrownBy(() -> paymentService.registerPayment(request("culqi-1"))).isInstanceOf(PinpadPaymentException.class);
+        assertThatThrownBy(() -> paymentService.ackPayment("niubiz-1", null)).isInstanceOf(PinpadPaymentException.class);
+        verifyNoInteractions(culqiTerminalClient);
+    }
+
+    @Test
+    void referenceCannotBeClaimedByAnotherCashierOrInternalPaymentMethod() {
+        when(culqiTerminalClient.processPayment(any())).thenReturn(approved());
+        PinpadPaymentRegisterDto original = request("reference-owner");
+        original.setCashier("USER1");
+        original.setInternalPaymentCode("TC001");
+        paymentService.registerPayment(original);
+        PinpadPaymentRegisterDto changed = request("reference-owner");
+        changed.setCashier("USER2");
+        changed.setInternalPaymentCode("TC001");
+        assertThatThrownBy(() -> paymentService.registerPayment(changed)).isInstanceOf(PinpadPaymentException.class);
+        changed.setCashier("USER1");
+        changed.setInternalPaymentCode("TD001");
+        assertThatThrownBy(() -> paymentService.registerPayment(changed)).isInstanceOf(PinpadPaymentException.class);
+        verify(culqiTerminalClient, times(1)).processPayment(any());
+    }
+
+    private NiubizTerminalClient useNiubiz() {
+        paymentService.shutdown();
+        properties.setProvider(PinpadProvider.NIUBIZ);
+        NiubizTerminalClient niubizTerminalClient = mock(NiubizTerminalClient.class);
+        paymentService = new PinpadPaymentService(paymentFileRepository, new PinpadNiubizAdapter(properties, niubizTerminalClient),
+                properties, objectMapper);
+        return niubizTerminalClient;
+    }
+
     private PinpadPaymentService createService() {
         return new PinpadPaymentService(paymentFileRepository, new PinpadCulqiAdapter(properties, culqiTerminalClient),
                 properties, objectMapper);
@@ -248,7 +335,7 @@ class PinpadPaymentServiceTest {
     private PinpadPaymentDetailDto persistedPayment(String paymentId, PinpadPaymentStatus status) {
         PinpadPaymentDetailDto detail = new PinpadPaymentDetailDto();
         detail.setPaymentId(paymentId);
-        detail.setProvider(PinpadProvider.CULQI);
+        detail.setProvider(properties.getProvider());
         detail.setTerminalId(properties.getTerminalId());
         detail.setMerchantId(properties.getMerchantId());
         detail.setStatus(status);

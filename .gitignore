@@ -6,3 +6,8 @@ frontend/web_ccadmin_lt/src/assets/public/image/
 
 # SUNAT generated XML/ZIP/CDR files
 backend/ws_wa_sunat_ccadmin/storage/sunat/
+
+# Identidades y claves privadas de cada instalacion pinpad
+pinpad-cajas.yml
+**/identity-rsa.json
+backend/ws_wa_store_ccadmin/data/pinpad-security/

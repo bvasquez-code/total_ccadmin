@@ -24,6 +24,12 @@ public class PinpadExceptionHandler {
                 .body(ResponseWsDto.error(PinpadErrorCode.INVALID_REQUEST.name(), "Solicitud invalida"));
     }
 
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<ResponseWsDto<Void>> handleMissingRoute(org.springframework.web.servlet.resource.NoResourceFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ResponseWsDto.error(PinpadErrorCode.INVALID_REQUEST.name(), "La URL del servicio pinpad no existe"));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ResponseWsDto<Void>> handleUnexpected(Exception ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

@@ -12,6 +12,8 @@ import java.util.List;
 @Repository
 public interface TrxPaymentRepository extends JpaRepository<TrxPaymentEntity, Long>, CcAdminRepository<TrxPaymentEntity, Long> {
 
+    @Query(value = "select * from trx_payments where PinpadPaymentId = :paymentId", nativeQuery = true)
+    TrxPaymentEntity findByPinpadPaymentId(@Param("paymentId") String paymentId);
 
     @Query( value = """
             select * from trx_payments tp where tp.TransactionId = :TransactionId

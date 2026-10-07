@@ -5,6 +5,8 @@ import com.local.app.pinpad.enums.PinpadPaymentStatus;
 public class PinpadPaymentStatusDto {
 
     private String paymentId;
+    private String cashier;
+    private String internalPaymentCode;
     private String saleCod;
     private PinpadPaymentStatus status;
     private Long amountCents;
@@ -23,6 +25,8 @@ public class PinpadPaymentStatusDto {
     public static PinpadPaymentStatusDto fromDetail(PinpadPaymentDetailDto detail) {
         PinpadPaymentStatusDto dto = new PinpadPaymentStatusDto();
         dto.setPaymentId(detail.getPaymentId());
+        dto.setCashier(detail.getCashier());
+        dto.setInternalPaymentCode(detail.getInternalPaymentCode());
         dto.setSaleCod(detail.getSaleCod());
         dto.setStatus(detail.getStatus());
         dto.setAmountCents(detail.getAmountCents());
@@ -41,6 +45,10 @@ public class PinpadPaymentStatusDto {
     }
 
     public String getPaymentId() { return paymentId; }
+    public String getCashier() { return cashier; }
+    public void setCashier(String cashier) { this.cashier = cashier; }
+    public String getInternalPaymentCode() { return internalPaymentCode; }
+    public void setInternalPaymentCode(String internalPaymentCode) { this.internalPaymentCode = internalPaymentCode; }
     public void setPaymentId(String paymentId) { this.paymentId = paymentId; }
     public String getSaleCod() { return saleCod; }
     public void setSaleCod(String saleCod) { this.saleCod = saleCod; }

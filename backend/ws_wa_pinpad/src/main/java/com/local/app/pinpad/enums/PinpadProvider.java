@@ -2,5 +2,10 @@ package com.local.app.pinpad.enums;
 
 public enum PinpadProvider {
     DEMO,
-    CULQI
+    CULQI,
+    NIUBIZ;
+
+    public boolean requiresReconciliation() {
+        return this != DEMO;
+    }
 }
