@@ -31,18 +31,15 @@ import javax.xml.transform.stream.StreamResult;
 import java.io.ByteArrayInputStream;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.security.Key;
-import java.security.KeyStore;
-import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
-import java.util.Enumeration;
 import java.util.List;
 
 @Service
 public class SunatXmlSignatureService {
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private SunatCertificateService sunatCertificateService;
 
     private static final String EXT_NS = "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2";
 
@@ -51,9 +48,9 @@ public class SunatXmlSignatureService {
             throw new IllegalArgumentException("XML sin firmar requerido");
         }
         try {
-            CertificateData certificate = loadCertificate(config);
+            SunatCertificateService.CertificateData certificate = sunatCertificateService.load(config);
             Document document = parseXml(unsignedXml);
-            DOMSignContext signContext = new DOMSignContext(certificate.privateKey, findExtensionContent(document));
+            DOMSignContext signContext = new DOMSignContext(certificate.privateKey(), findExtensionContent(document));
             signContext.setDefaultNamespacePrefix("ds");
 
             XMLSignatureFactory factory = XMLSignatureFactory.getInstance("DOM");
@@ -69,44 +66,17 @@ public class SunatXmlSignatureService {
                     factory.newSignatureMethod(SignatureMethod.RSA_SHA1, null),
                     Collections.singletonList(reference)
             );
-            KeyInfo keyInfo = buildKeyInfo(factory, certificate.certificate);
+            KeyInfo keyInfo = buildKeyInfo(factory, certificate.certificate());
             XMLSignature signature = factory.newXMLSignature(signedInfo, keyInfo);
             signature.sign(signContext);
             Element signatureElement = (Element) document.getElementsByTagNameNS(XMLSignature.XMLNS, "Signature").item(0);
             signatureElement.setAttribute("Id", "SignatureSP");
             String signedXml = toXml(document);
-            validateSignature(certificate.certificate, signedXml);
+            validateSignature(certificate.certificate(), signedXml);
             return signedXml;
         } catch (Exception ex) {
             throw new IllegalArgumentException("No se pudo firmar XML SUNAT: " + ex.getMessage(), ex);
         }
-    }
-
-    private CertificateData loadCertificate(SunatConfigEntity config) throws Exception {
-        if (config.CertificatePath == null || config.CertificatePath.isBlank()) {
-            throw new IllegalArgumentException("Ruta de certificado requerida");
-        }
-        if (config.CertificatePassword == null || config.CertificatePassword.isBlank()) {
-            throw new IllegalArgumentException("Clave de certificado requerida");
-        }
-        String keyStoreType = "JKS".equalsIgnoreCase(config.CertificateType) ? "JKS" : "PKCS12";
-        KeyStore keyStore = KeyStore.getInstance(keyStoreType);
-        char[] password = config.CertificatePassword.toCharArray();
-        try (var input = Files.newInputStream(Path.of(config.CertificatePath))) {
-            keyStore.load(input, password);
-        }
-        Enumeration<String> aliases = keyStore.aliases();
-        while (aliases.hasMoreElements()) {
-            String alias = aliases.nextElement();
-            if (!keyStore.isKeyEntry(alias)) {
-                continue;
-            }
-            Key key = keyStore.getKey(alias, password);
-            if (key instanceof PrivateKey privateKey && keyStore.getCertificate(alias) instanceof X509Certificate certificate) {
-                return new CertificateData(privateKey, certificate);
-            }
-        }
-        throw new IllegalArgumentException("No se encontro llave privada en el certificado configurado");
     }
 
     private Document parseXml(String xml) throws Exception {
@@ -155,6 +125,4 @@ public class SunatXmlSignatureService {
         }
     }
 
-    private record CertificateData(PrivateKey privateKey, X509Certificate certificate) {
-    }
 }

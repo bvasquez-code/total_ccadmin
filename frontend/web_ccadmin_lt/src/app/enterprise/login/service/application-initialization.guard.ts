@@ -46,15 +46,14 @@ export class ApplicationInitializationGuard implements CanActivate, CanActivateC
       this.dataSesionService.RequiresApplicationInitialization();
     const isInitializationRoute = url.split('?')[0] === this.initializationUrl;
 
-    if (initializationRequired) {
+    if (this.dataSesionService.getSessionStorageDto().UserCod.toUpperCase() === 'ROOT') {
       const response = await this.applicationInitializationService.findStatus();
-      if (!response.ErrorStatus && response.Data) {
-        const status = response.Data as ApplicationInitializationStatusDto;
-        if (!status.Required) {
-          this.dataSesionService.CompleteApplicationInitialization();
-          initializationRequired = false;
-        }
+      if (response.ErrorStatus || !response.Data) {
+        return false;
       }
+      const status = response.Data as ApplicationInitializationStatusDto;
+      this.dataSesionService.UpdateApplicationInitializationStatus(status);
+      initializationRequired = this.dataSesionService.RequiresApplicationInitialization();
     }
 
     if (initializationRequired) {

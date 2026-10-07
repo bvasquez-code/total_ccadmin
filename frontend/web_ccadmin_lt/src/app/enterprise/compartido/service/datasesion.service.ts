@@ -4,6 +4,7 @@ import { Observable, of, throwError } from 'rxjs';
 import { RespuestaWsDto } from '../entity/RespuestaWsDto';
 import { SessionStorageDto } from '../entity/SessionStorageDto';
 import { AppMenuEntity } from '../../menu/model/entity/AppMenuEntity';
+import type { ApplicationInitializationStatusDto } from '../../login/service/application-initialization.service';
 
 
 @Injectable({
@@ -144,15 +145,40 @@ export class DataSesionService {
     RequiresApplicationInitialization(): boolean
     {
         return this.sessionStorageDto.UserCod.toUpperCase() === 'ROOT'
-            && this.sessionStorageDto.ApplicationInitializationRequired;
+            && (this.sessionStorageDto.ApplicationInitializationRequired
+                || this.sessionStorageDto.CompanyInitializationPending
+                || this.sessionStorageDto.StoreInitializationPending);
     }
 
     CompleteApplicationInitialization(): void
     {
-        localStorage.setItem('ApplicationInitializationRequired', 'false');
-        localStorage.setItem('CompanyInitializationPending', 'false');
-        localStorage.setItem('StoreInitializationPending', 'false');
-        localStorage.removeItem('DefaultStoreCod');
+        this.UpdateApplicationInitializationStatus({
+            Required: false,
+            CompanyPending: false,
+            StorePending: false,
+            DefaultStoreCod: ''
+        });
+    }
+
+    UpdateApplicationInitializationStatus(status: ApplicationInitializationStatusDto): void
+    {
+        const session = this.sessionStorageDto;
+        const defaultStoreCod = status.DefaultStoreCod || '';
+        if (session.ApplicationInitializationRequired === status.Required
+            && session.CompanyInitializationPending === status.CompanyPending
+            && session.StoreInitializationPending === status.StorePending
+            && session.DefaultStoreCod === defaultStoreCod) {
+            return;
+        }
+
+        localStorage.setItem('ApplicationInitializationRequired', String(status.Required));
+        localStorage.setItem('CompanyInitializationPending', String(status.CompanyPending));
+        localStorage.setItem('StoreInitializationPending', String(status.StorePending));
+        if (defaultStoreCod) {
+            localStorage.setItem('DefaultStoreCod', defaultStoreCod);
+        } else {
+            localStorage.removeItem('DefaultStoreCod');
+        }
         this.cargarInfoSesion();
         this.notifySessionChange();
     }

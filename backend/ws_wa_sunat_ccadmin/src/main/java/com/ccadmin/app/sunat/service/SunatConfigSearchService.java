@@ -5,6 +5,8 @@ import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import com.ccadmin.app.shared.model.dto.SearchDto;
 import com.ccadmin.app.shared.service.SearchTService;
 import com.ccadmin.app.sunat.model.entity.SunatConfigEntity;
+import com.ccadmin.app.sunat.model.dto.SunatInitializationFormDto;
+import com.ccadmin.app.sunat.model.constants.SunatConfigDefaults;
 import com.ccadmin.app.sunat.repository.SunatConfigRepository;
 import com.ccadmin.app.system.utility.StringUtil;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +37,30 @@ public class SunatConfigSearchService {
         return this.sunatConfigRepository.findActiveConfig()
                 .orElseThrow(() -> new IllegalArgumentException("No existe configuracion SUNAT activa"));
     }
+
+    public SunatInitializationFormDto findInitializationForm() {
+        SunatInitializationFormDto form = new SunatInitializationFormDto();
+        form.BetaEndpoint = SunatConfigDefaults.BETA_ENDPOINT;
+        form.ProductionEndpoint = SunatConfigDefaults.PRODUCTION_ENDPOINT;
+        form.GuideEndpoint = SunatConfigDefaults.GUIDE_ENDPOINT;
+        form.GuideTokenEndpoint = SunatConfigDefaults.GUIDE_TOKEN_ENDPOINT;
+        SunatConfigEntity active = sunatConfigRepository.findActiveConfig().orElse(null);
+        SunatConfigEntity production = sunatConfigRepository.findById(SunatConfigDefaults.PRODUCTION_CODE).orElse(null);
+        if (active != null) form.Mode = active.Environment;
+        if (production != null) {
+            form.IssuerRuc = production.IssuerRuc;
+            form.SolUser = production.SolUser;
+            form.HasSolPassword = present(production.SolPassword);
+            form.HasCertificate = present(production.CertificatePath);
+            form.HasCertificatePassword = present(production.CertificatePassword);
+            form.GuideClientId = production.GuideClientId;
+            form.HasGuideClientSecret = present(production.GuideClientSecret);
+            form.GuideEnabled = present(production.GuideClientId) && form.HasGuideClientSecret;
+        }
+        return form;
+    }
+
+    private boolean present(String value) { return value != null && !value.isBlank(); }
 
     public ResponseWsDto findDataForm(String sunatConfigCod) {
         ResponseWsDto rpt = new ResponseWsDto();

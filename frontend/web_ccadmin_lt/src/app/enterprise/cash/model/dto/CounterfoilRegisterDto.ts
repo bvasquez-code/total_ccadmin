@@ -3,6 +3,8 @@ import { CounterfoilStoreEntity } from "../entity/CounterfoilStoreEntity";
 
 export class CounterfoilRegisterDto {
 
+    public PreviousCounterfoilCod?: string;
+
     public counterfoil: CounterfoilEntity;
     public counterfoilStore: CounterfoilStoreEntity;
 

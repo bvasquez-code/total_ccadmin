@@ -1,0 +1,97 @@
+<div class="card dcard">
+  <div class="card-body p-3 p-md-4">
+    <h4 class="text-primary-d2 mb-2"><i class="fa fa-paper-plane mr-2"></i>Envío de documentos a SUNAT</h4>
+    <p class="text-grey-d1">Elija cómo enviará las facturas, boletas y notas de su negocio.</p>
+
+    <p *ngIf="IsLoading" role="status">Cargando configuración…</p>
+    <div *ngIf="LoadError" class="alert alert-danger" role="alert">
+      {{LoadError}}
+      <button type="button" class="btn btn-sm btn-outline-danger ml-2" (click)="load()">Reintentar</button>
+    </div>
+
+    <form *ngIf="Form" (ngSubmit)="confirm()" autocomplete="off">
+      <fieldset [disabled]="IsSaving">
+        <div class="form-group">
+          <label for="sunatMode">¿Desea enviar sus documentos a SUNAT?</label>
+          <select id="sunatMode" name="sunatMode" class="form-control" [(ngModel)]="Mode">
+            <option value="NONE">No configurar / no usar SUNAT</option>
+            <option value="BETA">Usar ambiente de pruebas</option>
+            <option value="PRODUCCION">Usar ambiente de producción</option>
+          </select>
+        </div>
+
+        <div *ngIf="Mode === 'NONE'" class="alert alert-secondary">
+          El envío de documentos a SUNAT quedará deshabilitado. Puede configurar este servicio más adelante.
+        </div>
+        <div *ngIf="Mode === 'BETA'" class="alert alert-info">
+          Se usarán el usuario y la contraseña de pruebas MODDATOS, y el certificado de pruebas incluido en el sistema.
+          Los comprobantes se enviarán al ambiente beta. El envío de guías de remisión quedará deshabilitado.
+        </div>
+
+        <div *ngIf="Mode !== 'NONE'" class="form-group">
+          <label for="sunatIssuerRuc">RUC emisor</label>
+          <input id="sunatIssuerRuc" class="form-control" [value]="Form.IssuerRuc" readonly>
+          <small class="form-text text-muted">Se toma de la compañía configurada.</small>
+        </div>
+
+        <ng-container *ngIf="Mode === 'PRODUCCION'">
+          <div class="alert alert-info">Se utilizará el servicio de producción de SUNAT para los documentos que emita desde el sistema.</div>
+          <div class="form-row">
+            <div class="form-group col-md-6">
+              <label for="sunatSolUser">Usuario SOL</label>
+              <input id="sunatSolUser" name="sunatSolUser" class="form-control" [(ngModel)]="SolUser" maxlength="64" required>
+              <small class="form-text text-muted">Ingrese solo el usuario, sin anteponer el RUC.</small>
+            </div>
+            <div class="form-group col-md-6">
+              <label for="sunatSolPassword">Contraseña SOL</label>
+              <input id="sunatSolPassword" name="sunatSolPassword" type="password" class="form-control" [(ngModel)]="SolPassword"
+                maxlength="128" autocomplete="new-password" [required]="!Form.HasSolPassword">
+              <small *ngIf="Form.HasSolPassword" class="form-text text-muted">Deje vacío para conservar la contraseña guardada.</small>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group col-md-6">
+              <label for="sunatCertificate">Certificado de producción (.pfx)</label>
+              <input id="sunatCertificate" type="file" accept=".pfx" class="form-control-file" (change)="selectCertificate($event)" [required]="!Form.HasCertificate">
+              <small class="form-text text-muted">Máximo 2 MB. Se guardará en el servidor del servicio SUNAT.</small>
+              <small *ngIf="Form.HasCertificate" class="form-text text-muted">Ya hay un certificado guardado; cargue otro solo si desea reemplazarlo.</small>
+            </div>
+            <div class="form-group col-md-6">
+              <label for="sunatCertificatePassword">Contraseña del certificado</label>
+              <input id="sunatCertificatePassword" name="sunatCertificatePassword" type="password" class="form-control"
+                [(ngModel)]="CertificatePassword" maxlength="128" autocomplete="new-password" [required]="!Form.HasCertificatePassword || !!Certificate">
+              <small *ngIf="Form.HasCertificatePassword && !Certificate" class="form-text text-muted">Deje vacío para conservar la contraseña guardada.</small>
+            </div>
+          </div>
+          <div class="custom-control custom-checkbox mb-3">
+            <input id="sunatGuideEnabled" name="sunatGuideEnabled" type="checkbox" class="custom-control-input" [(ngModel)]="GuideEnabled">
+            <label class="custom-control-label" for="sunatGuideEnabled">Enviar también guías de remisión electrónicas</label>
+          </div>
+          <div *ngIf="GuideEnabled" class="form-row">
+            <div class="form-group col-md-6">
+              <label for="sunatGuideClientId">Client ID de API SUNAT</label>
+              <input id="sunatGuideClientId" name="sunatGuideClientId" class="form-control" [(ngModel)]="GuideClientId" maxlength="128" required>
+            </div>
+            <div class="form-group col-md-6">
+              <label for="sunatGuideClientSecret">Client Secret de API SUNAT</label>
+              <input id="sunatGuideClientSecret" name="sunatGuideClientSecret" type="password" class="form-control"
+                [(ngModel)]="GuideClientSecret" maxlength="256" autocomplete="new-password"
+                [required]="!Form.HasGuideClientSecret || GuideClientId !== Form.GuideClientId">
+              <small *ngIf="Form.HasGuideClientSecret" class="form-text text-muted">Deje vacío para conservar el valor guardado del mismo Client ID.</small>
+            </div>
+          </div>
+        </ng-container>
+
+        <div *ngIf="Mode !== 'NONE'" class="form-group">
+          <label for="sunatEndpoint">Servicio SUNAT (preconfigurado)</label>
+          <input id="sunatEndpoint" class="form-control" [value]="Mode === 'BETA' ? Form.BetaEndpoint : Form.ProductionEndpoint" readonly>
+        </div>
+        <div class="text-right mt-4">
+          <button type="submit" class="btn btn-primary px-4" [disabled]="IsSaving">
+            {{IsSaving ? 'Guardando…' : 'Confirmar y continuar'}} <i class="fa fa-arrow-right ml-1"></i>
+          </button>
+        </div>
+      </fieldset>
+    </form>
+  </div>
+</div>

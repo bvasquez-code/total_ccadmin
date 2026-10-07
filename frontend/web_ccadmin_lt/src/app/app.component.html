@@ -4,7 +4,7 @@
 
     <div class="main-container bgc-white">
 
-        <app-menusidebar></app-menusidebar>
+        <app-menusidebar *ngIf="canAccessApplicationMenus()"></app-menusidebar>
 
         <div role="main" class="main-content">
             <router-outlet></router-outlet>

@@ -13,7 +13,7 @@ public class SystemDocumentSearchService {
 
 
     public SystemDocumentEntity findById(String DocumentCod){
-        return this.systemDocumentRepository.findById(DocumentCod).get();
+        return this.systemDocumentRepository.findById(DocumentCod).orElse(null);
     }
 
 }

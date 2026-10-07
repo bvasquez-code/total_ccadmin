@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 
@@ -17,6 +17,15 @@ import { CounterfoilService } from '../../service/CounterfoilService';
   templateUrl: './createcounterfoil.component.html'
 })
 export class CreatecounterfoilComponent implements OnInit {
+
+  @Input() InitializationMode: boolean = false;
+  @Input() InitialCounterfoilCod: string = '';
+  @Input() InitialStoreCod: string = '';
+  @Output() ConfigurationCompleted = new EventEmitter<CounterfoilEntity>();
+  @Output() Cancelled = new EventEmitter<void>();
+
+  IsSaving: boolean = false;
+  IsFormLoaded: boolean = false;
 
   CounterfoilCod: string = "";
 
@@ -43,6 +52,9 @@ export class CreatecounterfoilComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    if (this.InitializationMode) {
+      this.CounterfoilCod = this.InitialCounterfoilCod;
+    }
     this.findDataForm(this.CounterfoilCod);
   }
 
@@ -57,6 +69,9 @@ export class CreatecounterfoilComponent implements OnInit {
 
       this.DocumentTypeList = documentType ?? [];
       this.Store = store ?? new StoreEntity();
+      if (this.InitializationMode && this.InitialStoreCod) {
+        this.Store.StoreCod = this.InitialStoreCod;
+      }
 
       if (counterfoil) {
         this.register.counterfoil = counterfoil;
@@ -74,6 +89,9 @@ export class CreatecounterfoilComponent implements OnInit {
       if (!this.CounterfoilCod || this.CounterfoilCod === '') {
         this.buildCounterfoilCod();
       }
+      this.IsFormLoaded = true;
+    } else {
+      this.toastrService.error(rpt.Message || 'No se pudo cargar el talonario');
     }
   }
 
@@ -106,6 +124,10 @@ export class CreatecounterfoilComponent implements OnInit {
 
   async validateCounterfoilAvailability(DocumentType: string, Series: string): Promise<boolean> {
     const rpt: ResponseWsDto = await this.counterfoilService.existsByDocumentTypeAndSeries(DocumentType, Series);
+    if (rpt.ErrorStatus) {
+      this.toastrService.error(rpt.Message || 'No se pudo comprobar la disponibilidad de la serie');
+      return false;
+    }
     if (!rpt.ErrorStatus && rpt.Data) {
       const result: boolean = rpt.Data;
       if (result) {
@@ -117,20 +139,35 @@ export class CreatecounterfoilComponent implements OnInit {
   }
 
   async save() {
+    if (this.IsSaving || !this.IsFormLoaded) return;
+    this.IsSaving = true;
+    try {
+      await this.buildCounterfoilCod();
 
-    await this.buildCounterfoilCod();
+      // relación 1 a 1
+      this.register.counterfoilStore.CounterfoilCod = this.register.counterfoil.CounterfoilCod;
+      this.register.counterfoilStore.StoreCod = this.Store.StoreCod;
 
-    // relación 1 a 1
-    this.register.counterfoilStore.CounterfoilCod = this.register.counterfoil.CounterfoilCod;
-    this.register.counterfoilStore.StoreCod = this.Store.StoreCod;
+      if (!this.validate(this.register)) return;
 
-    if (!this.validate(this.register)) return;
+      this.register.PreviousCounterfoilCod = this.InitializationMode && this.CounterfoilCod
+        && this.CounterfoilCod !== this.register.counterfoil.CounterfoilCod
+        ? this.CounterfoilCod : undefined;
 
-    const rpt: ResponseWsDto = await this.counterfoilService.save(this.register);
+      const rpt: ResponseWsDto = await this.counterfoilService.save(this.register);
 
-    if (!rpt.ErrorStatus) {
-      this.toastrService.success("Talonario guardado");
-      this.router.navigate(["enterprise/cash/pages/listcounterfoil"]);
+      if (!rpt.ErrorStatus) {
+        this.toastrService.success("Talonario guardado");
+        if (this.InitializationMode) {
+          this.ConfigurationCompleted.emit(this.register.counterfoil);
+        } else {
+          this.router.navigate(["enterprise/cash/pages/listcounterfoil"]);
+        }
+      } else {
+        this.toastrService.error(rpt.Message || 'No se pudo guardar el talonario');
+      }
+    } finally {
+      this.IsSaving = false;
     }
   }
 

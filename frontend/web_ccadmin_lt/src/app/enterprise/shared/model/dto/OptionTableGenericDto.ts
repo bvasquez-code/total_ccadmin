@@ -1,6 +1,7 @@
 export class OptionTableGenericDto{
 
-    public Type: 'Modal' | 'Url' = 'Modal';
+    public Type: 'Modal' | 'Url' | 'Action' = 'Modal';
+    public Action?: (...args: any[]) => void;
     public ID? : string = "";
     public Name? : string = "";
     public Url?  : string = "";

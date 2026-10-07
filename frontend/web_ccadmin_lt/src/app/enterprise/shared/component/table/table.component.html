@@ -58,6 +58,15 @@
                   </div>
                   <div *ngIf="(Headers.ColumnAction === true)">
 
+                    <ng-container *ngFor="let option of Headers.Options">
+                      <button *ngIf="option.Type === 'Action' && showOption(option,item)" type="button"
+                        [attr.title]="option.Title || null" [attr.aria-label]="option.Title || null"
+                        class="mx-2px btn radius-1 border-2 btn-xs btn-brc-tp btn-light-secondary btn-h-lighter-success btn-a-lighter-success"
+                        (click)="getDataRow(item); option.Action?.(item)">
+                        <i [ngClass]="option.Name === '' ? '' : option.Name"></i>
+                      </button>
+                    </ng-container>
+
                     <div class="d-none d-lg-flex">
                       <a *ngFor="let option of Headers.Options">
 

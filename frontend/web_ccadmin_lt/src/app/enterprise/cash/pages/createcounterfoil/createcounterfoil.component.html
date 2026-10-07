@@ -59,7 +59,10 @@
                         <div class="col-sm-9">
                             <input type="text" class="form-control col-sm-8 col-md-6"
                                 [(ngModel)]="register.counterfoil.Series" name="Series" maxlength="4"
-                                (keyup)="buildCounterfoilCod()" [readonly]="CounterfoilCod!==''">
+                                (blur)="buildCounterfoilCod()" [readonly]="CounterfoilCod!=='' && !InitializationMode">
+                            <small class="text-muted" *ngIf="InitializationMode && CounterfoilCod">
+                                Al cambiar la serie, se registra el nuevo talonario y se desactiva el anterior.
+                            </small>
                         </div>
                     </div>
 
@@ -70,6 +73,9 @@
                         <div class="col-sm-9">
                             <input type="number" class="form-control col-sm-8 col-md-6"
                                 [(ngModel)]="register.counterfoil.Correlative" name="Correlative">
+                            <small class="text-muted" *ngIf="InitializationMode">
+                                Último número utilizado. La próxima emisión usará el siguiente; deje 0 para comenzar en 1.
+                            </small>
                         </div>
                     </div>
 
@@ -108,16 +114,24 @@
                     <div class="mt-5 border-t-1 bgc-secondary-l4 brc-secondary-l2 py-35 mx-n25">
                         <div class="offset-md-3 col-md-9 text-nowrap">
 
-                            <a class="btn btn-info btn-bold px-4" type="button" (click)="save()">
+                            <button class="btn btn-info btn-bold px-4" type="button" (click)="save()"
+                                [disabled]="IsSaving || !IsFormLoaded">
                                 <i class="fa fa-check mr-1"></i>
                                 Guardar
-                            </a>
+                            </button>
 
                             <a class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4" type="reset"
+                                *ngIf="!InitializationMode"
                                 href="/enterprise/cash/pages/listcounterfoil">
                                 <i class="fa fa-undo mr-1"></i>
                                 Volver
                             </a>
+                            <button *ngIf="InitializationMode" type="button" [disabled]="IsSaving"
+                                class="btn btn-outline-lightgrey btn-bgc-white btn-bold ml-2 px-4"
+                                (click)="Cancelled.emit()">
+                                <i class="fa fa-undo mr-1"></i>
+                                Volver a talonarios
+                            </button>
 
                         </div>
                     </div>

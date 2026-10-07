@@ -174,6 +174,9 @@ public class SunatGreRestClientService {
         if (config == null) {
             throw new IllegalArgumentException("Configuracion SUNAT requerida para GRE");
         }
+        if (!"PRODUCCION".equals(config.Environment)) {
+            throw new IllegalArgumentException("El envío de GRE REST está deshabilitado en el ambiente de pruebas");
+        }
         if (config.GuideEndpoint == null || config.GuideEndpoint.isBlank()) {
             throw new IllegalArgumentException("GuideEndpoint REST requerido para GRE");
         }

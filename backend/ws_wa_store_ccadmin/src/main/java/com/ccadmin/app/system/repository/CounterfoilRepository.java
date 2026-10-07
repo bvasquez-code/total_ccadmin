@@ -12,6 +12,9 @@ import java.util.Optional;
 
 public interface CounterfoilRepository extends JpaRepository<CounterfoilEntity,String>, CcAdminRepository<CounterfoilEntity, String> {
 
+    @Query(value = "SELECT * FROM counterfoil WHERE CounterfoilCod = :counterfoilCod FOR UPDATE", nativeQuery = true)
+    Optional<CounterfoilEntity> findByIdForUpdate(@Param("counterfoilCod") String counterfoilCod);
+
     @Query( value = """
             select
             	c.*

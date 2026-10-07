@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
 import { ToastrService } from 'ngx-toastr';
 
 import { ActionTableService } from 'src/app/enterprise/shared/interface/ActionTableService';
@@ -19,6 +19,13 @@ import { DocumentTypeDto } from '../../model/dto/DocumentTypeDto';
   templateUrl: './listcounterfoil.component.html'
 })
 export class ListcounterfoilComponent implements OnInit, ActionTableService<CounterfoilEntity>, ActionModalConfirmService {
+
+  @Input() InitializationMode: boolean = false;
+  @Input() InitialStoreCod: string = '';
+  @Output() ConfigurationCompleted = new EventEmitter<void>();
+  IsEditing: boolean = false;
+  SelectedCounterfoilCod: string = '';
+  HasLoadedCounterfoils: boolean = false;
 
   @ViewChild('txtSearch') txtSearch!: ElementRef<HTMLInputElement>;
 
@@ -52,6 +59,16 @@ export class ListcounterfoilComponent implements OnInit, ActionTableService<Coun
 
   filter(Page: number): void {
     this.findAll(Page, this.txtSearch.nativeElement.value);
+  }
+
+  editCounterfoil(counterfoilCod: string = ''): void {
+    this.SelectedCounterfoilCod = counterfoilCod;
+    this.IsEditing = true;
+  }
+
+  counterfoilSaved(): void {
+    this.IsEditing = false;
+    void this.findAll(1, '');
   }
 
   loadingTable(responsePageSearch: ResponsePageSearch<CounterfoilEntity>): void {
@@ -109,7 +126,11 @@ export class ListcounterfoilComponent implements OnInit, ActionTableService<Coun
           ColumnAction: true,
           Id: ["CounterfoilCod"],
           Options: [
-            { Type: "Url", Name: "fa fa-pencil-alt", Url: "#", FunctionUrl: urlEdit, Function: (_) => true },
+            {
+              Type: this.InitializationMode ? 'Action' : 'Url', Name: 'fa fa-pencil-alt',
+              Title: 'Editar talonario', Url: '#', FunctionUrl: urlEdit,
+              Action: (item: CounterfoilEntity) => this.editCounterfoil(item.CounterfoilCod), Function: (_) => true
+            },
             { Type: "Modal", Name: "fa fa-check", Url: "#", ID: "modal_enable", Function: showEnable },
             { Type: "Modal", Name: "fa fa-ban", Url: "#", ID: "modal_disable", Function: showDisable },
           ]
@@ -127,15 +148,20 @@ export class ListcounterfoilComponent implements OnInit, ActionTableService<Coun
   }
 
   async findAll(Page: number, Query: string): Promise<void> {
+    this.HasLoadedCounterfoils = false;
     const rpt: ResponseWsDto = await this.counterfoilService.findAll(
       Query,
       Page,
-      this.sessionService.getSessionStorageDto().StoreCod
+      this.InitialStoreCod || this.sessionService.getSessionStorageDto().StoreCod
     );
 
     if (!rpt.ErrorStatus) {
       this.table.responsePageSearch = rpt.Data;
       this.loadingTable(this.table.responsePageSearch);
+      this.HasLoadedCounterfoils = true;
+    } else {
+      this.HasLoadedCounterfoils = false;
+      this.toastrService.error(rpt.Message || 'No se pudieron cargar los talonarios');
     }
   }
 

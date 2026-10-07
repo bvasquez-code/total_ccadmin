@@ -2,6 +2,8 @@ package com.ccadmin.app.sunat.controller;
 
 import com.ccadmin.app.shared.model.dto.ResponseWsDto;
 import com.ccadmin.app.sunat.model.entity.SunatConfigEntity;
+import com.ccadmin.app.sunat.model.dto.SunatInitializationRequestDto;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ccadmin.app.sunat.service.SunatConfigCreateService;
 import com.ccadmin.app.sunat.service.SunatConfigSearchService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +15,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("api/v1/sunat/config")
@@ -23,6 +27,24 @@ public class SunatConfigController {
 
     @Autowired
     private SunatConfigCreateService sunatConfigCreateService;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @GetMapping("initialization")
+    public ResponseEntity<ResponseWsDto> initialization() {
+        try { return ResponseEntity.ok(new ResponseWsDto(sunatConfigSearchService.findInitializationForm())); }
+        catch (Exception ex) { return ResponseEntity.badRequest().body(new ResponseWsDto(ex)); }
+    }
+
+    @PostMapping(value = "initialization", consumes = "multipart/form-data")
+    public ResponseEntity<ResponseWsDto> initialize(@RequestPart("configuration") String configuration,
+            @RequestPart(value = "certificate", required = false) MultipartFile certificate) {
+        try {
+            SunatInitializationRequestDto request = objectMapper.readValue(configuration, SunatInitializationRequestDto.class);
+            return ResponseEntity.ok(new ResponseWsDto(sunatConfigCreateService.configureInitialization(request, certificate)));
+        } catch (Exception ex) { return ResponseEntity.badRequest().body(new ResponseWsDto(ex)); }
+    }
 
     @GetMapping("findById")
     public ResponseEntity<ResponseWsDto> findById(@RequestParam String SunatConfigCod) {

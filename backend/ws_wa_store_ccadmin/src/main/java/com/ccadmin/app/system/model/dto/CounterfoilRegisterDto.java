@@ -7,6 +7,7 @@ public class CounterfoilRegisterDto {
 
     public CounterfoilEntity counterfoil;
     public CounterfoilStoreEntity counterfoilStore;
+    public String PreviousCounterfoilCod;
 
     public CounterfoilRegisterDto() { }
 

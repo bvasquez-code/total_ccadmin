@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class CounterfoilCreateService extends SessionService {
@@ -86,6 +87,10 @@ public class CounterfoilCreateService extends SessionService {
 
     @Transactional
     public CounterfoilRegisterDto save(CounterfoilRegisterDto request) {
+        CounterfoilEntity counterfoilToReplace = findCounterfoilToReplace(request);
+        if (counterfoilToReplace != null) {
+            request.counterfoil = createReplacementCounterfoil(request.counterfoil);
+        }
         request.counterfoil.validate().session(this.getUserCod());
         request.counterfoilStore.validate().session(this.getUserCod());
 
@@ -94,6 +99,10 @@ public class CounterfoilCreateService extends SessionService {
                 request.counterfoil.Series
         ).isPresent();
         boolean existsCounterfoil = this.counterfoilRepository.existsById(request.counterfoil.CounterfoilCod);
+
+        if (counterfoilToReplace != null && existsCounterfoil) {
+            throw new IllegalArgumentException("La nueva serie ya tiene un talonario; no se puede reemplazar");
+        }
 
         if (!existsCounterfoil && repeatedDocumentTypeAndSeries) {
             throw new RuntimeException(
@@ -104,10 +113,54 @@ public class CounterfoilCreateService extends SessionService {
             );
         }
 
-        return new CounterfoilRegisterDto(
+        CounterfoilRegisterDto saved = new CounterfoilRegisterDto(
                 counterfoilRepository.save(request.counterfoil),
                 counterfoilStoreRepository.save(request.counterfoilStore)
         );
+        if (counterfoilToReplace != null) {
+            deactivateCounterfoil(counterfoilToReplace);
+        }
+        return saved;
+    }
+
+    private CounterfoilEntity findCounterfoilToReplace(CounterfoilRegisterDto request) {
+        if (request.PreviousCounterfoilCod == null || request.PreviousCounterfoilCod.isBlank()) {
+            return null;
+        }
+        String previousCounterfoilCod = request.PreviousCounterfoilCod.trim().toUpperCase(Locale.ROOT);
+        if (previousCounterfoilCod.equals(request.counterfoil.CounterfoilCod)) {
+            return null;
+        }
+        CounterfoilEntity previousCounterfoil = counterfoilRepository.findByIdForUpdate(previousCounterfoilCod)
+                .orElseThrow(() -> new IllegalArgumentException("El talonario anterior no existe"));
+        if (!"A".equals(previousCounterfoil.Status)) {
+            throw new IllegalArgumentException("El talonario anterior ya no está activo; vuelva a cargar la lista");
+        }
+        if (!previousCounterfoil.DocumentType.equals(request.counterfoil.DocumentType)
+                || !request.counterfoil.CounterfoilCod.equals(
+                        request.counterfoil.DocumentType + request.counterfoil.Series)
+                || !request.counterfoilStore.CounterfoilCod.equals(request.counterfoil.CounterfoilCod)) {
+            throw new IllegalArgumentException("El cambio de serie debe conservar el tipo de documento y sus códigos asociados");
+        }
+        List<CounterfoilStoreEntity> storesAssigned = counterfoilStoreRepository
+                .findStoresByCounterfoil(previousCounterfoilCod);
+        if (storesAssigned.size() != 1
+                || !storesAssigned.getFirst().StoreCod.equals(request.counterfoilStore.StoreCod)) {
+            throw new IllegalArgumentException("El talonario debe estar asignado únicamente a la tienda que se está configurando");
+        }
+        return previousCounterfoil;
+    }
+
+    private CounterfoilEntity createReplacementCounterfoil(CounterfoilEntity source) {
+        CounterfoilEntity replacement = new CounterfoilEntity();
+        replacement.CounterfoilCod = source.CounterfoilCod;
+        replacement.DocumentType = source.DocumentType;
+        replacement.Series = source.Series;
+        replacement.Correlative = source.Correlative;
+        replacement.IsAutomatic = source.IsAutomatic;
+        replacement.GroupDocument = source.GroupDocument;
+        replacement.Status = source.Status;
+        return replacement;
     }
 
     @Transactional
@@ -128,8 +181,12 @@ public class CounterfoilCreateService extends SessionService {
     public CounterfoilEntity disable(CounterfoilEntity request) {
         CounterfoilEntity e = counterfoilRepository.findById(request.CounterfoilCod)
                 .orElseThrow(() -> new IllegalArgumentException("Counterfoil no encontrado"));
-        e.inactive(this.getUserCod());
-        return counterfoilRepository.save(e);
+        return deactivateCounterfoil(e);
+    }
+
+    private CounterfoilEntity deactivateCounterfoil(CounterfoilEntity counterfoil) {
+        counterfoil.inactive(this.getUserCod());
+        return counterfoilRepository.save(counterfoil);
     }
 
     // ------- Counterfoil-Store (attach/detach = CRUD relación) -------

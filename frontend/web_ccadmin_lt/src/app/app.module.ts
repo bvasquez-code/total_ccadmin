@@ -1,4 +1,5 @@
 import { NgModule } from '@angular/core';
+import { ConfigureSunatComponent } from './enterprise/sunat/pages/configuresunat/configuresunat.component';
 import { BrowserModule } from '@angular/platform-browser';
 
 import { AppRoutingModule } from './app-routing.module';
@@ -238,6 +239,7 @@ import { PurchaseSalesReportComponent } from './enterprise/report/pages/purchase
     CreatestorevirtualconfigComponent,
     ManagecompanyComponent,
     ApplicationInitializationComponent,
+    ConfigureSunatComponent,
     ListbusinessconfiggroupComponent,
     CreatebusinessconfiggroupComponent,
     CreatebusinessconfigComponent,

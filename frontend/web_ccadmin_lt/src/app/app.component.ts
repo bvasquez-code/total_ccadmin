@@ -24,6 +24,10 @@ export class AppComponent {
     return this.dataSesionService.SessionExists();
   }
 
+  canAccessApplicationMenus(): boolean {
+    return !this.dataSesionService.RequiresApplicationInitialization();
+  }
+
   @HostListener('window:storage', ['$event'])
   synchronizeSession(event: StorageEvent): void {
     if (!this.dataSesionService.IsSessionSynchronizationEvent(event)) {

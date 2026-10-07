@@ -34,11 +34,23 @@ export class ApplicationInitializationComponent implements OnInit {
       icon: 'fa-user-shield'
     },
     {
+      title: 'Configuración adicional',
+      description: 'Talonarios y series',
+      icon: 'fa-sliders-h'
+    },
+    {
+      title: 'SUNAT',
+      description: 'Envío de documentos',
+      icon: 'fa-paper-plane'
+    },
+    {
       title: 'Producto',
       description: 'Primera creación rápida',
       icon: 'fa-box-open'
     }
   ];
+
+  readonly ProductStep = this.Steps.length - 1;
 
   CurrentStep: number = 0;
   ConfiguredStoreCod: string = '';
@@ -55,8 +67,9 @@ export class ApplicationInitializationComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    const savedStep = Number(sessionStorage.getItem(this.progressStorageKey));
-    const hasSavedProgress = Number.isInteger(savedStep)
+    const savedProgress = sessionStorage.getItem(this.progressStorageKey);
+    const savedStep = Number(savedProgress);
+    const hasSavedProgress = savedProgress !== null && Number.isInteger(savedStep)
       && savedStep >= 0
       && savedStep < this.Steps.length;
     const session = this.dataSesionService.getSessionStorageDto();
@@ -68,16 +81,12 @@ export class ApplicationInitializationComponent implements OnInit {
     }
 
     this.ConfiguredStoreCod = session.DefaultStoreCod || session.StoreCod || '';
-    this.CompanyStepPending = hasSavedProgress && savedStep > 0
-      ? false
-      : session.CompanyInitializationPending;
-    this.StoreStepPending = hasSavedProgress && savedStep > 1
-      ? false
-      : session.StoreInitializationPending;
+    this.CompanyStepPending = session.CompanyInitializationPending;
+    this.StoreStepPending = session.StoreInitializationPending;
 
-    this.CurrentStep = hasSavedProgress
-        ? savedStep
-        : (session.CompanyInitializationPending ? 0 : 1);
+    this.CurrentStep = this.CompanyStepPending ? 0
+        : this.StoreStepPending ? 1
+        : (hasSavedProgress && savedStep >= 2 ? savedStep : 2);
   }
 
   companyConfigured(): void {
@@ -97,15 +106,23 @@ export class ApplicationInitializationComponent implements OnInit {
     this.advanceFrom(2);
   }
 
+  counterfoilsConfigured(): void {
+    this.advanceFrom(3);
+  }
+
+  sunatConfigured(): void {
+    this.advanceFrom(4);
+  }
+
   productConfigured(): void {
-    if (this.CurrentStep !== 3) return;
+    if (this.CurrentStep !== this.ProductStep) return;
 
     sessionStorage.removeItem(this.progressStorageKey);
     this.dataSesionService.CompleteApplicationInitialization();
   }
 
   skipProductConfiguration(): void {
-    if (this.CurrentStep !== 3) return;
+    if (this.CurrentStep !== this.ProductStep) return;
 
     sessionStorage.removeItem(this.progressStorageKey);
     this.dataSesionService.CompleteApplicationInitialization();
