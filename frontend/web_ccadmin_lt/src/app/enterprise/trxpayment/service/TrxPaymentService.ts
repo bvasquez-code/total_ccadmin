@@ -12,6 +12,7 @@ import { PinpadBrowserInstructionsDto } from "../model/dto/PinpadBrowserInstruct
     providedIn: 'root'
 })
 export class TrxPaymentService implements ICrudService<TrxPaymentEntity,number>{
+    private readonly registrationAttempted = new WeakSet<TrxPaymentEntity>();
 
     constructor(private apiService: ApiService, private pinpadLocalService: PinpadLocalService) {
     }
@@ -57,13 +58,14 @@ export class TrxPaymentService implements ICrudService<TrxPaymentEntity,number>{
                 if (!['APPROVED', 'READ'].includes(status)) {
                     const prepared = await this.apiService.ExecutePostService(
                         `${AppSetting.API}/api/v1/TrxPayment/preparePinpad`, TrxPayment);
-                    if (!prepared || prepared.ErrorStatus !== false) return this.normalize(prepared);
-                    TrxPayment.PinpadResult = await this.pinpadLocalService.process(prepared.Data as PinpadBrowserInstructionsDto);
+                    if (!prepared || prepared.ErrorStatus !== false) return this.pinpadError(TrxPayment, prepared);
+                    TrxPayment.PinpadResult = await this.pinpadLocalService.process(prepared.Data as PinpadBrowserInstructionsDto,
+                        () => this.registrationAttempted.add(TrxPayment));
                 }
             }
             RespuestaWS = this.normalize(await this.apiService.ExecutePostService(url,TrxPayment));
         } catch {
-            return this.normalize(null);
+            return this.pinpadError(TrxPayment, null);
         }
 
         if (!RespuestaWS.ErrorStatus && RespuestaWS.Data?.PinpadAckCommand && RespuestaWS.Data?.PinpadAckUrl && RespuestaWS.Data?.PinpadLoginUrl) {
@@ -75,6 +77,17 @@ export class TrxPaymentService implements ICrudService<TrxPaymentEntity,number>{
             }
         }
         return RespuestaWS;
+    }
+
+    private pinpadError(payment: TrxPaymentEntity, response: ResponseWsDto | null): ResponseWsDto {
+        const result = this.normalize(response);
+        if (payment.TypeMovement === 'I' && ['POS', 'PINPAD'].includes(payment.PaymentPlatform.toUpperCase())
+            && !this.registrationAttempted.has(payment) && !payment.PinpadResult
+            && typeof result.Data?.CanStartNewPayment !== 'boolean') {
+            result.Data = { PinpadPaymentId: payment.PinpadPaymentId, PaymentStatus: 'NOT_SENT', CanStartNewPayment: true };
+            if (!response) result.Message = 'No se pudo conectar al servicio pinpad. El cobro no fue enviado; puede elegir otro medio de pago.';
+        }
+        return result;
     }
 
     private normalize(RespuestaWS: ResponseWsDto | null): ResponseWsDto {

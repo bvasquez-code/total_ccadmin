@@ -45,6 +45,7 @@ export class ListpaymentmethodComponent implements OnInit, ActionTableService<Pa
         { Name: "Nombre", key: "Name" },
         { Name: "Descripcion", key: "Description" },
         { Name: "Tipo", key: "PaymentMethodType" },
+        { Name: "Cobro", key: "PaymentProcessingMode", Mask: { D: "Directo", I: "Intermediario", B: "Ambos" } },
         { Name: "Modificacion", key: "ModifyDate", IsDate: true },
         {
           Name: "Estado",

@@ -18,6 +18,7 @@ describe('CreatetrxpaymentComponent medios de pago', () => {
     toastr = jasmine.createSpyObj<ToastrService>('toastr', ['error', 'success']);
     const alerts = jasmine.createSpyObj<AlertService>('alerts', ['waringHtml']);
     component = new CreatetrxpaymentComponent(toastr, payments, {} as CreditNoteService, alerts);
+    component.IndPinpadIntegrated = { Indicator: 'IND_PINPAD_INTEGRATED', Value: 'S' };
     component.txtAmountPaid = new ElementRef(document.createElement('input'));
     component.txtAmountPaid.nativeElement.value = '50.00';
     component.cboPaymentMethodCod = new ElementRef(document.createElement('input'));
@@ -31,7 +32,8 @@ describe('CreatetrxpaymentComponent medios de pago', () => {
 
   function select(code: string, type: string): void {
     component.paymentMethodList = [Object.assign(new PaymentMethodEntity(), {
-      PaymentMethodCod: code, PaymentMethodType: type
+      PaymentMethodCod: code, PaymentMethodType: type,
+      PaymentProcessingMode: ['1002', '1003', '1006'].includes(type) ? 'I' : 'D'
     })];
     component.selectedPaymentMethodCod = code;
   }
@@ -70,5 +72,79 @@ describe('CreatetrxpaymentComponent medios de pago', () => {
     await component.Save();
     expect(payments.Save).not.toHaveBeenCalled();
     expect(toastr.error).toHaveBeenCalled();
+  });
+
+  it('Yape con ambos comienza con pinpad integrado y permite elegir directo', async () => {
+    select('WD001', '1006'); component.paymentMethodList[0].PaymentProcessingMode = 'B';
+    component.selectPaymentMethod(component.paymentMethodList[0]);
+    await component.Save();
+    expect(payments.Save.calls.mostRecent().args[0].PaymentPlatform).toBe('POS');
+    component.txtAmountPaid.nativeElement.value = '50.00'; component.paymentCollectionChannel = 'D';
+    await component.Save();
+    expect(payments.Save.calls.mostRecent().args[0].PaymentPlatform).toBe('FISICO');
+  });
+
+  it('una tarjeta configurada como directa no usa pinpad', async () => {
+    select('TC001', '1003'); component.paymentMethodList[0].PaymentProcessingMode = 'D';
+    await component.Save();
+    expect(payments.Save.calls.mostRecent().args[0].PaymentPlatform).toBe('FISICO');
+  });
+
+  it('despues de un fallo sin envio permite pagar con efectivo sin recargar', async () => {
+    select('WD001', '1006');
+    payments.Save.and.resolveTo(Object.assign(new ResponseWsDto(), {
+      ErrorStatus: true, Message: 'Pinpad unavailable', Data: { CanStartNewPayment: true, PaymentStatus: 'NOT_SENT' }
+    }));
+    await component.Save(); expect(component.pendingPinpadPayment).toBeNull();
+    select('E0001', '1001');
+    payments.Save.and.callFake(async payment => Object.assign(new ResponseWsDto(), { Data: payment, ErrorStatus: false }));
+    await component.Save();
+    expect(payments.Save.calls.mostRecent().args[0].PaymentMethodCod).toBe('E0001');
+    expect(payments.Save.calls.mostRecent().args[0].PaymentPlatform).toBe('FISICO');
+  });
+
+  it('si el cobro fue enviado conserva su referencia y bloquea cambiar a efectivo', async () => {
+    select('WD001', '1006');
+    payments.Save.and.resolveTo(Object.assign(new ResponseWsDto(), { ErrorStatus: true, Message: 'Unknown result' }));
+    await component.Save(); const pending = component.pendingPinpadPayment!;
+    component.selectPaymentMethod(Object.assign(new PaymentMethodEntity(), { PaymentMethodCod: 'E0001' }));
+    expect(component.selectedPaymentMethodCod).toBe('WD001');
+    await component.Save();
+    expect(payments.Save.calls.mostRecent().args[0]).toBe(pending);
+    expect(component.pendingPinpadPayment!.PinpadPaymentId).toBe(pending.PinpadPaymentId);
+  });
+
+  it('con indicador apagado la tarjeta se registra manualmente sin referencia ni pendiente', async () => {
+    component.IndPinpadIntegrated.Value = 'N'; select('TC001', '1003');
+    await component.Save();
+    const saved = payments.Save.calls.mostRecent().args[0];
+    expect(saved.PaymentPlatform).toBe('POS_MANUAL');
+    expect(saved.PaymentStatus).toBe('OK');
+    expect(saved.PinpadPaymentId).toBeNull();
+    expect(saved.PinpadResult).toBeUndefined();
+    expect(component.pendingPinpadPayment).toBeNull();
+  });
+
+  it('Yape con ambos conserva el pago directo y permite terminal separado sin integracion', async () => {
+    component.IndPinpadIntegrated.Value = 'N'; select('WD001', '1006');
+    component.paymentMethodList[0].PaymentProcessingMode = 'B';
+    component.selectPaymentMethod(component.paymentMethodList[0]);
+    await component.Save(); expect(payments.Save.calls.mostRecent().args[0].PaymentPlatform).toBe('FISICO');
+    component.txtAmountPaid.nativeElement.value = '50.00'; component.paymentCollectionChannel = 'I';
+    await component.Save(); expect(payments.Save.calls.mostRecent().args[0].PaymentPlatform).toBe('POS_MANUAL');
+  });
+
+  it('la confirmacion manual indica importe, medio y que el cobro se realiza en el terminal', async () => {
+    const alert = jasmine.createSpyObj<AlertService>('alerts', ['waringHtml']);
+    alert.waringHtml.and.resolveTo({ isConfirmed: true, isDenied: false, isDismissed: false });
+    const manual = new CreatetrxpaymentComponent(toastr, payments, {} as CreditNoteService, alert);
+    const payment = manual.transactionManualPinpad(); payment.CurrencyCod = 'PEN'; payment.AmountPaid = 121.8;
+    const method = Object.assign(new PaymentMethodEntity(), { Name: 'Tarjeta credito', PaymentMethodCod: 'TC001', PaymentProcessingMode: 'I' });
+    await manual.confirmPayment(payment, method);
+    const message = alert.waringHtml.calls.mostRecent().args[0];
+    expect(message).toContain('Ingrese directamente en el pinpad');
+    expect(message).toContain('PEN 121.80'); expect(message).toContain('Tarjeta credito');
+    expect(message).toContain('sin consultar el pinpad');
+    expect(message).not.toContain('Al confirmar se iniciara el cobro');
   });
 });

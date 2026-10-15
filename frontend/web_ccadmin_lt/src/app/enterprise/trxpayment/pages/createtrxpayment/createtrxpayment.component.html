@@ -47,6 +47,7 @@
                             <div class="dropdown col-sm-8 px-0 payment-method-selector">
                                 <button
                                     type="button"
+                                    [disabled]="savingPayment || !!pendingPinpadPayment"
                                     class="btn btn-white btn-bold border-1 brc-secondary-l2 d-flex align-items-center justify-content-between w-100"
                                     (click)="togglePaymentMethodDropdown()"
                                     (blur)="closePaymentMethodDropdown()">
@@ -100,6 +101,19 @@
                                     </button>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group row" *ngIf="!isReversalMode() && getSelectedPaymentMethod()?.PaymentProcessingMode === 'B'">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0">Como cobrar</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <select class="form-control col-sm-8" [(ngModel)]="paymentCollectionChannel"
+                                name="paymentCollectionChannel" [disabled]="savingPayment || !!pendingPinpadPayment">
+                                <option value="D">Directo</option>
+                                <option value="I">{{ isPinpadIntegrated ? 'Mediante pinpad integrado' : 'En pinpad separado' }}</option>
+                            </select>
                         </div>
                     </div>
 

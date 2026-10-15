@@ -75,6 +75,9 @@ export class CreatepaymentmethodComponent implements OnInit {
       ValidationHelper.validateIsNotEmpty(paymentMethod.Description, "Debe ingresar una descripcion");
       ValidationHelper.validLengthString(paymentMethod.Description, 64, "La descripcion solo puede tener 64 caracteres");
       ValidationHelper.validateIsNotEmpty(paymentMethod.PaymentMethodType, "Debe seleccionar un tipo de metodo de pago");
+      if (!['D', 'I', 'B'].includes(paymentMethod.PaymentProcessingMode)) {
+        throw new Error("Seleccione una modalidad de cobro valida");
+      }
       if (paymentMethod.IsInternalSaleEnabled !== "S" && paymentMethod.IsWebSaleEnabled !== "S") {
         throw new Error("El metodo de pago debe estar disponible en venta interna o tienda virtual");
       }
@@ -125,6 +128,7 @@ export class CreatepaymentmethodComponent implements OnInit {
   private ensureDefaults(): void {
     if (!this.paymentMethod) this.paymentMethod = new PaymentMethodEntity();
     this.paymentMethod.PaymentMethodType = this.paymentMethod.PaymentMethodType || "";
+    this.paymentMethod.PaymentProcessingMode = this.paymentMethod.PaymentProcessingMode || "D";
     this.paymentMethod.IsInternalSaleEnabled = this.paymentMethod.IsInternalSaleEnabled || "S";
     this.paymentMethod.IsWebSaleEnabled = this.paymentMethod.IsWebSaleEnabled || "S";
     this.paymentMethod.IsPaymentProofRequired = this.paymentMethod.IsPaymentProofRequired || "N";

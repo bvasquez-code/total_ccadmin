@@ -4,6 +4,8 @@ import com.ccadmin.app.cash.repository.CashSessionRepository;
 import com.ccadmin.app.payment.config.PinpadBrowserProperties;
 import com.ccadmin.app.shared.model.entity.BusinessConfigEntity;
 import com.ccadmin.app.shared.service.BusinessConfigSearchService;
+import com.ccadmin.app.shared.shared.CatalogSearchShared;
+import com.ccadmin.app.shared.model.constants.BusinessConfigConstants;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
@@ -27,15 +29,25 @@ public class PinpadConfigurationSearchService {
     private final BusinessConfigSearchService businessConfigSearchService;
     private final CashSessionRepository cashSessionRepository;
     private final PinpadBrowserProperties pinpadBrowserProperties;
+    private final CatalogSearchShared catalogSearchShared;
 
     public PinpadConfigurationSearchService(BusinessConfigSearchService businessConfigSearchService,
-            CashSessionRepository cashSessionRepository, PinpadBrowserProperties pinpadBrowserProperties) {
+            CashSessionRepository cashSessionRepository, PinpadBrowserProperties pinpadBrowserProperties,
+            CatalogSearchShared catalogSearchShared) {
         this.businessConfigSearchService = businessConfigSearchService;
         this.cashSessionRepository = cashSessionRepository;
         this.pinpadBrowserProperties = pinpadBrowserProperties;
+        this.catalogSearchShared = catalogSearchShared;
+    }
+
+    public boolean isIntegrationEnabled() {
+        return catalogSearchShared.isIndicatorSystemEnabled(BusinessConfigConstants.ConfigCod.IND_PINPAD_INTEGRATED);
     }
 
     public Connection connection(String userCod, Long cashSessionId, String storeCod) {
+        if (!isIntegrationEnabled()) {
+            throw new IllegalStateException("La integracion del pinpad esta desactivada; registre el cobro como pinpad manual");
+        }
         String registerCod = null;
         if (storeCod == null || storeCod.isBlank()) {
             throw new IllegalArgumentException("Seleccione una tienda para cobrar con pinpad");

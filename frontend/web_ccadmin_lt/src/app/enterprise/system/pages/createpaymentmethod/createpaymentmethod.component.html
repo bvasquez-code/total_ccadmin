@@ -75,6 +75,21 @@
 
                     <div class="form-group row">
                         <div class="col-sm-3 col-form-label text-sm-right pr-0">
+                            <label class="mb-0">Modalidad de cobro</label>
+                        </div>
+                        <div class="col-sm-9">
+                            <select class="form-control col-sm-8 col-md-6"
+                                [(ngModel)]="paymentMethod.PaymentProcessingMode" name="PaymentProcessingMode">
+                                <option value="D">Directo</option>
+                                <option value="I">Mediante intermediario (pinpad)</option>
+                                <option value="B">Ambos</option>
+                            </select>
+                            <small class="form-text text-muted">En venta interna, ambos permite elegir como cobrar cada pago.</small>
+                        </div>
+                    </div>
+
+                    <div class="form-group row">
+                        <div class="col-sm-3 col-form-label text-sm-right pr-0">
                             <label class="mb-0">Disponible en</label>
                         </div>
 

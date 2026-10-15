@@ -8,6 +8,22 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class PaymentMethodEntityTest {
 
     @Test
+    void processingModeIsIndependentOfTypeAndLimitsAllowedChannels() {
+        var method = new PaymentMethodEntity(); method.PaymentMethodCod = "WD001"; method.PaymentMethodType = "1006";
+        assertEquals("D", method.validate().PaymentProcessingMode);
+        org.junit.jupiter.api.Assertions.assertTrue(method.allowsDirectPayment());
+        org.junit.jupiter.api.Assertions.assertFalse(method.allowsIntermediaryPayment());
+        method.PaymentProcessingMode = " i "; method.validate();
+        org.junit.jupiter.api.Assertions.assertFalse(method.allowsDirectPayment());
+        org.junit.jupiter.api.Assertions.assertTrue(method.allowsIntermediaryPayment());
+        method.PaymentProcessingMode = "B";
+        org.junit.jupiter.api.Assertions.assertTrue(method.allowsDirectPayment());
+        org.junit.jupiter.api.Assertions.assertTrue(method.allowsIntermediaryPayment());
+        method.PaymentProcessingMode = "INVALID";
+        assertThrows(IllegalArgumentException.class, method::validate);
+    }
+
+    @Test
     void appliesDefaultsAndNormalizesChannelIndicators() {
         PaymentMethodEntity paymentMethod = new PaymentMethodEntity();
         paymentMethod.PaymentMethodCod = "PAY001";

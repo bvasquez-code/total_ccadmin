@@ -7,6 +7,7 @@ import com.ccadmin.app.shared.model.constants.AuditUserConstants;
 import com.ccadmin.app.shared.service.SessionService;
 import com.ccadmin.app.system.model.entity.CurrencyEntity;
 import com.ccadmin.app.system.shared.CurrencyShared;
+import com.ccadmin.app.system.shared.PaymentMethodShared;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -22,7 +23,13 @@ public class TrxPaymentCreateService extends SessionService {
     private CurrencyShared currencyShared;
 
     @Autowired
+    private PaymentMethodShared paymentMethodShared;
+
+    @Autowired
     private PinpadPaymentCreateService pinpadPaymentCreateService;
+
+    @Autowired
+    private PinpadConfigurationSearchService pinpadConfigurationSearchService;
 
     public TrxPaymentEntity save(TrxPaymentEntity trxPayment) {
         return this.save(trxPayment, getUserCod(), getCashSessionID());
@@ -122,9 +129,39 @@ public class TrxPaymentCreateService extends SessionService {
         trxPayment.CashSessionID = cashSessionID;
         trxPayment.addSession(userCod);
         trxPayment.validate();
+        validateInternalPaymentChannel(trxPayment, userCod);
 
         CurrencyEntity currencySystem = currencyShared.findCurrencySystem();
         trxPayment.CurrencyCodSys = currencySystem.CurrencyCod;
+    }
+
+    private void validateInternalPaymentChannel(TrxPaymentEntity payment, String userCod) {
+        if (!"I".equals(payment.TypeMovement) || AuditUserConstants.USER_WEB.equals(userCod)) return;
+        var method = paymentMethodShared.findById(payment.PaymentMethodCod);
+        if (method == null) throw new TrxPaymentBuildException("Medio de pago no encontrado");
+        boolean integratedPinpad = PinpadPaymentCreateService.requiresPinpad(payment);
+        boolean manualPinpad = "POS_MANUAL".equalsIgnoreCase(payment.PaymentPlatform);
+        if (integratedPinpad || manualPinpad) {
+            boolean enabled = pinpadConfigurationSearchService.isIntegrationEnabled();
+            if (integratedPinpad && !enabled) {
+                throw new TrxPaymentBuildException("La integracion del pinpad esta desactivada; actualice el formulario y registre el cobro manual");
+            }
+            if (manualPinpad && enabled) {
+                throw new TrxPaymentBuildException("El pinpad esta integrado; utilice el cobro conectado");
+            }
+            if (manualPinpad) {
+                if (payment.PinpadResult != null) {
+                    throw new TrxPaymentBuildException("Un resultado integrado no puede registrarse como cobro manual");
+                }
+                payment.PaymentStatus = "OK";
+            }
+        }
+        boolean intermediary = integratedPinpad || manualPinpad;
+        if (intermediary ? !method.allowsIntermediaryPayment() : !method.allowsDirectPayment()) {
+            throw new TrxPaymentBuildException(intermediary
+                    ? "Este medio de pago solo permite cobro directo"
+                    : "Este medio de pago requiere cobro mediante intermediario");
+        }
     }
 
     private void rejectManualCreditNotePayment(TrxPaymentEntity trxPayment) {

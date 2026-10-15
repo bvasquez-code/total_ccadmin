@@ -11,6 +11,8 @@ import com.ccadmin.app.system.model.entity.CurrencyEntity;
 import com.ccadmin.app.system.model.entity.PaymentMethodEntity;
 import com.ccadmin.app.system.shared.CurrencyShared;
 import com.ccadmin.app.system.shared.PaymentMethodShared;
+import com.ccadmin.app.shared.model.constants.BusinessConfigConstants;
+import com.ccadmin.app.system.model.dto.IndicatorDto;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -27,6 +29,9 @@ public class TrxPaymentSearchService extends SessionService {
 
     @Autowired
     private CurrencyShared currencyShared;
+
+    @Autowired
+    private PinpadConfigurationSearchService pinpadConfigurationSearchService;
 
     private SearchTService<TrxPaymentEntity> searchService;
 
@@ -59,6 +64,9 @@ public class TrxPaymentSearchService extends SessionService {
 
         rpt.AddResponseAdditional("paymentMethodList", paymentMethodList);
         rpt.AddResponseAdditional("currencyList", currencyList);
+        rpt.AddResponseAdditional("IndPinpadIntegrated", new IndicatorDto(
+                BusinessConfigConstants.ConfigCod.IND_PINPAD_INTEGRATED,
+                pinpadConfigurationSearchService.isIntegrationEnabled() ? "S" : "N"));
 
         return rpt;
     }

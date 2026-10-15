@@ -12,6 +12,7 @@ import { CreditNoteDetailDto } from 'src/app/enterprise/sale/model/dto/CreditNot
 import { TrxPaymentComponenRequestDto } from '../../model/dto/TrxPaymentComponenRequestDto';
 import { ElementHtmlDto } from 'src/app/enterprise/shared/model/dto/ElementHtmlDto';
 import { AlertService } from 'src/app/enterprise/shared/service/AlertService';
+import { IndicatorDto } from 'src/app/enterprise/shared/model/dto/IndicatorDto';
 
 @Component({
   selector: 'app-createtrxpayment',
@@ -38,6 +39,8 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
   showPaymentMethodDropdown: boolean = false;
   savingPayment: boolean = false;
   pendingPinpadPayment: TrxPaymentEntity | null = null;
+  paymentCollectionChannel: string = 'D';
+  IndPinpadIntegrated: IndicatorDto = new IndicatorDto();
 
   txtAmountPaidConfigHtml : ElementHtmlDto = new ElementHtmlDto();
   cboCurrencyCodConfigHtml : ElementHtmlDto = new ElementHtmlDto();
@@ -66,7 +69,9 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
     if(!rpt.ErrorStatus){
       this.paymentMethodList = rpt.DataAdditional.find( e => e.Name === "paymentMethodList" )?.Data ?? [];
       this.currencyList = rpt.DataAdditional.find( e => e.Name === "currencyList" )?.Data ?? [];
+      this.IndPinpadIntegrated = rpt.DataAdditional.find(e => e.Name === 'IndPinpadIntegrated')?.Data ?? new IndicatorDto();
       this.selectedPaymentMethodCod = this.getSelectablePaymentMethodList()[0]?.PaymentMethodCod ?? "";
+      this.resetPaymentCollectionChannel();
     }
   }
 
@@ -107,8 +112,8 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
       this.toastrService.error("Seleccione un medio de pago valido.");
       return;
     }
-    this.trxPayment = this.IsPinpad(paymentMethod)
-      ? this.transactionPos()
+    this.trxPayment = this.UsesIntermediary(paymentMethod)
+      ? (this.isPinpadIntegrated ? this.transactionPos() : this.transactionManualPinpad())
       : this.IsMethodPaymentOwn(paymentMethod) ? this.transactionCreditNote() : this.transactionManual();
     this.trxPayment.PaymentMethodCod = paymentMethod.PaymentMethodCod;
 
@@ -130,7 +135,7 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
       return;
     }
     if(paymentMethod){
-      if(this.IsPinpad(paymentMethod) && this.trxPayment.AmountPaid > outstandingBalance){
+      if(this.UsesIntermediary(paymentMethod) && this.trxPayment.AmountPaid > outstandingBalance){
         this.toastrService.error("Para este tipos de medios de pago no se puede pagar montos superiores al saldo.");
         return;
       }
@@ -246,7 +251,9 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
     const amount: string = `${trxPayment.CurrencyCod} ${this.toMoney(Math.abs(Number(trxPayment.AmountPaid || 0))).toFixed(2)}`;
     const originalId: string = originalPayment ? String(originalPayment.TrxPaymentId) : "";
     const transactionId: string = originalPayment?.TransactionId ? originalPayment.TransactionId : "-";
-    const cardMessage: string = this.isCardPayment(trxPayment)
+    const cardMessage: string = originalPayment?.PaymentPlatform === 'POS_MANUAL'
+      ? `<div class="mt-2 text-danger">Realice la devolucion directamente en el pinpad y confirme aqui solo cuando la haya completado. El sistema registrara su confirmacion sin consultar el terminal.</div>`
+      : this.isCardPayment(trxPayment)
       ? `<div class="mt-2 text-danger"><i class="fa fa-credit-card mr-1"></i> Pase la tarjeta por el pinpad y confirme solo si la operacion fue aceptada.</div>`
       : "";
     const paymentMethodMedia: string = this.getPaymentMethodAlertMedia(trxPayment);
@@ -274,7 +281,9 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
       ? `<div>Vuelto: <b>${trxPayment.CurrencyCod} ${this.toMoney(Number(trxPayment.AmountReturned || 0)).toFixed(2)}</b></div>`
       : "";
     const transactionId: string = trxPayment.PinpadPaymentId || trxPayment.TransactionId || "-";
-    const pinpadMessage: string = paymentMethod && this.IsPinpad(paymentMethod)
+    const pinpadMessage: string = trxPayment.PaymentPlatform === 'POS_MANUAL'
+      ? `<div class="mt-2 text-primary">Ingrese directamente en el pinpad el importe <b>${amount}</b> y el medio de pago <b>${paymentMethodDescription}</b>. Complete el cobro en el terminal y confirme aqui solo cuando haya sido aprobado. El sistema registrara su confirmacion sin consultar el pinpad.</div>`
+      : paymentMethod && this.IsPinpad(paymentMethod)
       ? `<div class="mt-2 text-primary">Al confirmar se iniciara el cobro. Siga las instrucciones del pinpad y espere el resultado.</div>`
       : "";
     const paymentMethodMedia: string = this.getPaymentMethodAlertMedia(trxPayment);
@@ -342,6 +351,12 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
 
   }
 
+  transactionManualPinpad(): TrxPaymentEntity {
+    const payment = this.transactionManual();
+    payment.PaymentPlatform = 'POS_MANUAL';
+    return payment;
+  }
+
   transactionCreditNote():TrxPaymentEntity{
 
     let TrxPayment : TrxPaymentEntity = new TrxPaymentEntity();
@@ -363,7 +378,22 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
   }
 
   IsPinpad(paymentMethod: PaymentMethodEntity): boolean {
-    return this.IsCard(paymentMethod) || paymentMethod.PaymentMethodType === "1006";
+    return this.isPinpadIntegrated && this.UsesIntermediary(paymentMethod);
+  }
+
+  get isPinpadIntegrated(): boolean {
+    return this.IndPinpadIntegrated?.Indicator === 'IND_PINPAD_INTEGRATED'
+      && (this.IndPinpadIntegrated.Value || 'N').trim().toUpperCase() === 'S';
+  }
+
+  UsesIntermediary(paymentMethod: PaymentMethodEntity): boolean {
+    return paymentMethod.PaymentProcessingMode === 'I'
+      || (paymentMethod.PaymentProcessingMode === 'B' && this.paymentCollectionChannel === 'I');
+  }
+
+  private resetPaymentCollectionChannel(): void {
+    const mode = this.getSelectedPaymentMethod()?.PaymentProcessingMode;
+    this.paymentCollectionChannel = mode === 'I' || (mode === 'B' && this.isPinpadIntegrated) ? 'I' : 'D';
   }
 
   IsMethodPaymentOwn(paymentMethod : PaymentMethodEntity){
@@ -405,7 +435,9 @@ export class CreatetrxpaymentComponent implements OnInit,IRegisterForm<TrxPaymen
   }
 
   selectPaymentMethod(paymentMethod: PaymentMethodEntity): void {
+    if (this.savingPayment || this.pendingPinpadPayment) return;
     this.selectedPaymentMethodCod = paymentMethod.PaymentMethodCod;
+    this.resetPaymentCollectionChannel();
     this.showPaymentMethodDropdown = false;
     this.selectPaymentMethodCod();
   }

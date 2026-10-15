@@ -5,6 +5,9 @@ import com.ccadmin.app.cash.repository.CashSessionRepository;
 import com.ccadmin.app.payment.config.PinpadBrowserProperties;
 import com.ccadmin.app.shared.model.entity.BusinessConfigEntity;
 import com.ccadmin.app.shared.service.BusinessConfigSearchService;
+import com.ccadmin.app.shared.shared.CatalogSearchShared;
+import com.ccadmin.app.shared.model.constants.BusinessConfigConstants;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import java.util.Map;
 import java.util.Optional;
@@ -15,7 +18,19 @@ class PinpadConfigurationSearchServiceTest {
     final BusinessConfigSearchService configurations = mock(BusinessConfigSearchService.class);
     final CashSessionRepository sessions = mock(CashSessionRepository.class);
     final PinpadBrowserProperties properties = new PinpadBrowserProperties();
-    final PinpadConfigurationSearchService service = new PinpadConfigurationSearchService(configurations, sessions, properties);
+    final CatalogSearchShared indicators = mock(CatalogSearchShared.class);
+    final PinpadConfigurationSearchService service = new PinpadConfigurationSearchService(configurations, sessions, properties, indicators);
+
+    @BeforeEach void enableIntegration() {
+        when(indicators.isIndicatorSystemEnabled(BusinessConfigConstants.ConfigCod.IND_PINPAD_INTEGRATED)).thenReturn(true);
+    }
+
+    @Test void disabledIntegrationDoesNotResolveCashRegisterOrAgentUrls() {
+        when(indicators.isIndicatorSystemEnabled(BusinessConfigConstants.ConfigCod.IND_PINPAD_INTEGRATED)).thenReturn(false);
+        assertFalse(service.isIntegrationEnabled());
+        assertThrows(IllegalStateException.class, () -> service.connection("USER1", null, "T001"));
+        verifyNoInteractions(sessions, configurations);
+    }
 
     @Test
     void selectsDefaultInstallationWithoutAnyCashSession() {

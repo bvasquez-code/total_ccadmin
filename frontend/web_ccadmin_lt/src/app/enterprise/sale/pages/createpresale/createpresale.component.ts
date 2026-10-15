@@ -37,7 +37,6 @@ export class CreatepresaleComponent implements OnInit {
   @Input() ResultFormClient: object | undefined;
 
   @ViewChild('txt_filtro_busqueda', { static: false }) txt_filtro_busqueda!: ElementRef<HTMLInputElement>;
-  @ViewChild('txt_NumUnit', { static: false }) txt_NumUnit!: ElementRef<HTMLInputElement>;
   @ViewChild('txtDocumentNum', { static: false }) txtDocumentNum!: ElementRef<HTMLInputElement>;
   @ViewChild('cboDocumentType') cboDocumentType!: ElementRef<HTMLSelectElement>;
 
@@ -50,6 +49,7 @@ export class CreatepresaleComponent implements OnInit {
   productList: ProductSearchEntity[] = [];
   productListHtml: ProductSearchEntity[][] = [];
   productInfoDtoSelect: ProductInfoDto = new ProductInfoDto();
+  productCartDraft?: ShoppingCartService;
   NumPhysicalStockTotal: number = 0;
 
   ShoppingCart: PresaleRegisterDto = new PresaleRegisterDto();
@@ -254,6 +254,7 @@ export class CreatepresaleComponent implements OnInit {
   }
 
   async findDetailById(ProductCod: string) {
+    this.cancelProductDraft();
     const response: ResponseWsDto = await this.productService.findDetailById(
       ProductCod, this.session.getSessionStorageDto().StoreCod
     );
@@ -261,6 +262,7 @@ export class CreatepresaleComponent implements OnInit {
     if (!response.ErrorStatus) {
       this.productInfoDtoSelect = response.Data;
       this.NumPhysicalStockTotal = this.productInfoDtoSelect.InfoList.map(item => item.NumPhysicalStock).reduce((a, b) => a + b, 0);
+      this.productCartDraft = this.shoppingCartService.createProductDraft(ProductCod);
     }
 
   }
@@ -309,13 +311,49 @@ export class CreatepresaleComponent implements OnInit {
 
   }
 
-  HandbookUnit(ProductInfo: ProductInfoDto, ProductVariant: ProductVariantEntity) {
+  changeDraftQuantity(ProductVariant: ProductVariantEntity, change: number): void {
+    const quantity = this.getDraftQuantity(ProductVariant);
+    this.setDraftQuantity(ProductVariant, Math.max(0, quantity + change));
+  }
+
+  getDraftQuantity(ProductVariant: ProductVariantEntity): number {
+    return this.productCartDraft?.getTotalProductVariantVisible(
+      this.productInfoDtoSelect.Product.ProductCod, ProductVariant.Variant
+    ) ?? 0;
+  }
+
+  applyDraftQuantity(ProductVariant: ProductVariantEntity, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.setDraftQuantity(ProductVariant, Number(input.value));
+    input.value = String(this.getDraftQuantity(ProductVariant));
+  }
+
+  private setDraftQuantity(ProductVariant: ProductVariantEntity, quantity: number): void {
+    if (!this.productCartDraft) return;
     try {
-      this.shoppingCartService.HandbookUnit(ProductInfo, ProductVariant, Number(this.txt_NumUnit.nativeElement.value));
+      this.productCartDraft.HandbookUnit(this.productInfoDtoSelect, ProductVariant, quantity);
+    } catch (error: any) {
+      // Stock validation already displays its error through the cart service.
+      if (error.message !== 'Imposible stock') this.toastrService.error(error.message);
+    }
+  }
+
+  cancelProductDraft(): void {
+    this.productCartDraft = undefined;
+  }
+
+  confirmProductDraft(): void {
+    if (!this.productCartDraft) return;
+    try {
+      const hasQuantity = this.productCartDraft.getTotalProduct(this.productInfoDtoSelect.Product.ProductCod) > 0;
+      this.shoppingCartService.confirmProductDraft(this.productInfoDtoSelect, this.productCartDraft);
       this.updateShoppingCart();
-    } catch (e) {
-      this.txt_NumUnit.nativeElement.value = "0";
-      this.updateShoppingCart();
+      this.cancelProductDraft();
+      const jquery = (window as any).$;
+      jquery?.('#ProductModal')?.modal('hide');
+      this.toastrService.success(hasQuantity ? 'Producto agregado al carrito.' : 'Carrito actualizado.');
+    } catch (error: any) {
+      if (error.message !== 'Imposible stock') this.toastrService.error(error.message);
     }
   }
 
@@ -327,8 +365,7 @@ export class CreatepresaleComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     try {
       const discount = this.clampManualDiscountInput(ProductInfo, input, false);
-      this.shoppingCartService.setManualDiscount(ProductInfo, ProductVariant, discount);
-      this.updateShoppingCart();
+      this.productCartDraft?.setManualDiscount(ProductInfo, ProductVariant, discount);
       input.value = String(this.getManualDiscountInput(ProductInfo, ProductVariant));
     } catch (error: any) {
       input.value = String(this.getManualDiscountInput(ProductInfo, ProductVariant));
@@ -437,14 +474,14 @@ export class CreatepresaleComponent implements OnInit {
   }
 
   isVariantInCart(ProductInfo: ProductInfoDto, ProductVariant: ProductVariantEntity): boolean {
-    return !!this.shoppingCartService.GetProductInCart(
+    return !!this.productCartDraft?.GetProductInCart(
       ProductInfo.Product.ProductCod,
       ProductVariant.Variant
     );
   }
 
   getManualDiscountInput(ProductInfo: ProductInfoDto, ProductVariant: ProductVariantEntity): number {
-    const detail = this.shoppingCartService.GetProductInCart(
+    const detail = this.productCartDraft?.GetProductInCart(
       ProductInfo.Product.ProductCod,
       ProductVariant.Variant
     );
@@ -474,7 +511,7 @@ export class CreatepresaleComponent implements OnInit {
   }
 
   getVisiblePriceAfterDiscount(ProductInfo: ProductInfoDto, ProductVariant: ProductVariantEntity): number {
-    const detail = this.shoppingCartService.GetProductInCart(
+    const detail = this.productCartDraft?.GetProductInCart(
       ProductInfo.Product.ProductCod,
       ProductVariant.Variant
     );
@@ -486,7 +523,7 @@ export class CreatepresaleComponent implements OnInit {
 
   getProductTotalAfterDiscount(ProductCod: string): number {
     return this.toMoney(
-      this.ShoppingCart.DetailList
+      (this.productCartDraft?.getCart().DetailList ?? [])
         .filter(item => item.ProductCod === ProductCod)
         .reduce((total, item) => total + Number(item.NumTotalPrice || 0), 0)
     );

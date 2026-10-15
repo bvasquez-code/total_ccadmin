@@ -200,6 +200,9 @@ public class PinpadPaymentCreateService {
         if (method == null || !"A".equals(method.Status) || !"S".equals(method.IsInternalSaleEnabled)) {
             throw new IllegalArgumentException("El medio de pago debe estar habilitado para venta interna");
         }
+        if (!method.allowsIntermediaryPayment()) {
+            throw new IllegalArgumentException("Este medio de pago esta configurado para cobro directo, sin pinpad");
+        }
         String paymentMethod = resolvePaymentMethod(method);
         if (payment.AmountPaid == null || payment.AmountPaid.signum() <= 0) {
             throw new IllegalArgumentException("El importe del pago pinpad debe ser positivo");

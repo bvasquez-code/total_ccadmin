@@ -50,6 +50,7 @@ class PinpadPaymentCreateServiceTest {
         when(trust.agentPublicKey("CAJA01")).thenReturn(Base64.getEncoder().encodeToString(IDENTITY.getPublic().getEncoded()));
         PaymentMethodEntity method = new PaymentMethodEntity();
         method.PaymentMethodType = "1002";
+        method.PaymentProcessingMode = "I";
         when(methods.findById("TC001")).thenReturn(method);
         CurrencyEntity currency = new CurrencyEntity();
         currency.CurrencyAbbr = "PEN";
@@ -58,8 +59,17 @@ class PinpadPaymentCreateServiceTest {
     }
 
     @Test
+    void directOnlyYapeCannotIssueTerminalGrant() {
+        var method = new PaymentMethodEntity(); method.PaymentMethodType = "1006"; method.PaymentProcessingMode = "D";
+        when(methods.findById("WD001")).thenReturn(method);
+        var payment = payment(); payment.PaymentMethodCod = "WD001";
+        assertThrows(IllegalArgumentException.class, () -> service.prepare(payment, "USER1", 9L, "S1"));
+        verifyNoInteractions(configurations, trust, persistence);
+    }
+
+    @Test
     void savesYapeApprovalAndAcknowledgesAsYapeWithoutChangingInternalCode() throws Exception {
-        var method = new PaymentMethodEntity(); method.PaymentMethodType = "1006";
+        var method = new PaymentMethodEntity(); method.PaymentMethodType = "1006"; method.PaymentProcessingMode = "B";
         when(methods.findById("WD001")).thenReturn(method);
         var payment = payment(); payment.PaymentMethodCod = "WD001";
         var prepared = service.prepare(payment, "USER1", 9L, "S1");
@@ -80,7 +90,7 @@ class PinpadPaymentCreateServiceTest {
     @ParameterizedTest
     @CsvSource({"1002,TJ001,CARD", "1002,TD001,CARD", "1003,TC001,CARD", "1006,WD001,YAPE"})
     void translatesCatalogTypeInsteadOfInternalPaymentCode(String type, String code, String expected) throws Exception {
-        var method = new PaymentMethodEntity(); method.PaymentMethodType = type;
+        var method = new PaymentMethodEntity(); method.PaymentMethodType = type; method.PaymentProcessingMode = "I";
         when(methods.findById(code)).thenReturn(method);
         var payment = payment(); payment.PaymentMethodCod = code;
         var prepared = service.prepare(payment, "USER1", 9L, "S1");
@@ -92,7 +102,7 @@ class PinpadPaymentCreateServiceTest {
     @ParameterizedTest
     @ValueSource(strings = {"1001", "1005", "1015", "9999"})
     void refusesOtherTypesBeforeIssuingAnyPinpadInstructions(String type) {
-        var method = new PaymentMethodEntity(); method.PaymentMethodType = type;
+        var method = new PaymentMethodEntity(); method.PaymentMethodType = type; method.PaymentProcessingMode = "I";
         when(methods.findById("MANUAL")).thenReturn(method);
         var payment = payment(); payment.PaymentMethodCod = "MANUAL";
         assertThrows(IllegalArgumentException.class, () -> service.prepare(payment, "USER1", 9L, "S1"));
@@ -102,7 +112,7 @@ class PinpadPaymentCreateServiceTest {
     @Test
     void refusesCardProofWhenCatalogMethodIsYape() throws Exception {
         var payment = payment(); payment.PinpadResult = receipt(payment, "APPROVED");
-        var method = new PaymentMethodEntity(); method.PaymentMethodType = "1006";
+        var method = new PaymentMethodEntity(); method.PaymentMethodType = "1006"; method.PaymentProcessingMode = "B";
         when(methods.findById("TC001")).thenReturn(method);
         assertThrows(IllegalArgumentException.class, () -> service.pay(payment, "USER1", 9L, "S1"));
         verifyNoInteractions(persistence);

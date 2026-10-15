@@ -279,11 +279,35 @@ cajas: se interpreta en el navegador de cada maquina.
 El catalogo del sistema se traduce por `PaymentMethodType`: `1002` y `1003`
 se envian como `CARD`; `1006` se envia como `YAPE`. El codigo interno original
 (por ejemplo, `TJ001`, `TC001` o `WD001`) se conserva en `internalPaymentCode`.
-Los otros tipos se registran sin llamar al agente. El modo demo admite Yape;
+La modalidad se configura en `payment_method.PaymentProcessingMode`: `D` directo,
+`I` intermediario y `B` ambos. El tipo solo traduce el medio enviado al terminal;
+no decide si se usa pinpad. Con ambos, la pantalla permite elegir por pago y
+comienza con pinpad cuando la integracion esta activada; con la integracion
+apagada comienza con cobro directo. La migracion inicial mantiene las tarjetas como
+intermediario, Yape como ambos y los demas medios como directos.
+El modo demo admite Yape;
 en Culqi/Niubiz solo debe habilitarse en `*-supported-payment-methods` cuando
 el conector y el terminal contratado lo soporten.
 
+El indicador `IND_PINPAD_INTEGRATED` del grupo `SystemFunctionalityActivator`
+controla la conexion al agente. El instalador
+`install_pinpad_integration_indicator_20261014.sql` lo crea con `ConfigVal=N`
+y conserva el valor en las ejecuciones siguientes. Cambiarlo a `S` habilita
+la integracion para los pagos que elijan intermediario.
+
+Con `N`, esos pagos se registran como `PaymentPlatform=POS_MANUAL`: el cajero
+ingresa el importe y medio de pago en el terminal separado y confirma el
+resultado en la web. No se inicia login, REGISTER, STATUS ni ACK y el sistema
+no verifica la aprobacion bancaria. Los pagos directos siguen su flujo habitual.
+El campo `PaymentProcessingMode` conserva su significado en ambos casos.
+
 El flujo implementado es:
+
+Si falla la preparacion o el login antes de intentar REGISTER, el formulario
+libera el pendiente y permite elegir otro medio. Si hubo un intento de REGISTER
+o existe un resultado firmado, los errores conservan la referencia pendiente,
+incluso cuando un login posterior falla. No se toma una perdida de conexion
+posterior al envio como prueba de que el banco no cobro.
 
 1. La web pide autorizacion a `POST /api/v1/TrxPayment/preparePinpad`.
    El backend valida identidad de caja, medio, importe y moneda, y autoriza

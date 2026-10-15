@@ -30,6 +30,7 @@ CREATE TABLE `payment_method` (
   `ModifyDate` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `Status` char(1) NOT NULL DEFAULT 'A',
   `PaymentMethodType` char(4) DEFAULT NULL COMMENT 'Tipo de medio de pago',
+  `PaymentProcessingMode` char(1) NOT NULL DEFAULT 'D' COMMENT 'Modalidad de cobro interno: D directo, I intermediario (pinpad), B ambos; independiente del canal web',
   `IsInternalSaleEnabled` char(1) NOT NULL DEFAULT 'S' COMMENT 'Indica si el medio de pago se muestra en ventas internas (S:Si, N:No)',
   `IsWebSaleEnabled` char(1) NOT NULL DEFAULT 'S' COMMENT 'Indica si el medio de pago se muestra en la tienda virtual (S:Si, N:No)',
   `IsPaymentProofRequired` char(1) NOT NULL DEFAULT 'N' COMMENT 'Indica si la tienda virtual debe solicitar una imagen del comprobante de pago (S:Si, N:No)',
@@ -99,8 +100,24 @@ CREATE TABLE `payment_method` (
             SELECT 'Columna IsPaymentProofRequired agregada exitosamente.' AS Mensaje;
         END IF;
 
-        
+    END IF;
 
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = DATABASE() AND table_name = 'payment_method'
+          AND column_name = 'PaymentProcessingMode'
+    ) THEN
+        ALTER TABLE `payment_method`
+            ADD COLUMN `PaymentProcessingMode` char(1) NOT NULL DEFAULT 'D'
+            COMMENT 'Modalidad de cobro interno: D directo, I intermediario (pinpad), B ambos; independiente del canal web'
+            AFTER `PaymentMethodType`;
+        -- Solo se inicializa al agregar la columna. Las ejecuciones siguientes conservan las decisiones del cliente.
+        UPDATE `payment_method`
+        SET `PaymentProcessingMode` = CASE
+            WHEN `PaymentMethodType` IN ('1002', '1003') THEN 'I'
+            WHEN `PaymentMethodType` = '1006' THEN 'B'
+            ELSE 'D'
+        END, `ModifyDate` = `ModifyDate`;
     END IF;
 
 

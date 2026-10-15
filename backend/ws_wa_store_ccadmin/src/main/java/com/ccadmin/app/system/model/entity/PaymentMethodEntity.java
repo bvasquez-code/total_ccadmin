@@ -16,6 +16,7 @@ public class PaymentMethodEntity extends AuditTableEntity implements Serializabl
     public String Name;
     public String Description;
     public String PaymentMethodType;
+    public String PaymentProcessingMode = "D";
     public String IsInternalSaleEnabled = "S";
     public String IsWebSaleEnabled = "S";
     public String IsPaymentProofRequired = "N";
@@ -29,6 +30,7 @@ public class PaymentMethodEntity extends AuditTableEntity implements Serializabl
         IsInternalSaleEnabled = normalizeIndicator(IsInternalSaleEnabled, "S");
         IsWebSaleEnabled = normalizeIndicator(IsWebSaleEnabled, "S");
         IsPaymentProofRequired = normalizeIndicator(IsPaymentProofRequired, "N");
+        PaymentProcessingMode = normalizeProcessingMode(PaymentProcessingMode);
         if ("N".equals(IsInternalSaleEnabled) && "N".equals(IsWebSaleEnabled)) {
             throw new IllegalArgumentException(
                     "El metodo de pago debe estar disponible en venta interna o tienda virtual"
@@ -40,6 +42,22 @@ public class PaymentMethodEntity extends AuditTableEntity implements Serializabl
             );
         }
         return this;
+    }
+
+    public boolean allowsDirectPayment() {
+        return !"I".equals(normalizeProcessingMode(PaymentProcessingMode));
+    }
+
+    public boolean allowsIntermediaryPayment() {
+        return !"D".equals(normalizeProcessingMode(PaymentProcessingMode));
+    }
+
+    private String normalizeProcessingMode(String value) {
+        String mode = value == null || value.isBlank() ? "D" : value.trim().toUpperCase();
+        if (!java.util.Set.of("D", "I", "B").contains(mode)) {
+            throw new IllegalArgumentException("Modalidad de cobro invalida: D directo, I intermediario, B ambos");
+        }
+        return mode;
     }
 
     private String normalizeIndicator(String value, String defaultValue) {

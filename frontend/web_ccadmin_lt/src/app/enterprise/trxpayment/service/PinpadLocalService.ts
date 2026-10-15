@@ -8,10 +8,11 @@ import { DataSesionService } from '../../compartido/service/datasesion.service';
 export class PinpadLocalService {
   constructor(private apiService: ApiService, private dataSesionService: DataSesionService) {}
 
-  async process(instructions: PinpadBrowserInstructionsDto): Promise<PinpadSignedMessageDto> {
+  async process(instructions: PinpadBrowserInstructionsDto, onRegisterAttempt: () => void = () => {}): Promise<PinpadSignedMessageDto> {
     const deadline = Date.now() + instructions.waitSeconds * 1000;
     const token = await this.login(instructions.loginUrl, instructions.loginCommand);
     let result: PinpadSignedMessageDto;
+    onRegisterAttempt();
     try {
       result = await this.execute(instructions.registerUrl, token);
     } catch {

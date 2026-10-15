@@ -16,6 +16,7 @@ export class ShoppingCartService
 {
 
     ShoppingCart : PresaleRegisterDto = new PresaleRegisterDto();
+    private persistCartSession: boolean = true;
 
     constructor(private toastrService: ToastrService)
     {
@@ -71,6 +72,30 @@ export class ShoppingCartService
         return this.ShoppingCart;
     }
 
+    public createProductDraft(ProductCod: string): ShoppingCartService {
+        const draft = new ShoppingCartService(this.toastrService);
+        draft.persistCartSession = false;
+        draft.ShoppingCart.DetailList = this.GetTmpProductInCart(ProductCod)
+            .map(detail => Object.assign(new PresaleDetEntity(), detail));
+        draft.ReBuild();
+        return draft;
+    }
+
+    public confirmProductDraft(ProductInfo: ProductInfoDto, draft: ShoppingCartService): void {
+        const ProductCod = ProductInfo.Product.ProductCod;
+        const details = draft.GetTmpProductInCart(ProductCod).filter(detail => detail.NumUnit > 0);
+        // Validate all variants before changing or persisting the real cart.
+        for (const detail of details) {
+            const variant = ProductInfo.VariantList.find(item => item.Variant === detail.Variant);
+            if (!variant) throw new Error("La variante del producto no es valida.");
+            this.GetExistsStock(detail.NumUnit, ProductInfo, variant);
+        }
+        this.ShoppingCart.DetailList = this.ShoppingCart.DetailList
+            .filter(detail => detail.ProductCod !== ProductCod)
+            .concat(details.map(detail => Object.assign(new PresaleDetEntity(), detail)));
+        this.ReBuild();
+    }
+
     public GetExistsStock(NumUnit : number,ProductInfo : ProductInfoDto,ProductVariant : ProductVariantEntity):number
     {
         if( NumUnit <  0)
@@ -118,6 +143,9 @@ export class ShoppingCartService
     {
         let presaleDetEntity : PresaleDetEntity | undefined = this.GetProductInCart(ProductInfo.Product.ProductCod,ProductVariant.Variant);
         const internalQuantity = this.toInternalQuantity(ProductInfo, NumUnit);
+        if (!Number.isFinite(NumUnit) || NumUnit < 0) {
+            throw new Error("Ingrese una cantidad valida.");
+        }
         
         if(presaleDetEntity)
         {
@@ -132,7 +160,7 @@ export class ShoppingCartService
                 );
             }            
         }
-        else
+        else if (internalQuantity > 0)
         {   presaleDetEntity = new PresaleDetEntity();
             presaleDetEntity.Build(ProductInfo,ProductVariant.Variant);
             presaleDetEntity.Update(
@@ -313,7 +341,9 @@ export class ShoppingCartService
 
     saveCartSession():void
     {
-        sessionStorage.setItem("ShoppingCart",JSON.stringify(this.ShoppingCart));
+        if (this.persistCartSession) {
+            sessionStorage.setItem("ShoppingCart",JSON.stringify(this.ShoppingCart));
+        }
     }
 
     private toMoney(value: number): number
