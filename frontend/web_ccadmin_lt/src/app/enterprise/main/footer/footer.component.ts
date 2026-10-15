@@ -7,6 +7,8 @@ import { Component, OnInit } from '@angular/core';
 })
 export class FooterComponent implements OnInit {
 
+  readonly showMobileToolbar = false;
+
   constructor() { }
 
   ngOnInit(): void {

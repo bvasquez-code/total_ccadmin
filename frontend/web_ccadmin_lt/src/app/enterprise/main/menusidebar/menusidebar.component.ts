@@ -14,6 +14,8 @@ import { DataSesionService } from '../../compartido/service/datasesion.service';
 })
 export class MenusidebarComponent implements OnInit {
 
+  readonly showSidebarShortcuts = false;
+
   public g_flg_menu_defecto: boolean = false;
   public g_list_menu: MenuPagina[] = [];
   public isOpenMenu: boolean = false;

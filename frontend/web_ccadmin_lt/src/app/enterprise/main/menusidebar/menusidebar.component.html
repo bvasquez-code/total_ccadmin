@@ -3,11 +3,19 @@
   class="sidebar sidebar-fixed expandable sidebar-light has-open">
   <div class="sidebar-inner">
 
+    <div class="d-flex d-xl-none justify-content-end p-2">
+      <button type="button" class="btn btn-burger burger-arrowed static collapsed text-primary-m1"
+        data-toggle-mobile="sidebar" data-target="#sidebar" aria-controls="sidebar"
+        aria-expanded="false" aria-label="Cerrar menú lateral" title="Cerrar menú lateral">
+        <span class="bars" aria-hidden="true"></span>
+      </button>
+    </div>
+
     <div class="flex-grow-1 ace-scroll" data-ace-scroll="{}">
 
       <div class="sidebar-section my-2">
         <!-- the shortcut buttons -->
-        <div class="sidebar-section-item fadeable-left">
+        <div *ngIf="showSidebarShortcuts" class="sidebar-section-item fadeable-left">
           <div class="fadeinable sidebar-shortcuts-mini">
             <!-- show this small buttons when collapsed -->
             <span class="btn btn-success p-0 opacity-1"></span>
@@ -39,7 +47,7 @@
           </div>
         </div>
 
-        <br>
+        <br *ngIf="showSidebarShortcuts">
         <!-- the search box -->
         <div class="sidebar-section-item">
           <i class="fadeinable fa fa-search text-info-m1 mr-n1"></i>

@@ -23,7 +23,7 @@
 
 
   <!-- footer toolbox for mobile view -->
-  <footer class="d-sm-none footer footer-sm footer-fixed">
+  <footer *ngIf="showMobileToolbar" class="d-sm-none footer footer-sm footer-fixed">
     <div class="footer-inner">
       <div
         class="btn-group d-flex h-100 mx-2 border-x-1 border-t-2 brc-primary-m3 bgc-white-tp1 radius-t-1 shadow">

@@ -1,6 +1,18 @@
 .user-session-summary {
+    min-width: 0;
     max-width: 16rem;
     vertical-align: middle;
+}
+
+.user-menu-toggle {
+    flex: 0 0 auto;
+}
+
+.user-avatar {
+    display: block;
+    width: 36px;
+    height: 36px;
+    object-fit: cover;
 }
 
 .user-session-summary .nav-user-name,
@@ -29,6 +41,9 @@
     display: block;
     font-size: 0.75rem;
     opacity: 0.85;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .current-store-name {
@@ -40,9 +55,38 @@
     font-weight: 600;
 }
 
-@media (max-width: 575.98px) {
+@media (max-width: 991.98px) {
+    .navbar-intro {
+        flex: 0 0 auto;
+    }
+
+    .current-store {
+        flex: 1 1 0;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+        overflow: hidden;
+    }
+
+    .current-store > i {
+        flex-shrink: 0;
+    }
+
     .current-store-name {
-        max-width: 35vw;
+        max-width: 100%;
         font-size: 0.85rem;
+    }
+
+    .user-session-summary {
+        max-width: calc(100vw - 5rem);
+    }
+}
+
+@media (max-width: 359.98px) {
+    .navbar-brand img {
+        width: 110px;
+    }
+
+    .current-store > i {
+        display: none;
     }
 }
