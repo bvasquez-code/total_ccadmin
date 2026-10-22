@@ -1,4 +1,5 @@
-import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
+import { Component, Inject, Input, OnInit } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { DataTablaGeneticDto } from '../../model/dto/DataTablaGeneticDto';
 import { TableService } from '../../service/table.service';
 import { HeaderTableGenericDto } from '../../model/dto/HeaderTableGenericDto';
@@ -9,15 +10,54 @@ import { ActionTableService } from '../../interface/ActionTableService';
 
 @Component({
   selector: 'app-table',
-  templateUrl: './table.component.html'
+  templateUrl: './table.component.html',
+  styleUrls: ['./table.component.css']
 })
 export class TableComponent<T> implements OnInit{
+  private static nextId = 0;
+  readonly tableId = `responsive-table-${TableComponent.nextId++}`;
+  readonly expandedRows = new Set<T>();
+
+  isMobileColumn(header: HeaderTableGenericDto): boolean {
+    if (header.VisibleMobile !== undefined) return header.VisibleMobile;
+    if (header.VisibleDesktop === false) return false;
+    return header.ColumnAction === true || this.dataSource.Headers
+      .filter(column => !column.ColumnAction && column.VisibleDesktop !== false)
+      .slice(0, 2).includes(header);
+  }
+
+  get displayColumns(): HeaderTableGenericDto[] {
+    return this.dataSource.Headers.filter(header => header.VisibleDesktop !== false || this.isMobileColumn(header));
+  }
+
+  get mobileColumnCount(): number {
+    return this.dataSource.Headers.filter(header => this.isMobileColumn(header)).length;
+  }
+
+  get detailColumns(): HeaderTableGenericDto[] {
+    return this.dataSource.Headers.filter(header => !header.ColumnAction &&
+      (header.VisibleInDetails ?? (header.VisibleDesktop !== false || this.isMobileColumn(header))));
+  }
+
+  toggleRow(item: T): void {
+    if (this.expandedRows.has(item)) this.expandedRows.delete(item);
+    else this.expandedRows.add(item);
+  }
+
+  onRowClick(event: MouseEvent, item: T): void {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('a, button, input, select, textarea, label, [role="button"]')) return;
+    if (this.document.defaultView?.matchMedia('(max-width: 767.98px)').matches && this.detailColumns.length) {
+      this.toggleRow(item);
+    }
+  }
 
   dataSource : DataTablaGeneticDto<T> = new DataTablaGeneticDto();
   actionTableService? : ActionTableService<T>;
 
   @Input() set data(data: DataTablaGeneticDto<T>) {
     this.dataSource = data;
+    this.expandedRows.clear();
   }
 
   @Input() set action(actionTableService : ActionTableService<T>) {
@@ -25,7 +65,7 @@ export class TableComponent<T> implements OnInit{
   }
 
 
-  constructor()
+  constructor(@Inject(DOCUMENT) private readonly document: Document)
   {
   }
 
@@ -159,7 +199,9 @@ export class TableComponent<T> implements OnInit{
 
   findResultPage(ValueButton : number)
   {
-    console.log(ValueButton);
+    const page = this.dataSource.DataTable.data;
+    if (ValueButton < 1 || ValueButton > page.TotalPages || ValueButton === page.Page) return;
+    this.expandedRows.clear();
     this.actionTableService?.filter(ValueButton);
   }
 

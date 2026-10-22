@@ -1,3 +1,7 @@
+@media (max-width: 767.98px) {
+  .presale-search-options.search-options-collapsed { display: none; }
+}
+
 .product-card-column {
   display: flex;
 }

@@ -45,6 +45,7 @@ export class CreatepresaleComponent implements OnInit {
   @ViewChild('cboDirectionSortedBy') cboDirectionSortedBy!: ElementRef<HTMLSelectElement>;
 
   productSearch: ProductSearchDto = new ProductSearchDto();
+  showMobileSearchOptions = false;
   responsePageSearch: ResponsePageSearch<ProductSearchEntity> = new ResponsePageSearch();
   productList: ProductSearchEntity[] = [];
   productListHtml: ProductSearchEntity[][] = [];
@@ -240,6 +241,14 @@ export class CreatepresaleComponent implements OnInit {
     this.subtractUnit(productInfoDto, productInfoDto.VariantList[0]);
   }
 
+
+  clearProductSearch(): void {
+    this.txt_filtro_busqueda.nativeElement.value = '';
+    this.inputBuffer = '';
+    this.lastKeypressTime = 0;
+    this.filterProduct(1);
+    this.txt_filtro_busqueda.nativeElement.focus();
+  }
 
   filterProduct(p_num_pagina_busqueda: number = 1, IsBarcodeReaderInput: boolean = false) {
     if (p_num_pagina_busqueda <= 0) return;

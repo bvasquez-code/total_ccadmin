@@ -365,24 +365,33 @@
         <div class="d-flex flex-column flex-lg-row align-items-lg-center">
           <div class="ml-lg-auto mt-2 mt-lg-0 w-100" style="max-width: 100%;">
             <div class="input-group">
-              <input type="text" class="form-control" placeholder="Buscar producto ..." #txt_filtro_busqueda
+              <input type="text" class="form-control" placeholder="Buscar producto ..." aria-label="Buscar producto" #txt_filtro_busqueda
                 (keydown)="filterProductEnter($event)" />
               <div class="input-group-append">
-                <button class="btn btn-blue px-3 btn-sm" type="button" (click)="filterProduct()">
+                <button class="btn btn-light-secondary px-3 btn-sm" type="button" (click)="clearProductSearch()" aria-label="Limpiar buscador" title="Limpiar buscador">
+                  <i class="fa fa-times" aria-hidden="true"></i>
+                </button>
+                <button class="btn btn-blue px-3 btn-sm" type="button" (click)="filterProduct()" aria-label="Buscar productos">
                   <i class="fa fa-search-plus text-105"></i>
                 </button>
               </div>
             </div>
           </div>
         </div>
-        <br>
-        <div class="d-flex flex-column flex-lg-row align-items-lg-center">
-          <div class="mr-md-3 mb-2 mb-md-0">
-            <label class="mb-0 d-inline-block text-sm">
+        <button type="button" class="btn btn-outline-primary btn-sm d-md-none mt-3 w-100"
+          (click)="showMobileSearchOptions = !showMobileSearchOptions"
+          [attr.aria-expanded]="showMobileSearchOptions" aria-controls="presale-search-options">
+          <i class="fa fa-sliders-h mr-2" aria-hidden="true"></i>
+          {{ showMobileSearchOptions ? 'Ocultar opciones de búsqueda' : 'Mostrar opciones de búsqueda' }}
+        </button>
+        <div id="presale-search-options" class="presale-search-options row mt-3"
+          [class.search-options-collapsed]="!showMobileSearchOptions">
+          <div class="col-12 col-md-4 mb-2">
+            <label for="cboSortedBy" class="mb-0 text-sm">
               Ordenar por:
             </label>
-            <div class="ml-2 d-inline-block">
-              <select class="ace-select brc-blue-m4 brc-h-blue-m1 pr-5 text-90 h-auto border-1" id="cboSortedBy"
+            <div class="w-100">
+              <select class="ace-select brc-blue-m4 brc-h-blue-m1 pr-5 text-90 h-auto border-1 w-100" id="cboSortedBy"
                 #cboSortedBy>
                 <option value="trend">Relevancia</option>
                 <option value="date">Fecha</option>
@@ -391,12 +400,12 @@
             </div>
           </div>
 
-          <div class="mr-md-3 mb-2 mb-md-0">
-            <label class="mb-0 d-inline-block text-sm">
+          <div class="col-12 col-md-4 mb-2">
+            <label for="cboDirectionSortedBy" class="mb-0 text-sm">
               Orden:
             </label>
-            <div class="ml-2 d-inline-block">
-              <select class="ace-select brc-blue-m4 brc-h-blue-m1 pr-5 text-90 h-auto border-1"
+            <div class="w-100">
+              <select class="ace-select brc-blue-m4 brc-h-blue-m1 pr-5 text-90 h-auto border-1 w-100"
                 id="cboDirectionSortedBy" #cboDirectionSortedBy>
                 <option value="desc">Descendente</option>
                 <option value="asc">Ascendente</option>
@@ -404,12 +413,12 @@
             </div>
           </div>
 
-          <div class="mb-2 mb-md-0">
-            <label class="mb-0 d-inline-block text-sm">
+          <div class="col-12 col-md-4 mb-2">
+            <label for="cboStockMin" class="mb-0 text-sm">
               Mostrar solo con stock:
             </label>
-            <div class="ml-2 d-inline-block">
-              <select class="ace-select brc-blue-m4 brc-h-blue-m1 pr-5 text-90 h-auto border-1" id="cboStockMin"
+            <div class="w-100">
+              <select class="ace-select brc-blue-m4 brc-h-blue-m1 pr-5 text-90 h-auto border-1 w-100" id="cboStockMin"
                 #cboStockMin>
                 <option value="N">No</option>
                 <option value="S">Si</option>

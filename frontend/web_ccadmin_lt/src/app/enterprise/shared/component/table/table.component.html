@@ -1,30 +1,61 @@
-<div class="row">
-  <div class="col-12">
-    <div class="card dcard">
-      <div class="card-body px-1 px-md-3">
-
-        <form autocomplete="off" *ngFor="let Data of [dataSource]">
-
-          <div class="d-flex justify-content-between flex-column flex-sm-row mb-3 px-2 px-sm-0">
-            <h3 class="text-125 pl-1 mb-3 mb-sm-0 text-secondary-d4">
-              {{ Data.NameTable }}
-            </h3>
-          </div>
-
-          <table id="simple-table"
-            class="mb-0 table table-borderless table-bordered-x brc-secondary-l3 text-dark-m2 radius-1 overflow-hidden">
-            <thead class="text-dark-tp3 bgc-grey-l4 text-90 border-b-1 brc-transparent">
-              <tr>
-                <th *ngFor="let Headers of Data.Headers">
-                  {{ Headers.Name }}
-                </th>
-              </tr>
-            </thead>
-
-            <tbody class="mt-1">
-              <tr class="bgc-h-yellow-l4 d-style" *ngFor="let item of Data.DataTable.data.resultSearch">
-
-                <td *ngFor="let Headers of Data.Headers">
+<div class="card dcard">
+  <div class="card-body px-1 px-md-3">
+    <h3 class="text-125 mb-3 text-secondary-d4">{{ dataSource.NameTable }}</h3>
+    <table [id]="tableId" class="table mb-0 table-borderless table-bordered-x brc-secondary-l3 text-dark-m2 responsive-table">
+      <thead class="bgc-grey-l4">
+        <tr>
+          <th *ngFor="let header of displayColumns" scope="col"
+            [class.hide-mobile]="!isMobileColumn(header)" [class.hide-desktop]="header.VisibleDesktop === false"
+            [class.options-column]="header.ColumnAction">{{ header.Name }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngFor="let item of dataSource.DataTable.data.resultSearch; let index = index">
+          <tr class="summary-row" (click)="onRowClick($event, item)">
+            <td *ngFor="let header of displayColumns"
+              [class.hide-mobile]="!isMobileColumn(header)" [class.hide-desktop]="header.VisibleDesktop === false"
+              [class.options-column]="header.ColumnAction">
+              <ng-container *ngTemplateOutlet="cell; context: { $implicit: item, header: header }"></ng-container>
+            </td>
+          </tr>
+          <tr *ngIf="expandedRows.has(item)" class="mobile-only detail-row" [id]="tableId + '-detail-' + index">
+            <td [attr.colspan]="mobileColumnCount">
+              <dl class="record-details">
+                <ng-container *ngFor="let header of detailColumns">
+                  <dt>{{ header.Name }}</dt>
+                  <dd><ng-container *ngTemplateOutlet="cell; context: { $implicit: item, header: header }"></ng-container></dd>
+                </ng-container>
+              </dl>
+            </td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+    <div class="table-footer" *ngIf="dataSource.DataTable.data as page">
+      <span>Mostrando {{ page.StarResult }} - {{ page.EndResult }} de {{ page.TotalResult }}</span>
+      <nav class="desktop-pagination" aria-label="Páginas de resultados">
+        <ul class="pagination mb-0">
+          <li *ngFor="let item of LoadingPages" class="page-item" [class.active]="item.IsCurrent">
+            <button type="button" class="page-link" [disabled]="item.ValueButton < 1 || item.ValueButton > page.TotalPages || item.IsCurrent"
+              [attr.aria-current]="item.IsCurrent ? 'page' : null"
+              [attr.aria-label]="item.NameButton === 'Prev' ? 'Página anterior' : item.NameButton === 'Next' ? 'Página siguiente' : 'Página ' + item.NameButton"
+              (click)="findResultPage(item.ValueButton)">
+              <i *ngIf="item.NameButton === 'Prev'" class="fa fa-chevron-left" aria-hidden="true"></i>
+              <i *ngIf="item.NameButton === 'Next'" class="fa fa-chevron-right" aria-hidden="true"></i>
+              <span *ngIf="item.NameButton !== 'Prev' && item.NameButton !== 'Next'">{{ item.NameButton }}</span>
+            </button>
+          </li>
+        </ul>
+      </nav>
+      <nav class="mobile-pagination" aria-label="Páginas de resultados">
+        <button type="button" class="btn btn-light-primary" aria-label="Página anterior" [disabled]="page.Page <= 1" (click)="findResultPage(page.Page - 1)"><i class="fa fa-chevron-left" aria-hidden="true"></i></button>
+        <span>Página {{ page.TotalPages ? page.Page : 0 }} de {{ page.TotalPages }}</span>
+        <button type="button" class="btn btn-light-primary" aria-label="Página siguiente" [disabled]="page.Page >= page.TotalPages || !page.TotalPages" (click)="findResultPage(page.Page + 1)"><i class="fa fa-chevron-right" aria-hidden="true"></i></button>
+      </nav>
+    </div>
+  </div>
+</div>
+<ng-template #cell let-item let-Headers="header">
                   <div *ngIf="(Headers.key && !Headers.IsDate && !Headers.IsStatus && !Headers.IsMoney && !Headers.IsProgress)"
                     [ngClass]="getCellClass(Headers, item)">
                     {{ getValue(item,Headers.key,Headers.FunctionKey) }}
@@ -41,7 +72,7 @@
                     </span>
                   </div>
                   <div *ngIf="(Headers.key && Headers.IsProgress === true)"
-                    style="min-width: 145px;">
+                    class="cell-progress">
                     <div class="progress" style="height: .55rem;">
                       <div class="progress-bar"
                         role="progressbar"
@@ -56,100 +87,19 @@
                       {{ getProgressText(Headers, item) }}
                     </small>
                   </div>
-                  <div *ngIf="(Headers.ColumnAction === true)">
-
-                    <ng-container *ngFor="let option of Headers.Options">
-                      <button *ngIf="option.Type === 'Action' && showOption(option,item)" type="button"
-                        [attr.title]="option.Title || null" [attr.aria-label]="option.Title || null"
-                        class="mx-2px btn radius-1 border-2 btn-xs btn-brc-tp btn-light-secondary btn-h-lighter-success btn-a-lighter-success"
-                        (click)="getDataRow(item); option.Action?.(item)">
-                        <i [ngClass]="option.Name === '' ? '' : option.Name"></i>
-                      </button>
-                    </ng-container>
-
-                    <div class="d-none d-lg-flex">
-                      <a *ngFor="let option of Headers.Options">
-
-                        <a *ngIf="(option.Type === 'Url' && showOption(option,item))" href="{{ generateUrl(option,item,Headers) }}"
-                          [attr.title]="option.Title || null"
-                          class="mx-2px btn radius-1 border-2 btn-xs btn-brc-tp btn-light-secondary btn-h-lighter-success btn-a-lighter-success"
-                          (click)="getDataRow(item)"
-                        >
-                          <i [ngClass]="option.Name === '' ? '' : option.Name"></i>
-                        </a>
-
-                        <a *ngIf="(option.Type === 'Modal' && showOption(option,item))" href="#" data-toggle="modal"
-                          [attr.data-target]="'#'+option.ID"
-                          [attr.title]="option.Title || null"
-                          class="mx-2px btn radius-1 border-2 btn-xs btn-brc-tp btn-light-secondary btn-h-lighter-success btn-a-lighter-success"
-                          (click)="getDataRow(item)"
-                        >
-                          <i [ngClass]="option.Name === '' ? '' : option.Name"></i>
-                        </a>
-
-                      </a>
-                    </div>
-
-                  </div>
-                </td>
-
-              </tr>
-            </tbody>
-          </table>
-
-          <div class="d-flex pl-4 pr-3 pt-35 border-t-1 brc-secondary-l3 flex-column flex-sm-row mt-n1px">
-            <div class="text-nowrap align-self-center align-self-sm-start">
-              <span class="d-inline-block text-grey-d2">
-                Mostrando {{Data.DataTable.data.StarResult}} - {{Data.DataTable.data.EndResult}} de
-                {{Data.DataTable.data.TotalResult}}
-              </span>
-            </div>
-
-            <div class="btn-group ml-sm-auto mt-3 mt-sm-0">
-
-              <div class="float-right pagination">
-                <ul class="pagination">
-                  <div *ngFor="let Item of LoadingPages">
-
-                    <li
-                      [ngClass]="Item.ValueButton > 0 ? 'page-item page-pre' : 'page-item page-pre disabled'"
-                      *ngIf="(Item.NameButton === 'Prev')"
-                    >
-                      <a class="page-link" aria-label="previous page"
-                        (click)="findResultPage(Item.ValueButton)"
-                        href="javascript:void(0)">‹
-                      </a>
-                    </li>
-
-                    <li class="page-item"
-                     [ngClass]="Item.IsCurrent === true ? 'page-item active' : 'page-item'"
-                      *ngIf="(Item.NameButton !== 'Next' && Item.NameButton !== 'Prev')"
-                    >
-                      <button class="page-link" aria-label="to page 2" href="javascript:void(0)" [disabled]="(Item.NameButton=='...')"
-                        (click)="findResultPage(Item.ValueButton)">
-                        {{ Item.NameButton }}
-                      </button>
-                    </li>
-
-                    <li
-                      [ngClass]="Item.ValueButton > 0 ? 'page-item page-next' : 'page-item page-next disabled'"
-                      *ngIf="(Item.NameButton === 'Next')"
-                    >
-                      <a class="page-link" aria-label="next page"
-                        (click)="findResultPage(Item.ValueButton)"
-                        href="javascript:void(0)">›
-                      </a>
-                    </li>
-                  </div>
-                  
-                </ul>
-              </div>
-
-            </div>
-          </div>
-        </form>
-
-      </div>
-    </div>
+  <div *ngIf="Headers.ColumnAction" class="table-actions">
+    <ng-container *ngFor="let option of Headers.Options">
+      <ng-container *ngIf="showOption(option, item)">
+        <button *ngIf="option.Type === 'Action'" type="button" class="btn btn-xs btn-light-secondary"
+          [attr.title]="option.Title || null" [attr.aria-label]="option.Title || 'Ejecutar acción'"
+          (click)="getDataRow(item); option.Action?.(item)"><i [ngClass]="option.Name" aria-hidden="true"></i></button>
+        <a *ngIf="option.Type === 'Url'" [href]="generateUrl(option, item, Headers)" class="btn btn-xs btn-light-secondary"
+          [attr.title]="option.Title || null" [attr.aria-label]="option.Title || 'Abrir registro'"
+          (click)="getDataRow(item)"><i [ngClass]="option.Name" aria-hidden="true"></i></a>
+        <button *ngIf="option.Type === 'Modal'" type="button" data-toggle="modal" [attr.data-target]="'#' + option.ID"
+          class="btn btn-xs btn-light-secondary" [attr.title]="option.Title || null" [attr.aria-label]="option.Title || 'Abrir opciones'"
+          (click)="getDataRow(item)"><i [ngClass]="option.Name" aria-hidden="true"></i></button>
+      </ng-container>
+    </ng-container>
   </div>
-</div>
+</ng-template>
