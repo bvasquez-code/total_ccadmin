@@ -11,6 +11,7 @@ import { CurrencyService } from '../../system/service/CurrencyService';
 import { StoreService } from '../../store/service/store.service';
 import { ResponsePageSearch } from '../../shared/model/dto/ResponsePageSearch';
 import { FinancialReportOverviewDto } from '../model/dto/FinancialReportOverviewDto';
+import { PurchaseSalesReportOverviewDto } from '../model/dto/PurchaseSalesReportOverviewDto';
 import { ReportFilterDto } from '../model/dto/ReportFilterDto';
 import { ReportPeriodDto } from '../model/dto/ReportPeriodDto';
 import { ReportTrendDto } from '../model/dto/ReportTrendDto';
@@ -19,7 +20,7 @@ import { ReportExcelService } from '../service/report-excel.service';
 import { ProfitReportComponent } from './profitreport/profitreport.component';
 import { PurchaseSalesReportComponent } from './purchasesalesreport/purchasesalesreport.component';
 
-function overview(profit: boolean): FinancialReportOverviewDto {
+function overview(profit: boolean): FinancialReportOverviewDto & Partial<Pick<PurchaseSalesReportOverviewDto, 'Profitability'>> {
     return {
         Summary: [
             { CurrencyCod: 'PEN', Sales: 600, Purchases: profit ? 0 : 1000, Cost: profit ? 400 : 0,
@@ -28,6 +29,12 @@ function overview(profit: boolean): FinancialReportOverviewDto {
             { CurrencyCod: 'USD', Sales: 10, Purchases: 0, Cost: profit ? 2 : 0, KnownResult: profit ? 8 : 10,
               Result: profit ? 8 : 10, Margin: profit ? 80 : null, MissingCostRows: 0, RowCount: 1 }
         ],
+        ...(!profit ? { Profitability: [
+            { CurrencyCod: 'PEN', NetSales: 45, CostOfGoodsSold: 37.8, StockLosses: 4.2,
+                SoldQuantity: 9, LostQuantity: 1, EstimatedResult: 3, MissingCostRows: 0 },
+            { CurrencyCod: 'USD', NetSales: 10, CostOfGoodsSold: 2, StockLosses: 0,
+                SoldQuantity: 1, LostQuantity: 0, EstimatedResult: 8, MissingCostRows: 0 }
+        ] } : {}),
         Daily: [
             { ReportDay: '2026-09-01', CurrencyCod: 'PEN', Sales: 150, Purchases: profit ? 0 : 1000,
               Cost: profit ? 100 : 0, KnownResult: profit ? 50 : -850, MissingCostRows: 0, RowCount: 10 },
@@ -47,11 +54,15 @@ for (const report of [
         let service: jasmine.SpyObj<any>;
         let excel: jasmine.SpyObj<any>;
         let toastr: jasmine.SpyObj<any>;
-        let financialOverview: FinancialReportOverviewDto;
+        let financialOverview: ReturnType<typeof overview>;
 
         beforeEach(async () => {
             financialOverview = overview(report.name === 'Profit');
-            service = jasmine.createSpyObj('ReportService', ['find' + report.name, 'overview' + report.name, 'export' + report.name]);
+            service = jasmine.createSpyObj('ReportService', ['findDataForm', 'find' + report.name, 'overview' + report.name, 'export' + report.name]);
+            service.findDataForm.and.resolveTo({ ErrorStatus: false, DataAdditional: [
+                { Name: 'storeList', Data: [{ StoreCod: 'T001', Name: 'Local 1' }] },
+                { Name: 'currencyList', Data: [{ CurrencyCod: 'PEN', CurrencyName: 'Soles' }] }
+            ] });
             const page = Object.assign(new ResponsePageSearch(), {
                 Page: 1, TotalPages: 3, TotalResult: 26, StarResult: 1, EndResult: 10,
                 resultSearch: [{ OperationCod: 'S1', SourceType: 'SALE', TypeOperation: 'R', Quantity: 1, Amount: 150, Sales: 150,
@@ -174,6 +185,60 @@ for (const report of [
                 expect(fixture.nativeElement.textContent).toContain('2 siguen pendientes');
             });
         } else {
+            it('renders the four profitability indicators and switches them with the summary currency', async () => {
+                const fixture = await render();
+                const section: HTMLElement = fixture.nativeElement.querySelector('[aria-labelledby="profitability-title"]');
+                expect(section.textContent).toContain('Ventas netas');
+                expect(section.textContent).toContain('Costo de mercadería vendida');
+                expect(section.textContent).toContain('Pérdidas por bajas');
+                expect(section.textContent).toContain('Resultado comercial estimado');
+                expect(section.textContent).toContain('45.00');
+                expect(section.textContent).toContain('37.80');
+                expect(section.textContent).toContain('4.20');
+                expect(section.textContent).toContain('+3.00');
+                fixture.componentInstance.summaryCurrency = 'USD';
+                fixture.detectChanges();
+                expect(section.textContent).toContain('+8.00');
+                expect(section.textContent).not.toContain('45.00');
+            });
+
+            it('retains the applied product filter for pagination and export until a new query is submitted', async () => {
+                const fixture = await render();
+                const component = fixture.componentInstance;
+                const input: HTMLInputElement = fixture.nativeElement.querySelector('#report-product');
+                input.value = '  atún  ';
+                input.dispatchEvent(new Event('input'));
+                await fixture.whenStable();
+                await component.findAll(1, '');
+                expect(service.findPurchaseSales.calls.mostRecent().args[0].ProductQuery).toBe('atún');
+                expect(service.overviewPurchaseSales.calls.mostRecent().args[0].ProductQuery).toBe('atún');
+                component.filters.ProductQuery = 'otro producto';
+                const paginate = spyOn(component, 'findAll').and.callThrough();
+                component.filter(2);
+                await paginate.calls.mostRecent().returnValue;
+                expect(service.findPurchaseSales.calls.mostRecent().args[0].ProductQuery).toBe('atún');
+                await component.exportExcel();
+                expect(service.exportPurchaseSales.calls.mostRecent().args[0].ProductQuery).toBe('atún');
+                expect(excel.download.calls.mostRecent().args[1].ProductQuery).toBe('atún');
+                expect(excel.download.calls.mostRecent().args[3].Profitability).toBe(financialOverview.Profitability);
+                component.resetFilters();
+                expect(component.filters.ProductQuery).toBe('');
+            });
+
+            it('shows pending costs without presenting a numeric estimated result', async () => {
+                const fixture = await render();
+                const totals = financialOverview.Profitability![0];
+                totals.MissingCostRows = 1;
+                totals.CostOfGoodsSold = null;
+                totals.StockLosses = null;
+                totals.EstimatedResult = null;
+                fixture.detectChanges();
+                const section: HTMLElement = fixture.nativeElement.querySelector('[aria-labelledby="profitability-title"]');
+                expect(section.textContent).toContain('Pendiente');
+                expect(section.textContent).toContain('moneda de costo incompatible');
+                expect(section.textContent).not.toContain('+3.00');
+            });
+
             it('allows all stores and exposes transfers and both stock movement types', async () => {
                 const fixture = await render();
                 const component = fixture.componentInstance;

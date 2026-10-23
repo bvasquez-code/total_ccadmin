@@ -4,10 +4,12 @@ import { DataTablaGeneticDto } from '../../shared/model/dto/DataTablaGeneticDto'
 import { ReportRowDto } from '../model/dto/ReportRowDto';
 import { FinancialReportOverviewDto } from '../model/dto/FinancialReportOverviewDto';
 import { ReportFilterDto } from '../model/dto/ReportFilterDto';
+import { PurchaseSalesReportOverviewDto } from '../model/dto/PurchaseSalesReportOverviewDto';
 
 @Injectable({ providedIn: 'root' })
 export class ReportExcelService {
-    download(table: DataTablaGeneticDto<ReportRowDto>, filters: ReportFilterDto, description: string, overview?: FinancialReportOverviewDto): void {
+    download(table: DataTablaGeneticDto<ReportRowDto>, filters: ReportFilterDto, description: string,
+             overview?: FinancialReportOverviewDto & Partial<Pick<PurchaseSalesReportOverviewDto, 'Profitability'>>): void {
         const columns = table.Headers.filter(column => !!column.key && !column.ColumnAction);
         const values = table.DataTable.data.resultSearch.map(row => columns.map(column => {
             const value = row[column.key!];
@@ -26,6 +28,7 @@ export class ReportExcelService {
             ['Local', filters.StoreCod || 'Todas las tiendas'],
             ['Moneda', filters.CurrencyCod || 'Todas (sin conversión)'],
             ['Búsqueda', filters.Query],
+            ...(filters.ProductQuery ? [['Producto (código, nombre o variante)', filters.ProductQuery]] : []),
             ['Estado / tipo', filters.State || 'Todos'],
             ['Filas', table.DataTable.data.TotalResult]
         ]), 'Filtros');
@@ -56,6 +59,18 @@ export class ReportExcelService {
             ];
             XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(summaryRows), 'Resumen');
             XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(dailyRows), 'Evolución diaria');
+            if (overview.Profitability) {
+                XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+                    ['Moneda', 'Ventas netas', 'Costo de mercadería vendida', 'Pérdidas por bajas',
+                        'Resultado comercial estimado', 'Unidades base netas vendidas', 'Unidades base dadas de baja',
+                        'Asignaciones con costo pendiente o moneda incompatible'],
+                    ...overview.Profitability.map(item => [currencyLabel(item.CurrencyCod), item.NetSales,
+                        item.CostOfGoodsSold, item.StockLosses, item.EstimatedResult, item.SoldQuantity, item.LostQuantity,
+                        item.MissingCostRows]),
+                    [],
+                    ['Criterio', 'Movimientos trazados. Ventas netas menos costo vendido y bajas; no representa utilidad contable.']
+                ]), 'Rentabilidad de mercadería');
+            }
         }
         const filename = table.NameTable.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
             .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/-$/, '');

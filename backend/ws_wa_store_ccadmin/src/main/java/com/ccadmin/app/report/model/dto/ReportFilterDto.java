@@ -6,6 +6,7 @@ public class ReportFilterDto {
     public String StoreCod;
     public String CurrencyCod;
     public String Query;
+    public String ProductQuery;
     public String State;
     public int Page = 1;
 

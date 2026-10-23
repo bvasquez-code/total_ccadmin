@@ -3,7 +3,7 @@ package com.ccadmin.app.report.service;
 import com.ccadmin.app.report.model.constants.ReportConstants;
 import com.ccadmin.app.report.model.dto.ReportFilterDto;
 import com.ccadmin.app.report.model.dto.ReportSearchDto;
-import com.ccadmin.app.report.model.dto.FinancialReportOverviewDto;
+import com.ccadmin.app.report.model.dto.PurchaseSalesReportOverviewDto;
 import com.ccadmin.app.report.model.dto.PurchaseSalesReportDto;
 import com.ccadmin.app.report.model.idto.IPurchaseSalesReportDto;
 import com.ccadmin.app.report.repository.PurchaseSalesReportRepository;
@@ -29,9 +29,10 @@ public class PurchaseSalesReportSearchService extends SessionService {
         return toResponse(searchTService.findAll(search, ReportConstants.PAGE_SIZE));
     }
 
-    public FinancialReportOverviewDto overview(ReportFilterDto filters) {
+    public PurchaseSalesReportOverviewDto overview(ReportFilterDto filters) {
         ReportSearchDto search = ReportSearchDto.forPeriod(filters, getUserCod());
-        return new FinancialReportOverviewDto(purchaseSalesReportRepository.findDaily(search));
+        return new PurchaseSalesReportOverviewDto(purchaseSalesReportRepository.findDaily(search),
+                purchaseSalesReportRepository.findProfitability(search));
     }
 
     public ResponsePageSearchT<PurchaseSalesReportDto> export(ReportFilterDto filters) {

@@ -3,6 +3,7 @@ package com.ccadmin.app.report.repository;
 import com.ccadmin.app.sale.model.entity.SaleHeadEntity;
 import com.ccadmin.app.report.model.idto.IPurchaseSalesReportDto;
 import com.ccadmin.app.report.model.idto.IFinancialReportDayDto;
+import com.ccadmin.app.report.model.idto.IMerchandiseProfitabilityDto;
 import com.ccadmin.app.shared.interfaceccadmin.CcAdminRepository;
 import com.ccadmin.app.shared.model.dto.SearchDto;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,6 +20,9 @@ public interface PurchaseSalesReportRepository extends JpaRepository<SaleHeadEnt
             WITH movements AS (
                 SELECT trace.OperationCod, trace.SourceTable, trace.TypeOperation,
                        trace.OperationDate AS ReportDate, trace.StoreCod, trace.NumUnit,
+                       trace.NumTotalPriceCost AS TracedCost,
+            """ + ReportTraceCostSql.VERIFIED_CURRENCY + """
+                       AS CostCurrencyCod,
                        CASE trace.SourceTable
                            WHEN 'pucharse_head' THEN 'PURCHASE'
                            WHEN 'sale_head' THEN 'SALE'
@@ -28,7 +32,7 @@ public interface PurchaseSalesReportRepository extends JpaRepository<SaleHeadEnt
                            WHEN 'transfer_head' THEN 'TRANSFER'
                        END AS SourceType,
                        COALESCE(sale.CurrencyCod, creditNote.CurrencyCod, purchase.CurrencyCod,
-                                lotPurchase.CurrencyCod,
+                                costPurchase.CurrencyCod,
                                 (SELECT currency.CurrencyCod FROM currency currency
                                  WHERE currency.IsMonedaSystem = 'S' ORDER BY currency.CurrencyCod LIMIT 1),
                                 'UNKNOWN') AS CurrencyCod,
@@ -51,15 +55,12 @@ public interface PurchaseSalesReportRepository extends JpaRepository<SaleHeadEnt
                                                    AND stockExit.StockExitCod = trace.OperationCod
                 LEFT JOIN transfer_head transfer ON trace.SourceTable = 'transfer_head'
                                                  AND transfer.TransferCod = trace.OperationCod
-                LEFT JOIN product_traceability lotOrigin ON lotOrigin.ProductTraceabilityID = (
-                    SELECT MIN(root.ProductTraceabilityID) FROM product_traceability root
-                    WHERE root.TechnicalLot = trace.TechnicalLot AND root.OriginProductTraceabilityID IS NULL
-                      AND root.Status = 'A'
-                )
-                LEFT JOIN pucharse_head lotPurchase ON lotOrigin.SourceTable = 'pucharse_head'
-                                                   AND lotPurchase.PucharseCod = lotOrigin.OperationCod
+            """ + ReportTraceCostSql.ORIGIN_JOINS + """
+                LEFT JOIN product product ON product.ProductCod = trace.ProductCod
                 WHERE trace.Status = 'A'
                   AND (:#{#search.StoreCod} = '' OR trace.StoreCod = :#{#search.StoreCod})
+                  AND CONCAT_WS(' ', trace.ProductCod, product.ProductName, trace.Variant)
+                      LIKE :#{#search.ProductQuery} ESCAPE '!'
                   AND trace.TypeOperation IN ('S', 'R')
                   AND trace.SourceTable IN ('pucharse_head', 'sale_head', 'credit_note_head',
                                             'stock_entry_head', 'stock_exit_head', 'transfer_head')
@@ -70,7 +71,25 @@ public interface PurchaseSalesReportRepository extends JpaRepository<SaleHeadEnt
                 SELECT SourceType, SourceTable, OperationCod, TypeOperation, MIN(ReportDate) AS ReportDate,
                        StoreCod, CurrencyCod, PartnerCod, Reference, SUM(NumUnit) AS Quantity,
                        SUM(CASE WHEN TypeOperation = 'R' THEN Amount ELSE 0 END) AS Sales,
-                       SUM(CASE WHEN TypeOperation = 'S' THEN Amount ELSE 0 END) AS Purchases
+                       SUM(CASE WHEN TypeOperation = 'S' THEN Amount ELSE 0 END) AS Purchases,
+                       SUM(CASE WHEN SourceType = 'SALE' AND TypeOperation = 'R' THEN Amount
+                                WHEN SourceType = 'CREDIT_NOTE' AND TypeOperation = 'S' THEN -Amount
+                                ELSE 0 END) AS NetSales,
+                       SUM(CASE WHEN SourceType = 'SALE' AND TypeOperation = 'R' THEN TracedCost
+                                WHEN SourceType = 'CREDIT_NOTE' AND TypeOperation = 'S' THEN -TracedCost
+                                ELSE 0 END) AS CostOfGoodsSold,
+                       SUM(CASE WHEN SourceType IN ('STOCK_EXIT', 'CREDIT_NOTE') AND TypeOperation = 'R'
+                                THEN TracedCost ELSE 0 END) AS StockLosses,
+                       SUM(CASE WHEN SourceType = 'SALE' AND TypeOperation = 'R' THEN NumUnit
+                                WHEN SourceType = 'CREDIT_NOTE' AND TypeOperation = 'S' THEN -NumUnit
+                                ELSE 0 END) AS SoldQuantity,
+                       SUM(CASE WHEN SourceType IN ('STOCK_EXIT', 'CREDIT_NOTE') AND TypeOperation = 'R'
+                                THEN NumUnit ELSE 0 END) AS LostQuantity,
+                       SUM(CASE WHEN (SourceType IN ('SALE', 'CREDIT_NOTE') OR
+                                             (SourceType = 'STOCK_EXIT' AND TypeOperation = 'R'))
+                                      AND (TracedCost IS NULL OR CostCurrencyCod IS NULL OR CostCurrencyCod <> CurrencyCod
+                                           OR CostCurrencyCod = 'UNKNOWN')
+                                THEN 1 ELSE 0 END) AS MissingCommercialCostRows
                 FROM movements
                 WHERE (:#{#search.CurrencyCod} = '' OR CurrencyCod = :#{#search.CurrencyCod})
                   AND (:#{#search.State} = '' OR SourceType = :#{#search.State})
@@ -104,4 +123,15 @@ public interface PurchaseSalesReportRepository extends JpaRepository<SaleHeadEnt
             ORDER BY ReportDay, CurrencyCod
             """, nativeQuery = true)
     List<IFinancialReportDayDto> findDaily(@Param("search") SearchDto search);
+
+    @Query(value = REPORT_ROWS + """
+            SELECT CurrencyCod, SUM(NetSales) AS NetSales, SUM(CostOfGoodsSold) AS CostOfGoodsSold,
+                   SUM(StockLosses) AS StockLosses, SUM(SoldQuantity) AS SoldQuantity,
+                   SUM(LostQuantity) AS LostQuantity,
+                   SUM(MissingCommercialCostRows) AS MissingCostRows
+            FROM report_rows
+            GROUP BY CurrencyCod
+            ORDER BY CurrencyCod
+            """, nativeQuery = true)
+    List<IMerchandiseProfitabilityDto> findProfitability(@Param("search") SearchDto search);
 }

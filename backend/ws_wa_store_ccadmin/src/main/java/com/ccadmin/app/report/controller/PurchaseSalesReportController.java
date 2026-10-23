@@ -26,11 +26,13 @@ public class PurchaseSalesReportController {
             @RequestParam(name = "StoreCod", defaultValue = "") String storeCod,
             @RequestParam(name = "CurrencyCod", defaultValue = "") String currencyCod,
             @RequestParam(name = "Query", defaultValue = "") String query,
+            @RequestParam(name = "ProductQuery", defaultValue = "") String productQuery,
             @RequestParam(name = "State", defaultValue = "") String state,
             @RequestParam(name = "Page", defaultValue = "1") int page
     ) {
         try {
             ReportFilterDto filters = new ReportFilterDto(dateFrom, dateTo, storeCod, currencyCod, query, state, page);
+            filters.ProductQuery = productQuery;
             return ResponseEntity.ok(new ResponseWsDto(purchaseSalesReportSearchService.findAll(filters)));
         } catch (IllegalArgumentException exception) {
             return new ResponseEntity<>(new ResponseWsDto(exception), HttpStatus.BAD_REQUEST);
@@ -49,11 +51,13 @@ public class PurchaseSalesReportController {
             @RequestParam(name = "StoreCod", defaultValue = "") String storeCod,
             @RequestParam(name = "CurrencyCod", defaultValue = "") String currencyCod,
             @RequestParam(name = "Query", defaultValue = "") String query,
+            @RequestParam(name = "ProductQuery", defaultValue = "") String productQuery,
             @RequestParam(name = "State", defaultValue = "") String state,
             @RequestParam(name = "Page", defaultValue = "1") int page
     ) {
         try {
             ReportFilterDto filters = new ReportFilterDto(dateFrom, dateTo, storeCod, currencyCod, query, state, page);
+            filters.ProductQuery = productQuery;
             return ResponseEntity.ok(new ResponseWsDto(purchaseSalesReportSearchService.overview(filters)));
         } catch (IllegalArgumentException exception) {
             return new ResponseEntity<>(new ResponseWsDto(exception), HttpStatus.BAD_REQUEST);
@@ -72,11 +76,13 @@ public class PurchaseSalesReportController {
             @RequestParam(name = "StoreCod", defaultValue = "") String storeCod,
             @RequestParam(name = "CurrencyCod", defaultValue = "") String currencyCod,
             @RequestParam(name = "Query", defaultValue = "") String query,
+            @RequestParam(name = "ProductQuery", defaultValue = "") String productQuery,
             @RequestParam(name = "State", defaultValue = "") String state,
             @RequestParam(name = "Page", defaultValue = "1") int page
     ) {
         try {
             ReportFilterDto filters = new ReportFilterDto(dateFrom, dateTo, storeCod, currencyCod, query, state, page);
+            filters.ProductQuery = productQuery;
             return ResponseEntity.ok(new ResponseWsDto(purchaseSalesReportSearchService.export(filters)));
         } catch (IllegalArgumentException exception) {
             return new ResponseEntity<>(new ResponseWsDto(exception), HttpStatus.BAD_REQUEST);

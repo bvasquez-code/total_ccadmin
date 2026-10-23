@@ -63,6 +63,11 @@
                   <option value="TRANSFER">Transferencias</option><option value="STOCK_ENTRY">Entradas de stock</option><option value="STOCK_EXIT">Salidas de stock</option>
                 </select>
               </div>
+              <div class="col-md-3 mb-3">
+                <label for="report-product">Producto</label>
+                <input id="report-product" name="productQuery" class="form-control" maxlength="128" [(ngModel)]="filters.ProductQuery"
+                       placeholder="Código, nombre o variante">
+              </div>
               <div class="col-md-6 mb-3">
                 <label for="report-query">Buscar</label>
                 <input id="report-query" name="query" class="form-control" maxlength="128" [(ngModel)]="filters.Query"
@@ -86,7 +91,7 @@
 
     <div class="alert alert-danger" role="alert" *ngIf="errorMessage">{{ errorMessage }}</div>
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-3" *ngIf="appliedFilters">
-      <span class="text-grey-d1">{{ appliedStoreName }} · Del {{ appliedFilters.DateFrom | date:'dd/MM/yyyy' }} al {{ appliedFilters.DateTo | date:'dd/MM/yyyy' }} · Todos los resultados del filtro</span>
+      <span class="text-grey-d1">{{ appliedStoreName }} · Del {{ appliedFilters.DateFrom | date:'dd/MM/yyyy' }} al {{ appliedFilters.DateTo | date:'dd/MM/yyyy' }} · {{ appliedFilters.ProductQuery ? 'Producto: ' + appliedFilters.ProductQuery : 'Todos los productos' }} · Todos los resultados del filtro</span>
       <div *ngIf="overviewData?.Summary?.length">
         <label for="summary-currency" class="mr-2 mb-0">Resumen y gráfico en</label>
         <select id="summary-currency" class="custom-select w-auto" [(ngModel)]="summaryCurrency"
@@ -120,6 +125,43 @@
           </div></div>
         </div>
       </div>
+      <section class="card dcard mb-3" aria-labelledby="profitability-title" *ngIf="profitability as profitabilityTotals">
+        <div class="card-body">
+          <h2 id="profitability-title" class="text-110 mb-3">RENTABILIDAD DE MERCADERÍA · {{ currencyLabel(profitabilityTotals.CurrencyCod) }}</h2>
+          <div class="row" aria-live="polite">
+            <div class="col-md-6 mb-3">
+              <div class="p-3">
+                <div class="text-grey-d1">Ventas netas</div>
+                <div class="financial-value font-weight-bold">{{ profitabilityTotals.NetSales | number:'1.2-2' }}</div>
+                <div class="text-grey-d1">Descontando notas de crédito trazadas</div>
+              </div>
+            </div>
+            <div class="col-md-6 mb-3">
+              <div class="p-3">
+                <div class="text-grey-d1">Costo de mercadería vendida</div>
+                <div class="financial-value font-weight-bold">{{ profitabilityTotals.CostOfGoodsSold === null ? 'Pendiente' : (profitabilityTotals.CostOfGoodsSold | number:'1.2-2') }}</div>
+                <div class="text-grey-d1">{{ profitabilityTotals.SoldQuantity | number:'1.0-2' }} unidades base netas vendidas</div>
+              </div>
+            </div>
+            <div class="col-md-6 mb-3">
+              <div class="p-3">
+                <div class="text-grey-d1">Pérdidas por bajas</div>
+                <div class="financial-value font-weight-bold text-danger">{{ profitabilityTotals.StockLosses !== null && profitabilityTotals.StockLosses > 0 ? '−' : '' }}{{ profitabilityTotals.StockLosses === null ? 'Pendiente' : (profitabilityTotals.StockLosses | number:'1.2-2') }}</div>
+                <div class="text-grey-d1">{{ profitabilityTotals.LostQuantity | number:'1.0-2' }} unidades base dadas de baja o rechazadas en devoluciones</div>
+              </div>
+            </div>
+            <div class="col-md-6 mb-3">
+              <div class="p-3 rounded h-100" [ngClass]="profitabilityTotals.EstimatedResult === null ? 'bgc-secondary-l4' : profitabilityTotals.EstimatedResult >= 0 ? 'bgc-success-l5 border-1 brc-success-l2' : 'bgc-danger-l5 border-1 brc-danger-l2'">
+                <div class="text-grey-d1">Resultado comercial estimado</div>
+                <div class="financial-value font-weight-bold" [ngClass]="profitabilityTotals.EstimatedResult === null ? 'text-grey-d1' : profitabilityTotals.EstimatedResult >= 0 ? 'text-success' : 'text-danger'">{{ profitabilityTotals.EstimatedResult !== null && profitabilityTotals.EstimatedResult > 0 ? '+' : '' }}{{ profitabilityTotals.EstimatedResult === null ? 'Pendiente' : (profitabilityTotals.EstimatedResult | number:'1.2-2') }}</div>
+                <div class="text-grey-d1">Después de bajas de inventario</div>
+              </div>
+            </div>
+          </div>
+          <p class="text-warning-d2" *ngIf="profitabilityTotals.MissingCostRows">Hay {{ profitabilityTotals.MissingCostRows }} asignaciones sin costo o con moneda de costo incompatible. No se calcula el resultado comercial hasta verificarlas.</p>
+          <p class="text-90 text-grey-d1 mb-0">Ventas netas menos costo vendido y pérdidas por bajas, según la trazabilidad disponible. Excluye compras, transferencias y entradas de stock del cálculo comercial. No representa utilidad contable.</p>
+        </div>
+      </section>
       <div class="card dcard mb-3" *ngIf="trend as chart">
         <div class="card-body">
           <div class="d-flex flex-wrap justify-content-between align-items-center mb-2">

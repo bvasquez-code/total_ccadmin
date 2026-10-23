@@ -61,6 +61,16 @@ class ReportSearchDtoTest {
         assertThrows(IllegalArgumentException.class, () -> ReportSearchDto.forPeriod(filters, "U001"));
     }
 
+    @Test
+    void productFilterIsOptionalTrimsAndEscapesLiteralWildcards() {
+        var filters = filters();
+        assertEquals("%%", ReportSearchDto.forPeriod(filters, "U001").ProductQuery);
+        filters.ProductQuery = "  atún_10%!  ";
+        assertEquals("%atún!_10!%!!%", ReportSearchDto.forPeriod(filters, "U001").ProductQuery);
+        filters.ProductQuery = "x".repeat(129);
+        assertThrows(IllegalArgumentException.class, () -> ReportSearchDto.forPeriod(filters, "U001"));
+    }
+
     private ReportFilterDto filters() {
         return new ReportFilterDto("2026-09-01", "2026-09-30", "", "", "", "", 1);
     }

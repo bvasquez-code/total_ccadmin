@@ -7,7 +7,8 @@ import { ActionTableService } from '../../../shared/interface/ActionTableService
 import { DataTablaGeneticDto } from '../../../shared/model/dto/DataTablaGeneticDto';
 import { ResponsePageSearch } from '../../../shared/model/dto/ResponsePageSearch';
 import { CurrencyEntity } from '../../../shared/model/entity/CurrencyEntity';
-import { FinancialReportOverviewDto, FinancialReportSummaryDto } from '../../model/dto/FinancialReportOverviewDto';
+import { FinancialReportSummaryDto } from '../../model/dto/FinancialReportOverviewDto';
+import { MerchandiseProfitabilityDto, PurchaseSalesReportOverviewDto } from '../../model/dto/PurchaseSalesReportOverviewDto';
 import { ReportPeriodDto } from '../../model/dto/ReportPeriodDto';
 import { ReportTrendDto } from '../../model/dto/ReportTrendDto';
 import { ReportRowDto } from '../../model/dto/ReportRowDto';
@@ -26,13 +27,17 @@ export class PurchaseSalesReportComponent implements OnInit, OnDestroy, ActionTa
     period = new ReportPeriodDto();
     readonly months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    overviewData?: FinancialReportOverviewDto;
+    overviewData?: PurchaseSalesReportOverviewDto;
     summaryCurrency = '';
     cumulative = true;
     trend?: ReportTrendDto;
 
     get summary(): FinancialReportSummaryDto | undefined {
         return this.overviewData?.Summary.find(item => item.CurrencyCod === this.summaryCurrency);
+    }
+
+    get profitability(): MerchandiseProfitabilityDto | undefined {
+        return this.overviewData?.Profitability?.find(item => item.CurrencyCod === this.summaryCurrency);
     }
 
     get appliedStoreName(): string {
@@ -127,7 +132,8 @@ export class PurchaseSalesReportComponent implements OnInit, OnDestroy, ActionTa
 
     async findAll(Page: number, Query: string, filters: ReportFilterDto = this.filters): Promise<void> {
         if (Page < 1 || this.exporting || this.destroyed) return;
-        const search = Object.assign(new ReportFilterDto(), filters, { Page, Query: Query.trim() });
+        const search = Object.assign(new ReportFilterDto(), filters,
+            { Page, Query: Query.trim(), ProductQuery: (filters.ProductQuery || '').trim() });
         try {
             if (filters === this.filters) {
                 this.period.apply(search);

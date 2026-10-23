@@ -52,31 +52,29 @@ public interface ProfitReportRepository extends JpaRepository<SaleHeadEntity, St
                 WHERE o.ReportDate >= :#{#search.DateFrom} AND o.ReportDate < :#{#search.DateTo}
                   AND CONCAT_WS(' ', o.OperationCod, o.ProductCod, pr.ProductName, o.Variant)
                       LIKE :#{#search.Query} ESCAPE '!'
+            ), trace_allocations AS (
+                SELECT trace.*,
+            """ + ReportTraceCostSql.VERIFIED_CURRENCY + """
+                       AS CostCurrencyCod
+                FROM product_traceability trace
+                JOIN movements m ON m.SourceTable = trace.SourceTable AND m.OperationCod = trace.OperationCod
+                     AND m.ItemNumber = trace.ItemNumber AND m.StoreCod = trace.StoreCod
+                     AND m.ProductCod = trace.ProductCod AND m.Variant = trace.Variant
+            """ + ReportTraceCostSql.ORIGIN_JOINS + """
+                WHERE trace.Status = 'A' AND (
+                    (trace.SourceTable = 'sale_head' AND trace.TypeOperation = 'R')
+                    OR (trace.SourceTable = 'credit_note_head' AND trace.TypeOperation IN ('S', 'R'))
+                )
             ), trace_cost AS (
                 SELECT t.SourceTable, t.OperationCod, t.ItemNumber, t.ProductCod, t.Variant, t.StoreCod,
                        SUM(CASE WHEN t.SourceTable = 'credit_note_head' AND t.TypeOperation = 'R'
                                 THEN -t.NumUnit ELSE t.NumUnit END) AS CostQuantity,
                        SUM(CASE WHEN t.SourceTable = 'credit_note_head' AND t.TypeOperation = 'R'
                                 THEN -t.NumTotalPriceCost ELSE t.NumTotalPriceCost END) AS Cost,
-                       MIN(purchase.CurrencyCod) AS MinCurrency, MAX(purchase.CurrencyCod) AS MaxCurrency,
-                       SUM(CASE WHEN purchase.CurrencyCod IS NULL OR purchase.CurrencyCod = ''
+                       MIN(t.CostCurrencyCod) AS MinCurrency, MAX(t.CostCurrencyCod) AS MaxCurrency,
+                       SUM(CASE WHEN t.CostCurrencyCod IS NULL OR t.CostCurrencyCod = ''
                                 THEN 1 ELSE 0 END) AS UnverifiedAllocations
-                FROM product_traceability t
-                JOIN movements m ON m.SourceTable = t.SourceTable AND m.OperationCod = t.OperationCod
-                     AND m.ItemNumber = t.ItemNumber AND m.StoreCod = t.StoreCod
-                     AND m.ProductCod = t.ProductCod AND m.Variant = t.Variant
-                LEFT JOIN product_traceability origin ON origin.ProductTraceabilityID = (
-                    SELECT MIN(root.ProductTraceabilityID) FROM product_traceability root
-                    WHERE root.TechnicalLot = t.TechnicalLot AND root.OriginProductTraceabilityID IS NULL
-                      AND root.Status = 'A'
-                )
-                LEFT JOIN pucharse_head purchase ON origin.SourceTable = 'pucharse_head'
-                     AND purchase.PucharseCod = origin.OperationCod AND purchase.Status = 'A'
-                     AND purchase.PurchaseStatus = 'F'
-                WHERE t.Status = 'A' AND (
-                    (t.SourceTable = 'sale_head' AND t.TypeOperation = 'R')
-                    OR (t.SourceTable = 'credit_note_head' AND t.TypeOperation IN ('S', 'R'))
-                )
+                FROM trace_allocations t
                 GROUP BY t.SourceTable, t.OperationCod, t.ItemNumber, t.ProductCod, t.Variant, t.StoreCod
             ), priced AS (
                 SELECT m.*,

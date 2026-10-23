@@ -15,18 +15,22 @@ public class ReportSearchDto extends SearchDto {
     public String CurrencyCod;
     public String State;
     public String UserCod;
+    public String ProductQuery;
 
     private ReportSearchDto(ReportFilterDto filters, String userCod) {
         if (filters == null) {
             throw new IllegalArgumentException("Los filtros son obligatorios");
         }
         String query = normalize(filters.Query);
+        String productQuery = normalize(filters.ProductQuery);
         CurrencyCod = normalize(filters.CurrencyCod);
         if (filters.Page < 1 || query.length() > ReportConstants.MAX_QUERY_LENGTH
-                || CurrencyCod.length() > ReportConstants.MAX_CURRENCY_LENGTH) {
+                || CurrencyCod.length() > ReportConstants.MAX_CURRENCY_LENGTH
+                || productQuery.length() > ReportConstants.MAX_QUERY_LENGTH) {
             throw new IllegalArgumentException("Página o filtros no válidos");
         }
-        Query = "%" + query.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
+        Query = containsPattern(query);
+        ProductQuery = containsPattern(productQuery);
         Page = filters.Page;
         StoreCod = normalize(filters.StoreCod);
         State = normalize(filters.State);
@@ -59,5 +63,9 @@ public class ReportSearchDto extends SearchDto {
 
     private static String normalize(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private static String containsPattern(String value) {
+        return "%" + value.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
     }
 }

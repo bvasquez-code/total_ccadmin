@@ -130,8 +130,13 @@ fixture_currency AS (
     UNION ALL SELECT 'USD', 'N'
 ),
 fixture_stock_entry_head AS (
-    SELECT 'E1' AS StockEntryCod, 'OPENING' AS ReasonCode
-    UNION ALL SELECT 'E2', 'ADJUSTMENT'
+    SELECT 'E1' AS StockEntryCod, 'OPENING' AS ReasonCode, 'A' AS Status, 'C' AS ProcessStatus
+    UNION ALL SELECT 'E2', 'ADJUSTMENT', 'A', 'C'
+),
+fixture_stock_entry_det AS (
+    SELECT 'E1' AS StockEntryCod, 1 AS ItemNumber, 'P1' AS ProductCod, '0000' AS Variant,
+           110 AS NumUnitPrice, 'A' AS Status
+    UNION ALL SELECT 'E2', 1, 'P1', '0000', 110, 'A'
 ),
 fixture_stock_exit_head AS (
     SELECT 'X1' AS StockExitCod, 'ADJUSTMENT' AS ReasonCode

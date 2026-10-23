@@ -6,6 +6,7 @@ export class ReportFilterDto {
     public StoreCod: string = '';
     public CurrencyCod: string = '';
     public Query: string = '';
+    public ProductQuery: string = '';
     public State: string = '';
     public Page: number = 1;
 
@@ -22,6 +23,7 @@ export class ReportFilterDto {
 
     static validate(filters: ReportFilterDto, usesDates: boolean = true): void {
         ValidationHelper.validLengthString(filters.Query, 128, 'La búsqueda admite hasta 128 caracteres');
+        ValidationHelper.validLengthString(filters.ProductQuery, 128, 'El filtro de producto admite hasta 128 caracteres');
         if (usesDates) {
             ValidationHelper.validateIsNotEmpty(filters.DateFrom, 'Ingrese la fecha inicial');
             ValidationHelper.validateIsNotEmpty(filters.DateTo, 'Ingrese la fecha final');

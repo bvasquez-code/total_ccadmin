@@ -21,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ReportRepositoryMySqlTest {
     private static final List<Class<?>> REPOSITORIES = List.of(PurchaseSalesReportRepository.class, SalesReportRepository.class, SoldProductsReportRepository.class, StockReportRepository.class, PaymentMethodsReportRepository.class, DocumentsReportRepository.class, ClientsReportRepository.class, OrdersReportRepository.class, CreditNotesReportRepository.class, ProfitReportRepository.class);
-    private static final List<String> TABLES = List.of("kardex", "user_store", "store", "person", "client", "product", "sale_head", "sale_det", "product_info", "product_config", "payment_method", "cash_session", "sale_payments", "trx_payments", "sale_document", "credit_note_head", "credit_note_det", "credit_note_document", "presale_head", "presale_channel", "sale_delivery", "pucharse_head", "product_traceability", "currency", "stock_entry_head", "stock_exit_head", "transfer_head");
+    private static final List<String> TABLES = List.of("kardex", "user_store", "store", "person", "client", "product", "sale_head", "sale_det", "product_info", "product_config", "payment_method", "cash_session", "sale_payments", "trx_payments", "sale_document", "credit_note_head", "credit_note_det", "credit_note_document", "presale_head", "presale_channel", "sale_delivery", "pucharse_head", "product_traceability", "currency", "stock_entry_head", "stock_entry_det", "stock_exit_head", "transfer_head");
     private Connection connection;
     private NamedParameterJdbcTemplate jdbc;
     private String fixtures;
@@ -215,6 +215,100 @@ class ReportRepositoryMySqlTest {
 
 
     @Test
+    void pricedInitialStockVerifiesSalesAndReturnsInSystemCurrencyAcrossBothReports() {
+        String original = fixtures;
+        try {
+            fixtures = initialStockFixtures(original);
+            var rows = rows(ProfitReportRepository.class, "");
+            var sale = rows.stream().filter(row -> "S1".equals(row.get("OperationCod"))
+                    && "P1".equals(row.get("ProductCod"))).findFirst().orElseThrow();
+            assertMoney("40", sale.get("Cost"));
+            assertMoney("78", sale.get("Profit"));
+            assertEquals("COMPLETE", sale.get("CostStatus"));
+            var note = rows.stream().filter(row -> "N1".equals(row.get("OperationCod"))).findFirst().orElseThrow();
+            assertMoney("-20", note.get("Cost"));
+            var usd = rows.stream().filter(row -> "S2".equals(row.get("OperationCod"))).findFirst().orElseThrow();
+            assertNull(usd.get("Cost"));
+            assertEquals(2, count(ProfitReportRepository.class, "COMPLETE"));
+            assertMoney("39", sum(daily(ProfitReportRepository.class, parameters("")), "PEN", "KnownResult"));
+            assertMoney("0", sum(profitability(parameters("")), "PEN", "MissingCostRows"));
+        } finally { fixtures = original; }
+    }
+
+    @Test
+    void initialStockWithoutDocumentedPriceStaysPendingEvenWhenTraceHasAnInferredCost() {
+        String original = fixtures;
+        try {
+            fixtures = initialStockFixtures(original).replace("110 AS NumUnitPrice", "0 AS NumUnitPrice");
+            assertInitialStockCostIsPending();
+            assertMoney("4", sum(profitability(parameters("")), "PEN", "MissingCostRows"));
+            fixtures = initialStockFixtures(original).replace("200.00 AS `NumTotalPriceCost`", "0.00 AS `NumTotalPriceCost`");
+            assertInitialStockCostIsPending();
+        } finally { fixtures = original; }
+    }
+
+    @Test
+    void initialStockWithoutASingleSystemCurrencyOrConfirmedSourceStaysPending() {
+        String original = fixtures;
+        try {
+            fixtures = initialStockFixtures(original).replace("'S' AS IsMonedaSystem", "'N' AS IsMonedaSystem");
+            assertInitialStockCostIsPending();
+            fixtures = initialStockFixtures(original).replace("UNION ALL SELECT 'USD', 'N'", "UNION ALL SELECT 'USD', 'S'");
+            assertInitialStockCostIsPending();
+            fixtures = initialStockFixtures(original).replace("'C' AS ProcessStatus", "'P' AS ProcessStatus");
+            assertInitialStockCostIsPending();
+        } finally { fixtures = original; }
+    }
+
+    @Test
+    void aSaleCombiningPricedAndUnpricedInitialStockDoesNotVerifyOnlyThePricedAllocations() {
+        String original = fixtures;
+        try {
+            fixtures = initialStockFixtures(original)
+                    .replace("SELECT 3.00 AS `ProductTraceabilityID`, 'LT1' AS `TechnicalLot`, 1.00 AS `OriginProductTraceabilityID`",
+                            "SELECT 3.00 AS `ProductTraceabilityID`, 'LTE2' AS `TechnicalLot`, 16.00 AS `OriginProductTraceabilityID`")
+                    .replace("UNION ALL SELECT 'E2', 1, 'P1', '0000', 110, 'A'",
+                            "UNION ALL SELECT 'E2', 1, 'P1', '0000', 0, 'A'");
+            assertInitialStockCostIsPending();
+        } finally { fixtures = original; }
+    }
+
+    @Test
+    void initialStockReturnsRecoverOnlyAcceptedUnitsAndKeepUnresolvedReturnsPending() {
+        String original = fixtures;
+        try {
+            fixtures = initialStockFixtures(original).replace("'S' AS `TypeOperation`, 'P1' AS `ProductCod`, '0000' AS `Variant`, 'T001' AS `StoreCod`, 1.00 AS `NumUnit`, 20.00 AS `NumTotalPriceCost`",
+                    "'S' AS `TypeOperation`, 'P1' AS `ProductCod`, '0000' AS `Variant`, 'T001' AS `StoreCod`, 2.00 AS `NumUnit`, 40.00 AS `NumTotalPriceCost`");
+            int end = fixtures.lastIndexOf(')');
+            fixtures = fixtures.substring(0, end)
+                    + " UNION ALL SELECT 999, 'LT1', 4, 'N1', 1, 'credit_note_head', 'R', 'P1', '0000', 'T001', 1, 20, 'A', 0, '2026-09-18 12:00:00' "
+                    + fixtures.substring(end);
+            var note = rows(ProfitReportRepository.class, "").stream()
+                    .filter(row -> "N1".equals(row.get("OperationCod"))).findFirst().orElseThrow();
+            assertMoney("-20", note.get("Cost"));
+            assertMoney("-39", note.get("Profit"));
+            fixtures = fixtures.replace("'S' AS `IsStockReturned`", "'N' AS `IsStockReturned`");
+            note = rows(ProfitReportRepository.class, "").stream()
+                    .filter(row -> "N1".equals(row.get("OperationCod"))).findFirst().orElseThrow();
+            assertNull(note.get("Cost"));
+        } finally { fixtures = original; }
+    }
+
+    private String initialStockFixtures(String original) {
+        return original.replace("'B1' AS `OperationCod`", "'E1' AS `OperationCod`")
+                .replace("'pucharse_head' AS `SourceTable`", "'stock_entry_head' AS `SourceTable`");
+    }
+
+    private void assertInitialStockCostIsPending() {
+        var sale = rows(ProfitReportRepository.class, "").stream()
+                .filter(row -> "S1".equals(row.get("OperationCod")) && "P1".equals(row.get("ProductCod")))
+                .findFirst().orElseThrow();
+        assertNull(sale.get("Cost"));
+        assertNull(sale.get("Profit"));
+        assertEquals("MISSING", sale.get("CostStatus"));
+    }
+
+    @Test
     void menuScriptIsRerunnableAndRegistersExactlyTenChildren() throws Exception {
         connection.setReadOnly(false);
         try {
@@ -269,12 +363,18 @@ class ReportRepositoryMySqlTest {
             assertNull(pen.Result);
             assertNull(pen.Margin);
             assertEquals("2026-09-01", profit.Daily.getFirst().ReportDay);
-            var comparison = new com.ccadmin.app.report.model.dto.FinancialReportOverviewDto(
-                    factory.getRepository(PurchaseSalesReportRepository.class).findDaily(search));
+            var comparisonRepository = factory.getRepository(PurchaseSalesReportRepository.class);
+            var comparison = new com.ccadmin.app.report.model.dto.PurchaseSalesReportOverviewDto(
+                    comparisonRepository.findDaily(search), comparisonRepository.findProfitability(search));
             pen = comparison.Summary.stream().filter(row -> "PEN".equals(row.CurrencyCod)).findFirst().orElseThrow();
             assertMoney("-461", pen.Result);
             assertMoney("1039", pen.Purchases);
             assertEquals(0, pen.MissingCostRows);
+            var commercialPen = comparison.Profitability.stream().filter(row -> "PEN".equals(row.CurrencyCod)).findFirst().orElseThrow();
+            assertMoney("-401", commercialPen.EstimatedResult);
+            var commercialUsd = comparison.Profitability.stream().filter(row -> "USD".equals(row.CurrencyCod)).findFirst().orElseThrow();
+            assertEquals(1, commercialUsd.MissingCostRows);
+            assertNull(commercialUsd.EstimatedResult);
         }
     }
 
@@ -462,6 +562,75 @@ class ReportRepositoryMySqlTest {
         assertMoney("-40", sum(daily(PurchaseSalesReportRepository.class, params), "PEN", "KnownResult"));
     }
 
+    @Test
+    void productFilterRestrictsAllocationsBeforeGroupingAndAppliesToEveryReportView() {
+        var params = parameters("");
+        params.put("ProductQuery", "%Producto dos%");
+        var detail = execute(PurchaseSalesReportRepository.class, false, params);
+        assertEquals(1, detail.size());
+        assertEquals("B2", detail.getFirst().get("OperationCod"));
+        assertMoney("5", detail.getFirst().get("Quantity"));
+        assertMoney("300", detail.getFirst().get("Purchases"));
+        assertMoney("-300", sum(daily(PurchaseSalesReportRepository.class, params), "PEN", "KnownResult"));
+        var profitability = profitability(params);
+        assertMoney("0", sum(profitability, "PEN", "NetSales"));
+        assertMoney("0", sum(profitability, "PEN", "StockLosses"));
+        params.put("ProductQuery", "%P1%");
+        assertMoney("59", sum(profitability(params), "PEN", "NetSales"));
+        params.put("ProductQuery", "%NO-SUCH-PRODUCT%");
+        assertTrue(execute(PurchaseSalesReportRepository.class, false, params).isEmpty());
+        assertTrue(daily(PurchaseSalesReportRepository.class, params).isEmpty());
+        assertTrue(profitability(params).isEmpty());
+    }
+
+    @Test
+    void profitabilitySeparatesCommercialAmountsFromPurchasesTransfersAndStockEntries() {
+        var params = parameters("");
+        params.put("Limit", 1);
+        var totals = profitability(params);
+        assertMoney("59", sum(totals, "PEN", "NetSales"));
+        assertMoney("20", sum(totals, "PEN", "CostOfGoodsSold"));
+        assertMoney("440", sum(totals, "PEN", "StockLosses"));
+        assertMoney("1", sum(totals, "PEN", "SoldQuantity"));
+        assertMoney("4", sum(totals, "PEN", "LostQuantity"));
+        assertMoney("118", sum(totals, "USD", "NetSales"));
+        params.put("State", "TRANSFER");
+        assertMoney("0", sum(profitability(params), "PEN", "NetSales"));
+        assertMoney("0", sum(profitability(params), "PEN", "StockLosses"));
+        params.put("State", "");
+        params.put("Query", "%X1%");
+        assertMoney("440", sum(profitability(params), "PEN", "StockLosses"));
+        params.put("CurrencyCod", "USD");
+        assertTrue(profitability(params).isEmpty());
+    }
+
+    @Test
+    void rejectedReturnsAreLossesWithoutDiscountingTheCreditNoteTwice() {
+        String original = fixtures;
+        try {
+            int end = fixtures.lastIndexOf(')');
+            fixtures = fixtures.substring(0, end)
+                    + " UNION ALL SELECT 999, 'LT1', 4, 'N1', 1, 'credit_note_head', 'R', 'P1', '0000', 'T001', 1, 20, 'A', 0, '2026-09-18 12:00:00' "
+                    + fixtures.substring(end);
+            var params = parameters("CREDIT_NOTE");
+            var totals = profitability(params);
+            assertMoney("-59", sum(totals, "PEN", "NetSales"));
+            assertMoney("-20", sum(totals, "PEN", "CostOfGoodsSold"));
+            assertMoney("20", sum(totals, "PEN", "StockLosses"));
+            assertMoney("1", sum(totals, "PEN", "LostQuantity"));
+        } finally { fixtures = original; }
+    }
+
+    private List<Map<String, Object>> profitability(Map<String, Object> parameters) {
+        try {
+            return executeSql(PurchaseSalesReportRepository.class
+                    .getMethod("findProfitability", com.ccadmin.app.shared.model.dto.SearchDto.class)
+                    .getAnnotation(Query.class).value(), parameters);
+        } catch (ReflectiveOperationException exception) {
+            throw new IllegalStateException(exception);
+        }
+    }
+
     private BigDecimal sum(List<Map<String, Object>> rows, String currency, String field) {
         return rows.stream().filter(row -> currency.equals(row.get("CurrencyCod")))
                 .map(row -> new BigDecimal(row.get(field).toString())).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -513,6 +682,7 @@ class ReportRepositoryMySqlTest {
         parameters.put("UserCod", "U001");
         parameters.put("CurrencyCod", "");
         parameters.put("Query", "%");
+        parameters.put("ProductQuery", "%");
         parameters.put("State", state);
         parameters.put("Init", 0);
         parameters.put("Limit", 10);
